@@ -61,10 +61,10 @@ The screenshots below are real outputs from this project.
 ## Quick Install
 
 1. Install a userscript manager such as [Tampermonkey](https://www.tampermonkey.net/) in a Chromium- or Firefox-based browser.
-2. Download [`AI中转站价格分析工具.user.js`](https://github.com/napstablook666/ai-price-analyzer/releases/latest/download/AI%E4%B8%AD%E8%BD%AC%E7%AB%99%E4%BB%B7%E6%A0%BC%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7.user.js) from the latest GitHub release.
+2. Download [`ai-price-analyzer.user.js`](https://github.com/napstablook666/ai-price-analyzer/releases/latest/download/ai-price-analyzer.user.js) from the latest GitHub release.
 3. Open the downloaded file and confirm the userscript installation.
 
-The repository source file is [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js). The release asset uses the `.user.js` suffix so userscript managers recognize it.
+The repository source file is [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js). The release asset uses the ASCII filename `ai-price-analyzer.user.js` so the direct download URL works reliably across clients.
 
 ## Quick Start
 

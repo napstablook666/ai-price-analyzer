@@ -61,11 +61,10 @@ AI Price Analyzer 是一个浏览器用户脚本，用于比较受支持 AI 中�
 ## 快速安装
 
 1. 在 Chromium 或 Firefox 浏览器中安装用户脚本管理器，例如 [Tampermonkey](https://www.tampermonkey.net/)。
-2. 从最新 GitHub Release 下载 [`AI中转站价格分析工具.user.js`](https://github.com/napstablook666/ai-price-analyzer/releases/latest/download/AI%E4%B8%AD%E8%BD%AC%E7%AB%99%E4%BB%B7%E6%A0%BC%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7.user.js)。
+2. 从最新 GitHub Release 下载 [`ai-price-analyzer.user.js`](https://github.com/napstablook666/ai-price-analyzer/releases/latest/download/ai-price-analyzer.user.js)。
 3. 打开下载的文件并确认安装用户脚本。
 
-仓库中的源文件是 [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js)。Release 资产使用 `.user.js` 后缀，便于用户脚本管理器识别。
-
+仓库中的源文件是 [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js)。Release 资产使用 ASCII 文件名 `ai-price-analyzer.user.js`，确保不同客户端访问直链时更可靠。
 ## 快速开始
 
 1. 打开受支持的模型、价格或费率页面。

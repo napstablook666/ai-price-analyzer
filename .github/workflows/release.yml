@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
           mkdir -p dist/source
-          cp "AI中转站价格分析工具.js" "dist/AI中转站价格分析工具.user.js"
+          cp "AI中转站价格分析工具.js" "dist/ai-price-analyzer.user.js"
           cp README.md README.zh-CN.md LICENSE PRIVACY.md RELEASE_NOTES.md dist/source/
           cp "AI中转站价格分析工具.js" dist/source/
           cp -R assets dist/source/
@@ -41,7 +41,7 @@ jobs:
             cd dist/source
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
-          sha256sum "dist/AI中转站价格分析工具.user.js" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
+          sha256sum "dist/ai-price-analyzer.user.js" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -49,6 +49,6 @@ jobs:
           generate_release_notes: true
           body_path: RELEASE_NOTES.md
           files: |
-            dist/AI中转站价格分析工具.user.js
+            dist/ai-price-analyzer.user.js
             ai-price-analyzer-${{ github.ref_name }}-source.zip
             dist/SHA256SUMS.txt
