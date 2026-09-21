@@ -1,0 +1,54 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate source
+        run: |
+          node --check "AI中转站价格分析工具.js"
+          node test-kbq-pricing.js
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          mkdir -p dist/source
+          cp "AI中转站价格分析工具.js" "dist/AI中转站价格分析工具.user.js"
+          cp README.md README.zh-CN.md LICENSE PRIVACY.md RELEASE_NOTES.md dist/source/
+          cp "AI中转站价格分析工具.js" dist/source/
+          cp -R assets dist/source/
+          (
+            cd dist/source
+            zip -qr "../../ai-price-analyzer-${version}-source.zip" .
+          )
+          sha256sum "dist/AI中转站价格分析工具.user.js" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          body_path: RELEASE_NOTES.md
+          files: |
+            dist/AI中转站价格分析工具.user.js
+            ai-price-analyzer-${{ github.ref_name }}-source.zip
+            dist/SHA256SUMS.txt

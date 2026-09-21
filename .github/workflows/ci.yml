@@ -1,0 +1,52 @@
+# GitHub Actions workflow syntax follows the current stable action major versions.
+# The workflow only performs local checks and does not need repository secrets.
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Check userscript syntax
+        run: node --check "AI中转站价格分析工具.js"
+
+      - name: Run pricing self-check
+        run: node test-kbq-pricing.js
+
+      - name: Check public repository files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s README.md
+          test -s README.zh-CN.md
+          test -s LICENSE
+          test -s PRIVACY.md
+          test -s "AI中转站价格分析工具.js"
+          test -f assets/tokenflux-pricing-analysis.png
+          test -f assets/jiji-model-list-analysis.png
+
+      - name: Scan tracked source for obvious secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RInE --exclude-dir=.git --exclude='*.png' --exclude='*.jpg' \
+            '(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|password[[:space:]]*[:=][[:space:]]*[^[:space:]]+)' \
+            .; then
+            echo "Potential credential marker found. Review the match before publishing."
+            exit 1
+          fi

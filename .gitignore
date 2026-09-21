@@ -1,0 +1,30 @@
+# Node and local tooling
+node_modules/
+
+# Generated release output
+dist/
+*.zip
+
+# Local test artifacts
+*.log
+coverage/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# CodeStable session metadata is local working state
+.codestable/
+
+# Windows reserved-name artifact created accidentally during local testing
+/NUL
