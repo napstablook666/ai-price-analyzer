@@ -38,7 +38,6 @@ jobs:
           test -s PRIVACY.md
           test -s "AI中转站价格分析工具.js"
           test -f assets/tokenflux-pricing-analysis.png
-          test -f assets/jiji-model-list-analysis.png
 
       - name: Scan tracked source for obvious secrets
         shell: bash

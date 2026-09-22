@@ -54,10 +54,6 @@ AI Price Analyzer 是一个浏览器用户脚本，用于比较受支持 AI 中�
   <img src="./assets/tokenflux-pricing-analysis.png" width="720" alt="AI Price Analyzer 对比 TokenFlux 模型价格">
 </p>
 
-<p align="center">
-  <img src="./assets/jiji-model-list-analysis.png" width="720" alt="AI Price Analyzer 分析 Jiji 模型列表">
-</p>
-
 ## 快速安装
 
 1. 在 Chromium 或 Firefox 浏览器中安装用户脚本管理器，例如 [Tampermonkey](https://www.tampermonkey.net/)。

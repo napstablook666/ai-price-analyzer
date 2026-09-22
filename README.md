@@ -54,9 +54,6 @@ The screenshots below are real outputs from this project.
   <img src="./assets/tokenflux-pricing-analysis.png" width="720" alt="AI Price Analyzer comparing TokenFlux model pricing">
 </p>
 
-<p align="center">
-  <img src="./assets/jiji-model-list-analysis.png" width="720" alt="AI Price Analyzer analyzing a Jiji model list">
-</p>
 
 ## Quick Install
 
