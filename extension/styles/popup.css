@@ -1,0 +1,27 @@
+.popup-page { width: 360px; max-width: calc(100vw - 16px); }
+.popup-shell { display: grid; gap: 14px; padding: 16px; }
+.popup-header { display: flex; align-items: center; gap: 11px; }
+.popup-brand-mark { display: grid; place-items: center; width: 36px; height: 36px; color: var(--paper); background: var(--ink); border-radius: 2px; }
+.popup-brand-mark .icon { width: 20px; height: 20px; }
+.popup-header .eyebrow { margin-bottom: 2px; }
+.popup-header h1 { margin: 0; font-size: 18px; line-height: 1.25; }
+.popup-context { min-height: 36px; margin: 0; padding: 9px 10px; border-left: 3px solid var(--mint-deep); color: var(--ink-soft); background: rgba(255, 253, 250, .72); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.popup-actions { display: grid; gap: 6px; }
+.popup-action { display: flex; align-items: center; gap: 11px; width: 100%; min-width: 0; min-height: 54px; padding: 9px 11px; border: 1px solid var(--line); border-radius: 2px; color: var(--ink); background: var(--white); text-align: left; transition: border-color .15s ease, background .15s ease; }
+.popup-action:not(:disabled):hover { border-color: var(--blue); background: rgba(22, 78, 99, .06); }
+.popup-action:active { background: rgba(22, 78, 99, .12); }
+.popup-action:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.popup-action:disabled { cursor: not-allowed; }
+.popup-action > .icon { width: 19px; height: 19px; color: var(--blue); }
+.popup-action-primary { border-color: var(--mint-deep); background: var(--mint); }
+.popup-action-primary:not(:disabled):hover { background: #d5ff82; }
+.popup-action-copy { display: grid; gap: 3px; min-width: 0; }
+.popup-action-copy strong { font-size: 13px; line-height: 1.3; }
+.popup-action-copy small { color: var(--ink-soft); font-size: 12px; line-height: 1.35; }
+.popup-status { margin: 0 2px; color: var(--ink-soft); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.popup-status.is-success { color: var(--blue); }
+.popup-status.is-error { color: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+  .popup-action { transition: none; }
+}

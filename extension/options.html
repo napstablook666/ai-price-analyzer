@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Model Atlas · 站点与设置</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/options.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand-lockup" href="dashboard.html" aria-label="Model Atlas 首页">
+      <span class="brand-mark"><span data-icon="arrow-up-right" class="icon"></span></span>
+      <span class="brand-copy"><span class="eyebrow">MODEL ATLAS / 02</span><strong>站点与设置</strong></span>
+    </a>
+    <nav class="top-actions" aria-label="页面操作">
+      <a class="button button-quiet" href="dashboard.html"><span data-icon="chevron-right" class="icon icon-flip"></span><span>返回对比</span></a>
+      <button class="button button-quiet" id="add-station-top" type="button"><span data-icon="bot" class="icon"></span><span>Agent 添加站点</span></button>
+      <button class="button button-primary" id="save-all" type="button"><span data-icon="check" class="icon"></span><span>保存全部</span></button>
+    </nav>
+  </header>
+
+  <main class="settings-shell">
+    <section class="settings-intro">
+      <div><p class="eyebrow accent">CONTROL ROOM / ADAPTERS</p><h1>把采集<br><em>变成配置。</em></h1></div>
+      <div class="intro-aside"><span class="intro-index">02</span><p>站点、模型和适配器资料集中在这里。密钥只保存在扩展会话存储，不进入导出文件。</p></div>
+    </section>
+
+    <section class="config-grid" aria-label="自动适配配置">
+      <article class="panel config-card config-card-llm">
+        <div class="config-heading"><div class="config-icon"><span data-icon="bot" class="icon"></span></div><div><p class="eyebrow">OPTIONAL INTELLIGENCE</p><h2>LLM 自动适配</h2></div><label class="switch"><input id="llm-enabled" type="checkbox"><span></span><b class="sr-only">启用 LLM 自动适配</b></label></div>
+        <p class="config-copy">使用 OpenAI-compatible 接口，把站点地址转换成结构化采集配置。</p>
+        <div class="provider-profile-row">
+          <label><span>供应商档案</span><select id="llm-profile"><option value="">当前配置（未保存）</option></select></label>
+          <label><span>档案名称</span><input id="llm-profile-name" placeholder="例如：OpenRouter"></label>
+          <div class="provider-profile-actions"><button class="button button-quiet button-small" id="save-llm-profile" type="button"><span data-icon="bookmark-plus" class="icon"></span><span>保存档案</span></button><button class="icon-button danger-icon" id="delete-llm-profile" type="button" title="删除当前供应商档案" aria-label="删除当前供应商档案"><span data-icon="trash-2" class="icon"></span></button></div>
+        </div>
+        <div class="field-grid">
+          <label class="wide"><span>API 地址</span><input id="llm-base-url" type="url" placeholder="https://api.example.com/v1"></label>
+          <label><span>提供方协议</span><select id="llm-provider"><option value="openai-compatible">OpenAI-compatible</option></select></label>
+          <label><span>模型</span><select id="llm-model"><option value="">先获取模型列表</option></select></label>
+          <label><span>Temperature</span><input id="llm-temperature" type="number" min="0" max="1" step="0.1" value="0.1"></label>
+          <label class="wide"><span>API Key <small id="llm-key-status">尚未配置 API Key</small></span><input id="llm-api-key" type="password" autocomplete="new-password" placeholder="sk-..."></label>
+          <label class="check-label"><input id="clear-llm-key" type="checkbox"><span>保存时清除现有 Key</span></label>
+          <label class="wide"><span>附加指令</span><textarea id="llm-system-prompt" rows="3" placeholder="可选：补充你使用的站点命名或接口约定"></textarea></label>
+          <div class="wide station-actions model-actions" aria-live="polite">
+            <span class="model-status muted" id="llm-model-status">尚未获取模型列表</span>
+            <button class="button button-quiet" id="fetch-llm-models" type="button"><span data-icon="refresh-cw" class="icon"></span><span>获取模型列表</span></button>
+            <button class="button button-quiet" id="test-llm-model" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试可用</span></button>
+            <button class="button button-primary button-small" id="save-llm-settings" type="button"><span data-icon="bookmark-plus" class="icon"></span><span>保存 LLM 配置</span></button>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel config-card config-card-jev">
+        <div class="config-heading"><div class="config-icon"><span data-icon="file-code-2" class="icon"></span></div><div><p class="eyebrow">MODEL PROFILE / JEV</p><h2>JEV 模型资料</h2></div><label class="switch"><input id="jev-enabled" type="checkbox"><span></span><b class="sr-only">启用 JEV 模型资料</b></label></div>
+        <p class="config-copy">将固定的模型、接口和响应线索交给本地适配器，未配置 LLM 也能先完成基础填充。</p>
+        <div class="provider-profile-row">
+          <label><span>供应商档案</span><select id="jev-profile"><option value="">当前配置（未保存）</option></select></label>
+          <label><span>档案名称</span><input id="jev-profile-name" placeholder="例如：Nekopeer Jev"></label>
+          <div class="provider-profile-actions"><button class="button button-quiet button-small" id="save-jev-profile" type="button"><span data-icon="bookmark-plus" class="icon"></span><span>保存档案</span></button><button class="icon-button danger-icon" id="delete-jev-profile" type="button" title="删除当前供应商档案" aria-label="删除当前供应商档案"><span data-icon="trash-2" class="icon"></span></button></div>
+        </div>
+        <div class="field-grid">
+          <label class="wide"><span>API 地址</span><input id="jev-base-url" type="url" placeholder="https://jev.example.com/v1/systemone"></label>
+          <label class="wide"><span>API Key <small id="jev-key-status">尚未配置 API Key</small></span><input id="jev-api-key" type="password" autocomplete="new-password" placeholder="sk-..."></label>
+          <label class="check-label"><input id="clear-jev-key" type="checkbox"><span>保存时清除现有 Key</span></label>
+          <label><span>模型 ID</span><input id="jev-model-id" type="text" list="jev-model-list" autocomplete="off" placeholder="输入模型 ID 或选择建议"></label><datalist id="jev-model-list"></datalist>
+          <label><span>展示名称</span><input id="jev-model-name" placeholder="JEV Model"></label>
+          <label><span>版本</span><input id="jev-version" placeholder="2025.01"></label>
+          <label><span>响应格式</span><select id="jev-response-format"><option value="auto">自动识别</option><option value="pqh">P站 / PQH</option><option value="sora">Sora</option></select></label>
+          <label class="wide"><span>默认接口路径</span><input id="jev-endpoint" placeholder="/api/ai/pricing"></label>
+          <label class="wide"><span>资料备注</span><textarea id="jev-notes" rows="3" placeholder="补充该模型在不同站点的字段约定"></textarea></label>
+          <div class="wide station-actions model-actions" aria-live="polite">
+            <span class="model-status muted" id="jev-model-status">尚未获取模型列表</span>
+            <button class="button button-quiet" id="fetch-jev-models" type="button"><span data-icon="refresh-cw" class="icon"></span><span>获取模型列表</span></button>
+            <button class="button button-quiet" id="test-jev-model" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试可用</span></button>
+            <button class="button button-primary button-small" id="save-jev-settings" type="button"><span data-icon="bookmark-plus" class="icon"></span><span>保存 JEV 配置</span></button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel settings-panel">
+      <div class="panel-heading"><div><p class="eyebrow">SCHEDULE & WORKLOAD</p><h2>刷新与成本口径</h2></div><span class="section-mark">03</span></div>
+      <form id="settings-form" class="settings-form">
+        <div class="preset-grid wide">
+          <label><span>刷新预设</span><select id="refresh-preset"><option value="5">高频（5 分钟）</option><option value="15">标准（15 分钟）</option><option value="30">低频（30 分钟）</option><option value="60">省电（60 分钟）</option><option value="custom">自定义</option></select></label>
+          <label><span>成本口径预设</span><select id="usage-preset"><option value="legacy">旧版 JS 默认</option><option value="baseline">基础估算（100 万输入 / 20 万输出）</option><option value="custom">自定义</option></select></label>
+        </div>
+        <label><span>自动刷新间隔（分钟）</span><input id="refresh-interval" type="number" min="1" step="1" required></label>
+        <label><span>货币</span><select id="currency"><option value="CNY">人民币（CNY）</option><option value="USD">美元（USD）</option></select></label>
+        <label class="wide"><span>官方美元兑人民币汇率</span><input id="exchange-rate" type="number" min="0.0001" step="0.0001" required><button class="button button-quiet button-small" id="refresh-exchange-rate" type="button"><span data-icon="refresh-cw" class="icon"></span><span>从中国银行刷新</span></button></label>
+        <label><span>推荐口径</span><select id="recommendation-profile"><option value="balanced">均衡推荐（成本 80% / 证据 20%）</option><option value="price">价格优先（成本 90% / 证据 10%）</option><option value="reliability">稳定优先（成本 70% / 证据 30%）</option></select></label>
+        <fieldset><legend>估算日用量</legend><div class="usage-grid"><label><span>输入（M tokens）</span><input id="usage-input" type="number" min="0" step="0.01"></label><label><span>缓存读取（M tokens）</span><input id="usage-cache-read" type="number" min="0" step="0.01"></label><label><span>缓存写入（M tokens）</span><input id="usage-cache-write" type="number" min="0" step="0.01"></label><label><span>输出（M tokens）</span><input id="usage-output" type="number" min="0" step="0.01"></label><label><span>请求次数</span><input id="usage-requests" type="number" min="0" step="1"></label><label><span>高峰占比（%）</span><input id="usage-peak-share" type="number" min="0" max="100" step="1"></label><label><span>图像（M tokens）</span><input id="usage-image-tokens" type="number" min="0" step="0.01"></label><label><span>图像请求数</span><input id="usage-images" type="number" min="0" step="1"></label></div></fieldset>
+        <label class="check-label"><input id="show-unmatched" type="checkbox"><span>默认显示未匹配模型</span></label>
+        <fieldset><legend>模型匹配规则</legend><div class="matching-rules"><label class="check-label"><input data-matching-rule="exact" type="checkbox"><span>精确名称</span></label><label class="check-label"><input data-matching-rule="suffix" type="checkbox"><span>后缀 / 供应商</span></label><label class="check-label"><input data-matching-rule="ignore_version" type="checkbox"><span>忽略版本号</span></label><label class="check-label"><input data-matching-rule="fuzzy" type="checkbox"><span>模糊匹配</span></label></div></fieldset>
+      </form>
+    </section>
+
+    <section class="section-heading"><div><p class="eyebrow">STATION REGISTRY</p><h2>中转站</h2></div><button class="button button-primary" id="add-station" type="button"><span data-icon="bot" class="icon"></span><span>Agent 添加</span></button></section>
+    <section id="stations-list" class="stations-list" aria-live="polite"></section>
+
+    <section class="panel data-panel">
+      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><p class="eyebrow">PORTABILITY</p><h2>数据备份</h2><p class="muted">导出包含站点、设置、官方参考目录和采集快照，不包含站点密钥与 LLM / JEV API Key。</p></div></div>
+      <div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json"></label></div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="src/options.js"></script>
+</body>
+</html>

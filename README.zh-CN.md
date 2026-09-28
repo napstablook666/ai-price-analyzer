@@ -95,6 +95,14 @@ AI Price Analyzer 是一个浏览器用户脚本，用于比较受支持 AI 中�
 
 详细说明见 [`PRIVACY.md`](./PRIVACY.md)。
 
+## Chromium 扩展
+
+仓库现在同时提供一个无需构建的 Chromium MV3 扩展，代码位于 [`extension/`](./extension/)。它保留原用户脚本流程，并增加多中转站定时采集、OpenRouter 与中国银行参考价缓存、IndexedDB 快照、模型匹配和对比面板。
+
+本地使用时打开 `chrome://extensions`，启用“开发者模式”，点击“加载已解压的扩展”，选择 `extension/` 目录。在扩展设置中配置站点接口和凭据。允许跨域的 JSON 接口使用“直接接口”模式，需要浏览器登录态的站点使用“页面桥接”模式。
+
+扩展不依赖 Docker、Playwright、打包器或第三方运行时依赖。单元测试命令：`node --test extension/test/*.test.js`。
+
 ## 开发
 
 用户脚本源文件不需要构建工具链。使用 Node.js 执行语法检查和随附的价格计算自检：
@@ -102,13 +110,14 @@ AI Price Analyzer 是一个浏览器用户脚本，用于比较受支持 AI 中�
 ```bash
 node --check "AI中转站价格分析工具.js"
 node test-kbq-pricing.js
+node --test extension/test/*.test.js
 ```
 
 GitHub Actions 会运行相同检查，并扫描发布源文件中常见的私钥或凭据标记。
 
 ## 发布流程
 
-Release 由 Git tag 触发。推送类似 `v0.1.0` 的语义化版本标签后，发布工作流会创建源代码 ZIP 和用户脚本资产，并使用 GitHub 自动生成 Release notes。
+Release 由 Git tag 触发。推送类似 `v0.1.0` 的语义化版本标签后，发布工作流会创建源代码 ZIP、用户脚本资产和 Chromium 扩展 ZIP，并使用 GitHub 自动生成 Release notes。
 
 ```bash
 git tag v0.1.0

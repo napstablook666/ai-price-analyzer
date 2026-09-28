@@ -26,7 +26,7 @@ jobs:
         run: |
           node --check "AI中转站价格分析工具.js"
           node test-kbq-pricing.js
-
+          node --test extension/test/*.test.js
       - name: Prepare release assets
         shell: bash
         run: |
@@ -37,11 +37,16 @@ jobs:
           cp README.md README.zh-CN.md LICENSE PRIVACY.md RELEASE_NOTES.md dist/source/
           cp "AI中转站价格分析工具.js" dist/source/
           cp -R assets dist/source/
+          cp -R extension dist/source/
+          (
+            cd extension
+            zip -qr "../dist/ai-relay-price-extension-${version}.zip" .
+          )
           (
             cd dist/source
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
-          sha256sum "dist/ai-price-analyzer.user.js" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
+          sha256sum "dist/ai-price-analyzer.user.js" "dist/ai-relay-price-extension-${version}.zip" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -50,5 +55,6 @@ jobs:
           body_path: RELEASE_NOTES.md
           files: |
             dist/ai-price-analyzer.user.js
+            dist/ai-relay-price-extension-${{ github.ref_name }}.zip
             ai-price-analyzer-${{ github.ref_name }}-source.zip
             dist/SHA256SUMS.txt

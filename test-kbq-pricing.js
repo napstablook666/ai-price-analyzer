@@ -28,6 +28,40 @@ const parseJiji = Function(`const SYSTEM_BASE_PRICE_PER_1M = ${base}; ${parserCo
 const matchModel = Function(`${aliases}\n${extract("normalizeProxyModelName")}\n${extract("getOfficialNames")}\n${extract("cleanModelName")}\n${extract("removeVersion")}\n${extract("matchModel")}\nreturn matchModel;`)();
 const prices = Function(`const SYSTEM_BASE_PRICE_PER_1M = ${base}; ${extract("currencyToRMB")}\n${extract("getProxyPrices")}\n${extract("workloadCost")}\nreturn { getProxyPrices, workloadCost };`)();
 
+const sortResults = Function(`${extract("sortResults")} return sortResults;`)();
+const sortRows = [
+    { model_name: "cheap", real_cost: 10, diff_percent: -20 },
+    { model_name: "premium", real_cost: 90, diff_percent: 40 },
+    { model_name: "mid", real_cost: 50, diff_percent: 5 }
+];
+assert.deepEqual(sortResults(sortRows.slice(), { primary: "none", secondary: "real_cost", direction: "desc" }).map(row => row.model_name), ["premium", "mid", "cheap"]);
+assert.deepEqual(sortResults(sortRows.slice(), { primary: "none", secondary: "diff_percent", direction: "desc" }).map(row => row.model_name), ["premium", "mid", "cheap"]);
+assert.deepEqual(sortResults(sortRows.slice(), { primary: "none", secondary: "real_cost", direction: "asc" }).map(row => row.model_name), ["cheap", "mid", "premium"]);
+const recommendationRows = [
+    { model_name: "eligible", recommendation_score: 50, recommendation_eligible: true },
+    { model_name: "verify", recommendation_score: 90, recommendation_eligible: false }
+];
+assert.deepEqual(sortResults(recommendationRows.slice(), { primary: "none", secondary: "recommendation_score", direction: "desc" }).map(row => row.model_name), ["eligible", "verify"]);
+assert.deepEqual(sortResults(recommendationRows.slice(), { primary: "none", secondary: "recommendation_score", direction: "asc" }).map(row => row.model_name), ["verify", "eligible"]);
+const filterReset = Function(`
+    const chips = [false, false].map(() => {
+        const chip = { active: false };
+        chip.classList = { add() { chip.active = true; } };
+        return chip;
+    });
+    const keyword = { value: "gpt" };
+    const state = { modal: { querySelectorAll: () => chips } };
+    const document = {};
+    const getModalElement = () => keyword;
+    let renderCount = 0;
+    const applySortingAndRender = () => renderCount++;
+    ${extract("resetFilters")}
+    return { resetFilters, chips, keyword, getRenderCount: () => renderCount };
+`)();
+filterReset.resetFilters();
+assert.deepEqual(filterReset.chips.map(chip => chip.active), [true, true]);
+assert.equal(filterReset.keyword.value, "");
+assert.equal(filterReset.getRenderCount(), 1);
 const sinanTools = Function(`
     const SYSTEM_BASE_PRICE_PER_1M = ${base};
     const window = { location: { hostname: "compute.sinanlab.com", pathname: "/", hash: "" } };

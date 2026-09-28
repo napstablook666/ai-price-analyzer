@@ -97,6 +97,14 @@ The script also recognizes the Jiji model-list page and the Sinan model plaza in
 
 See [`PRIVACY.md`](./PRIVACY.md) for the public-release privacy statement.
 
+## Chromium extension
+
+The repository now also includes a no-build Chromium MV3 extension in [`extension/`](./extension/). It keeps the userscript workflow intact while adding multi-station scheduled collection, OpenRouter and Bank of China reference caching, IndexedDB snapshots, model matching, and a comparison dashboard.
+
+For local use, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the `extension/` directory. Configure station endpoints and credentials in the extension settings. Use direct mode for CORS-enabled JSON APIs; use page mode when the station requires an existing browser login.
+
+The extension has no Docker, Playwright, bundler, or third-party runtime dependency. Run its unit tests with `node --test extension/test/*.test.js`.
+
 ## Development
 
 No build toolchain is required for the userscript source. Use Node.js for syntax checks and the included pricing self-check:
@@ -104,13 +112,14 @@ No build toolchain is required for the userscript source. Use Node.js for syntax
 ```bash
 node --check "AI中转站价格分析工具.js"
 node test-kbq-pricing.js
+node --test extension/test/*.test.js
 ```
 
 The GitHub Actions workflow runs the same checks and verifies that the release source contains no obvious private-key or credential markers.
 
 ## Release process
 
-Releases are tag-driven. Push a semantic version tag such as `v0.1.0` to run the release workflow. It creates a source ZIP and a userscript asset, then publishes a GitHub Release with generated notes.
+Releases are tag-driven. Push a semantic version tag such as `v0.1.0` to run the release workflow. It creates a source ZIP, a userscript asset, and an extension ZIP, then publishes a GitHub Release with generated notes.
 
 ```bash
 git tag v0.1.0

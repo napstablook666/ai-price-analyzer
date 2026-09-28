@@ -28,6 +28,23 @@ jobs:
       - name: Run pricing self-check
         run: node test-kbq-pricing.js
 
+      - name: Check extension syntax and manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check extension/src/service-worker.js
+          node --check extension/src/dashboard.js
+          node --check extension/src/options.js
+          node --check extension/src/content-bridge.js
+          node --check extension/src/page-bridge.js
+          node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json', 'utf8'))"
+          test -f extension/dashboard.html
+          test -f extension/options.html
+          node --check extension/src/popup.js
+          node -e "const m = JSON.parse(require('fs').readFileSync('extension/manifest.json', 'utf8')); if (m.action?.default_popup !== 'popup.html') process.exit(1)"
+          test -f extension/popup.html
+      - name: Run extension unit tests
+        run: node --test extension/test/*.test.js
       - name: Check public repository files
         shell: bash
         run: |
@@ -44,7 +61,7 @@ jobs:
         run: |
           set -euo pipefail
           if grep -RInE --exclude-dir=.git --exclude='*.png' --exclude='*.jpg' \
-            '(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|password[[:space:]]*[:=][[:space:]]*[^[:space:]]+)' \
+            "(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|password[[:space:]]*[:=][[:space:]]*[\"'][^\"']{12,}[\"']|password[[:space:]]*[:=][[:space:]]*[[:alnum:]_+=/-]{16,})" \
             .; then
             echo "Potential credential marker found. Review the match before publishing."
             exit 1

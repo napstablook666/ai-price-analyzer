@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>快捷操作 · Model Atlas</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body class="popup-page">
+  <main class="popup-shell">
+    <header class="popup-header">
+      <span class="popup-brand-mark"><span data-icon="layers-3" class="icon"></span></span>
+      <div>
+        <p class="eyebrow accent">MODEL ATLAS</p>
+        <h1>快捷操作</h1>
+      </div>
+    </header>
+
+    <p class="popup-context" id="current-page">正在读取当前页面…</p>
+
+    <section class="popup-actions" aria-label="快捷操作">
+      <button class="popup-action popup-action-primary" id="open-dashboard" type="button">
+        <span data-icon="arrow-up-right" class="icon"></span>
+        <span class="popup-action-copy"><strong>打开价格对比</strong><small>查看站点报价与模型对比</small></span>
+      </button>
+      <button class="popup-action" id="refresh-all" type="button">
+        <span data-icon="refresh-cw" class="icon"></span>
+        <span class="popup-action-copy"><strong>立即刷新</strong><small>更新已配置站点的报价</small></span>
+      </button>
+      <button class="popup-action" id="open-settings" type="button">
+        <span data-icon="settings-2" class="icon"></span>
+        <span class="popup-action-copy"><strong>站点与设置</strong><small>管理站点和采集配置</small></span>
+      </button>
+      <button class="popup-action" id="add-current-site" type="button" disabled>
+        <span data-icon="wand-sparkles" class="icon"></span>
+        <span class="popup-action-copy"><strong>识别当前站点</strong><small>从当前页面识别采集配置</small></span>
+      </button>
+    </section>
+
+    <p class="popup-status" id="popup-status" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+  </main>
+  <script type="module" src="src/popup.js"></script>
+</body>
+</html>

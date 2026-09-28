@@ -187,7 +187,9 @@ officialData: null,
             min-height: 32px; padding: 5px 8px; border: 0; border-radius: 6px;
             background: transparent; color: #2563eb; font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1.2; cursor: pointer;
         }
-        .ai-pricing-modal .filter-link:hover, .ai-pricing-modal .filter-link:focus-visible { background: #eff6ff; outline: none; }
+        .ai-pricing-modal .filter-link:hover { background: #eff6ff; }
+        .ai-pricing-modal .filter-link:focus-visible { background: #eff6ff; outline: 2px solid #2563eb; outline-offset: 2px; }
+        .ai-pricing-modal .sort-toolbar .filter-link { min-height: 44px; }
         .ai-pricing-modal .filter-chips {
             display: flex; flex-wrap: wrap; align-content: flex-start; gap: 7px; max-height: 164px; min-height: 32px;
             margin-top: 0; overflow-x: hidden; overflow-y: auto;
@@ -773,8 +775,29 @@ officialData: null,
     }
 
     // === 5. 排序与渲染逻辑===
+    function sortResults(rows, config) {
+        const { primary, secondary, direction } = config;
+        const sortFn = (a, b, key) => {
+            const valA = a[key], valB = b[key];
+            return typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB;
+        };
+
+        return rows.sort((a, b) => {
+            if (primary !== 'none') {
+                const result = sortFn(a, b, primary);
+                if (result !== 0) return result;
+            }
+            if (secondary === 'recommendation_score' && a.recommendation_eligible !== b.recommendation_eligible) {
+                return direction === 'asc'
+                    ? Number(a.recommendation_eligible) - Number(b.recommendation_eligible)
+                    : Number(b.recommendation_eligible) - Number(a.recommendation_eligible);
+            }
+            const result = sortFn(a, b, secondary);
+            return direction === 'asc' ? result : -result;
+        });
+    }
     function applySortingAndRender() {
-        const { primary, secondary, direction } = state.sortConfig;
+        const { primary } = state.sortConfig;
         const container = getModalElement('resultsBody');
         container.innerHTML = "";
 
@@ -796,23 +819,7 @@ officialData: null,
             return;
         }
 
-        const sortFn = (a, b, key) => {
-            let valA = a[key], valB = b[key];
-            if (typeof valA === 'string') return valA.localeCompare(valB);
-            return valA - valB;
-        };
-
-        filtered.sort((a, b) => {
-            if (primary !== 'none') {
-                const res = sortFn(a, b, primary);
-                if (res !== 0) return res;
-            }
-            if (secondary === 'recommendation_score' && a.recommendation_eligible !== b.recommendation_eligible) {
-                return Number(b.recommendation_eligible) - Number(a.recommendation_eligible);
-            }
-            const res = sortFn(a, b, secondary);
-            return direction === 'asc' ? res : -res;
-        });
+        sortResults(filtered, state.sortConfig);
 
         let lastGroupVal = null;
 
@@ -904,6 +911,13 @@ officialData: null,
         const root = state.modal || document;
         const chips = root.querySelectorAll(`#${containerId} .chip`);
         chips.forEach(c => isActive ? c.classList.add('active') : c.classList.remove('active'));
+        applySortingAndRender();
+    }
+
+    function resetFilters() {
+        const root = state.modal || document;
+        root.querySelectorAll('#providerFilters .chip, #groupFilters .chip').forEach(chip => chip.classList.add('active'));
+        getModalElement('modelKeyword').value = '';
         applySortingAndRender();
     }
 
@@ -1251,15 +1265,21 @@ officialData: null,
                                 <div style="width:1px; height:20px; background:#e2e8f0; margin:0 10px;"></div>
                                 <div class="sort-group">
                                     <strong>排序:</strong>
-                                    <select id="sortBySelect" style="padding:4px; border-radius:4px; border:1px solid #cbd5e1;">
-                                        <option value="recommendation_score" selected>综合推荐 (高->低)</option>
-                                        <option value="real_cost">实际汇率成本 (低->高)</option>
-                                        <option value="diff_percent">溢价率</option>
+                                    <select id="sortBySelect" aria-label="排序字段">
+                                        <option value="recommendation_score" selected>综合推荐</option>
+                                        <option value="real_cost">24小时成本（中转）</option>
+                                        <option value="diff_percent">相对官方（溢价率）</option>
                                         <option value="model_name">模型名称</option>
                                     </select>
+                                    <strong>方向:</strong>
+                                    <select id="sortDirectionSelect" aria-label="排序方向">
+                                        <option value="asc">升序</option>
+                                        <option value="desc" selected>降序</option>
+                                    </select>
                                 </div>
-                                <div style="margin-left:auto; font-size:12px; color:#64748b;">
-                                    共找到 <strong id="resultCount" style="color:#333;">0</strong> 个结果
+                                <button type="button" class="filter-link" id="resetFilters">重置筛选</button>
+                                <div class="result-summary">
+                                    共找到 <strong id="resultCount">0</strong> 个结果
                                 </div>
                             </div>
 
@@ -1306,7 +1326,9 @@ officialData: null,
             getModalElement('recommendationProfile').onchange = (e) => {
                 state.recommendationProfile = e.target.value;
                 state.sortConfig.secondary = 'recommendation_score';
+                getModalElement('sortBySelect').value = 'recommendation_score';
                 state.sortConfig.direction = 'desc';
+                getModalElement('sortDirectionSelect').value = 'desc';
                 refreshRecommendationScores();
             };
             updateRechargeRateDisplay();
@@ -1320,6 +1342,11 @@ officialData: null,
             getModalElement('sortBySelect').onchange = (e) => {
                 state.sortConfig.secondary = e.target.value;
                 state.sortConfig.direction = e.target.value === 'recommendation_score' ? 'desc' : 'asc';
+                getModalElement('sortDirectionSelect').value = state.sortConfig.direction;
+                applySortingAndRender();
+            };
+            getModalElement('sortDirectionSelect').onchange = (e) => {
+                state.sortConfig.direction = e.target.value;
                 applySortingAndRender();
             };
 
@@ -1327,6 +1354,7 @@ officialData: null,
             getModalElement('groupNone').onclick = () => toggleFilterAll('groupFilters', false);
             getModalElement('providerAll').onclick = () => toggleFilterAll('providerFilters', true);
             getModalElement('providerNone').onclick = () => toggleFilterAll('providerFilters', false);
+            getModalElement('resetFilters').onclick = resetFilters;
             getModalElement('modelKeyword').oninput = applySortingAndRender;
         }
         state.modal = modal;
