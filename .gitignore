@@ -7,7 +7,6 @@ dist/
 
 # Local test artifacts
 *.log
-*.har
 coverage/
 
 # Editors and operating systems
