@@ -7,6 +7,7 @@ dist/
 
 # Local test artifacts
 *.log
+*.har
 coverage/
 
 # Editors and operating systems
@@ -28,3 +29,6 @@ Thumbs.db
 
 # Windows reserved-name artifact created accidentally during local testing
 /NUL
+
+# HAR captures contain login credentials - never commit
+*.har

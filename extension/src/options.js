@@ -1,7 +1,7 @@
-import { cloneDefaultStation, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, REFRESH_PRESETS, TOKENS_PER_MILLION, USAGE_PRESETS } from "./shared/schema.js";
+import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, REFRESH_PRESETS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
 import { callService, downloadJson, escapeHtml, hydrateIcons, icon } from "./shared/ui.js";
 
-const state = { stations: [], settings: null, modelCatalog: { llm: [], jev: [] } };
+const state = { stations: [], settings: null, modelCatalog: { llm: [], jev: [] }, collapsedStationIds: new Set(), pendingStation: null, previewRequestId: 0 };
 const $ = selector => document.querySelector(selector);
 
 function toast(message) {
@@ -37,18 +37,24 @@ function renderProviderProfiles(kind) {
   nameInput.value = profiles.find(profile => profile.id === activeId)?.name || "";
 }
 function renderModelOptions(kind, selectedValue = "") {
-  const select = modelSelect(kind);
-  if (!select) return;
+  const field = modelSelect(kind);
+  if (!field) return;
   const selected = String(selectedValue || "").trim();
   const models = [...(state.modelCatalog[kind] || [])];
   if (selected && !models.some(model => String(model.id || "") === selected)) models.unshift({ id: selected, name: "已保存" });
-  select.innerHTML = `<option value="">${models.length ? "选择模型" : "先获取模型列表"}</option>${models.map(model => {
+  const options = models.map(model => {
     const id = String(model.id || "").trim();
     const name = String(model.name || "").trim();
-    const label = name && name !== id ? `${id} · ${name}` : id;
-    return id ? `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>` : "";
-  }).join("")}`;
-  select.value = selected;
+    return id ? { id, label: name && name !== id ? `${id} · ${name}` : id } : null;
+  }).filter(Boolean);
+  if (field instanceof HTMLInputElement) {
+    const datalist = $(`#${kind}-model-list`);
+    if (datalist) datalist.innerHTML = options.map(({ id, label }) => `<option value="${escapeHtml(id)}" label="${escapeHtml(label)}"></option>`).join("");
+    field.value = selected;
+    return;
+  }
+  field.innerHTML = `<option value="">${options.length ? "选择模型" : "先获取模型列表"}</option>${options.map(({ id, label }) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join("")}`;
+  field.value = selected;
 }
 
 function modelStatus(kind, message, error = false) {
@@ -98,34 +104,79 @@ function derivedRechargeRate(rmb, credits) {
   return rmb > 0 && credits > 0 ? rmb / credits : 1;
 }
 
+function currentExchangeRate() {
+  const rate = Number($("#exchange-rate")?.value);
+  return Number.isFinite(rate) && rate > 0 ? Math.max(0.0001, rate) : DEFAULT_EXCHANGE_RATE;
+}
+
+function formatRechargeAmount(value) {
+  const amount = Number(value);
+  return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 8 }).format(Number.isFinite(amount) ? amount : 0);
+}
+
+function changeRechargeCurrency(amountInput, currencySelect) {
+  const previousCurrency = currencySelect.dataset.previousCurrency || "CNY";
+  if (amountInput.value !== "") {
+    const converted = convertRechargeAmount(amountInput.value, previousCurrency, currencySelect.value, currentExchangeRate());
+    if (converted !== null) amountInput.value = String(converted);
+  }
+  currencySelect.dataset.previousCurrency = currencySelect.value;
+}
+
+function updateStationRechargeRate(card) {
+  const amountInput = card.querySelector('[data-field="rechargeAmount"]');
+  const currencySelect = card.querySelector('[data-field="rechargeCurrency"]');
+  const creditsInput = card.querySelector('[data-field="rechargeCredits"]');
+  const rmb = convertRechargeAmount(amountInput.value, currencySelect.value, "CNY", currentExchangeRate()) ?? 0;
+  const credits = Number(creditsInput.value);
+  const rate = derivedRechargeRate(rmb, credits);
+  card.querySelector('[data-field="rechargeRate"]').value = rate.toFixed(4);
+  card.querySelector("[data-recharge-rate-display]").textContent = `每 1 中转币成本 ¥${rate.toFixed(4)}`;
+  card.querySelector(".station-summary-meta").children[1].textContent = `${formatRechargeAmount(amountInput.value || 0)} ${currencySelect.value} : ${creditsInput.value || 0} 中转币`;
+}
+
 function stationCard(station, index) {
   const adapter = station.adapter || {};
   const auth = station.auth || {};
+  const rechargeRmb = nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1);
+  const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
+  const rechargeAmount = convertRechargeAmount(rechargeRmb, "CNY", rechargeCurrency, currentExchangeRate());
+  const rechargeCredits = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
+  const origin = currentSiteOrigin(station.baseUrl);
+  const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
+  const stationHint = station.mode === "page"
+    ? isFastAiToken ? "FastAIToken 会复用本 Chrome 配置文件中的登录状态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录；采集会复用该页面会话。"
+    : "直接模式：智能填充会先读取上面的模型列表地址，通常无需登录；需要登录时切换页面模式。";
   return `<article class="station-card" data-station-id="${escapeHtml(station.id)}" data-index="${index}">
-    <div class="station-head">
-      <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><p class="station-kicker">STATION ${String(index + 1).padStart(2, "0")}</p><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
-      <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-autofill-station type="button">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
-    </div>
-    <div class="station-grid">
-      <label><span>站点名称</span><input data-field="name" value="${escapeHtml(station.name)}" placeholder="例如：主用站"></label>
-      <label class="wide"><span>模型列表 / 站点地址</span><input data-field="baseUrl" type="url" value="${escapeHtml(station.baseUrl)}" placeholder="https://relay.example.com/v1/models" required></label>
-      <label><span>采集模式</span><select data-field="mode"><option value="direct"${selected(station.mode, "direct")}>直接接口</option><option value="page"${selected(station.mode, "page")}>页面桥接</option></select></label>
-      <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
-      <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
-      <label><span>响应格式</span><select data-field="responseFormat"><option value="auto"${selected(adapter.responseFormat, "auto")}>自动识别</option><option value="pqh"${selected(adapter.responseFormat, "pqh")}>P站 / PQH</option><option value="sora"${selected(adapter.responseFormat, "sora")}>Sora</option></select></label>
-      <label class="wide"><span>手动价格 JSON（可选）</span><textarea data-field="rawJson" rows="3" placeholder='{"data":[{"model":"gpt-4o","input":2,"output":8}]}'>${escapeHtml(adapter.rawJson || "")}</textarea></label>
-      <label><span>请求方式</span><select data-field="method"><option value="GET"${selected(adapter.method, "GET")}>GET</option><option value="POST"${selected(adapter.method, "POST")}>POST</option></select></label>
-      <label><span>认证方式</span><select data-field="authType"><option value="none"${selected(auth.type, "none")}>无</option><option value="bearer"${selected(auth.type, "bearer")}>Bearer Token</option><option value="api-key"${selected(auth.type, "api-key")}>X-API-Key</option><option value="basic"${selected(auth.type, "basic")}>Basic</option></select></label>
+    <details class="station-disclosure"${state.collapsedStationIds.has(station.id) ? "" : " open"}>
+      <summary class="station-summary">
+        <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><p class="station-kicker">STATION ${String(index + 1).padStart(2, "0")}</p><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
+        <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
+      </summary>
+      <div class="station-content">
+        <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-autofill-station type="button">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
+        <div class="station-grid">
+          <label><span>站点名称</span><input data-field="name" value="${escapeHtml(station.name)}" placeholder="例如：主用站"></label>
+          <label class="wide"><span>模型列表 / 站点地址</span><input data-field="baseUrl" type="url" value="${escapeHtml(station.baseUrl)}" placeholder="https://relay.example.com/v1/models" required></label>
+          <label><span>采集模式</span><select data-field="mode"><option value="direct"${selected(station.mode, "direct")}>直接接口</option><option value="page"${selected(station.mode, "page")}>页面桥接</option></select></label>
+          <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
+          <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
+          <label><span>响应格式</span><select data-field="responseFormat"><option value="auto"${selected(adapter.responseFormat, "auto")}>自动识别</option><option value="pqh"${selected(adapter.responseFormat, "pqh")}>P站 / PQH</option><option value="sora"${selected(adapter.responseFormat, "sora")}>Sora</option></select></label>
+          <label class="wide"><span>手动价格 JSON（可选）</span><textarea data-field="rawJson" rows="3" placeholder='{"data":[{"model":"gpt-4o","input":2,"output":8}]}'>${escapeHtml(adapter.rawJson || "")}</textarea></label>
+          <label><span>请求方式</span><select data-field="method"><option value="GET"${selected(adapter.method, "GET")}>GET</option><option value="POST"${selected(adapter.method, "POST")}>POST</option></select></label>
+          <label><span>认证方式</span><select data-field="authType"><option value="none"${selected(auth.type, "none")}>无</option><option value="bearer"${selected(auth.type, "bearer")}>Bearer Token</option><option value="api-key"${selected(auth.type, "api-key")}>X-API-Key</option><option value="basic"${selected(auth.type, "basic")}>Basic</option></select></label>
           <label><span>Token / 密钥</span><input data-field="token" type="password" value="${escapeHtml(auth.token || "")}" placeholder="留空则保留已有密钥"></label>
-      <label><span>用户名</span><input data-field="username" value="${escapeHtml(auth.username || "")}" autocomplete="off"></label>
-      <label><span>密码</span><input data-field="password" type="password" value="${escapeHtml(auth.password || "")}" autocomplete="off"></label>
-      <label><span>充值金额（人民币）</span><input data-field="rechargeRmb" type="number" min="0" step="0.01" value="${nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1)}"></label>
-      <label><span>到账中转币</span><input data-field="rechargeCredits" type="number" min="0.000001" step="0.01" value="${Number(station.rechargeCredits) > 0 ? station.rechargeCredits : 1}"></label>
-      <label><span>充值比例（¥ / 币）</span><input data-field="rechargeRate" type="number" min="0" step="0.0001" value="${derivedRechargeRate(Number(station.rechargeRmb), Number(station.rechargeCredits) || 1).toFixed(4)}" readonly><small data-recharge-rate-display>每 1 中转币成本 ¥${derivedRechargeRate(Number(station.rechargeRmb), Number(station.rechargeCredits) || 1).toFixed(4)}</small></label>
-      <label><span>基础价 / 1M USD</span><input data-field="basePricePerMillion" type="number" min="0" step="0.0001" value="${nonNegativeNumber(station.basePricePerMillion, 2)}"></label>
-      <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与自动刷新</span></label>
-    </div>
-    <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${station.mode === "page" ? "页面模式：请先在当前标签页登录；智能填充会复用该页面 Cookie，不保存 Cookie。" : "直接模式：智能填充会先读取上面的模型列表地址，通常无需登录；需要登录时切换页面模式。"}</p>
+          <label><span>用户名</span><input data-field="username" value="${escapeHtml(auth.username || "")}" autocomplete="off"></label>
+          <label><span>密码</span><input data-field="password" type="password" value="${escapeHtml(auth.password || "")}" autocomplete="off"></label>
+          <div class="station-money-field"><label for="station-recharge-amount-${index}">充值金额</label><div class="station-money-input"><input id="station-recharge-amount-${index}" data-field="rechargeAmount" type="number" min="0" step="any" value="${rechargeAmount}"><select data-field="rechargeCurrency" data-previous-currency="${rechargeCurrency}" aria-label="充值金额币种"><option value="CNY"${selected(rechargeCurrency, "CNY")}>人民币 CNY</option><option value="USD"${selected(rechargeCurrency, "USD")}>美元 USD</option></select></div></div>
+          <label><span>到账中转币</span><input data-field="rechargeCredits" type="number" min="0.000001" step="0.01" value="${rechargeCredits}"></label>
+          <label><span>充值比例（¥ / 币）</span><input data-field="rechargeRate" type="number" min="0" step="0.0001" value="${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}" readonly><small data-recharge-rate-display>每 1 中转币成本 ¥${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}</small></label>
+          <label><span>基础价 / 1M USD</span><input data-field="basePricePerMillion" type="number" min="0" step="0.0001" value="${nonNegativeNumber(station.basePricePerMillion, 2)}"></label>
+          <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与自动刷新</span></label>
+        </div>
+        <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${stationHint}</p>
+      </div>
+    </details>
   </article>`;
 }
 
@@ -155,11 +206,10 @@ function readUsageInputs() {
 }
 
 function writeUsageInputs(usage) {
-  for (const { field, id, million, percent } of USAGE_INPUTS) $(`#${id}`).value = Number(usage[field] || 0) / (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1);
-}
-
-function usagePresetId(usage) {
-  return USAGE_PRESETS.find(preset => USAGE_INPUTS.every(({ field }) => Number(preset.usage[field]) === Number(usage[field])))?.id || "custom";
+  for (const { field, id, million, percent } of USAGE_INPUTS) {
+    if (!Object.prototype.hasOwnProperty.call(usage, field)) continue;
+    $(`#${id}`).value = Number(usage[field] || 0) / (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1);
+  }
 }
 
 function syncPresetControls() {
@@ -169,12 +219,14 @@ function syncPresetControls() {
 }
 
 function applyRefreshPreset(id) {
+  if (id === "custom") return;
   const preset = REFRESH_PRESETS.find(item => item.id === id);
   if (preset) $("#refresh-interval").value = preset.minutes;
   syncPresetControls();
 }
 
 function applyUsagePreset(id) {
+  if (id === "custom") return;
   const preset = USAGE_PRESETS.find(item => item.id === id);
   if (preset) writeUsageInputs(preset.usage);
   syncPresetControls();
@@ -226,15 +278,18 @@ function renderSettings() {
 function readStations() {
   return [...document.querySelectorAll(".station-card")].map(card => {
     const value = field => card.querySelector(`[data-field="${field}"]`)?.value || "";
+    const rechargeCurrency = value("rechargeCurrency") === "USD" ? "USD" : "CNY";
+    const rechargeRmb = convertRechargeAmount(value("rechargeAmount"), rechargeCurrency, "CNY", currentExchangeRate()) ?? 0;
     return {
       id: card.dataset.stationId || crypto.randomUUID(),
       name: value("name"),
       baseUrl: value("baseUrl"),
       mode: value("mode"),
       enabled: card.querySelector('[data-field="enabled"]')?.checked ?? true,
-      rechargeRmb: nonNegativeNumber(value("rechargeRmb"), 1),
+      rechargeRmb,
+      rechargeCurrency,
       rechargeCredits: Number(value("rechargeCredits")) > 0 ? Number(value("rechargeCredits")) : 1,
-      rechargeRate: derivedRechargeRate(nonNegativeNumber(value("rechargeRmb"), 0), Number(value("rechargeCredits")) || 0),
+      rechargeRate: derivedRechargeRate(rechargeRmb, Number(value("rechargeCredits")) || 0),
       basePricePerMillion: nonNegativeNumber(value("basePricePerMillion"), 2),
       auth: { type: value("authType"), token: value("token"), username: value("username"), password: value("password") },
       adapter: { kind: "custom", endpoint: value("endpoint"), body: value("body"), rawJson: value("rawJson"), method: value("method"), responseFormat: value("responseFormat") },
@@ -403,6 +458,7 @@ async function load() {
   try {
     const data = await callService("GET_DASHBOARD");
     state.stations = data.stations || [];
+    state.collapsedStationIds = new Set(state.stations.map(station => station.id));
     state.settings = data.settings;
     state.modelCatalog = { llm: [], jev: [] };
     renderSettings();
@@ -414,43 +470,218 @@ async function load() {
       const sourceTabId = params.get("sourceTabId");
       const preferredTabId = /^\d+$/.test(sourceTabId || "") ? Number(sourceTabId) : undefined;
       history.replaceState(null, "", location.pathname);
-      addStation(siteOrigin, preferredTabId);
+      openStationDialog(siteOrigin, preferredTabId);
     }
   } catch (error) { toast(error.message); }
 }
 
-function addStation(siteUrl = "", sourceTabId) {
+function stationPreviewBaseUrl(value, fallback) {
+  try { return normalizeUrl(value || fallback); } catch { return fallback; }
+}
+
+function showStationPreview(result, rechargeRatio) {
+  const pending = state.pendingStation;
+  const suggestion = result.suggestion;
+  if (!pending || !suggestion) throw new Error("站点分析未返回可用配置");
+  suggestion.baseUrl = stationPreviewBaseUrl(suggestion.baseUrl, pending.station.baseUrl);
+  pending.suggestion = suggestion;
+  const authLabels = { none: "无", bearer: "Bearer Token", "api-key": "X-API-Key", basic: "Basic" };
+  const formatLabels = { auto: "自动识别", pqh: "P站 / PQH", sora: "Sora" };
+  const endpoint = suggestion.endpoint || "自动探测";
+  const format = `${suggestion.method || "GET"} / ${formatLabels[suggestion.responseFormat] || suggestion.responseFormat || "自动识别"}`;
+  const fields = {
+    name: suggestion.name || pending.station.name,
+    baseUrl: suggestion.baseUrl,
+    mode: suggestion.mode === "page" ? "页面桥接" : suggestion.mode === "direct" ? "直接接口" : "自动识别",
+    endpoint,
+    format,
+    authType: authLabels[suggestion.authType] || authLabels[pending.station.auth.type],
+    body: suggestion.body || "无"
+  };
+  for (const [field, value] of Object.entries(fields)) {
+    $(`[data-preview-field="${field}"]`).textContent = String(value);
+  }
+  const source = suggestion.source === "llm" ? "LLM" : suggestion.source === "fallback" ? "本地规则" : "本地探测";
+  const modelCount = Number(result.discovery?.modelCount);
+  const details = [result.warning, `分析来源：${source}${Number.isFinite(modelCount) ? `，探测到 ${modelCount} 个模型` : ""}`, suggestion.rationale].filter(Boolean);
+  $("#station-preview-status").textContent = details.join("；");
+  const rechargeCurrency = rechargeRatio.currency === "USD" ? "USD" : "CNY";
+  const amountInput = $("#preview-recharge-amount");
+  amountInput.value = rechargeRatio.amount;
+  const currencySelect = $("#preview-recharge-currency");
+  currencySelect.value = rechargeCurrency;
+  currencySelect.dataset.previousCurrency = rechargeCurrency;
+  $("#preview-recharge-credits").value = rechargeRatio.credits;
+  $("#station-url-step").hidden = true;
+  $("#station-preview").hidden = false;
+  $("#add-station-dialog").setAttribute("aria-labelledby", "station-preview-title");
+  updatePreviewRechargeRate();
+  $("#confirm-add-station").focus();
+}
+
+function updatePreviewRechargeRate() {
+  const amount = Number($("#preview-recharge-amount").value);
+  const currency = $("#preview-recharge-currency").value;
+  const rmb = convertRechargeAmount(amount, currency, "CNY", currentExchangeRate()) ?? 0;
+  const credits = Number($("#preview-recharge-credits").value);
+  const rate = rmb > 0 && credits > 0 ? rmb / credits : null;
+  $("#preview-recharge-rate").textContent = rate === null ? "请输入大于 0 的金额和中转币" : `每 1 中转币成本 ¥${rate.toFixed(4)}`;
+  return rate;
+}
+
+function refreshRechargeDisplays() {
+  for (const card of $("#stations-list").querySelectorAll(".station-card")) updateStationRechargeRate(card);
+  updatePreviewRechargeRate();
+}
+
+async function analyzeStation(siteUrl, sourceTabId) {
+  const input = $("#new-station-url");
   const siteOrigin = currentSiteOrigin(siteUrl);
-  const existing = siteOrigin && state.stations.find(station => currentSiteOrigin(station.baseUrl) === siteOrigin);
+  if (!siteOrigin) {
+    input.setCustomValidity("请输入 HTTPS 站点网址；HTTP 仅支持 localhost");
+    input.reportValidity();
+    return;
+  }
+  input.setCustomValidity("");
+  const existing = state.stations.find(station => currentSiteOrigin(station.baseUrl) === siteOrigin);
   if (existing && !window.confirm("该站点已有配置。仍要添加一份独立配置吗？")) {
-    [...$("#stations-list").querySelectorAll(".station-card")].find(card => card.dataset.stationId === existing.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const card = [...$("#stations-list").querySelectorAll(".station-card")].find(item => item.dataset.stationId === existing.id);
+    state.collapsedStationIds.delete(existing.id);
+    const disclosure = card?.querySelector(".station-disclosure");
+    if (disclosure) disclosure.open = true;
+    card?.scrollIntoView({ behavior: "smooth", block: "center" });
     toast("已保留现有站点配置");
     return;
   }
+  const previousRatio = state.pendingStation ? { amount: $("#preview-recharge-amount").value, currency: $("#preview-recharge-currency").value, credits: $("#preview-recharge-credits").value } : { amount: "1", currency: "CNY", credits: "1" };
   const station = cloneDefaultStation();
   station.id = crypto.randomUUID();
-  station.name = siteOrigin ? new URL(siteOrigin).hostname.replace(/^www\./i, "") : `站点 ${state.stations.length + 1}`;
-  if (siteOrigin) {
-    station.baseUrl = siteOrigin;
-    station.mode = "page";
-  }
-  state.stations.push(station);
-  renderStations();
-  const card = document.querySelector(`[data-station-id="${station.id}"]`);
-  card?.scrollIntoView({ behavior: "smooth", block: "center" });
-  if (siteOrigin && card) {
-    if (Number.isInteger(sourceTabId)) card.dataset.sourceTabId = String(sourceTabId);
-    void adaptStation(card, true, sourceTabId);
+  station.name = new URL(siteOrigin).hostname.replace(/^www\./i, "");
+  station.baseUrl = siteOrigin;
+  station.mode = Number.isInteger(sourceTabId) ? "page" : "direct";
+  state.pendingStation = { station, sourceTabId, suggestion: null };
+  const requestId = ++state.previewRequestId;
+  const button = $("#analyze-station");
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.querySelector("span:last-child").textContent = "分析中";
+  try {
+    const result = await callService("ADAPT_STATION", { station, settings: readSettings(), llmApiKey: $("#llm-api-key").value.trim(), ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
+    if (requestId === state.previewRequestId) showStationPreview(result, previousRatio);
+  } catch (error) {
+    if (requestId === state.previewRequestId) {
+      state.pendingStation = null;
+      toast(error.message);
+    }
+  } finally {
+    if (requestId === state.previewRequestId) {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      button.querySelector("span:last-child").textContent = "分析站点";
+    }
   }
 }
 
-$("#add-station").addEventListener("click", () => addStation());
-$("#add-station-top").addEventListener("click", () => addStation());
+function resetStationDialog() {
+  state.previewRequestId += 1;
+  state.pendingStation = null;
+  $("#add-station-form").reset();
+  $("#station-url-step").hidden = false;
+  $("#station-preview").hidden = true;
+  $("#add-station-dialog").setAttribute("aria-labelledby", "add-station-title");
+  const button = $("#analyze-station");
+  button.disabled = false;
+  button.removeAttribute("aria-busy");
+  button.querySelector("span:last-child").textContent = "分析站点";
+}
 
+function openStationDialog(siteUrl = "", sourceTabId) {
+  resetStationDialog();
+  $("#new-station-url").value = siteUrl;
+  $("#add-station-dialog").showModal();
+  if (siteUrl) void analyzeStation(siteUrl, sourceTabId);
+}
+
+function commitStationPreview() {
+  const pending = state.pendingStation;
+  if (!pending?.suggestion) return;
+  const amountInput = $("#preview-recharge-amount");
+  const currencySelect = $("#preview-recharge-currency");
+  const creditsInput = $("#preview-recharge-credits");
+  if (!amountInput.reportValidity() || !creditsInput.reportValidity()) return;
+  const rechargeCurrency = currencySelect.value === "USD" ? "USD" : "CNY";
+  const rechargeRmb = convertRechargeAmount(amountInput.value, rechargeCurrency, "CNY", currentExchangeRate());
+  const rechargeCredits = Number(creditsInput.value);
+  const suggestion = pending.suggestion;
+  const station = {
+    ...pending.station,
+    name: String(suggestion.name || pending.station.name).trim().slice(0, 120),
+    baseUrl: stationPreviewBaseUrl(suggestion.baseUrl, pending.station.baseUrl),
+    mode: suggestion.mode === "page" ? "page" : suggestion.mode === "direct" ? "direct" : pending.station.mode,
+    rechargeRmb,
+    rechargeCurrency,
+    rechargeCredits,
+    rechargeRate: derivedRechargeRate(rechargeRmb, rechargeCredits),
+    adapter: {
+      ...pending.station.adapter,
+      endpoint: suggestion.endpoint || pending.station.adapter.endpoint,
+      body: suggestion.body || pending.station.adapter.body,
+      method: ["GET", "POST"].includes(suggestion.method) ? suggestion.method : pending.station.adapter.method,
+      responseFormat: ["auto", "pqh", "sora"].includes(suggestion.responseFormat) ? suggestion.responseFormat : pending.station.adapter.responseFormat
+    }
+  };
+  state.collapsedStationIds.delete(station.id);
+  state.stations.push(station);
+  renderStations();
+  const card = document.querySelector(`[data-station-id="${station.id}"]`);
+  if (Number.isInteger(pending.sourceTabId) && card) card.dataset.sourceTabId = String(pending.sourceTabId);
+  card?.scrollIntoView({ behavior: "smooth", block: "center" });
+  $("#add-station-dialog").close();
+  toast("站点已添加，请点击“保存站点”使配置生效");
+}
+
+function closeStationDialog() {
+  $("#add-station-dialog").close();
+}
+
+$("#add-station").addEventListener("click", () => openStationDialog());
+$("#add-station-top").addEventListener("click", () => openStationDialog());
+$("#cancel-add-station").addEventListener("click", closeStationDialog);
+$("#cancel-preview-station").addEventListener("click", closeStationDialog);
+$("#back-to-station-url").addEventListener("click", () => {
+  $("#station-preview").hidden = true;
+  $("#station-url-step").hidden = false;
+  $("#add-station-dialog").setAttribute("aria-labelledby", "add-station-title");
+  $("#new-station-url").focus();
+});
+$("#confirm-add-station").addEventListener("click", commitStationPreview);
+$("#preview-recharge-amount").addEventListener("input", updatePreviewRechargeRate);
+$("#preview-recharge-currency").addEventListener("change", () => {
+  changeRechargeCurrency($("#preview-recharge-amount"), $("#preview-recharge-currency"));
+  updatePreviewRechargeRate();
+});
+$("#preview-recharge-credits").addEventListener("input", updatePreviewRechargeRate);
+$("#add-station-dialog").addEventListener("close", resetStationDialog);
+$("#new-station-url").addEventListener("input", event => event.target.setCustomValidity(""));
+$("#add-station-form").addEventListener("submit", event => {
+  event.preventDefault();
+  const input = $("#new-station-url");
+  if (!input.reportValidity()) return;
+  void analyzeStation(input.value);
+});
+
+$("#stations-list").addEventListener("toggle", event => {
+  const details = event.target;
+  if (!details.matches(".station-disclosure")) return;
+  const stationId = details.closest(".station-card")?.dataset.stationId;
+  if (!stationId) return;
+  details.open ? state.collapsedStationIds.delete(stationId) : state.collapsedStationIds.add(stationId);
+}, true);
 $("#stations-list").addEventListener("click", async event => {
   const card = event.target.closest(".station-card");
   if (!card) return;
   if (event.target.closest("[data-remove-station]")) {
+    state.collapsedStationIds.delete(card.dataset.stationId);
     state.stations = readStations().filter(station => station.id !== card.dataset.stationId);
     renderStations();
     return;
@@ -475,15 +706,27 @@ $("#stations-list").addEventListener("click", async event => {
   }
 });
 $("#stations-list").addEventListener("input", event => {
-  if (!event.target.matches('[data-field="rechargeRmb"], [data-field="rechargeCredits"]')) return;
   const card = event.target.closest(".station-card");
-  const rmb = Number(card?.querySelector('[data-field="rechargeRmb"]')?.value);
-  const credits = Number(card?.querySelector('[data-field="rechargeCredits"]')?.value);
-  const rate = card?.querySelector('[data-field="rechargeRate"]');
-  const value = derivedRechargeRate(rmb, credits);
-  if (rate) rate.value = value.toFixed(4);
-  const display = card?.querySelector("[data-recharge-rate-display]");
-  if (display) display.textContent = `每 1 中转币成本 ¥${value.toFixed(4)}`;
+  if (!card) return;
+  const summary = card.querySelector(".station-summary-meta");
+  if (event.target.matches('[data-field="name"]')) {
+    card.querySelector(".station-title h3").textContent = event.target.value || "未命名站点";
+    return;
+  }
+  if (event.target.matches('[data-field="enabled"]')) {
+    summary.children[0].textContent = event.target.checked ? "已启用" : "已停用";
+    card.querySelector(".status-dot").classList.toggle("is-live", event.target.checked);
+    return;
+  }
+  if (!event.target.matches('[data-field="rechargeAmount"], [data-field="rechargeCredits"]')) return;
+  updateStationRechargeRate(card);
+});
+$("#stations-list").addEventListener("change", event => {
+  if (!event.target.matches('[data-field="rechargeCurrency"]')) return;
+  const card = event.target.closest(".station-card");
+  if (!card) return;
+  changeRechargeCurrency(card.querySelector('[data-field="rechargeAmount"]'), event.target);
+  updateStationRechargeRate(card);
 });
 
 $("#fetch-llm-models").addEventListener("click", () => runModelAction("llm", "fetch"));
@@ -513,6 +756,7 @@ $("#usage-preset").addEventListener("change", event => applyUsagePreset(event.ta
 $("#refresh-interval").addEventListener("input", syncPresetControls);
 for (const { id } of USAGE_INPUTS) $(`#${id}`).addEventListener("input", syncPresetControls);
 
+$("#exchange-rate").addEventListener("input", refreshRechargeDisplays);
 $("#refresh-exchange-rate").addEventListener("click", () => refreshExchangeRate());
 async function refreshExchangeRate() {
   const button = $("#refresh-exchange-rate");
@@ -522,6 +766,7 @@ async function refreshExchangeRate() {
     const rate = Number(data.references?.exchangeRate);
     if (!Number.isFinite(rate) || rate <= 0) throw new Error("中国银行汇率数据不可用");
     $("#exchange-rate").value = rate.toFixed(4);
+    refreshRechargeDisplays();
     toast(`官方汇率已更新：${rate.toFixed(4)}`);
   } catch (error) {
     toast(error.message);

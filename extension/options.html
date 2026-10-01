@@ -106,6 +106,46 @@
     </section>
   </main>
 
+  <dialog id="add-station-dialog" class="station-dialog" aria-labelledby="add-station-title">
+    <form id="add-station-form" novalidate>
+      <section id="station-url-step">
+        <div><p class="eyebrow accent">STATION AGENT</p><h2 id="add-station-title">添加中转站</h2></div>
+        <label for="new-station-url">站点网址</label>
+        <input id="new-station-url" type="url" autocomplete="url" placeholder="https://example.com/pricing" required autofocus>
+        <div class="station-dialog-actions">
+          <button class="button button-quiet" id="cancel-add-station" type="button">取消</button>
+          <button class="button button-primary" id="analyze-station" type="submit"><span data-icon="bot" class="icon"></span><span>分析站点</span></button>
+        </div>
+      </section>
+      <section id="station-preview" hidden aria-labelledby="station-preview-title">
+        <div><p class="eyebrow accent">AI PREVIEW</p><h2 id="station-preview-title">确认站点配置</h2></div>
+        <p class="station-preview-status" id="station-preview-status" role="status" aria-live="polite"></p>
+        <dl class="station-preview-list">
+          <div><dt>站点名称</dt><dd data-preview-field="name"></dd></div>
+          <div><dt>站点地址</dt><dd data-preview-field="baseUrl"></dd></div>
+          <div><dt>采集模式</dt><dd data-preview-field="mode"></dd></div>
+          <div><dt>接口路径</dt><dd data-preview-field="endpoint"></dd></div>
+          <div><dt>请求方式 / 响应格式</dt><dd data-preview-field="format"></dd></div>
+          <div><dt>认证方式</dt><dd data-preview-field="authType"></dd></div>
+          <div><dt>请求体</dt><dd data-preview-field="body"></dd></div>
+        </dl>
+        <fieldset class="station-rate-preview">
+          <legend>确认充值比例</legend>
+          <div class="station-ratio-fields">
+            <div class="station-money-field"><label for="preview-recharge-amount">充值金额</label><div class="station-money-input"><input id="preview-recharge-amount" type="number" min="0.000001" step="any" value="1" required><select id="preview-recharge-currency" data-previous-currency="CNY" aria-label="充值金额币种"><option value="CNY" selected>人民币 CNY</option><option value="USD">美元 USD</option></select></div></div>
+            <span aria-hidden="true">兑换</span>
+            <label for="preview-recharge-credits"><span>到账中转币</span><input id="preview-recharge-credits" type="number" min="0.000001" step="any" value="1" required></label>
+          </div>
+          <output id="preview-recharge-rate">每 1 中转币成本 ¥1.0000</output>
+        </fieldset>
+        <div class="station-dialog-actions">
+          <button class="button button-quiet" id="cancel-preview-station" type="button">取消</button>
+          <button class="button button-quiet" id="back-to-station-url" type="button">返回修改</button>
+          <button class="button button-primary" id="confirm-add-station" type="button"><span data-icon="check" class="icon"></span><span>确认并添加</span></button>
+        </div>
+      </section>
+    </form>
+  </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script type="module" src="src/options.js"></script>
 </body>

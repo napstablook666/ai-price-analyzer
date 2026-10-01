@@ -1,8 +1,12 @@
+(() => {
+  if (window.__AI_PRICING_PAGE_BRIDGE__) return;
+  window.__AI_PRICING_PAGE_BRIDGE__ = true;
+const legacyBridge = window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ === true;
 const REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
 const CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
 const RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
-const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source"]);
+const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request"]);
 let capturedPricing = null;
 const MAX_CAPTURE_BYTES = 512 * 1024;
 const CAPTURE_TTL_MS = 30_000;
@@ -13,14 +17,23 @@ const PRICING_KEYS = new Set([
   "per_image_price", "image_output_price", "imageOutputPrice", "image_token_price", "billing_expr", "price"
 ].map(key => key.toLowerCase()));
 const PRICING_CONTAINERS = new Set([
-  "data", "models", "pricing", "groups", "providers", "model_info", "group_prices", "model_group",
-  "modelprice", "modelratio", "price_info", "billing", "default"
+  "data", "models", "pricing", "groups", "providers", "channels", "platforms", "supported_models", "group_pricing", "sections",
+  "model_info", "group_prices", "model_group", "modelprice", "modelratio", "price_info", "billing", "default"
 ].map(key => key.toLowerCase()));
+
+function isFastAiChannelsUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.href);
+    return url.hostname.toLowerCase().replace(/^www\./, "") === "fastaitoken.com" && url.pathname === "/api/v1/channels/available";
+  } catch {
+    return false;
+  }
+}
 
 function isPricingUrl(value) {
   try {
     const path = new URL(String(value || ""), window.location.href).pathname;
-    return /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
+    return isFastAiChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
   } catch {
     return false;
   }
@@ -31,7 +44,7 @@ function payloadFitsCaptureLimit(payload) {
 }
 
 function hasPricingShape(value, depth = 0) {
-  if (!value || depth > 4) return false;
+  if (!value || depth > 8) return false;
   if (Array.isArray(value)) return value.some(item => hasPricingShape(item, depth + 1));
   if (typeof value !== "object") return false;
   for (const [key, current] of Object.entries(value)) {
@@ -81,18 +94,26 @@ function directText(node) {
 
 function findExactTextElement(root, labels) {
   const wanted = labels.map(value => String(value || "").trim().toLowerCase().replace(/[：:]\s*$/, ""));
-  return Array.from(root.querySelectorAll("*")).find(element => element.children.length === 0 && wanted.includes(String(element.textContent || "").trim().toLowerCase().replace(/[：:]\s*$/, "")));
+  return Array.from(root.querySelectorAll("*")).find(element => {
+    if (element.children.length !== 0) return false;
+    const text = String(element.textContent || "").trim().toLowerCase().replace(/[：:]\s*$/, "");
+    return wanted.some(label => label.endsWith("*") ? text.startsWith(label.slice(0, -1)) : text === label);
+  });
 }
 
-function readTokenPrice(card, labels) {
+function readTokenPrice(card, labels, unitPattern = /(?:credits?|usd|cny|rmb|[$€¥￥])?\s*\/\s*(?:m|1m|million|百万|tokens?)/i) {
   const label = findExactTextElement(card, labels);
   const block = label?.parentElement;
   if (!block) return null;
-  const unit = Array.from(block.querySelectorAll("*")).find(element => element.children.length === 0 && /(?:credits?|usd|cny|rmb|[$€¥￥])?\s*\/\s*(?:m|1m|million|百万|tokens?)/i.test(element.textContent.trim()));
-  if (!unit?.parentElement) return null;
-  const priceNode = unit.parentElement;
-  const direct = Array.from(priceNode.childNodes).filter(node => node.nodeType === 3).map(node => node.textContent).join(" ");
-  const value = firstNumber(direct) ?? firstNumber(priceNode.textContent);
+  const sibling = label.nextElementSibling;
+  const unit = sibling && unitPattern.test(sibling.textContent)
+    ? sibling
+    : Array.from(block.querySelectorAll("*")).find(element => element.children.length === 0 && unitPattern.test(element.textContent.trim()));
+  if (!unit) return null;
+  const priceNode = unit === sibling ? unit : unit.parentElement;
+  if (!priceNode) return null;
+  const valueNode = priceNode.querySelector("b, strong, .font-semibold, .value");
+  const value = firstNumber(valueNode?.textContent || priceNode.textContent);
   const approximateNode = priceNode.parentElement && Array.from(priceNode.parentElement.querySelectorAll("*")).find(element => /≈\s*[¥￥]/.test(element.textContent) && Array.from(element.childNodes).some(node => node.nodeType === 3 && /[¥￥]\s*\d/.test(node.textContent)));
   const approximateText = approximateNode ? Array.from(approximateNode.childNodes).filter(node => node.nodeType === 3).map(node => node.textContent).join(" ") : "";
   const approximateValue = firstNumber(approximateText);
@@ -128,16 +149,20 @@ function getCardModelInfo(card) {
   return { modelName: id || codeName || amlName || displayName, displayName: displayName || id, provider };
 }
 
-function addDomPricingItem(data, info, inputPrice, outputPrice, requestPrice, cachePrice, groupName) {
+function addDomPricingItem(data, info, inputPrice, outputPrice, requestPrice, cachePrice, groupName, cacheWritePrice = null, imageOutputPrice = null, imagePrice = null) {
   const hasTokenPrice = inputPrice?.value !== null && inputPrice?.value >= 0 && outputPrice?.value !== null && outputPrice?.value >= 0;
   const hasRequestPrice = requestPrice?.value !== null && requestPrice?.value >= 0;
-  if (!info.modelName || (!hasTokenPrice && !hasRequestPrice)) return;
-  const tokenInput = hasTokenPrice ? inputPrice : { value: 0, approximateRmb: null, currency: requestPrice.currency };
+  const hasImageOutputPrice = imageOutputPrice?.value !== null && imageOutputPrice?.value >= 0;
+  const hasImagePrice = imagePrice?.value !== null && imagePrice?.value >= 0;
+  if (!info.modelName || (!hasTokenPrice && !hasRequestPrice && !hasImageOutputPrice && !hasImagePrice)) return;
+  const fallbackPrice = requestPrice || imagePrice || imageOutputPrice;
+  const tokenInput = hasTokenPrice ? inputPrice : { value: 0, approximateRmb: null, currency: fallbackPrice?.currency || "USD" };
   const tokenOutput = hasTokenPrice ? outputPrice : { value: 0, approximateRmb: null, currency: tokenInput.currency };
-  const useRmb = hasTokenPrice && tokenInput.approximateRmb !== null && tokenOutput.approximateRmb !== null;
+  const useRmb = hasTokenPrice && tokenInput.currency !== "CREDITS" && tokenInput.approximateRmb !== null && tokenOutput.approximateRmb !== null;
   const inputValue = useRmb ? tokenInput.approximateRmb : tokenInput.value;
   const outputValue = useRmb ? tokenOutput.approximateRmb : tokenOutput.value;
   const cacheValue = cachePrice && Number.isFinite(cachePrice.value) ? (useRmb ? cachePrice.approximateRmb : cachePrice.value) : null;
+  const cacheWriteValue = cacheWritePrice && Number.isFinite(cacheWritePrice.value) ? (useRmb ? cacheWritePrice.approximateRmb : cacheWritePrice.value) : null;
   data.push({
     model_name: info.modelName,
     model_display_name: info.displayName,
@@ -146,7 +171,10 @@ function addDomPricingItem(data, info, inputPrice, outputPrice, requestPrice, ca
     model_ratio: inputValue / 2,
     completion_ratio: inputValue > 0 ? outputValue / inputValue : 1,
     request_price: hasRequestPrice ? requestPrice.value : null,
+    image_output_price: hasImageOutputPrice ? imageOutputPrice.value : null,
+    image_price: hasImagePrice ? imagePrice.value : null,
     cache_read_price: Number.isFinite(cacheValue) ? cacheValue : null,
+    cache_write_price: Number.isFinite(cacheWriteValue) ? cacheWriteValue : null,
     price_currency: useRmb ? "CNY" : tokenInput.currency,
     enable_groups: [groupName],
     proxy_group_name: groupName,
@@ -170,13 +198,44 @@ function parseSinanPricingTable() {
   return data.length ? { sourceFormat: "sinan-dom", data, group_ratio: Object.fromEntries(data.map(item => [item.proxy_group_name, 1])) } : null;
 }
 
+function parseSoleApiPricingCards() {
+  if (window.location.hostname.toLowerCase().replace(/^www\./, "") !== "soleapi.com") return null;
+  const groupName = "soleapi.com";
+  const data = [];
+  const seen = new Set();
+  for (const link of document.querySelectorAll('a[href*="/models/"]')) {
+    const href = link.href;
+    if (seen.has(href)) continue;
+    let card = link.parentElement;
+    while (card && card !== document.body) {
+      if (card.querySelectorAll('a[href*="/models/"]').length === 1) {
+        const input = readTokenPrice(card, ["输入", "输入价格", "input"]);
+        const output = readTokenPrice(card, ["输出", "输出价格", "output"]);
+        const request = readRequestPrice(card);
+        const imageOutput = readTokenPrice(card, ["图像输出（通用）", "图像输出", "image output"]);
+        const imagePrice = readTokenPrice(card, ["图像输出（通用）", "图像输出", "image output"], /(?:credits?|usd|cny|rmb|[$€¥￥])?\s*\/\s*(?:images?|张|图片|次)/i);
+        if (input || output || request || imageOutput || imagePrice) {
+          const before = data.length;
+          addDomPricingItem(data, getCardModelInfo(card), input, output, request, readTokenPrice(card, ["缓存", "缓存读取", "cache", "cache read"]), groupName, readTokenPrice(card, ["缓存写入*", "cache write*"]), imageOutput, imagePrice);
+          if (data.length > before) {
+            seen.add(href);
+            break;
+          }
+        }
+      }
+      card = card.parentElement;
+    }
+  }
+  return data.length ? { sourceFormat: "dom", data, group_ratio: { [groupName]: 1 } } : null;
+}
+
 function parseModelPricingCards() {
   const groupName = window.location.hostname.replace(/^www\./i, "") || "页面价格";
   const data = [];
   document.querySelectorAll("article, div.group.relative, .aml-card-item, .aml-row").forEach(card => {
     if (card.querySelector("article, div.group.relative, .aml-card-item, .aml-row")) return;
     const info = getCardModelInfo(card);
-    addDomPricingItem(data, info, readTokenPrice(card, ["输入", "输入价格", "input"]), readTokenPrice(card, ["输出", "输出价格", "output"]), readRequestPrice(card), readTokenPrice(card, ["缓存", "缓存读取", "cache", "cache read"]), groupName);
+    addDomPricingItem(data, info, readTokenPrice(card, ["输入", "输入价格", "input"]), readTokenPrice(card, ["输出", "输出价格", "output"]), readRequestPrice(card), readTokenPrice(card, ["缓存", "缓存读取", "cache", "cache read"]), groupName, readTokenPrice(card, ["缓存写入*", "cache write*"]));
   });
   document.querySelectorAll(".aml-table tbody tr").forEach(row => {
     const info = getCardModelInfo(row);
@@ -188,7 +247,7 @@ function parseModelPricingCards() {
 }
 
 function scanPricing() {
-  return parseSinanPricingTable() || takeCapturedPricing() || parseModelPricingCards();
+  return parseSinanPricingTable() || takeCapturedPricing() || parseSoleApiPricingCards() || parseModelPricingCards();
 }
 
 async function capturePricing() {
@@ -203,6 +262,12 @@ function validateRequest(request) {
   if (!ALLOWED_METHODS.has(method)) throw new Error("页面请求方式不受支持");
   const headers = {};
   for (const [name, value] of Object.entries(request.headers || {})) if (ALLOWED_HEADERS.has(name.toLowerCase()) && typeof value === "string") headers[name] = value;
+  if (isFastAiChannelsUrl(url)) {
+    const token = window.localStorage.getItem("auth_token");
+    if (!token) throw new Error("未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试");
+    headers.Authorization = `Bearer ${token}`;
+    headers["X-User-UI-Request"] = "1";
+  }
   return { url: url.toString(), method, headers, body: method === "POST" && typeof request.body === "string" ? request.body : undefined };
 }
 
@@ -241,8 +306,10 @@ function rememberFetches() {
   };
 }
 
-rememberNavigation();
-rememberFetches();
+if (!legacyBridge) {
+  rememberNavigation();
+  rememberFetches();
+}
 window.addEventListener("message", async event => {
   if (event.source !== window || event.origin !== window.location.origin) return;
   const { type, id, request } = event.data || {};
@@ -252,7 +319,7 @@ window.addEventListener("message", async event => {
     window.postMessage({ type: RESPONSE_TYPE, id, ok: Boolean(payload), response: { ok: Boolean(payload), status: payload ? 200 : 404, body: payload || { data: [], group_ratio: {} } } }, window.location.origin);
     return;
   }
-  if (type !== REQUEST_TYPE) return;
+  if (legacyBridge || type !== REQUEST_TYPE) return;
   try {
     const safeRequest = validateRequest(request);
     const { url, ...init } = safeRequest;
@@ -266,3 +333,4 @@ window.addEventListener("message", async event => {
     window.postMessage({ type: RESPONSE_TYPE, id, ok: false, error: error.message }, window.location.origin);
   }
 });
+})();

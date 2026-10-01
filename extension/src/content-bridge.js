@@ -1,3 +1,6 @@
+(() => {
+  if (globalThis.__AI_PRICING_CONTENT_BRIDGE__) return;
+  globalThis.__AI_PRICING_CONTENT_BRIDGE__ = true;
 const RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
 const REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
 const CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
@@ -32,3 +35,4 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   window.postMessage({ type: isCapture ? CAPTURE_REQUEST_TYPE : REQUEST_TYPE, id, request: message.request }, window.location.origin);
   return true;
 });
+})();

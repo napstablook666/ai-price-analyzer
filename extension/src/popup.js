@@ -4,6 +4,8 @@ import { callService, hydrateIcons } from "./shared/ui.js";
 const activePage = document.querySelector("#current-page");
 const addCurrentSiteButton = document.querySelector("#add-current-site");
 const refreshButton = document.querySelector("#refresh-all");
+const checkinButton = document.querySelector("#checkin-now");
+const checkinNote = document.querySelector("#checkin-note");
 const status = document.querySelector("#popup-status");
 let activeTab;
 let siteOrigin = "";
@@ -70,5 +72,34 @@ refreshButton.addEventListener("click", async () => {
   }
 });
 
+async function loadCheckin() {
+  if (!siteOrigin || !checkinButton) return;
+  try {
+    const data = await callService("CHECKIN_STATUS", { stationOrigin: siteOrigin });
+    if (!data.results?.length) return;
+    const result = data.results[0];
+    checkinButton.hidden = false;
+    checkinNote.textContent = result.error || result.message || "复用登录态直接签到";
+  } catch {
+    // 查询失败时保持隐藏
+  }
+}
+checkinButton?.addEventListener("click", async () => {
+  checkinButton.disabled = true;
+  checkinNote.textContent = "正在签到…";
+  try {
+    const data = await callService("CHECKIN_NOW", { stationOrigin: siteOrigin });
+    const result = (data.results || [])[0];
+    if (result?.error) throw new Error(result.error);
+    checkinNote.textContent = result?.message || "签到成功";
+    setStatus(result?.message || "签到成功", "success");
+  } catch (error) {
+    checkinNote.textContent = error.message || "签到失败";
+    setStatus(error.message || "签到失败", "error");
+  } finally {
+    checkinButton.disabled = false;
+  }
+});
 hydrateIcons();
 loadActivePage();
+loadCheckin();

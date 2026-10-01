@@ -3,6 +3,15 @@ export const BOC_EXCHANGE_URL = "https://www.boc.cn/sourcedb/whpj/";
 export const DEFAULT_EXCHANGE_RATE = 7.3;
 export const SYSTEM_BASE_PRICE_PER_1M = 2.0;
 
+export function convertRechargeAmount(amount, fromCurrency, toCurrency, exchangeRate = DEFAULT_EXCHANGE_RATE) {
+  const value = Number(amount);
+  if (!Number.isFinite(value) || value < 0) return null;
+  const configuredRate = Number(exchangeRate);
+  const rate = Number.isFinite(configuredRate) && configuredRate > 0 ? configuredRate : DEFAULT_EXCHANGE_RATE;
+  const rmb = value * (fromCurrency === "USD" ? rate : 1);
+  return toCurrency === "USD" ? rmb / rate : rmb;
+}
+
 export const TOKENS_PER_MILLION = 1_000_000;
 
 export const DEFAULT_DAILY_USAGE = {
@@ -24,6 +33,10 @@ export const USAGE_PRESETS = [
     usage: { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0 }
   }
 ];
+
+export function usagePresetId(usage) {
+  return USAGE_PRESETS.find(preset => Object.entries(preset.usage).every(([field, value]) => Number(value) === Number(usage[field])))?.id || "custom";
+}
 
 export const REFRESH_PRESETS = [
   { id: "5", label: "高频（5 分钟）", minutes: 5 },
@@ -86,6 +99,7 @@ export const DEFAULT_SETTINGS = {
   recommendationProfile: "price",
   usage: { ...DEFAULT_DAILY_USAGE },
   matchingRules: DEFAULT_MATCHING_RULES,
+  modelMatchOverrides: [],
   showUnmatched: true,
   showStale: true,
   llm: DEFAULT_LLM_CONFIG,
@@ -101,11 +115,13 @@ export const DEFAULT_STATION = {
   enabled: true,
   mode: "direct",
   rechargeRmb: 1,
+  rechargeCurrency: "CNY",
   rechargeCredits: 1,
   rechargeRate: 1,
   basePricePerMillion: SYSTEM_BASE_PRICE_PER_1M,
   auth: { type: "none", token: "", username: "", password: "" },
   adapter: { kind: "custom", endpoint: "", method: "GET", responseFormat: "auto", rawJson: "" },
+  checkin: { token: "", autoEnabled: false },
   tags: []
 };
 
@@ -151,6 +167,19 @@ function normalizeProviderProfiles(kind, input) {
     };
   }).filter(profile => profile.id);
 }
+function normalizeModelMatchOverrides(input) {
+  const overrides = new Map();
+  for (const raw of Array.isArray(input) ? input : []) {
+    const stationId = String(raw?.stationId || "").trim();
+    const modelName = String(raw?.modelName || "").trim();
+    const officialModelId = String(raw?.officialModelId || "").trim();
+    const normalizedModelName = modelName.toLowerCase().replace(/^(?:\[[^\]]*\]\s*)+/, "").replace(/-expires-on-\d{4}(?:-\d{2}-\d{2})?$/, "");
+    if (stationId && normalizedModelName && officialModelId) overrides.set(JSON.stringify([stationId, normalizedModelName]), { stationId, modelName, officialModelId });
+  }
+  return [...overrides.values()];
+}
+
+
 export function normalizeSettings(input = {}) {
   const base = cloneDefaultSettings();
   const settings = {
@@ -158,6 +187,7 @@ export function normalizeSettings(input = {}) {
     ...input,
     usage: { ...base.usage, ...(input.usage || {}) },
     matchingRules: Array.isArray(input.matchingRules) ? input.matchingRules.map((rule) => ({ ...rule })) : base.matchingRules.map((rule) => ({ ...rule })),
+    modelMatchOverrides: normalizeModelMatchOverrides(input.modelMatchOverrides),
     recommendationProfile: ["balanced", "price", "reliability"].includes(input.recommendationProfile) ? input.recommendationProfile : "price",
     llm: normalizeModelConfig("llm", input.llm),
     jev: normalizeModelConfig("jev", input.jev)
@@ -202,6 +232,7 @@ export function normalizeStation(input = {}) {
   station.mode = station.mode === "page" ? "page" : "direct";
   station.adapter = { ...DEFAULT_STATION.adapter, ...(input.adapter || {}) };
   station.auth = { ...DEFAULT_STATION.auth, ...(input.auth || {}) };
+  station.checkin = { token: String(input.checkin?.token || "").trim(), autoEnabled: Boolean(input.checkin?.autoEnabled) };
   const hasRatioInputs = Object.prototype.hasOwnProperty.call(input, "rechargeRmb") || Object.prototype.hasOwnProperty.call(input, "rechargeCredits");
   const rechargeRmb = Number(input.rechargeRmb);
   const rechargeCredits = Number(input.rechargeCredits);
@@ -212,6 +243,7 @@ export function normalizeStation(input = {}) {
   station.rechargeRmb = Number.isFinite(rechargeRmb) && rechargeRmb >= 0 ? rechargeRmb : rechargeRate;
   station.rechargeCredits = Number.isFinite(rechargeCredits) && rechargeCredits > 0 ? rechargeCredits : 1;
   station.rechargeRate = rechargeRate;
+  station.rechargeCurrency = input.rechargeCurrency === "USD" ? "USD" : "CNY";
   const basePricePerMillion = Number(station.basePricePerMillion);
   station.basePricePerMillion = Number.isFinite(basePricePerMillion) && basePricePerMillion >= 0 ? basePricePerMillion : SYSTEM_BASE_PRICE_PER_1M;
   return station;

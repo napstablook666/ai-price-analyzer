@@ -1,5 +1,5 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
-export const NORMALIZATION_VERSION = 4;
+export const NORMALIZATION_VERSION = 9;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -69,41 +69,60 @@ export class PqhPricingStrategy extends ParsingStrategy {
   parse(raw, options = {}) {
     const configuredBase = Number(options.basePricePerMillion);
     const base = Number.isFinite(configuredBase) && configuredBase >= 0 ? configuredBase : SYSTEM_BASE_PRICE_PER_1M;
+    const hasModelCatalog = Array.isArray(raw.available_models) && Array.isArray(raw.priced_model_details);
+    let items = raw.data;
+    if (hasModelCatalog) {
+      const normalizeName = value => String(value || "").trim().toLowerCase();
+      const available = new Set(raw.available_models.map(normalizeName));
+      const merged = new Map();
+      for (const item of raw.data) {
+        const name = normalizeName(item?.model_name);
+        if (name) merged.set(name, item);
+      }
+      for (const item of raw.priced_model_details) {
+        const name = normalizeName(item?.model_name);
+        if (!name) continue;
+        const current = merged.get(name);
+        merged.set(name, current ? { ...current, ...item, enable_groups: current.enable_groups } : item);
+      }
+      items = [...merged.values()].filter(item => available.has(normalizeName(item.model_name)));
+    }
     const groupRatios = Object.fromEntries(Object.entries(raw.group_ratio).map(([key, value]) => [key, number(value)]));
-    const catalogRatios = raw.catalog_group_ratio && typeof raw.catalog_group_ratio === "object"
+    const catalogRatios = !hasModelCatalog && raw.catalog_group_ratio && typeof raw.catalog_group_ratio === "object"
       ? Object.fromEntries(Object.entries(raw.catalog_group_ratio).map(([key, value]) => [key, number(value)]))
       : null;
     const catalogPricing = Boolean(catalogRatios && Object.keys(catalogRatios).length);
     const displayGroups = catalogPricing ? Object.keys(catalogRatios) : null;
-    const usableGroups = raw.usable_group && typeof raw.usable_group === "object" ? Object.keys(raw.usable_group) : [];
+    const usableGroups = !hasModelCatalog && raw.usable_group && typeof raw.usable_group === "object" ? Object.keys(raw.usable_group) : [];
     const activeGroups = usableGroups.filter(group => own(groupRatios, group));
     const list = [];
 
-    for (const item of raw.data) {
+    for (const item of items) {
       if (!item || typeof item.model_name !== "string") continue;
       const itemGroups = Array.isArray(item.enable_groups) ? item.enable_groups : [item.enable_groups].filter(Boolean);
-      if (!itemGroups.length) continue;
-      const tiers = parseBillingTiers(item.billing_expr);
+      if (!hasModelCatalog && !itemGroups.length) continue;
+      const requestBilled = hasModelCatalog && Number(item.quota_type) === 1;
+      const tiers = requestBilled ? [] : parseBillingTiers(item.billing_expr);
       const variants = tiers.length ? tiers : [{
         name: "标准",
-        input: Number(item.model_ratio) * base,
-        output: Number(item.model_ratio) * base * Number(item.completion_ratio || 1),
+        input: requestBilled ? NaN : Number(item.model_ratio) * base,
+        output: requestBilled ? NaN : Number(item.model_ratio) * base * Number(item.completion_ratio || 1),
         ratio: item.model_ratio,
         completion: item.completion_ratio,
         request: Number(item.quota_type) === 1 && Number.isFinite(Number(item.model_price)) ? Number(item.model_price) : null,
         billing: {
-          cacheRead: finitePrice(item.cache_ratio) === null ? null : Number(item.model_ratio) * base * Number(item.cache_ratio),
-          cacheWrite: finitePrice(item.create_cache_ratio) === null ? null : Number(item.model_ratio) * base * Number(item.create_cache_ratio)
+          cacheRead: requestBilled || finitePrice(item.cache_ratio) === null ? null : Number(item.model_ratio) * base * Number(item.cache_ratio),
+          cacheWrite: requestBilled || finitePrice(item.create_cache_ratio) === null ? null : Number(item.model_ratio) * base * Number(item.create_cache_ratio)
         }
       }];
-      const targetGroups = catalogPricing
+      const targetGroups = hasModelCatalog ? [null] : catalogPricing
         ? displayGroups
         : (activeGroups.length ? itemGroups.filter(group => activeGroups.includes(group)) : itemGroups);
       const discounts = item.active_discount_rates || {};
       const displayDiscounts = item.active_discount_display || {};
 
       for (const group of targetGroups) {
-        const groupRatio = number((catalogPricing ? catalogRatios : groupRatios)[group]);
+        const groupRatio = hasModelCatalog ? 1 : number((catalogPricing ? catalogRatios : groupRatios)[group]);
         const discountValue = catalogPricing && own(discounts, group) && displayDiscounts[group] !== false ? Number(discounts[group]) : null;
         const discountFactor = Number.isFinite(discountValue) ? discountValue / 100 : 1;
         for (const tier of variants) {
@@ -122,8 +141,8 @@ export class PqhPricingStrategy extends ParsingStrategy {
             cache_write_1h_price: finitePrice(billing.cacheWrite1h) === null ? null : billing.cacheWrite1h * groupRatio * discountFactor,
             request_price: finitePrice(tier.request) === null ? null : tier.request * groupRatio * discountFactor,
             price_currency: "USD",
-            enable_groups: [group],
-            proxy_group_name: group,
+            enable_groups: hasModelCatalog ? itemGroups : [group],
+            proxy_group_name: hasModelCatalog ? "" : group,
             tier_name: tier.name,
             group_ratio: groupRatio * discountFactor,
             evidence: "exact"
@@ -131,7 +150,7 @@ export class PqhPricingStrategy extends ParsingStrategy {
         }
       }
     }
-    return { data: list, group_ratio: catalogPricing ? Object.fromEntries(displayGroups.map(group => [group, 1])) : groupRatios, sourceFormat: "pqh" };
+    return { data: list, group_ratio: hasModelCatalog ? {} : catalogPricing ? Object.fromEntries(displayGroups.map(group => [group, 1])) : groupRatios, sourceFormat: Array.isArray(raw.auto_groups) ? "new-api-pricing" : "pqh" };
   }
 }
 
@@ -149,6 +168,166 @@ function jijiPrice(model, group, fields, multiplier) {
   const parsed = finitePrice(value);
   return parsed === null ? null : directField ? parsed : parsed * multiplier;
 }
+
+function fastAiChannels(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.data?.data)) return raw.data.data;
+  return [];
+}
+
+function fastAiEffectivePrice(interval, pricing, field) {
+  const value = interval[field];
+  if (value !== null && value !== undefined) return finitePrice(value);
+  const base = finitePrice(pricing[field]);
+  return base === null ? null : base * number(interval[`${field.replace(/_price$/, "")}_multiplier`]);
+}
+
+function fastAiTierName(interval) {
+  if (!interval || interval.tier_label) return interval?.tier_label || "标准";
+  const label = value => value >= 1_000_000 ? `${Math.round(value / 10_000) / 100}M` : value >= 1_000 ? `${Math.round(value / 10) / 100}K` : String(value);
+  const min = number(interval.min_tokens, 0);
+  return interval.max_tokens == null ? `>${label(min)}` : min === 0 ? `<=${label(number(interval.max_tokens))}` : `${label(min)}-${label(number(interval.max_tokens))}`;
+}
+
+function fastAiCacheWrite1h(interval, pricing) {
+  const value = interval.cache_write_1h_price ?? interval.cache_write_price;
+  if (value !== null && value !== undefined) return finitePrice(value);
+  const base = finitePrice(pricing.cache_write_1h_price ?? pricing.cache_write_price);
+  return base === null ? null : base * number(interval.cache_write_multiplier);
+}
+
+export class FastAiChannelsStrategy extends ParsingStrategy {
+  canParse(raw) { return fastAiChannels(raw).some(channel => Array.isArray(channel?.platforms)); }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    for (const channel of fastAiChannels(raw)) {
+      for (const section of channel.platforms || []) {
+        const groups = Array.isArray(section.groups) && section.groups.length ? section.groups : [{ name: section.platform || channel.name, rate_multiplier: 1 }];
+        for (const model of section.supported_models || []) {
+          const modelName = String(model?.model_id || model?.name || "").trim();
+          if (!modelName) continue;
+          for (const group of groups) {
+            const pricing = model.group_pricing?.[String(group.id)] || model.pricing;
+            if (!pricing) continue;
+            const intervals = Array.isArray(pricing.intervals) ? [...pricing.intervals].sort((a, b) => number(a.min_tokens, 0) - number(b.min_tokens, 0)) : [];
+            const defaultInterval = intervals.find(interval => number(interval.min_tokens, 0) < 1 && (interval.max_tokens == null || number(interval.max_tokens) >= 1));
+            const tiers = group.long_context_pricing_enabled === false
+              ? [defaultInterval || pricing]
+              : intervals.length ? intervals : [pricing];
+            const rate = number(group.rate_multiplier);
+            const imageRate = group.image_rate_independent ? Math.max(0, number(group.image_rate_multiplier)) : rate;
+            const scale = (value, multiplier = rate) => value === null ? null : value * multiplier;
+            const groupName = String(group.name || section.platform || channel.name || "Default").trim();
+            groupRatio[groupName] = 1;
+            for (const tier of tiers) {
+              const input = scale(perMillion(fastAiEffectivePrice(tier, pricing, "input_price")));
+              const output = scale(perMillion(fastAiEffectivePrice(tier, pricing, "output_price")));
+              const cacheRead = scale(perMillion(fastAiEffectivePrice(tier, pricing, "cache_read_price")));
+              const cacheWrite = scale(perMillion(fastAiEffectivePrice(tier, pricing, "cache_write_price")));
+              const cacheWrite1h = scale(perMillion(fastAiCacheWrite1h(tier, pricing)));
+              const request = scale(finitePrice(tier.per_request_price ?? pricing.per_request_price), model.pricing?.billing_mode === "image" ? imageRate : rate);
+              const imageOutput = scale(perMillion(fastAiEffectivePrice(tier, pricing, "image_output_price")));
+              const imagePrice = scale(finitePrice(tier.per_image_price ?? tier.image_price ?? pricing.per_image_price ?? pricing.image_price), imageRate);
+              if ([input, output, cacheRead, cacheWrite, cacheWrite1h, request, imageOutput, imagePrice].every(value => value === null)) continue;
+              data.push({
+                model_name: modelName,
+                model_display_name: String(model.name || model.display_name || modelName),
+                model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+                completion_ratio: input > 0 && output !== null ? output / input : 1,
+                input_price: input,
+                output_price: output,
+                cache_read_price: cacheRead,
+                cache_write_price: cacheWrite,
+                cache_write_1h_price: cacheWrite1h,
+                request_price: request,
+                image_output_price: imageOutput,
+                image_price: imagePrice,
+                price_currency: tier.price_currency || tier.currency || pricing.price_currency || pricing.currency || model.price_currency || model.currency || "USD",
+                enable_groups: [groupName],
+                proxy_group_name: groupName,
+                group_ratio: 1,
+                tier_name: intervals.length && group.long_context_pricing_enabled !== false ? fastAiTierName(tier) : "标准",
+                evidence: "exact"
+              });
+            }
+          }
+        }
+      }
+    }
+    if (!data.length) throw new Error("FastAIToken 可用渠道价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "fastaitoken" };
+  }
+}
+function soleApiCharge(charges, keys, multiplier, usage) {
+  for (const key of keys) {
+    const charge = charges?.[key];
+    const price = finitePrice(charge?.price);
+    if (price === null) continue;
+    const unit = String(charge.unit || "").toLowerCase();
+    const scale = usage === "tokens" && unit === "per_m_tokens" ? 1
+      : usage === "request" && unit === "per_request" ? 1
+        : usage === "request" && unit === "per_k_calls" ? 0.001
+          : usage === "image" && unit === "per_image" ? 1
+            : null;
+    if (scale !== null) return price * scale * multiplier;
+  }
+  return null;
+}
+
+export class SoleApiPublicModelsStrategy extends ParsingStrategy {
+  canParse(raw) { return Array.isArray(raw?.data?.list); }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    for (const model of raw.data.list) {
+      const modelName = String(model?.canonicalName || "").trim();
+      if (!modelName) continue;
+      const channels = Array.isArray(model.channels) ? model.channels : [];
+      for (const channel of channels) {
+        const groupName = String(channel?.name || "").trim();
+        const multiplier = finitePrice(channel?.multiplier);
+        if (!groupName || multiplier === null) continue;
+        const charges = model.charges || {};
+        const input = soleApiCharge(charges, ["prompt"], multiplier, "tokens");
+        const output = soleApiCharge(charges, ["completion"], multiplier, "tokens");
+        const cacheRead = soleApiCharge(charges, ["cache_read"], multiplier, "tokens");
+        const cacheWrite = soleApiCharge(charges, ["cache_write_5m"], multiplier, "tokens") ?? soleApiCharge(charges, ["cache_write"], multiplier, "tokens");
+        const cacheWrite1h = soleApiCharge(charges, ["cache_write_1h"], multiplier, "tokens");
+        const request = soleApiCharge(charges, ["request"], multiplier, "request");
+        const imageOutput = soleApiCharge(charges, ["image_output"], multiplier, "tokens");
+        const imagePrice = soleApiCharge(charges, ["image_output", "image_output_1024px", "image_output_512px"], multiplier, "image");
+        if ([input, output, cacheRead, cacheWrite, cacheWrite1h, request, imageOutput, imagePrice].every(value => value === null)) continue;
+        groupRatio[groupName] = 1;
+        data.push({
+          model_name: modelName,
+          model_display_name: String(model.displayName || modelName),
+          model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+          completion_ratio: input > 0 && output !== null ? output / input : 1,
+          input_price: input,
+          output_price: output,
+          cache_read_price: cacheRead,
+          cache_write_price: cacheWrite,
+          cache_write_1h_price: cacheWrite1h,
+          request_price: request,
+          image_output_price: imageOutput,
+          image_price: imagePrice,
+          price_currency: String(model.priceCurrency || "USD").toUpperCase(),
+          enable_groups: [groupName],
+          proxy_group_name: groupName,
+          group_ratio: 1,
+          evidence: "exact"
+        });
+      }
+    }
+    if (!data.length) throw new Error("SoleAPI 公开模型价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "soleapi-public-api" };
+  }
+}
+
 
 export class JijiModelMarketStrategy extends ParsingStrategy {
   canParse(raw) { return Array.isArray(raw?.providers) && raw.providers.some(provider => Array.isArray(provider?.models)); }
@@ -307,6 +486,8 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
 
 export function normalizeProxyData(raw, options = {}) {
   const strategies = [
+    new SoleApiPublicModelsStrategy(),
+    new FastAiChannelsStrategy(),
     new JijiModelPlazaStrategy(),
     new JijiModelMarketStrategy(),
     new PqhPricingStrategy(),

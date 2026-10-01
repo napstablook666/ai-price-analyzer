@@ -1,4 +1,5 @@
 import { NORMALIZATION_VERSION, normalizeCapturedData } from "./normalizers.js";
+import { PUBLIC_PRICING_HOSTS } from "./station-presets.js";
 import { normalizeStation } from "../shared/schema.js";
 
 function number(value, fallback = null) {
@@ -28,7 +29,7 @@ function hasInvalidPricingValue(value, depth = 0) {
   });
 }
 
-const JIJI_HOST = "www.jiji.cc";
+const JIJI_HOST = "jiji.cc";
 const JIJI_MODEL_PAGE = "/extension/models";
 const JIJI_MODEL_API = "/extension/api/trpc/extension.modelMarket";
 const JIJI_INPUT = JSON.stringify({ 0: { json: {} } });
@@ -36,15 +37,48 @@ const JIJI_INPUT = JSON.stringify({ 0: { json: {} } });
 function jijiRequestConfig(value) {
   let url;
   try { url = new URL(String(value || "")); } catch { return null; }
-  if (url.hostname.toLowerCase() !== JIJI_HOST || ![JIJI_MODEL_PAGE, JIJI_MODEL_API].includes(url.pathname)) return null;
+  if (url.hostname.toLowerCase().replace(/^www\./, "") !== JIJI_HOST || !["/", JIJI_MODEL_PAGE, JIJI_MODEL_API].includes(url.pathname)) return null;
   const token = url.searchParams.get("token") || "";
   const endpoint = new URL(JIJI_MODEL_API, url.origin);
   endpoint.searchParams.set("batch", "1");
   endpoint.searchParams.set("input", JIJI_INPUT);
-  return { baseUrl: `${url.origin}${JIJI_MODEL_PAGE}`, endpoint: endpoint.toString(), token };
+  return { baseUrl: `${url.origin}${url.pathname}`, endpoint: endpoint.toString(), token };
 }
 
 export function prepareStationInput(stationInput = {}) {
+  let url;
+  try { url = new URL(String(stationInput.baseUrl || "")); } catch { return stationInput; }
+  const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (hostname === "soleapi.com" || PUBLIC_PRICING_HOSTS.has(hostname)) {
+    const isSoleApi = hostname === "soleapi.com";
+    return {
+      ...stationInput,
+      baseUrl: url.origin,
+      auth: { type: "none" },
+      mode: "direct",
+      adapter: {
+        ...(stationInput.adapter || {}),
+        kind: "public-pricing",
+        endpoint: isSoleApi ? "/api/public/models" : "/api/pricing",
+        method: "GET",
+        responseFormat: "auto"
+      }
+    };
+  }
+  if (hostname === "fastaitoken.com") {
+    const path = url.pathname === "/" ? "/available-channels" : url.pathname;
+    return {
+      ...stationInput,
+      baseUrl: `https://www.fastaitoken.com${path}`,
+      mode: "page",
+      adapter: {
+        ...(stationInput.adapter || {}),
+        endpoint: "/api/v1/channels/available",
+        method: "GET",
+        responseFormat: "auto"
+      }
+    };
+  }
   const config = jijiRequestConfig(stationInput.baseUrl);
   if (!config) return stationInput;
   const inputAuth = stationInput.auth || {};
@@ -52,6 +86,7 @@ export function prepareStationInput(stationInput = {}) {
   return {
     ...stationInput,
     baseUrl: config.baseUrl,
+    mode: "direct",
     auth: token ? { ...inputAuth, type: "bearer", token } : inputAuth,
     adapter: { ...(stationInput.adapter || {}), kind: "jiji", endpoint: config.endpoint, method: "GET", responseFormat: "auto" }
   };
@@ -218,7 +253,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
     try {
       const response = station.mode === "page" && pageFetch
         ? await pageFetch(pageRequest)
-        : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: "include" });
+        : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: ["public-pricing", "jiji"].includes(station.adapter?.kind) ? "omit" : "include" });
       if (!response || response.ok === false || (response.status && response.status >= 400)) {
         throw new Error(`${station.name} 请求失败（${response?.status || "无响应"}）`);
       }

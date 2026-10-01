@@ -1,8 +1,10 @@
 import { flattenComparisonRows } from "./core/pricing.js";
+import { buildJevComparisonTask, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
+import { getJevModelCandidates } from "./core/matching.js";
 import { callService, escapeHtml, formatMoney, hydrateIcons, icon } from "./shared/ui.js";
-import { currentSiteOrigin, DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
+import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
 
-const state = { data: null, rows: [], reference: null, filters: { search: "", stationId: "", provider: null, group: null, showUnmatched: true, showStale: true, sortBy: "groupName", sortSecondary: "recommendationScore", sortDirection: "desc" } };
+const state = { data: null, rows: [], reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), filters: { search: "", stationId: "", provider: null, group: null, showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
 const $ = selector => document.querySelector(selector);
 
 
@@ -24,12 +26,13 @@ function toast(message) {
   toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
 }
 
-function formatPrice(value, currency = "CNY") {
+function formatPrice(value, currency = "CNY", precision = 4) {
   const number = Number(value);
-  if (value === null || value === undefined || Number.isNaN(number)) return "—";
+  if (value === null || value === undefined || !Number.isFinite(number)) return "—";
   const rate = Number(state.data?.references?.exchangeRate) || DEFAULT_EXCHANGE_RATE;
   const displayValue = currency === "USD" ? number / rate : number;
-  return formatMoney(displayValue, currency === "USD" ? "$" : "¥");
+  const symbol = currency === "USD" ? "$" : "¥";
+  return precision === 4 ? formatMoney(displayValue, symbol) : `${symbol}${displayValue.toFixed(precision)}`;
 }
 
 function rowMatches(row) {
@@ -45,10 +48,12 @@ function rowMatches(row) {
 }
 
 function statusMarkup(row) {
-  if (row.stale) return `<span class="status-tag warning">${icon("clock-3", { className: "icon" })}过期</span>`;
-  if (!row.officialName) return `<span class="status-tag muted">${icon("circle-help", { className: "icon" })}未匹配</span>`;
-  if (row.evidence === "estimated") return `<span class="status-tag warning">${icon("calculator", { className: "icon" })}估算</span>`;
-  return `<span class="status-tag">${icon("badge-check", { className: "icon" })}已校准</span>`;
+  const tags = [];
+  if (row.stale) tags.push(`<span class="status-tag warning">${icon("clock-3", { className: "icon" })}过期</span>`);
+  if (!row.officialName) tags.push(`<span class="status-tag muted">${icon("circle-help", { className: "icon" })}未匹配</span>`);
+  if (row.evidence === "estimated") tags.push(`<span class="status-tag warning">${icon("calculator", { className: "icon" })}价格推导</span>`);
+  if (!tags.length) tags.push(`<span class="status-tag">${icon("badge-check", { className: "icon" })}已校准</span>`);
+  return `<div class="status-cluster">${tags.join("")}</div>`;
 }
 
 function stationFor(row) {
@@ -57,22 +62,39 @@ function stationFor(row) {
 
 function renderSummary(rows) {
   const matched = rows.filter(row => row.officialName);
-  const prices = matched.filter(row => Number.isFinite(row.dailyCost)).map(row => row.dailyCost);
-  const cheapest = prices.length ? Math.min(...prices) : null;
+  const recommended = rows.filter(row => row.recommended).length;
+  const needsReview = rows.filter(row => !row.officialName || row.evidence === "estimated" || row.stale).length;
+  const modelCount = new Set(rows.map(row => row.canonicalModel)).size;
   const stationCount = (state.data?.stations || []).filter(station => station.enabled).length;
+  const matchRate = rows.length ? Math.round(matched.length / rows.length * 100) : 0;
   $("#summary").innerHTML = [
-    ["报价总数", String(rows.length), "当前缓存的有效报价"],
-    ["已匹配", String(matched.length), `${rows.length ? Math.round(matched.length / rows.length * 100) : 0}% 可比较`],
-    ["参与站点", String(stationCount), "来自已启用配置"],
-    ["最低日成本", formatPrice(cheapest, state.data?.settings?.defaultCurrency), "按当前用量估算"]
+    ["覆盖模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
+    ["官方匹配", String(matched.length), `${matchRate}% 有官方参考价`],
+    ["首选方案", String(recommended), "同一模型内的推荐报价"],
+    ["需核验", String(needsReview), "未匹配、推导或过期数据"]
   ].map(([label, value, note]) => `<article class="summary-card"><span class="summary-label">${label}</span><strong class="summary-value">${escapeHtml(value)}</strong><span class="summary-note">${escapeHtml(note)}</span></article>`).join("");
 }
-
 function renderStationFilter(rows) {
-  const select = $("#station-filter");
   const current = state.filters.stationId;
-  const stations = [...new Map(rows.map(row => [row.stationId, row.stationName])).entries()];
-  select.innerHTML = `<option value="">全部中转站</option>${stations.map(([id, name]) => `<option value="${escapeHtml(id)}"${id === current ? " selected" : ""}>${escapeHtml(name)}</option>`).join("")}`;
+  const stationsById = new Map((state.data?.stations || []).map(station => [station.id, station.name]));
+  for (const row of rows) if (!stationsById.has(row.stationId)) stationsById.set(row.stationId, row.stationName);
+  const stations = [...stationsById.entries()];
+  const selectedName = stations.find(([id]) => id === current)?.[1];
+  $("#station-filter-label").textContent = selectedName || "全部中转站";
+  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}><span>${escapeHtml(name)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
+  filterFacetOptions("station");
+}
+function filterFacetOptions(key) {
+  const query = $(`[data-facet-search="${key}"]`).value.trim().toLowerCase();
+  const container = $(`#${key}-filters`);
+  const options = [...container.querySelectorAll(".facet-option")];
+  let matches = 0;
+  for (const option of options) {
+    option.hidden = !option.textContent.toLowerCase().includes(query);
+    if (!option.hidden) matches++;
+  }
+  const noMatches = container.querySelector("[data-no-matches]");
+  if (noMatches) noMatches.hidden = !query || matches > 0;
 }
 function renderFacetFilters(rows) {
   for (const key of ["provider", "group"]) {
@@ -80,8 +102,9 @@ function renderFacetFilters(rows) {
     const values = [...new Set(rows.map(row => row[key === "provider" ? "provider" : "groupName"]).filter(Boolean))].sort();
     const selected = state.filters[key] === null ? new Set(values) : new Set(state.filters[key]);
     container.innerHTML = values.length
-      ? values.map(value => `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}><span>${escapeHtml(value)}</span></label>`).join("")
+      ? `${values.map(value => `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}><span>${escapeHtml(value)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`
       : `<span class="facet-empty">暂无可选项</span>`;
+    filterFacetOptions(key);
   }
 }
 
@@ -106,27 +129,114 @@ function sortRows(rows) {
     return `${left.stationName} ${left.modelName}`.localeCompare(`${right.stationName} ${right.modelName}`);
   });
 }
+function unitPricesMarkup(prices, currency, row, official = false) {
+  if (!prices) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
+  const readEstimated = official ? prices.cacheRead === null || prices.cacheRead === undefined : row.cacheReadEstimated;
+  const writeEstimated = official ? prices.cacheWrite === null || prices.cacheWrite === undefined : row.cacheWriteEstimated;
+  const lines = [
+    ["输入", prices.input, false],
+    ["输出", prices.output, false],
+    [`缓存读${readEstimated ? "（估算）" : ""}`, prices.cacheRead ?? prices.input, false],
+    [`缓存写${writeEstimated ? "（估算）" : ""}`, prices.cacheWrite ?? prices.input, false],
+    ...(prices.request === null || prices.request === undefined ? [] : [["按次", prices.request, false]]),
+    ...(prices.imageOutput === null || prices.imageOutput === undefined ? [] : [["图 token", prices.imageOutput, true]]),
+    ...(prices.imagePrice === null || prices.imagePrice === undefined ? [] : [["图 / 张", prices.imagePrice, true]])
+  ];
+  return `<div class="price-lines">${lines.filter(([, value]) => value !== null && value !== undefined).map(([label, value, precise], index) => `<div class="price-line${index < 2 ? " price-line-primary" : ""}"><span class="price-key">${label}</span><span class="price-value">${formatPrice(value, currency, precise ? 6 : 4)}</span></div>`).join("")}</div>`;
+}
+
+function jevResultKey(task, row) {
+  const identity = [task, row.stationId, row.modelName];
+  if (task === "comparison_review") identity.push(row.groupName, row.tierName, row.officialName);
+  return JSON.stringify(identity);
+}
+
+function activeJevProfile() {
+  const settings = state.data?.settings;
+  return settings?.providerProfiles?.jev?.find(profile => profile.id === settings.activeProviders?.jev) || settings?.jev || {};
+}
+
+function jevResultFor(task, row) {
+  const result = state.jevResults.get(jevResultKey(task, row));
+  const settings = state.data?.settings;
+  const activeJev = activeJevProfile();
+  if (Number(result?.collectedAt) !== Number(row.collectedAt) || result?.jevProfileId !== settings?.activeProviders?.jev || result?.jevBaseUrl !== activeJev.baseUrl || result?.jevModelId !== activeJev.modelId || result?.referencesFetchedAt !== (state.data?.references?.fetchedAt ?? null)) return null;
+  if (task === "comparison_review" && JSON.stringify(result.taskState) !== JSON.stringify(buildJevComparisonTask(row).state)) return null;
+  if (task === "model_match") {
+    const candidateIds = getJevModelCandidates(row.modelName, state.data?.references?.models || [], settings?.matchingRules).candidates.map(model => String(model.id || model.name)).sort();
+    if (JSON.stringify(result.candidateIds) !== JSON.stringify(candidateIds)) return null;
+  }
+  return result;
+}
+
+function jevActionButton(task, row, label) {
+  const config = activeJevProfile();
+  if (!config.baseUrl || !config.modelId || !config.hasApiKey) return `<a class="jev-config-link" href="options.html">配置 JEV</a>`;
+  const key = jevResultKey(task, row);
+  const pending = state.jevPending.has(key);
+  const shownLabel = pending ? "判断中" : state.jevIgnored.has(key) ? "再次建议" : label;
+  return `<button class="jev-action" type="button" data-jev-action="analyze" data-jev-task="${escapeHtml(task)}" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" data-group-name="${escapeHtml(row.groupName || "")}" data-tier-name="${escapeHtml(row.tierName || "")}" data-official-name="${escapeHtml(row.officialName || "")}" data-collected-at="${escapeHtml(row.collectedAt || "")}" aria-label="${escapeHtml(shownLabel)}：${escapeHtml(row.displayNameOverride || row.modelName)}"${pending ? " disabled aria-busy=\"true\"" : ""}><span class="jev-action-icon" aria-hidden="true">${icon(pending ? "loader-circle" : "sparkles", { className: pending ? "icon spin" : "icon" })}</span><span>${shownLabel}</span></button>`;
+}
+
+function modelJevMarkup(row, showAction) {
+  if (!showAction) return "";
+  if (row.matchRuleId === "manual") return `<div class="jev-assist"><span class="jev-result" role="status">人工确认匹配</span><button class="jev-icon-action" type="button" data-jev-action="remove" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="取消人工匹配" aria-label="取消 ${escapeHtml(row.modelName)} 的人工匹配">${icon("x", { className: "icon" })}</button></div>`;
+  const result = jevResultFor("model_match", row);
+  if (!result) return `<div class="jev-assist">${jevActionButton("model_match", row, "JEV 建议")}</div>`;
+  const confidence = `${Math.round(result.confidence * 100)}%`;
+  if (result.choice === JEV_NO_MATCH) return `<div class="jev-assist"><span class="jev-result" role="status">JEV 未选出候选 · ${confidence}</span><button class="jev-icon-action" type="button" data-jev-action="ignore" data-jev-task="model_match" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="忽略此建议" aria-label="忽略 ${escapeHtml(row.modelName)} 的 JEV 建议">${icon("x", { className: "icon" })}</button>${jevActionButton("model_match", row, "重新建议")}</div>`;
+  const model = state.reference?.models?.find(item => (item.id || item.name) === result.choice);
+  const name = model?.name || result.choice;
+  return `<div class="jev-assist"><span class="jev-result" role="status">JEV 建议 ${escapeHtml(name)} · ${confidence}</span><button class="jev-action" type="button" data-jev-action="apply" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" data-collected-at="${escapeHtml(row.collectedAt || "")}" aria-label="确认 ${escapeHtml(row.modelName)} 匹配到 ${escapeHtml(name)}"><span class="jev-action-icon" aria-hidden="true">${icon("check", { className: "icon" })}</span><span>确认匹配</span></button><button class="jev-icon-action" type="button" data-jev-action="ignore" data-jev-task="model_match" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="忽略此建议" aria-label="忽略 ${escapeHtml(row.modelName)} 的 JEV 建议">${icon("x", { className: "icon" })}</button></div>`;
+}
+
+function comparisonJevMarkup(row) {
+  if (!row.officialName) return "";
+  const result = jevResultFor("comparison_review", row);
+  const label = result ? JEV_COMPARISON_LABELS[result.choice] || result.choice : "";
+  const note = result ? `<span class="jev-result" role="status">JEV 复核：${escapeHtml(label)} · ${Math.round(result.confidence * 100)}%</span>` : "";
+  return `<div class="jev-assist">${note}${jevActionButton("comparison_review", row, result ? "重新复核" : "JEV 复核")}</div>`;
+}
+
+
 function renderRows() {
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const visible = sortRows(state.rows.filter(rowMatches));
   $("#result-count").textContent = `${visible.length} 条报价`;
+  const seenModelAssists = new Set();
   $("#comparison-body").innerHTML = visible.map(row => {
-    const prices = row.prices || {};
     const station = stationFor(row);
-    const delta = row.diffPercent;
+    const delta = Number.isFinite(row.diffPercent) ? row.diffPercent : null;
+    const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
+    const deltaLabel = delta === null ? "无官方价" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
+    const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore} 分` : "暂无评分";
+    const ratingLabels = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
+    const rating = ratingLabels[row.category] || "";
+    const dailyCost = formatPrice(row.dailyCost, currency);
+    const hasOfficialCost = Number.isFinite(row.officialDailyCost);
+    const dailyDifference = hasOfficialCost ? row.officialDailyCost - row.dailyCost : null;
+    const modelName = row.displayNameOverride || row.modelName || row.displayName;
+    const matchNote = row.officialName
+      ? `匹配 ${row.officialName} · ${row.matchRule || "官方目录"} · 置信 ${row.confidenceScore}%`
+      : "没有对应的官方目录记录";
+    const modelAssistKey = JSON.stringify([row.stationId, row.modelName]);
+    const needsModelAssist = row.matchRuleId === "manual" || row.matchCandidateCount !== 1 || row.matchConfidence < 1;
+    const showModelAssist = needsModelAssist && !seenModelAssists.has(modelAssistKey);
+    if (showModelAssist) seenModelAssists.add(modelAssistKey);
     return `<tr>
-      <td><div class="model-cell"><span class="model-name">${escapeHtml(row.displayName || row.modelName)}</span><span class="model-meta">${row.officialName ? `官方匹配：${escapeHtml(row.officialName)}` : "没有对应的官方目录记录"}</span></div></td>
-      <td><div class="station-cell"><span class="station-name"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span>${escapeHtml(row.stationName)}</span><span class="station-meta">${escapeHtml(row.groupName || row.provider || "未分组")}${row.tierName && row.tierName !== "标准" ? ` · ${escapeHtml(row.tierName)}` : ""}</span></div></td>
-      <td class="price-cell"><strong>${formatPrice(prices.input, currency)}</strong><span class="model-meta">官方 ${formatPrice(row.officialPrices?.input, currency)}</span><span class="model-meta">缓存读 ${formatPrice(prices.cacheRead ?? prices.input, currency)}${prices.cacheRead === null || prices.cacheRead === undefined ? "（估算）" : ""}</span>${row.evidence === "estimated" ? `<span class="estimate-tag">推导</span>` : ""}</td>
-      <td class="price-cell"><strong>${formatPrice(prices.output, currency)}</strong><span class="model-meta">官方 ${formatPrice(row.officialPrices?.output, currency)}</span><span class="model-meta">缓存写 ${formatPrice(prices.cacheWrite ?? prices.input, currency)}${prices.cacheWrite === null || prices.cacheWrite === undefined ? "（估算）" : ""}</span><span class="model-meta">按次 ${formatPrice(prices.request, currency)}</span></td>
-      <td class="price-cell">${prices.imageOutput !== null && prices.imageOutput !== undefined ? `<span class="model-meta">图 tokens ${formatPrice(prices.imageOutput, currency)}</span>` : ""}${prices.imagePrice !== null && prices.imagePrice !== undefined ? `<span class="model-meta">按张 ${formatPrice(prices.imagePrice, currency)}</span>` : ""}${prices.imageOutput === null && prices.imageOutput === undefined && prices.imagePrice === null && prices.imagePrice === undefined ? "—" : ""}</td>
-      <td class="price-cell"><strong>${formatPrice(row.dailyCost, currency)}</strong><span class="model-meta"> / 天</span></td>
-      <td>${delta === null || delta === undefined ? `<span class="delta-tag neutral">—</span>` : `<span class="delta-tag ${delta > 10 ? "expensive" : ""}">${delta > 0 ? "+" : ""}${Math.round(delta)}%</span>`}</td>
-      <td><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${Number.isFinite(row.recommendationScore) ? `<span class="model-meta">${row.recommendationScore} 分</span>` : ""}</td>
-      <td>${statusMarkup(row)}</td>
-      <td><button class="icon-button row-action" title="查看站点" aria-label="查看站点" data-focus-station="${escapeHtml(row.stationId)}">${icon("arrow-up-right", { className: "icon" })}</button></td>
+      <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(matchNote)}</span>${modelJevMarkup(row, showModelAssist)}</div></td>
+      <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
+      <td data-label="中转单价">${unitPricesMarkup(row.prices, currency, row)}</td>
+      <td data-label="官方单价">${unitPricesMarkup(row.officialPrices, currency, row, true)}</td>
+      <td data-label="24 小时成本"><div class="cost-cell"><strong>${dailyCost}<small> / 天</small></strong><span class="cost-meta">官方 ${hasOfficialCost ? `${formatPrice(row.officialDailyCost, currency)} / 天` : "暂无参考"}</span>${dailyDifference === null ? "" : `<span class="cost-gap ${dailyDifference >= 0 ? "is-saving" : "is-extra"}">${dailyDifference >= 0 ? "日省" : "日多付"} ${formatPrice(Math.abs(dailyDifference), currency)}</span>`}</div></td>
+      <td data-label="相对官方"><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
+      <td data-label="推荐与状态"><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信 ${row.confidenceScore}%</span>${statusMarkup(row)}${comparisonJevMarkup(row)}</div></td>
     </tr>`;
   }).join("");
+  for (const heading of document.querySelectorAll("th[data-sort-keys]")) {
+    const keys = heading.dataset.sortKeys.split(" ");
+    heading.setAttribute("aria-sort", keys.includes(state.filters.sortBy) ? (state.filters.sortDirection === "asc" ? "ascending" : "descending") : "none");
+  }
   $("#empty-state").hidden = visible.length > 0;
   $(".table-wrap").hidden = visible.length === 0;
   hydrateIcons($("#comparison-body"));
@@ -137,6 +247,37 @@ function renderReferenceStatus() {
   if (!ref) return;
   $("#reference-status").textContent = ref.models?.length ? `官方参考价已加载 · ${ref.models.length} 个模型` : "官方参考价未加载";
   $("#reference-note").textContent = ref.fetchedAt ? `最近更新 ${new Date(ref.fetchedAt).toLocaleString("zh-CN", { hour12: false })}；${ref.warnings?.length ? ref.warnings.join("；") : "OpenRouter 模型目录与中国银行美元汇率"}` : "OpenRouter 模型目录与中国银行美元汇率会每日缓存，可在上方手动更新。";
+}
+function renderCheckin(data) {
+  const panel = $("#checkin-panel");
+  const list = $("#checkin-list");
+  const stations = data.checkinStations || [];
+  const state = data.checkinState || {};
+  if (!stations.length) {
+    panel.hidden = false;
+    list.innerHTML = `<div class="checkin-empty"><span class="checkin-empty-text">暂无可签到的站点 —— 添加 <strong>vyceai.com</strong> 中转站后，这里会自动出现每日签到入口。</span><a class="button button-quiet" href="options.html"><span data-icon="plus" class="icon"></span><span>去添加站点</span></a></div>`;
+    hydrateIcons(list);
+    return;
+  }
+  panel.hidden = false;
+  list.innerHTML = stations.map(station => {
+    const record = state[station.id] || {};
+    const claimedToday = record.lastStatus === "ok" && !record.lastResult?.includes("可签到");
+    const statusText = record.lastStatus === "error" ? record.lastResult || "查询失败" : record.lastResult || "尚未查询";
+    const statusClass = record.lastStatus === "error" ? "checkin-status-error" : claimedToday ? "checkin-status-ok" : "checkin-status-idle";
+    return `
+      <div class="checkin-item" data-station-id="${escapeHtml(station.id)}">
+        <div class="checkin-info">
+          <strong>${escapeHtml(station.name)}</strong>
+          <span class="checkin-meta">连续签到 ${Number(record.streak) || 0} 天 · ${escapeHtml(statusText)}</span>
+        </div>
+        <div class="checkin-actions">
+          <label class="check-label"><input type="checkbox" data-checkin-action="auto" data-station-id="${escapeHtml(station.id)}" ${station.autoEnabled ? "checked" : ""}><span>自动签到</span></label>
+          <button class="button button-quiet" type="button" data-checkin-action="claim" data-station-id="${escapeHtml(station.id)}"><span data-icon="sparkles" class="icon"></span><span>立即签到</span></button>
+        </div>
+      </div>`;
+  }).join("");
+  hydrateIcons(list);
 }
 
 function render(data) {
@@ -161,21 +302,10 @@ function render(data) {
   emptyState.querySelector("p").textContent = hasStations ? "点击上方“刷新全部”开始采集价格。" : "先添加一个中转站，再刷新采集价格。";
   emptyState.querySelector("a span:last-child").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
+  renderCheckin(data);
   $("#last-updated").textContent = data.snapshots?.[0]?.collectedAt ? `更新于 ${new Date(data.snapshots[0].collectedAt).toLocaleTimeString("zh-CN", { hour12: false })}` : "尚未刷新";
   $("#connection-dot").classList.toggle("is-live", state.rows.length > 0);
   hydrateIcons();
-}
-function configureCurrentSiteAction() {
-  const params = new URLSearchParams(location.search);
-  const siteOrigin = currentSiteOrigin(params.get("siteOrigin"));
-  if (!siteOrigin) return;
-  const target = new URL(chrome.runtime.getURL("options.html"));
-  target.searchParams.set("addSite", siteOrigin);
-  const sourceTabId = params.get("sourceTabId");
-  if (/^\d+$/.test(sourceTabId || "")) target.searchParams.set("sourceTabId", sourceTabId);
-  const link = $("#add-current-site");
-  link.href = target.toString();
-  link.hidden = false;
 }
 
 async function load() {
@@ -188,6 +318,10 @@ async function switchDashboardProvider(kind, select) {
   select.disabled = true;
   try {
     render(await callService("SWITCH_PROVIDER", { kind, profileId: select.value }));
+    if (kind === "jev") {
+      state.jevResults.clear();
+      state.jevIgnored.clear();
+    }
     toast(`已切换 ${kind === "jev" ? "JEV" : "LLM"} 供应商`);
   } catch (error) {
     select.disabled = false;
@@ -199,15 +333,33 @@ async function switchDashboardProvider(kind, select) {
 });
 
 $("#search").addEventListener("input", event => { state.filters.search = event.target.value; renderRows(); });
-$("#station-filter").addEventListener("change", event => { state.filters.stationId = event.target.value; renderRows(); });
 document.addEventListener("change", event => {
+  const station = event.target.closest("input[data-station-filter]");
+  if (station) {
+    state.filters.stationId = station.value;
+    const menu = $("#station-filter-menu");
+    menu.open = false;
+    menu.querySelector("summary").focus();
+    renderStationFilter(state.rows);
+    renderRows();
+    return;
+  }
   const input = event.target.closest("input[data-facet-key]");
   if (!input) return;
   const key = input.dataset.facetKey;
   state.filters[key] = [...document.querySelectorAll(`#${key}-filters input[data-facet-key]:checked`)].map(option => option.value);
+  renderFacetFilters(state.rows);
   renderRows();
 });
+document.addEventListener("input", event => {
+  const input = event.target.closest("[data-facet-search]");
+  if (input) filterFacetOptions(input.dataset.facetSearch);
+});
 document.addEventListener("click", event => {
+  const activeMenu = event.target.closest(".facet-menu");
+  for (const menu of document.querySelectorAll(".facet-menu[open]")) {
+    if (menu !== activeMenu) menu.open = false;
+  }
   const button = event.target.closest("[data-facet-action]");
   if (!button) return;
   const key = button.dataset.facetKey;
@@ -219,12 +371,13 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: null, group: null, showUnmatched: true, showStale: true, sortBy: "groupName", sortSecondary: "recommendationScore", sortDirection: "desc" };
+  state.filters = { search: "", stationId: "", provider: null, group: null, showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" };
   $("#search").value = "";
-  $("#station-filter").value = "";
-  $("#sort-by").value = "groupName";
+  renderStationFilter(state.rows);
+  for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
+  $("#sort-by").value = "dailyCost";
   $("#sort-secondary").value = "recommendationScore";
-  $("#sort-direction").value = "desc";
+  $("#sort-direction").value = "asc";
   $("#show-unmatched").checked = true;
   $("#show-stale").checked = true;
   renderFacetFilters(state.rows);
@@ -232,11 +385,72 @@ $("#reset-filters").addEventListener("click", () => {
 });
 $("#show-unmatched").addEventListener("change", event => { state.filters.showUnmatched = event.target.checked; renderRows(); });
 $("#show-stale").addEventListener("change", event => { state.filters.showStale = event.target.checked; renderRows(); });
-$("#comparison-body").addEventListener("click", event => {
+async function handleJevAction(button) {
+  const action = button.dataset.jevAction;
+  const task = button.dataset.jevTask || "model_match";
+  const row = { stationId: button.dataset.stationId, modelName: button.dataset.modelName, groupName: button.dataset.groupName || "", tierName: button.dataset.tierName || "", officialName: button.dataset.officialName || "", collectedAt: Number(button.dataset.collectedAt) };
+  const key = jevResultKey(task, row);
+  if (action === "ignore") {
+    state.jevResults.delete(key);
+    state.jevIgnored.add(key);
+    renderRows();
+    return;
+  }
+  button.disabled = true;
+  try {
+    if (action === "analyze") {
+      state.jevPending.add(key);
+      state.jevIgnored.delete(key);
+      renderRows();
+      const settings = state.data?.settings || {};
+      const profile = activeJevProfile();
+      const result = await callService("ANALYZE_JEV", {
+        task, ...row, referencesFetchedAt: state.data?.references?.fetchedAt ?? null,
+        jevProfileId: settings.activeProviders?.jev, jevBaseUrl: profile.baseUrl, jevModelId: profile.modelId
+      });
+      state.jevResults.set(key, result);
+      toast(task === "model_match" ? "JEV 匹配建议已返回" : "JEV 复核已完成");
+      return;
+    }
+    if (action === "apply") {
+      const result = jevResultFor("model_match", row);
+      if (!result || result.choice === JEV_NO_MATCH) return;
+      const data = await callService("SAVE_JEV_MODEL_MATCH", {
+        stationId: row.stationId, modelName: row.modelName, officialModelId: result.choice,
+        collectedAt: result.collectedAt, referencesFetchedAt: result.referencesFetchedAt,
+        jevProfileId: result.jevProfileId, jevBaseUrl: result.jevBaseUrl, jevModelId: result.jevModelId, candidateIds: result.candidateIds
+      });
+      state.jevResults.delete(jevResultKey("model_match", row));
+      state.jevIgnored.delete(jevResultKey("model_match", row));
+      render(data);
+      toast("已保存人工确认的模型匹配");
+      return;
+    }
+    if (action === "remove") {
+      render(await callService("REMOVE_JEV_MODEL_MATCH", { stationId: row.stationId, modelName: row.modelName }));
+      toast("已取消人工匹配");
+    }
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    state.jevPending.delete(key);
+    button.disabled = false;
+    renderRows();
+  }
+}
+
+
+$("#comparison-body").addEventListener("click", async event => {
+  const action = event.target.closest("[data-jev-action]");
+  if (action) {
+    event.preventDefault();
+    await handleJevAction(action);
+    return;
+  }
   const button = event.target.closest("[data-focus-station]");
   if (!button) return;
   state.filters.stationId = button.dataset.focusStation;
-  $("#station-filter").value = state.filters.stationId;
+  renderStationFilter(state.rows);
   renderRows();
 });
 
@@ -257,8 +471,48 @@ $("#fetch-references").addEventListener("click", async event => {
   finally { button.disabled = false; }
 });
 
+$("#checkin-refresh").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  try { render(await callService("CHECKIN_STATUS", {})); toast("签到状态已刷新"); }
+  catch (error) { toast(error.message); }
+  finally { button.disabled = false; }
+});
+
+document.addEventListener("click", async event => {
+  const claimButton = event.target.closest("[data-checkin-action='claim']");
+  if (!claimButton) return;
+  const stationId = claimButton.dataset.stationId;
+  claimButton.disabled = true;
+  claimButton.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>签到中</span>`;
+  try {
+    const data = await callService("CHECKIN_NOW", { stationId });
+    const result = (data.results || [])[0];
+    if (result?.error) throw new Error(result.error);
+    toast(result?.message || "签到完成");
+    render(await callService("GET_DASHBOARD"));
+  } catch (error) {
+    toast(error.message || "签到失败");
+    render(await callService("GET_DASHBOARD"));
+  } finally {
+    claimButton.disabled = false;
+    claimButton.innerHTML = `${icon("sparkles", { className: "icon" })}<span>立即签到</span>`;
+  }
+});
+
+document.addEventListener("change", async event => {
+  const toggle = event.target.closest("[data-checkin-action='auto']");
+  if (!toggle) return;
+  try {
+    await callService("SAVE_CHECKIN", { stationId: toggle.dataset.stationId, autoEnabled: toggle.checked });
+    toast(toggle.checked ? "已开启自动签到（每 4 小时检查）" : "已关闭自动签到");
+  } catch (error) {
+    toast(error.message || "保存失败");
+    toggle.checked = !toggle.checked;
+  }
+});
+
 hydrateIcons();
-configureCurrentSiteAction();
 load();
 
 document.addEventListener("visibilitychange", () => {

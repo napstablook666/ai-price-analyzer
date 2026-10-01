@@ -152,6 +152,10 @@ export async function getProviderApiKey(kind, profileId, chromeApi = globalThis.
   const normalizedKind = kind === "jev" ? "jev" : "llm";
   return String(keys[normalizedKind]?.[id] || "");
 }
+
+export function selectProviderApiKey(kind, profileId, activeKey, legacyKey) {
+  return String(activeKey || "").trim() || (kind === "jev" && profileId ? "" : String(legacyKey || "").trim());
+}
 export async function hasProviderApiKey(kind, profileId, chromeApi = globalThis.chrome) {
   return Boolean(await getProviderApiKey(kind, profileId, chromeApi));
 }

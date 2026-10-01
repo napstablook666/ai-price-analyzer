@@ -1,5 +1,5 @@
 import { DEFAULT_MATCHING_RULES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
-import { matchModel } from "./matching.js";
+import { matchModelWithOverrides } from "./matching.js";
 
 const PRICE_FIELDS = ["input", "output", "cacheRead", "cacheWrite", "request", "imageOutput", "imagePrice"];
 
@@ -135,7 +135,7 @@ export function addRecommendationScores(comparisons, profile = "price") {
   return comparisons;
 }
 
-export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, showUnmatched = true, recommendationProfile = "price" } = {}) {
+export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, modelMatchOverrides = [], showUnmatched = true, recommendationProfile = "price" } = {}) {
   const stationMap = new Map(stations.map(station => [station.id, station]));
   const referenceList = Array.isArray(references.models) ? references.models : [];
   const latestByStation = new Map();
@@ -162,7 +162,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
 
     snapshot.normalized.data.forEach((item, itemIndex) => {
       if (item.catalogOnly) return;
-      const matches = matchModel(item.model_name, referenceList, rules);
+      const matches = matchModelWithOverrides(item.model_name, referenceList, { stationId: station.id, overrides: modelMatchOverrides, rules });
       if (!matches.length && !showUnmatched) return;
       const matchResults = matches.length ? matches : [{ match: null, rule: "未匹配", ruleId: "unmatched", confidence: 0 }];
       for (const group of offerGroups(item, snapshot.normalized)) {
@@ -196,6 +196,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             matchRule: result.rule,
             matchRuleId: result.ruleId,
             matchConfidence: result.confidence,
+            matchCandidateCount: matches.length,
             evidence: item.evidence || "estimated",
             stale: Boolean(snapshot.stale || snapshot.status !== "success"),
             collectedAt: snapshot.collectedAt,
@@ -229,6 +230,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       matchRule: row.matchRule,
       matchRuleId: row.matchRuleId,
       matchConfidence: row.matchConfidence,
+      matchCandidateCount: row.matchCandidateCount,
       groupName: row.groupName,
       groupRatio: row.groupRatio,
       tierName: [...row.tierNames].join(" / ") || "标准",

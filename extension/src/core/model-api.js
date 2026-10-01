@@ -150,8 +150,9 @@ export async function testModelConnection({ baseUrl, apiKey, model, kind = "llm"
   }, { signal, timeoutMs });
   const data = await response.json();
 
-  if (isJev && (!data || typeof data.answers !== "object" || Array.isArray(data.answers))) {
-    throw new Error("JEV 响应缺少 answers 对象");
+  const jevAnswer = data?.answers?.income_hype;
+  if (isJev && (!jevAnswer || jevAnswer.type !== "noul" || !Number.isFinite(jevAnswer.noul) || jevAnswer.noul < 0 || jevAnswer.noul > 1)) {
+    throw new Error("JEV 响应缺少有效 noul 判断");
   }
   if (!isJev && (!data || !Array.isArray(data.choices))) {
     throw new Error("LLM 响应缺少 choices 数组");
@@ -161,6 +162,43 @@ export async function testModelConnection({ baseUrl, apiKey, model, kind = "llm"
     usage: data.usage || null,
     response: data
   };
+}
+
+export async function requestJevChoices({ baseUrl, apiKey, model, state, questions, fetchImpl = fetch, signal, timeoutMs } = {}) {
+  const modelId = String(model || "").trim();
+  if (!String(baseUrl || "").trim()) throw new Error("请先配置 JEV API 地址");
+  if (!String(apiKey || "").trim()) throw new Error("请先配置 JEV API Key");
+  if (!modelId) throw new Error("请先选择 JEV 模型");
+  if (!state || typeof state !== "object") throw new Error("JEV state 必须是结构化对象");
+  const entries = Object.entries(questions || {});
+  if (!entries.length || entries.some(([id, question]) => !/^[a-z][a-z0-9_]{0,63}$/i.test(id) || question?.type !== "choice" || !question.criteria || typeof question.criteria !== "object" || Array.isArray(question.criteria) || Object.keys(question.criteria).length < 2 || Object.keys(question.criteria).length > 255)) {
+    throw new Error("JEV 任务必须包含 2 到 255 个选项的 Choice 问题");
+  }
+
+  const endpoint = jevApiUrl(baseUrl, "/systemone");
+  const response = await request(fetchImpl, endpoint, {
+    method: "POST",
+    headers: headers(String(apiKey).trim(), true),
+    body: JSON.stringify({ model: modelId, state, questions })
+  }, { signal, timeoutMs });
+  const data = await response.json();
+  if (!data || !data.answers || typeof data.answers !== "object" || Array.isArray(data.answers)) throw new Error("JEV 响应缺少 answers 对象");
+
+  const answers = {};
+  for (const [id, question] of entries) {
+    const answer = data.answers[id];
+    const options = question.criteria;
+    if (!answer || answer.type !== "choice" || typeof answer.choice !== "string" || !Object.hasOwn(options, answer.choice)) {
+      throw new Error(`JEV 响应的 choice 无效：${id}`);
+    }
+    if (!Number.isFinite(answer.confidence) || answer.confidence < 0 || answer.confidence > 1) throw new Error(`JEV 响应的 confidence 无效：${id}`);
+    const probabilities = answer.probabilities || {};
+    if (typeof probabilities !== "object" || Array.isArray(probabilities) || Object.entries(probabilities).some(([option, value]) => !Object.hasOwn(options, option) || !Number.isFinite(value) || value < 0 || value > 1)) {
+      throw new Error(`JEV 响应的 probabilities 无效：${id}`);
+    }
+    answers[id] = { type: "choice", choice: answer.choice, confidence: answer.confidence, probabilities };
+  }
+  return { model: String(data.model || modelId), answers, usage: data.usage || null };
 }
 
 export { apiUrl, jevApiUrl, normalizeModelBaseUrl };

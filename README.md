@@ -99,7 +99,8 @@ See [`PRIVACY.md`](./PRIVACY.md) for the public-release privacy statement.
 
 ## Chromium extension
 
-The repository now also includes a no-build Chromium MV3 extension in [`extension/`](./extension/). It keeps the userscript workflow intact while adding multi-station scheduled collection, OpenRouter and Bank of China reference caching, IndexedDB snapshots, model matching, and a comparison dashboard.
+The repository also includes a no-build Chromium MV3 extension in [`extension/`](./extension/). It keeps the userscript workflow intact and adds multi-station scheduled collection, OpenRouter and Bank of China reference caching, IndexedDB snapshots, model matching, and a comparison dashboard. With a separate JEV provider configured, users can request model-match suggestions or structured comparison reviews; mappings are saved only after user confirmation.
+Supported stations (see `extension/src/core/checkin.js`) also get a daily check-in entry: one click claims the station's daily reward directly through its API with the existing browser login, and an optional per-station alarm can claim it automatically.
 
 For local use, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the `extension/` directory. Configure station endpoints and credentials in the extension settings. Use direct mode for CORS-enabled JSON APIs; use page mode when the station requires an existing browser login.
 

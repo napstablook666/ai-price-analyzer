@@ -79,6 +79,21 @@ export async function putStations(stations) {
   for (const station of stations) await withStore("stations", "readwrite", store => requestToPromise(store.put(redactStation(station))));
 }
 
+export function addStationIfNeeded(createStation) {
+  return withStore("stations", "readwrite", store => new Promise((resolve, reject) => {
+    const lookup = store.getAll();
+    lookup.onerror = () => reject(lookup.error || new Error("Unable to read stations"));
+    lookup.onsuccess = () => {
+      let station;
+      try { station = createStation(lookup.result); } catch (error) { reject(error); return; }
+      if (!station) return resolve(false);
+      const request = store.add(redactStation(station));
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => reject(request.error || new Error("Unable to add station"));
+    };
+  }));
+}
+
 export async function getSnapshots({ stationId, limit = 50 } = {}) {
   const rows = await withStore("snapshots", "readonly", store => requestToPromise(store.getAll()));
   return rows.filter(row => isValidSnapshot(row) && (!stationId || row.stationId === stationId))
