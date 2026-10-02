@@ -4,6 +4,11 @@ const DB_VERSION = 1;
 
 const MAX_IMPORTED_SNAPSHOTS = 500;
 const MAX_IMPORTED_RECORD_BYTES = 2 * 1024 * 1024;
+let comparisonRevision = 0;
+
+export function getComparisonRevision() {
+  return comparisonRevision;
+}
 
 function isPlainObject(value) {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -18,6 +23,38 @@ function requestToPromise(request) {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error("IndexedDB request failed"));
+  });
+}
+
+function compareSnapshotIds(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function sortSnapshots(rows) {
+  return rows.sort((left, right) => Number(right.collectedAt) - Number(left.collectedAt) || compareSnapshotIds(left.id, right.id));
+}
+
+function latestSnapshotsFromRows(rows, stationIds, isUsable) {
+  const latest = new Map();
+  for (const snapshot of rows) {
+    if (!stationIds.has(snapshot.stationId) || !isValidSnapshot(snapshot) || !isUsable(snapshot)) continue;
+    const previous = latest.get(snapshot.stationId);
+    const collectedAt = Number(snapshot.collectedAt);
+    if (!previous || collectedAt > Number(previous.collectedAt) || (collectedAt === Number(previous.collectedAt) && compareSnapshotIds(snapshot.id, previous.id) < 0)) latest.set(snapshot.stationId, snapshot);
+  }
+  return sortSnapshots([...latest.values()]);
+}
+
+function pruneSnapshots(index, query, shouldDelete) {
+  return new Promise((resolve, reject) => {
+    const request = index.openCursor(query);
+    request.onerror = () => reject(request.error || new Error("Unable to prune snapshots"));
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return resolve();
+      if (shouldDelete(cursor.value)) cursor.delete();
+      cursor.continue();
+    };
   });
 }
 
@@ -63,8 +100,10 @@ export async function getValue(key, fallback = null) {
   return value === undefined ? fallback : value;
 }
 
-export function setValue(key, value) {
-  return withStore("kv", "readwrite", store => requestToPromise(store.put(value, key)));
+export async function setValue(key, value) {
+  const result = await withStore("kv", "readwrite", store => requestToPromise(store.put(value, key)));
+  if (key === "settings" || key === "references") comparisonRevision++;
+  return result;
 }
 
 export async function getStations() {
@@ -73,10 +112,15 @@ export async function getStations() {
 }
 
 export async function putStations(stations) {
-  const current = await getStations();
-  const wanted = new Set(stations.map(station => station.id));
-  for (const station of current) if (!wanted.has(station.id)) await withStore("stations", "readwrite", store => requestToPromise(store.delete(station.id)));
-  for (const station of stations) await withStore("stations", "readwrite", store => requestToPromise(store.put(redactStation(station))));
+  comparisonRevision++;
+  try {
+    const current = await getStations();
+    const wanted = new Set(stations.map(station => station.id));
+    for (const station of current) if (!wanted.has(station.id)) await withStore("stations", "readwrite", store => requestToPromise(store.delete(station.id)));
+    for (const station of stations) await withStore("stations", "readwrite", store => requestToPromise(store.put(redactStation(station))));
+  } finally {
+    comparisonRevision++;
+  }
 }
 
 export function addStationIfNeeded(createStation) {
@@ -88,17 +132,50 @@ export function addStationIfNeeded(createStation) {
       try { station = createStation(lookup.result); } catch (error) { reject(error); return; }
       if (!station) return resolve(false);
       const request = store.add(redactStation(station));
-      request.onsuccess = () => resolve(true);
+      request.onsuccess = () => { comparisonRevision++; resolve(true); };
       request.onerror = () => reject(request.error || new Error("Unable to add station"));
     };
   }));
 }
 
 export async function getSnapshots({ stationId, limit = 50 } = {}) {
-  const rows = await withStore("snapshots", "readonly", store => requestToPromise(store.getAll()));
-  return rows.filter(row => isValidSnapshot(row) && (!stationId || row.stationId === stationId))
-    .sort((a, b) => b.collectedAt - a.collectedAt)
-    .slice(0, limit);
+  const rows = await withStore("snapshots", "readonly", store => requestToPromise(stationId ? store.index("stationId").getAll(stationId) : store.getAll()));
+  return sortSnapshots(rows.filter(row => isValidSnapshot(row) && (!stationId || row.stationId === stationId))).slice(0, limit);
+}
+
+export async function getLatestSnapshots(stationIds, isUsable = () => true) {
+  const targets = new Set(stationIds);
+  if (!targets.size) return [];
+  return withStore("snapshots", "readonly", store => new Promise((resolve, reject) => {
+    const request = store.index("collectedAt").openCursor(null, "prev");
+    const latest = new Map();
+    request.onerror = () => reject(request.error || new Error("Unable to read latest snapshots"));
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return resolve(sortSnapshots([...latest.values()]));
+      const snapshot = cursor.value;
+      if (typeof snapshot?.collectedAt !== "number") {
+        const fallback = store.getAll();
+        fallback.onerror = () => reject(fallback.error || new Error("Unable to read snapshots"));
+        fallback.onsuccess = () => {
+          try { resolve(latestSnapshotsFromRows(fallback.result, targets, isUsable)); }
+          catch (error) { reject(error); }
+        };
+        return;
+      }
+      if (latest.size === targets.size) {
+        let oldestLatest = Infinity;
+        for (const item of latest.values()) oldestLatest = Math.min(oldestLatest, Number(item.collectedAt));
+        if (snapshot.collectedAt < oldestLatest) return resolve(sortSnapshots([...latest.values()]));
+      }
+      if (targets.has(snapshot.stationId)) {
+        const previous = latest.get(snapshot.stationId);
+        const collectedAt = Number(snapshot.collectedAt);
+        if ((!previous || collectedAt >= Number(previous.collectedAt)) && isValidSnapshot(snapshot) && isUsable(snapshot) && (!previous || collectedAt > Number(previous.collectedAt) || compareSnapshotIds(snapshot.id, previous.id) < 0)) latest.set(snapshot.stationId, snapshot);
+      }
+      cursor.continue();
+    };
+  }));
 }
 
 export function putSnapshot(snapshot) {
@@ -107,21 +184,20 @@ export function putSnapshot(snapshot) {
     const request = store.put(snapshot);
     request.onerror = () => reject(request.error || new Error("Unable to save snapshot"));
     request.onsuccess = () => {
+      comparisonRevision++;
       const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      const cursorRequest = store.openCursor();
-      cursorRequest.onerror = () => reject(cursorRequest.error || new Error("Unable to prune snapshots"));
-      cursorRequest.onsuccess = () => {
-        const cursor = cursorRequest.result;
-        if (!cursor) return resolve();
-        if (Number(cursor.value?.collectedAt) < cutoff) cursor.delete();
-        cursor.continue();
-      };
+      Promise.all([
+        pruneSnapshots(store.index("collectedAt"), IDBKeyRange.upperBound(cutoff), value => Number(value.collectedAt) < cutoff),
+        pruneSnapshots(store.index("collectedAt"), IDBKeyRange.lowerBound(""), value => Number.isFinite(Number(value.collectedAt)) && Number(value.collectedAt) < cutoff)
+      ]).then(resolve, reject);
     };
   }));
 }
 
-export function clearSnapshots() {
-  return withStore("snapshots", "readwrite", store => requestToPromise(store.clear()));
+export async function clearSnapshots() {
+  const result = await withStore("snapshots", "readwrite", store => requestToPromise(store.clear()));
+  comparisonRevision++;
+  return result;
 }
 
 export function redactStation(station = {}) {

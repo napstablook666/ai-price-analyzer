@@ -39,33 +39,72 @@ function exactNames(name) {
   return [...new Set([raw, normalized, ...(MODEL_ALIASES[raw] || []), ...(MODEL_ALIASES[normalized] || [])])];
 }
 
-export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHING_RULES) {
+function addIndexedModel(index, key, modelIndex) {
+  let values = index.get(key);
+  if (!values) index.set(key, values = new Set());
+  values.add(modelIndex);
+}
+
+
+function modelsForIndexes(indexes, index) {
+  return [...indexes].sort((left, right) => left - right).map(modelIndex => index.models[modelIndex]);
+}
+
+export function buildModelMatchIndex(officialList = [], overrides = []) {
+  const index = {
+    models: officialList,
+    namesByModel: [],
+    byName: new Map(),
+    byVersionlessName: new Map(),
+    modelById: new Map(),
+    overridesByStation: new Map()
+  };
+  officialList.forEach((model, modelIndex) => {
+    const names = getOfficialNames(model);
+    index.namesByModel.push(names);
+    const id = model.id || model.name;
+    if (!index.modelById.has(id)) index.modelById.set(id, model);
+    for (const name of names) {
+      addIndexedModel(index.byName, name, modelIndex);
+      addIndexedModel(index.byVersionlessName, removeVersion(name), modelIndex);
+    }
+  });
+  for (const override of overrides) {
+    let stationOverrides = index.overridesByStation.get(override.stationId);
+    if (!stationOverrides) index.overridesByStation.set(override.stationId, stationOverrides = new Map());
+    const modelName = normalizeProxyModelName(override.modelName);
+    if (!stationOverrides.has(modelName)) stationOverrides.set(modelName, override.officialModelId);
+  }
+  return index;
+}
+
+export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHING_RULES, index = buildModelMatchIndex(officialList)) {
   const rawName = String(proxyName || "").trim().toLowerCase();
   const normalized = normalizeProxyModelName(rawName);
   for (const rule of rules?.length ? rules : DEFAULT_MATCHING_RULES) {
     if (!rule?.enabled) continue;
     let matches = [];
     if (rule.id === "exact") {
-      const names = exactNames(rawName);
-      matches = officialList.filter(model => getOfficialNames(model).some(name => names.includes(name)));
+      const candidateIndexes = new Set();
+      for (const name of exactNames(rawName)) for (const modelIndex of index.byName.get(name) || []) candidateIndexes.add(modelIndex);
+      matches = modelsForIndexes(candidateIndexes, index);
     } else if (rule.id === "suffix") {
       const cleanProxy = cleanModelName(normalized);
-      matches = officialList.filter(model => getOfficialNames(model).some(name => {
+      matches = index.models.filter((model, modelIndex) => index.namesByModel[modelIndex].some(name => {
         const cleanOfficial = cleanModelName(name);
         return cleanProxy === cleanOfficial || normalized.endsWith(name) || name.endsWith(cleanProxy);
       }));
     } else if (rule.id === "ignore_version") {
-      const baseProxy = removeVersion(normalized);
-      matches = officialList.filter(model => getOfficialNames(model).some(name => removeVersion(name) === baseProxy));
+      matches = modelsForIndexes(index.byVersionlessName.get(removeVersion(normalized)) || [], index);
     } else if (rule.id === "fuzzy") {
       let best;
       let bestScore = 0;
-      for (const model of officialList) {
-        for (const name of getOfficialNames(model)) {
+      for (let modelIndex = 0; modelIndex < index.namesByModel.length; modelIndex++) {
+        for (const name of index.namesByModel[modelIndex]) {
           if (!normalized.includes(name) && !name.includes(normalized)) continue;
           const score = Math.min(normalized.length, name.length) / Math.max(normalized.length, name.length);
           if (score > 0.6 && score > bestScore) {
-            best = model;
+            best = index.models[modelIndex];
             bestScore = score;
           }
         }
@@ -80,11 +119,12 @@ export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHIN
   return [];
 }
 
-export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules } = {}) {
+export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules, index } = {}) {
+  const matchingIndex = index || buildModelMatchIndex(officialList, overrides);
   const normalized = normalizeProxyModelName(proxyName);
-  const override = overrides.find(item => item.stationId === stationId && normalizeProxyModelName(item.modelName) === normalized);
-  const match = override && officialList.find(model => (model.id || model.name) === override.officialModelId);
-  return match ? [{ match, rule: "人工确认", ruleId: "manual", confidence: 1 }] : matchModel(proxyName, officialList, rules);
+  const overrideId = matchingIndex.overridesByStation.get(stationId)?.get(normalized);
+  const match = overrideId && matchingIndex.modelById.get(overrideId);
+  return match ? [{ match, rule: "人工确认", ruleId: "manual", confidence: 1 }] : matchModel(proxyName, officialList, rules, matchingIndex);
 }
 
 export function suggestModelCandidates(proxyName, officialList = [], limit = JEV_MODEL_CANDIDATE_LIMIT) {

@@ -16,6 +16,8 @@
     <nav class="top-actions" aria-label="页面操作">
       <a class="button button-quiet" href="dashboard.html"><span data-icon="chevron-right" class="icon icon-flip"></span><span>返回对比</span></a>
       <button class="button button-quiet" id="add-station-top" type="button"><span data-icon="bot" class="icon"></span><span>Agent 添加站点</span></button>
+      <button class="button button-quiet" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
+      <button class="button button-quiet" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
       <button class="button button-primary" id="save-all" type="button"><span data-icon="check" class="icon"></span><span>保存全部</span></button>
     </nav>
   </header>
@@ -23,13 +25,12 @@
   <main class="settings-shell">
     <section class="settings-intro">
       <div><p class="eyebrow accent">CONTROL ROOM / ADAPTERS</p><h1>把采集<br><em>变成配置。</em></h1></div>
-      <div class="intro-aside"><span class="intro-index">02</span><p>站点、模型和适配器资料集中在这里。密钥只保存在扩展会话存储，不进入导出文件。</p></div>
+      <div class="intro-aside"><span class="intro-index">02</span><p>密钥只保存在扩展会话存储，不进入导出文件。</p></div>
     </section>
 
     <section class="config-grid" aria-label="自动适配配置">
-      <article class="panel config-card config-card-llm">
+      <article class="panel config-card config-card-llm" data-collapsible data-collapse-key="llm">
         <div class="config-heading"><div class="config-icon"><span data-icon="bot" class="icon"></span></div><div><p class="eyebrow">OPTIONAL INTELLIGENCE</p><h2>LLM 自动适配</h2></div><label class="switch"><input id="llm-enabled" type="checkbox"><span></span><b class="sr-only">启用 LLM 自动适配</b></label></div>
-        <p class="config-copy">使用 OpenAI-compatible 接口，把站点地址转换成结构化采集配置。</p>
         <div class="provider-profile-row">
           <label><span>供应商档案</span><select id="llm-profile"><option value="">当前配置（未保存）</option></select></label>
           <label><span>档案名称</span><input id="llm-profile-name" placeholder="例如：OpenRouter"></label>
@@ -52,9 +53,8 @@
         </div>
       </article>
 
-      <article class="panel config-card config-card-jev">
+      <article class="panel config-card config-card-jev" data-collapsible data-collapse-key="jev">
         <div class="config-heading"><div class="config-icon"><span data-icon="file-code-2" class="icon"></span></div><div><p class="eyebrow">MODEL PROFILE / JEV</p><h2>JEV 模型资料</h2></div><label class="switch"><input id="jev-enabled" type="checkbox"><span></span><b class="sr-only">启用 JEV 模型资料</b></label></div>
-        <p class="config-copy">将固定的模型、接口和响应线索交给本地适配器，未配置 LLM 也能先完成基础填充。</p>
         <div class="provider-profile-row">
           <label><span>供应商档案</span><select id="jev-profile"><option value="">当前配置（未保存）</option></select></label>
           <label><span>档案名称</span><input id="jev-profile-name" placeholder="例如：Nekopeer Jev"></label>
@@ -80,14 +80,12 @@
       </article>
     </section>
 
-    <section class="panel settings-panel">
-      <div class="panel-heading"><div><p class="eyebrow">SCHEDULE & WORKLOAD</p><h2>刷新与成本口径</h2></div><span class="section-mark">03</span></div>
+    <section class="panel settings-panel" id="settings-panel" data-collapsible>
+      <div class="panel-heading"><div><p class="eyebrow">PRICING WORKLOAD</p><h2>成本估算设置</h2></div><span class="section-mark">03</span></div>
       <form id="settings-form" class="settings-form">
         <div class="preset-grid wide">
-          <label><span>刷新预设</span><select id="refresh-preset"><option value="5">高频（5 分钟）</option><option value="15">标准（15 分钟）</option><option value="30">低频（30 分钟）</option><option value="60">省电（60 分钟）</option><option value="custom">自定义</option></select></label>
           <label><span>成本口径预设</span><select id="usage-preset"><option value="legacy">旧版 JS 默认</option><option value="baseline">基础估算（100 万输入 / 20 万输出）</option><option value="custom">自定义</option></select></label>
         </div>
-        <label><span>自动刷新间隔（分钟）</span><input id="refresh-interval" type="number" min="1" step="1" required></label>
         <label><span>货币</span><select id="currency"><option value="CNY">人民币（CNY）</option><option value="USD">美元（USD）</option></select></label>
         <label class="wide"><span>官方美元兑人民币汇率</span><input id="exchange-rate" type="number" min="0.0001" step="0.0001" required><button class="button button-quiet button-small" id="refresh-exchange-rate" type="button"><span data-icon="refresh-cw" class="icon"></span><span>从中国银行刷新</span></button></label>
         <label><span>推荐口径</span><select id="recommendation-profile"><option value="balanced">均衡推荐（成本 80% / 证据 20%）</option><option value="price">价格优先（成本 90% / 证据 10%）</option><option value="reliability">稳定优先（成本 70% / 证据 30%）</option></select></label>
@@ -100,8 +98,8 @@
     <section class="section-heading"><div><p class="eyebrow">STATION REGISTRY</p><h2>中转站</h2></div><button class="button button-primary" id="add-station" type="button"><span data-icon="bot" class="icon"></span><span>Agent 添加</span></button></section>
     <section id="stations-list" class="stations-list" aria-live="polite"></section>
 
-    <section class="panel data-panel">
-      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><p class="eyebrow">PORTABILITY</p><h2>数据备份</h2><p class="muted">导出包含站点、设置、官方参考目录和采集快照，不包含站点密钥与 LLM / JEV API Key。</p></div></div>
+    <section class="panel data-panel" id="data-panel" data-collapsible>
+      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><p class="eyebrow">PORTABILITY</p><h2>数据备份</h2><p class="muted">不含站点密钥与 API Key。</p></div></div>
       <div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json"></label></div>
     </section>
   </main>

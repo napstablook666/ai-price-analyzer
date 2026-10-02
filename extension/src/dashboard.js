@@ -1,11 +1,19 @@
 import { flattenComparisonRows } from "./core/pricing.js";
 import { buildJevComparisonTask, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
 import { getJevModelCandidates } from "./core/matching.js";
-import { callService, escapeHtml, formatMoney, hydrateIcons, icon } from "./shared/ui.js";
+import { callService, escapeHtml, formatMoney, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
+import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
+import { initCollapsibleCards } from "./shared/collapse.js";
 import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
 
-const state = { data: null, rows: [], reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), filters: { search: "", stationId: "", provider: null, group: null, showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
+const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
+const PAGE_SIZE = 100;
+const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
 const $ = selector => document.querySelector(selector);
+let lastRefreshSummary = null;
+let pageFilterKey = null;
+const refreshRows = new Map();
+const RATING_LABELS = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
 
 
 function renderProviderSwitchers(settings) {
@@ -35,10 +43,9 @@ function formatPrice(value, currency = "CNY", precision = 4) {
   return precision === 4 ? formatMoney(displayValue, symbol) : `${symbol}${displayValue.toFixed(precision)}`;
 }
 
-function rowMatches(row) {
-  const query = state.filters.search.trim().toLowerCase();
-  const haystack = [row.displayName, row.modelName, row.stationName, row.groupName, row.officialName, row.provider].join(" ").toLowerCase();
-  if (query && !haystack.includes(query)) return false;
+function rowMatches(row, query) {
+  if (query && !state.searchTextByRow.get(row).includes(query)) return false;
+  if (!matchesModelQueries(state.modelTextByRow.get(row), state.filters.models)) return false;
   if (state.filters.stationId && row.stationId !== state.filters.stationId) return false;
   if (Array.isArray(state.filters.provider) && !state.filters.provider.includes(row.provider)) return false;
   if (Array.isArray(state.filters.group) && !state.filters.group.includes(row.groupName)) return false;
@@ -57,7 +64,7 @@ function statusMarkup(row) {
 }
 
 function stationFor(row) {
-  return state.data?.stations?.find(station => station.id === row.stationId) || {};
+  return state.stationById.get(row.stationId) || {};
 }
 
 function renderSummary(rows) {
@@ -106,6 +113,18 @@ function renderFacetFilters(rows) {
       : `<span class="facet-empty">暂无可选项</span>`;
     filterFacetOptions(key);
   }
+}
+
+const MODEL_FILTER_BOXES = 4;
+function updateModelFilterLabel() {
+  const count = state.filters.models.filter(query => query.trim()).length;
+  $("#model-filter-label").textContent = count ? `模型对比 · ${count}` : "模型对比";
+}
+function renderModelFilter() {
+  const queries = state.filters.models;
+  const boxes = Array.from({ length: MODEL_FILTER_BOXES }, (_, index) => queries[index] || "");
+  $("#model-filter-inputs").innerHTML = boxes.map((value, index) => `<input class="facet-search model-filter-input" type="search" data-model-filter="${index}" value="${escapeHtml(value)}" placeholder="模型 ${index + 1}" autocomplete="off" aria-label="模型对比 ${index + 1}">`).join("");
+  updateModelFilterLabel();
 }
 
 function sortValue(row, key) {
@@ -201,8 +220,20 @@ function comparisonJevMarkup(row) {
 
 function renderRows() {
   const currency = state.data?.settings?.defaultCurrency || "CNY";
-  const visible = sortRows(state.rows.filter(rowMatches));
-  $("#result-count").textContent = `${visible.length} 条报价`;
+  const query = state.filters.search.trim().toLowerCase();
+  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.showStale, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
+  if (pageFilterKey !== null && pageFilterKey !== filterKey) state.page = 0;
+  pageFilterKey = filterKey;
+  const filtered = sortRows(state.rows.filter(row => rowMatches(row, query)));
+  const page = paginateRows(filtered, state.page, PAGE_SIZE);
+  state.page = page.page;
+  const visible = page.rows;
+  const pagination = $("#comparison-pagination");
+  pagination.hidden = page.pageCount <= 1;
+  $("#comparison-page").textContent = page.pageCount ? `第 ${page.page + 1} / ${page.pageCount} 页` : "";
+  $("#comparison-previous").disabled = page.page === 0;
+  $("#comparison-next").disabled = page.page + 1 >= page.pageCount;
+  $("#result-count").textContent = `${filtered.length} 条报价`;
   const seenModelAssists = new Set();
   $("#comparison-body").innerHTML = visible.map(row => {
     const station = stationFor(row);
@@ -210,8 +241,7 @@ function renderRows() {
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
     const deltaLabel = delta === null ? "无官方价" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore} 分` : "暂无评分";
-    const ratingLabels = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
-    const rating = ratingLabels[row.category] || "";
+    const rating = RATING_LABELS[row.category] || "";
     const dailyCost = formatPrice(row.dailyCost, currency);
     const hasOfficialCost = Number.isFinite(row.officialDailyCost);
     const dailyDifference = hasOfficialCost ? row.officialDailyCost - row.dailyCost : null;
@@ -282,7 +312,13 @@ function renderCheckin(data) {
 
 function render(data) {
   state.data = data;
+  state.page = 0;
+  pageFilterKey = null;
   state.rows = flattenComparisonRows(data.comparisons || []);
+  const index = createDashboardIndex(state.rows, data.stations || []);
+  state.searchTextByRow = index.searchTextByRow;
+  state.modelTextByRow = index.modelTextByRow;
+  state.stationById = index.stationById;
   renderProviderSwitchers(data.settings);
   state.reference = data.references;
   state.filters.showUnmatched = Boolean(data.settings?.showUnmatched);
@@ -292,6 +328,7 @@ function render(data) {
   renderSummary(state.rows);
   renderStationFilter(state.rows);
   renderFacetFilters(state.rows);
+  renderModelFilter();
   $("#sort-by").value = state.filters.sortBy;
   $("#sort-secondary").value = state.filters.sortSecondary;
   $("#sort-direction").value = state.filters.sortDirection;
@@ -352,6 +389,12 @@ document.addEventListener("change", event => {
   renderRows();
 });
 document.addEventListener("input", event => {
+  if (event.target.matches("input[data-model-filter]")) {
+    state.filters.models = [...document.querySelectorAll("input[data-model-filter]")].map(input => input.value);
+    updateModelFilterLabel();
+    renderRows();
+    return;
+  }
   const input = event.target.closest("[data-facet-search]");
   if (input) filterFacetOptions(input.dataset.facetSearch);
 });
@@ -371,8 +414,9 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: null, group: null, showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" };
+  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" };
   $("#search").value = "";
+  renderModelFilter();
   renderStationFilter(state.rows);
   for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
   $("#sort-by").value = "dailyCost";
@@ -440,6 +484,50 @@ async function handleJevAction(button) {
 }
 
 
+function renderRefreshProgress(progress) {
+  const panel = $("#refresh-progress-panel");
+  panel.hidden = false;
+  const total = Math.max(0, Number(progress.total) || 0);
+  const completed = Math.max(0, Number(progress.completed) || 0);
+  const bar = $("#refresh-progress-bar");
+  bar.max = Math.max(total, 1);
+  bar.value = Math.min(completed, bar.max);
+  $("#refresh-progress-count").textContent = `${completed} / ${total} 站点`;
+  const message = $("#refresh-progress-message");
+  if (progress.phase === "start") {
+    lastRefreshSummary = null;
+    refreshRows.clear();
+    $("#refresh-progress-results").replaceChildren();
+    message.textContent = total ? `准备查询 ${total} 个启用站点` : "没有启用的站点可查询";
+  } else if (progress.phase === "references") {
+    message.textContent = progress.message;
+  } else if (progress.phase === "station") {
+    let row = refreshRows.get(progress.stationId);
+    if (!row) {
+      row = document.createElement("li");
+      refreshRows.set(progress.stationId, row);
+      $("#refresh-progress-results").append(row);
+    }
+    row.dataset.status = progress.status;
+    const duration = Number.isFinite(progress.durationMs) ? ` · ${(progress.durationMs / 1000).toFixed(1)} 秒` : "";
+    const detail = progress.status === "running" ? "查询中" : progress.status === "error" ? `失败 · ${progress.error || "未知错误"}` : `${Number(progress.modelCount) || 0} 个模型${duration}`;
+    row.textContent = `${progress.stationName || progress.stationId} · ${detail}`;
+    message.textContent = progress.status === "running"
+      ? `正在查询 ${progress.current}/${total}：${progress.stationName}`
+      : `已查询 ${completed}/${total} 个站点`;
+  } else if (progress.phase === "complete") {
+    lastRefreshSummary = progress.summary;
+    const summary = progress.summary;
+    message.textContent = total
+      ? `查询完成：${summary.successCount} 成功，${summary.errorCount} 失败，${summary.totalModels} 个模型 · ${(summary.durationMs / 1000).toFixed(1)} 秒`
+      : "没有启用的站点可查询";
+  } else if (progress.phase === "error") {
+    message.textContent = progress.message;
+  }
+}
+
+$("#comparison-previous").addEventListener("click", () => { state.page--; renderRows(); });
+$("#comparison-next").addEventListener("click", () => { state.page++; renderRows(); });
 $("#comparison-body").addEventListener("click", async event => {
   const action = event.target.closest("[data-jev-action]");
   if (action) {
@@ -457,9 +545,15 @@ $("#comparison-body").addEventListener("click", async event => {
 $("#refresh-all").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>刷新中</span>`;
-  try { render(await callService("REFRESH_ALL")); toast("全部站点已刷新"); }
-  catch (error) { toast(error.message); }
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>查询中</span>`;
+  lastRefreshSummary = null;
+  try {
+    const data = await callService("REFRESH_ALL");
+    lastRefreshSummary = data.refreshSummary;
+    render(data);
+    if (!lastRefreshSummary?.total) toast("没有启用的站点可查询");
+    else toast(`查询完成：${lastRefreshSummary.successCount} 成功，${lastRefreshSummary.errorCount} 失败`);
+  } catch (error) { toast(error.message); }
   finally { button.disabled = false; button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`; }
 });
 
@@ -513,6 +607,10 @@ document.addEventListener("change", async event => {
 });
 
 hydrateIcons();
+const cards = initCollapsibleCards("dashboard");
+$("#expand-all").addEventListener("click", () => cards.setAll(false));
+$("#collapse-all").addEventListener("click", () => cards.setAll(true));
+onRefreshProgress(renderRefreshProgress);
 load();
 
 document.addEventListener("visibilitychange", () => {

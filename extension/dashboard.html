@@ -20,6 +20,8 @@
         <label class="provider-switch"><span>LLM</span><select id="llm-provider-switch"><option value="">未保存档案</option></select></label>
         <label class="provider-switch"><span>JEV</span><select id="jev-provider-switch"><option value="">未保存档案</option></select></label>
       </div>
+      <button class="button button-quiet" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
+      <button class="button button-quiet" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
       <button class="button button-primary" id="refresh-all" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新全部</span></button>
     </nav>
   </header>
@@ -27,20 +29,26 @@
   <main class="page-shell">
     <section class="dashboard-heading" aria-labelledby="page-title">
       <div><p class="eyebrow accent">价格对比</p><h1 id="page-title">模型报价</h1></div>
-      <p class="scope-note">同一用量 · 跨站对比 · 按 24 小时估算</p>
+    </section>
+
+    <section class="panel refresh-progress-panel" id="refresh-progress-panel" aria-label="站点模型查询进度" hidden>
+      <div class="refresh-progress-heading"><div><p class="eyebrow">站点模型查询</p><h2>采集进度</h2></div><span id="refresh-progress-count">0 / 0 站点</span></div>
+      <progress id="refresh-progress-bar" max="1" value="0" aria-label="已完成的站点查询数"></progress>
+      <p id="refresh-progress-message" role="status" aria-live="polite" aria-atomic="true"></p>
+      <ul id="refresh-progress-results" aria-live="off"></ul>
     </section>
 
     <section class="summary-grid" id="summary" aria-label="统计摘要"></section>
 
 
-    <section class="panel checkin-panel" aria-label="站点签到" id="checkin-panel" hidden>
+    <section class="panel checkin-panel" aria-label="站点签到" id="checkin-panel" data-collapsible hidden>
       <div class="panel-heading">
-        <div><p class="eyebrow">站点签到</p><h2>每日签到</h2><p class="table-context">复用浏览器登录态，直接调用站点签到接口</p></div>
+        <div><p class="eyebrow">站点签到</p><h2>每日签到</h2></div>
         <button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button>
       </div>
       <div class="checkin-list" id="checkin-list"></div>
     </section>
-    <section class="panel toolbar-panel" aria-label="筛选和排序">
+    <section class="panel toolbar-panel" id="toolbar-panel" data-collapsible aria-label="筛选和排序">
       <div class="toolbar-main">
         <label class="search-field"><span data-icon="search" class="icon"></span><span class="sr-only">搜索模型或站点</span><input id="search" type="search" placeholder="搜索模型、站点或供应商" autocomplete="off"></label>
         <details class="facet-menu station-filter-menu" id="station-filter-menu"><summary><span data-icon="building-2" class="icon"></span><span id="station-filter-label">全部中转站</span></summary><div class="facet-menu-body"><input class="facet-search" type="search" data-facet-search="station" placeholder="搜索站点" aria-label="搜索站点" autocomplete="off"><div class="facet-options" id="station-filters"></div></div></details>
@@ -51,6 +59,10 @@
         <button class="button button-quiet" id="fetch-references" type="button"><span data-icon="external-link" class="icon"></span><span>更新官方价</span></button>
         <button class="button button-quiet" id="reset-filters" type="button" title="重置筛选"><span data-icon="x" class="icon"></span><span>重置</span></button>
       </div>
+      <div class="model-filter-row">
+        <span class="model-filter-label" id="model-filter-label">模型对比</span>
+        <div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div>
+      </div>
       <div class="toolbar-options">
         <label class="check-label"><input id="show-unmatched" type="checkbox"><span>显示未匹配</span></label>
         <label class="check-label"><input id="show-stale" type="checkbox" checked><span>显示过期</span></label>
@@ -58,9 +70,9 @@
       </div>
     </section>
 
-    <section class="panel comparison-panel" aria-labelledby="comparison-title">
+    <section class="panel comparison-panel" id="comparison-panel" data-collapsible aria-labelledby="comparison-title">
       <div class="panel-heading">
-        <div><p class="eyebrow">当前报价</p><h2 id="comparison-title">价格明细</h2><p class="table-context">日成本按设置中的 24 小时工作负载估算</p></div>
+        <div><p class="eyebrow">当前报价</p><h2 id="comparison-title">价格明细</h2></div>
         <div class="comparison-meta"><span class="result-count" id="result-count">0 条报价</span><div class="reference-readout"><strong id="reference-status">官方参考价未加载</strong><span id="reference-note">参考价与汇率每日缓存</span></div></div>
       </div>
       <div class="table-wrap">
@@ -69,6 +81,11 @@
           <tbody id="comparison-body"></tbody>
         </table>
       </div>
+      <nav class="comparison-pagination" id="comparison-pagination" aria-label="报价分页" hidden>
+        <button class="button button-quiet" id="comparison-previous" type="button" aria-label="上一页" title="上一页"><span data-icon="chevron-left" class="icon"></span><span>上一页</span></button>
+        <span id="comparison-page" aria-live="polite"></span>
+        <button class="button button-quiet" id="comparison-next" type="button" aria-label="下一页" title="下一页"><span>下一页</span><span data-icon="chevron-right" class="icon"></span></button>
+      </nav>
       <div class="empty-state" id="empty-state" hidden>
         <span data-icon="database" class="icon empty-icon"></span>
         <h3>还没有可比较的报价</h3>

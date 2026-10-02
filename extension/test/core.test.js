@@ -5,14 +5,15 @@ import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation, prepareStationInput } from "../src/core/collectors.js";
 import { addRecommendationScores, buildComparisonRows, getProxyPrices, getTierShares, workloadCost } from "../src/core/pricing.js";
-import { getJevModelCandidates, matchModelWithOverrides, matchOne, suggestModelCandidates } from "../src/core/matching.js";
+import { createDashboardIndex, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
+import { buildModelMatchIndex, getJevModelCandidates, matchModel, matchModelWithOverrides, matchOne, suggestModelCandidates } from "../src/core/matching.js";
 import { normalizePricingPayload } from "../src/core/collectors.js";
-import { convertRechargeAmount, DEFAULT_DAILY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, REFRESH_PRESETS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
+import { convertRechargeAmount, DEFAULT_DAILY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
 import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
 import { ensurePageBridge, findOrOpenPageTab, selectPageTab } from "../src/core/page-tabs.js";
 import { inferStationAdapter, parseAdapterSuggestion } from "../src/core/adapters.js";
-import { addStationIfNeeded, redactStation } from "../src/shared/db.js";
+import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnapshots, putSnapshot, putStations, redactStation } from "../src/shared/db.js";
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
@@ -31,6 +32,90 @@ const response = body => ({
   json: async () => body
 });
 
+
+async function withSnapshotDb(initialSnapshots, callback) {
+  const previousIndexedDb = globalThis.indexedDB;
+  const previousKeyRange = globalThis.IDBKeyRange;
+  const snapshots = structuredClone(initialSnapshots);
+  const compareKeys = (left, right) => {
+    if (typeof left !== typeof right) return typeof left === "number" ? -1 : 1;
+    return typeof left === "number" ? left - right : String(left).localeCompare(String(right));
+  };
+  const database = {
+    close() {},
+    transaction() {
+      const transaction = {
+        objectStore() {
+          return {
+            getAll() {
+              const request = {};
+              queueMicrotask(() => { request.result = [...snapshots].sort((a, b) => a.id.localeCompare(b.id)); request.onsuccess?.(); });
+              return request;
+            },
+            put(value) {
+              const request = {};
+              queueMicrotask(() => {
+                const index = snapshots.findIndex(snapshot => snapshot.id === value.id);
+                if (index < 0) snapshots.push(structuredClone(value));
+                else snapshots[index] = structuredClone(value);
+                request.onsuccess?.();
+              });
+              return request;
+            },
+            index(name) {
+              return {
+                getAll(query) {
+                  const request = {};
+                  queueMicrotask(() => {
+                    request.result = snapshots.filter(snapshot => name !== "stationId" || snapshot.stationId === query);
+                    request.onsuccess?.();
+                  });
+                  return request;
+                },
+                openCursor(query = null, direction = "next") {
+                  const request = {};
+                  let rows = snapshots.filter(snapshot => {
+                    if (query?.type === "upper") return typeof snapshot.collectedAt === "number" && snapshot.collectedAt < query.value;
+                    if (query?.type === "lower") return typeof snapshot.collectedAt === "string";
+                    return true;
+                  }).sort((a, b) => compareKeys(a.collectedAt, b.collectedAt) || a.id.localeCompare(b.id));
+                  if (direction === "prev") rows.reverse();
+                  let position = 0;
+                  const emit = () => queueMicrotask(() => {
+                    const snapshot = rows[position];
+                    request.result = snapshot ? {
+                      key: snapshot.collectedAt,
+                      value: structuredClone(snapshot),
+                      continue() { position++; emit(); },
+                      delete() { const index = snapshots.findIndex(item => item.id === snapshot.id); if (index >= 0) snapshots.splice(index, 1); }
+                    } : null;
+                    request.onsuccess?.();
+                  });
+                  emit();
+                  return request;
+                }
+              };
+            }
+          };
+        }
+      };
+      setTimeout(() => transaction.oncomplete?.(), 0);
+      return transaction;
+    }
+  };
+  globalThis.indexedDB = { open() { const request = { result: database }; queueMicrotask(() => request.onsuccess?.()); return request; } };
+  globalThis.IDBKeyRange = {
+    upperBound(value) { return { type: "upper", value }; },
+    lowerBound(value) { return { type: "lower", value }; }
+  };
+  try { return await callback(snapshots); }
+  finally {
+    if (previousIndexedDb === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = previousIndexedDb;
+    if (previousKeyRange === undefined) delete globalThis.IDBKeyRange;
+    else globalThis.IDBKeyRange = previousKeyRange;
+  }
+}
 test("parses OpenRouter token and image prices", () => {
   const [model] = parseOpenRouterData({ data: [{
     id: "openai/gpt-4o",
@@ -62,7 +147,6 @@ test("uses the legacy userscript workload as the default daily usage", () => {
   assert.equal(settings.usage.input, 66.5 * TOKENS_PER_MILLION);
   assert.equal(settings.usage.cacheRead, 550.7 * TOKENS_PER_MILLION);
   assert.equal(settings.usage.output, 5.5 * TOKENS_PER_MILLION);
-  assert.deepEqual(REFRESH_PRESETS.map(preset => preset.minutes), [5, 15, 30, 60]);
   assert.equal(USAGE_PRESETS.find(preset => preset.id === "legacy").usage.requests, 7900);
 });
 
@@ -613,6 +697,85 @@ test("suggests official candidates for unmatched proxy names and scopes confirme
   assert.deepEqual(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-b", overrides: override }), []);
 });
 
+test("indexed model matcher preserves rule priority, suffixes, versions, fuzzy matches, and override scope", () => {
+  const official = [
+    { id: "openai/gpt-4o", name: "openai/gpt-4o", aliases: ["gpt-4o"] },
+    { id: "duplicate-gpt-4o", name: "gpt-4o" },
+    { id: "anthropic/claude-3.7-sonnet", name: "anthropic/claude-3.7-sonnet", aliases: ["claude-3.7-sonnet"] },
+    { id: "google/gemini-2.0-flash", name: "google/gemini-2.0-flash", aliases: ["gemini-2.0-flash"] }
+  ];
+  const overrides = [{ stationId: "station-a", modelName: "relay-sonnet", officialModelId: "anthropic/claude-3.7-sonnet" }];
+  const index = buildModelMatchIndex(official, overrides);
+  const rules = [
+    { id: "exact", enabled: true },
+    { id: "suffix", enabled: true },
+    { id: "ignore_version", enabled: true },
+    { id: "fuzzy", enabled: true }
+  ];
+  const cases = [
+    ["gpt-4o", [["openai/gpt-4o", "exact"], ["duplicate-gpt-4o", "exact"]]],
+    ["custom-claude-3.7-sonnet", [["anthropic/claude-3.7-sonnet", "suffix"]]],
+    ["gemini-2.0-flash-20260220", [["google/gemini-2.0-flash", "ignore_version"]]],
+    ["xclaude-3.7-sonnetx", [["anthropic/claude-3.7-sonnet", "fuzzy"]]]
+  ];
+  for (const [name, expected] of cases) {
+    assert.deepEqual(matchModel(name, official, rules, index).map(({ match, ruleId }) => [match.id, ruleId]), expected);
+  }
+  assert.equal(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-a", overrides, index })[0].ruleId, "manual");
+  assert.deepEqual(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-b", overrides, index }), []);
+});
+
+test("pagination keeps every quote reachable while bounding each page", () => {
+  const rows = Array.from({ length: 205 }, (_, index) => index);
+  const pages = [0, 1, 2].map(page => paginateRows(rows, page, 100));
+  assert.deepEqual(pages.map(page => page.rows.length), [100, 100, 5]);
+  assert.deepEqual(pages.flatMap(page => page.rows), rows);
+  assert.equal(paginateRows(rows, 99, 100).page, 2);
+  assert.deepEqual(paginateRows([], 0, 100), { page: 0, pageCount: 0, rows: [] });
+});
+
+test("reads the newest usable snapshot per station and keeps station reads indexed", async () => {
+  const snapshot = (id, stationId, collectedAt) => ({ id, stationId, collectedAt, status: "success", normalized: { data: [] } });
+  const records = [
+    snapshot("orphan", "other", 50),
+    snapshot("a-invalid", "a", 40),
+    snapshot("b-z", "b", 35),
+    snapshot("b-a", "b", 35),
+    snapshot("a-z", "a", 30),
+    snapshot("a-a", "a", 30),
+    snapshot("a-old", "a", 10)
+  ];
+  await withSnapshotDb(records, async () => {
+    const latest = await getLatestSnapshots(["a", "b"], item => item.id !== "a-invalid");
+    assert.deepEqual(latest.map(item => item.id), ["b-a", "a-a"]);
+    assert.deepEqual((await getSnapshots({ stationId: "a", limit: 1 })).map(item => item.id), ["a-invalid"]);
+  });
+});
+test("brackets station saves with comparison invalidation", async () => {
+  const revision = getComparisonRevision();
+  await withSnapshotDb([], async () => {
+    await putStations([{ id: "station-a", name: "A" }]);
+    assert.equal(getComparisonRevision(), revision + 2);
+  });
+});
+
+test("prunes old numeric and imported string timestamps without dropping fresh snapshots", async () => {
+  const now = Date.now();
+  const revision = getComparisonRevision();
+  const snapshot = (id, collectedAt) => ({ id, stationId: "station-a", collectedAt, normalized: { data: [] } });
+  const records = [
+    snapshot("expired", now - 31 * 24 * 60 * 60 * 1000),
+    snapshot("expired-string", String(now - 31 * 24 * 60 * 60 * 1000)),
+    snapshot("fresh-string", String(now - 2 * 24 * 60 * 60 * 1000)),
+    snapshot("fresh", now - 2 * 24 * 60 * 60 * 1000)
+  ];
+  await withSnapshotDb(records, async snapshots => {
+    await putSnapshot(snapshot("saved", now));
+    assert.equal(getComparisonRevision(), revision + 1);
+    assert.deepEqual(new Set(snapshots.map(item => item.id)), new Set(["fresh-string", "fresh", "saved"]));
+  });
+});
+
 test("applies only confirmed model overrides to comparison rows", () => {
   const official = [{ name: "openai/gpt-4o", provider: "openai", input: 5, output: 15 }];
   const [comparison] = buildComparisonRows({
@@ -755,7 +918,7 @@ test("normalizes model settings and adapter suggestions", () => {
     llm: { enabled: true, apiKey: "secret", temperature: 2 },
     jev: { enabled: true, modelId: "custom-model-v2", endpoint: "https://jev.example/api/pricing", responseFormat: "pqh" }
   });
-  assert.equal(settings.refreshIntervalMinutes, 15);
+  assert.equal("refreshIntervalMinutes" in settings, false);
   assert.equal(settings.defaultCurrency, "CNY");
   assert.equal(settings.llm.temperature, 1);
   assert.equal("apiKey" in settings.llm, false);
@@ -1099,4 +1262,75 @@ test("keeps dashboard facet checkboxes at a compact fixed size", () => {
   const stationOptions = css.match(/\.station-filter-menu \.facet-options\s*\{([^}]+)\}/)?.[1];
   assert.ok(stationOptions, "station filter sizing rule is missing");
   assert.match(stationOptions, /max-height:\s*min\(420px,\s*45vh\)/);
+});
+
+test("keeps every section card collapsible behind the global toggles", () => {
+  const read = name => readFileSync(new URL(`../${name}`, import.meta.url), "utf8");
+  const baseCss = read("styles/base.css");
+  assert.match(baseCss, /\[data-collapsed="true"\] > \*:not\(:first-child\) \{ display: none; \}/);
+
+  let cardCount = 0;
+  for (const page of ["dashboard.html", "options.html"]) {
+    const html = read(page);
+    assert.match(html, /id="expand-all"/, `${page} is missing the expand-all button`);
+    assert.match(html, /id="collapse-all"/, `${page} is missing the collapse-all button`);
+    const keys = new Set();
+    for (const match of html.matchAll(/<[a-z-]+ [^>]*data-collapsible[^>]*>/g)) {
+      cardCount += 1;
+      const tag = match[0];
+      const key = tag.match(/data-collapse-key="([^"]+)"/)?.[1] || tag.match(/id="([^"]+)"/)?.[1];
+      assert.ok(key, `collapsible card in ${page} needs an id or data-collapse-key: ${tag}`);
+      assert.ok(!keys.has(key), `duplicate collapse key ${key} in ${page}`);
+      keys.add(key);
+      assert.match(html.slice(match.index, match.index + 200), /class="(panel-heading|config-heading|toolbar-main|data-panel-copy)"/, `first child of ${key} must hold the collapse toggle`);
+    }
+  }
+  assert.equal(cardCount, 7);
+});
+
+test("defaults provider filters to Anthropic, DeepSeek, OpenAI, and z-ai", () => {
+  const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  assert.match(source, /const DEFAULT_PROVIDER_FILTER = \["anthropic", "deepseek", "openai", "z-ai"\]/);
+  assert.equal((source.match(/provider: DEFAULT_PROVIDER_FILTER/g) || []).length, 2);
+});
+
+test("indexes dashboard search text and station lookups", () => {
+  const row = {
+    displayName: "Claude 3.7 Sonnet",
+    modelName: "claude-3-7-sonnet",
+    stationName: "Relay One",
+    groupName: "Default",
+    officialName: "anthropic/claude-3.7-sonnet",
+    provider: "anthropic",
+    stationId: "station-1"
+  };
+  const station = { id: "station-1", name: "Relay One", enabled: true };
+  const index = createDashboardIndex([row], [station]);
+  assert.equal(index.searchTextByRow.get(row), "claude 3.7 sonnet claude-3-7-sonnet relay one default anthropic/claude-3.7-sonnet anthropic");
+  assert.equal(index.stationById.get("station-1"), station);
+});
+
+test("labels global section controls for icon-only mobile layout", () => {
+  for (const page of ["dashboard.html", "options.html"]) {
+    const html = readFileSync(new URL(`../${page}`, import.meta.url), "utf8");
+    assert.match(html, /id="expand-all"[^>]*aria-label="展开全部卡片"/);
+    assert.match(html, /id="collapse-all"[^>]*aria-label="折叠全部卡片"/);
+  }
+});
+
+test("filters quotes by any entered model across all stations", () => {
+  const rows = [
+    { modelName: "claude-3-7-sonnet", displayName: "Claude 3.7 Sonnet", stationName: "Relay One", officialName: "anthropic/claude-3.7-sonnet", canonicalModel: "claude-3.7-sonnet" },
+    { modelName: "gpt-4.1", displayName: "GPT-4.1", stationName: "Relay Two", officialName: "openai/gpt-4.1", canonicalModel: "gpt-4.1" }
+  ];
+  const index = createDashboardIndex(rows, []);
+  assert.equal(matchesModelQueries(index.modelTextByRow.get(rows[0]), ["gpt-4.1", "claude-3.7"]), true);
+  assert.equal(matchesModelQueries(index.modelTextByRow.get(rows[1]), ["claude-3.7"]), false);
+  assert.equal(matchesModelQueries(index.modelTextByRow.get(rows[1]), ["  ", ""]), true);
+
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  assert.match(html, /id="model-filter-inputs"/);
+  assert.match(dashboard, /state\.modelTextByRow = index\.modelTextByRow/);
+  assert.match(dashboard, /data-model-filter/);
 });

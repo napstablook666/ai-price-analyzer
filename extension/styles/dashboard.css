@@ -23,7 +23,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .page-shell { width: min(1560px, calc(100% - 48px)); margin: 0 auto; padding: 24px 0 48px; }
 .dashboard-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
 .dashboard-heading h1 { margin: 3px 0 0; color: var(--ink); font-size: 30px; font-weight: 780; line-height: 1.15; }
-.scope-note { margin: 0 0 3px; color: var(--ink-soft); font-size: 12px; }
+.refresh-progress-panel { display: grid; gap: 9px; margin-bottom: 12px; padding: 14px 18px; }
+.refresh-progress-panel[hidden] { display: none; }
+.refresh-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.refresh-progress-heading .eyebrow { margin-bottom: 3px; }
+.refresh-progress-heading h2 { margin: 0; font-size: 15px; line-height: 1.3; }
+#refresh-progress-count { color: var(--ink-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+#refresh-progress-bar { width: 100%; height: 8px; accent-color: var(--blue); }
+#refresh-progress-message { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.4; }
+#refresh-progress-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 6px 14px; max-height: 156px; margin: 0; padding: 8px 0 0; overflow: auto; border-top: 1px solid var(--line); list-style: none; }
+#refresh-progress-results li { min-width: 0; color: var(--ink-soft); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+#refresh-progress-results li[data-status="success"] { color: var(--mint-deep); }
+#refresh-progress-results li[data-status="error"] { color: var(--danger); }
 .eyebrow, .brand-copy strong, .button { letter-spacing: 0; }
 
  .provider-switchers { display: flex; align-items: center; gap: 8px; }
@@ -39,6 +50,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
  .toolbar-panel { display: block; margin-bottom: 12px; padding: 10px; }
 .toolbar-main { display: grid; grid-template-columns: minmax(190px, 1.7fr) minmax(150px, 1.2fr) auto auto minmax(140px, 1fr) 90px auto auto; align-items: center; gap: 8px; }
+.model-filter-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 8px; margin-top: 8px; padding: 8px 2px 0; border-top: 1px solid var(--line); }
+.model-filter-label { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.model-filter-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+.model-filter-input { width: 100%; min-width: 0; min-height: 36px; margin: 0; padding: 0 9px; font-size: 12px; }
+@media (max-width: 600px) {
+.model-filter-row { grid-template-columns: 1fr; gap: 6px; }
+.model-filter-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .toolbar-options { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 8px; padding: 8px 2px 0; border-top: 1px solid var(--line); }
 .search-field, .select-field { position: relative; display: flex; align-items: center; min-width: 0; }
 .search-field .icon, .select-field .icon { position: absolute; left: 12px; z-index: 1; color: var(--ink-soft); pointer-events: none; }
@@ -69,7 +88,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  .comparison-panel { overflow: hidden; }
 .panel-heading { align-items: center; padding: 16px 20px 13px; }
 .panel-heading h2 { margin: 3px 0 0; font-size: 21px; line-height: 1.2; }
-.table-context { margin: 4px 0 0; color: var(--ink-soft); font-size: 11px; }
 .comparison-meta { display: grid; justify-items: end; gap: 5px; max-width: min(540px, 48%); text-align: right; }
 .result-count { color: var(--ink); font-size: 12px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .reference-readout { display: grid; gap: 2px; color: var(--ink-soft); font-size: 10px; }
@@ -84,6 +102,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .comparison-table th:nth-child(5) { width: 12%; }
 .comparison-table th:nth-child(6) { width: 9%; }
 .comparison-table th:nth-child(7) { width: 11%; }
+.comparison-pagination { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; border-top: 1px solid var(--line); }
+.comparison-pagination[hidden] { display: none; }
+.comparison-pagination #comparison-page { min-width: 92px; color: var(--ink-soft); font-size: 11px; font-variant-numeric: tabular-nums; text-align: center; }
+.comparison-pagination .button { min-height: 34px; padding: 0 9px; font-size: 11px; }
+.comparison-pagination .button:disabled { color: var(--ink-soft); cursor: default; opacity: .55; }
 .comparison-table th span { display: block; margin-top: 2px; color: #6b7783; font-size: 10px; font-weight: 500; }
 .comparison-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.4; vertical-align: top; }
 .comparison-table tbody tr { background: var(--white); transition: background .15s ease; }
@@ -168,7 +191,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .page-shell { width: calc(100% - 24px); padding-top: 14px; }
 .dashboard-heading { align-items: start; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 .dashboard-heading h1 { font-size: 25px; }
-.scope-note { font-size: 11px; }
 .summary-card { min-height: 74px; padding: 10px 12px; }
 .summary-value { font-size: 23px; }
 .toolbar-main { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

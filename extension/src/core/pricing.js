@@ -1,5 +1,5 @@
 import { DEFAULT_MATCHING_RULES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
-import { matchModelWithOverrides } from "./matching.js";
+import { buildModelMatchIndex, matchModelWithOverrides } from "./matching.js";
 
 const PRICE_FIELDS = ["input", "output", "cacheRead", "cacheWrite", "request", "imageOutput", "imagePrice"];
 
@@ -139,6 +139,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
   const stationMap = new Map(stations.map(station => [station.id, station]));
   const referenceList = Array.isArray(references.models) ? references.models : [];
   const latestByStation = new Map();
+  const matchingIndex = buildModelMatchIndex(referenceList, modelMatchOverrides);
   for (const snapshot of snapshots) {
     const previous = latestByStation.get(snapshot.stationId);
     if (!previous || snapshot.collectedAt > previous.collectedAt) latestByStation.set(snapshot.stationId, snapshot);
@@ -162,7 +163,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
 
     snapshot.normalized.data.forEach((item, itemIndex) => {
       if (item.catalogOnly) return;
-      const matches = matchModelWithOverrides(item.model_name, referenceList, { stationId: station.id, overrides: modelMatchOverrides, rules });
+      const matches = matchModelWithOverrides(item.model_name, referenceList, { stationId: station.id, rules, index: matchingIndex });
       if (!matches.length && !showUnmatched) return;
       const matchResults = matches.length ? matches : [{ match: null, rule: "未匹配", ruleId: "unmatched", confidence: 0 }];
       for (const group of offerGroups(item, snapshot.normalized)) {

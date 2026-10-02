@@ -38,13 +38,6 @@ export function usagePresetId(usage) {
   return USAGE_PRESETS.find(preset => Object.entries(preset.usage).every(([field, value]) => Number(value) === Number(usage[field])))?.id || "custom";
 }
 
-export const REFRESH_PRESETS = [
-  { id: "5", label: "高频（5 分钟）", minutes: 5 },
-  { id: "15", label: "标准（15 分钟）", minutes: 15 },
-  { id: "30", label: "低频（30 分钟）", minutes: 30 },
-  { id: "60", label: "省电（60 分钟）", minutes: 60 }
-];
-
 const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 export function isSecureRemoteUrl(value) {
   try {
@@ -93,7 +86,6 @@ export const DEFAULT_PROVIDER_PROFILES = { llm: [], jev: [] };
 export const DEFAULT_ACTIVE_PROVIDERS = { llm: "", jev: "" };
 
 export const DEFAULT_SETTINGS = {
-  refreshIntervalMinutes: 15,
   defaultCurrency: "CNY",
   exchangeRate: DEFAULT_EXCHANGE_RATE,
   recommendationProfile: "price",
@@ -192,12 +184,12 @@ export function normalizeSettings(input = {}) {
     llm: normalizeModelConfig("llm", input.llm),
     jev: normalizeModelConfig("jev", input.jev)
   };
+  delete settings.refreshIntervalMinutes;
   for (const field of ["input", "cacheRead", "cacheWrite", "output", "requests", "imageTokens", "images", "peakShare"]) {
     const value = Number(settings.usage[field]);
     settings.usage[field] = Number.isFinite(value) && value >= 0 ? value : base.usage[field];
   }
   settings.usage.peakShare = Math.min(1, Math.max(0, Number(settings.usage.peakShare) || base.usage.peakShare));
-  settings.refreshIntervalMinutes = Math.max(1, Number(settings.refreshIntervalMinutes) || base.refreshIntervalMinutes);
   settings.defaultCurrency = settings.defaultCurrency === "USD" ? "USD" : "CNY";
   settings.exchangeRate = Number.isFinite(Number(settings.exchangeRate)) && Number(settings.exchangeRate) > 0 ? Number(settings.exchangeRate) : DEFAULT_EXCHANGE_RATE;
   settings.showUnmatched = Boolean(settings.showUnmatched);

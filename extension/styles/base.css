@@ -79,6 +79,9 @@ select { appearance: none; padding-right: 34px; background-image: linear-gradien
 
 .panel { border: 1px solid var(--line); background: rgba(255, 253, 250, .62); box-shadow: var(--shadow); }
 .panel-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; padding: 25px 28px 20px; border-bottom: 1px solid var(--line); }
+.collapse-toggle { flex: 0 0 auto; margin-left: auto; }
+[data-collapsed="true"] > *:not(:first-child) { display: none; }
+[data-collapsed="true"] > .panel-heading { border-bottom: 0; }
 .panel-heading h2, .section-heading h2 { margin: 5px 0 0; font-size: 29px; line-height: 1; letter-spacing: 0; }
 .result-count, .section-mark { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
 .toast { position: fixed; z-index: 10; right: 24px; bottom: 24px; max-width: min(400px, calc(100vw - 48px)); padding: 13px 16px; color: var(--white); background: var(--ink); box-shadow: 0 15px 45px rgba(16, 24, 32, .24); font-size: 12px; line-height: 1.5; }

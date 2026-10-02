@@ -1,5 +1,5 @@
 import { currentSiteOrigin } from "./shared/schema.js";
-import { callService, hydrateIcons } from "./shared/ui.js";
+import { callService, hydrateIcons, onRefreshProgress } from "./shared/ui.js";
 
 const activePage = document.querySelector("#current-page");
 const addCurrentSiteButton = document.querySelector("#add-current-site");
@@ -7,6 +7,8 @@ const refreshButton = document.querySelector("#refresh-all");
 const checkinButton = document.querySelector("#checkin-now");
 const checkinNote = document.querySelector("#checkin-note");
 const status = document.querySelector("#popup-status");
+const refreshProgress = document.querySelector("#refresh-progress");
+let lastRefreshSummary = null;
 let activeTab;
 let siteOrigin = "";
 
@@ -16,6 +18,32 @@ function setStatus(message, type = "") {
   status.classList.toggle("is-error", type === "error");
   status.classList.toggle("is-success", type === "success");
 }
+
+onRefreshProgress(progress => {
+  const total = Math.max(0, Number(progress.total) || 0);
+  refreshProgress.max = Math.max(total, 1);
+  refreshProgress.value = Math.min(Number(progress.completed) || 0, refreshProgress.max);
+  if (progress.phase === "start") {
+    lastRefreshSummary = null;
+    refreshProgress.hidden = false;
+    setStatus(total ? `准备查询 ${total} 个启用站点` : "没有启用的站点可查询");
+  } else if (progress.phase === "references") {
+    setStatus(progress.message);
+  } else if (progress.phase === "station") {
+    if (progress.status === "running") setStatus(`正在查询 ${progress.current}/${total}：${progress.stationName}`);
+    else if (progress.status === "error") setStatus(`${progress.stationName} 查询失败：${progress.error}`, "error");
+    else setStatus(`${progress.stationName} 已查询 ${progress.modelCount} 个模型`);
+  } else if (progress.phase === "complete") {
+    lastRefreshSummary = progress.summary;
+    const summary = progress.summary;
+    const message = summary.total
+      ? `查询完成：${summary.successCount} 成功，${summary.errorCount} 失败，共 ${summary.totalModels} 个模型 · ${(summary.durationMs / 1000).toFixed(1)} 秒`
+      : "没有启用的站点可查询";
+    setStatus(message, summary.errorCount ? "error" : "success");
+  } else if (progress.phase === "error") {
+    setStatus(progress.message, "error");
+  }
+});
 
 function siteParams(key) {
   if (!siteOrigin) return {};
@@ -61,12 +89,18 @@ document.querySelector("#open-settings").addEventListener("click", () => openPag
 addCurrentSiteButton.addEventListener("click", () => openPage("options.html", siteParams("addSite")));
 refreshButton.addEventListener("click", async () => {
   refreshButton.disabled = true;
-  setStatus("正在刷新全部站点…");
+  refreshProgress.hidden = false;
+  lastRefreshSummary = null;
+  setStatus("正在准备查询站点模型");
   try {
-    await callService("REFRESH_ALL");
-    setStatus("站点报价已刷新", "success");
+    const data = await callService("REFRESH_ALL");
+    lastRefreshSummary = data.refreshSummary || lastRefreshSummary;
+    if (lastRefreshSummary) {
+      const { successCount, errorCount, total } = lastRefreshSummary;
+      setStatus(total ? `查询完成：${successCount} 成功，${errorCount} 失败` : "没有启用的站点可查询", errorCount ? "error" : "success");
+    }
   } catch (error) {
-    setStatus(error.message || "刷新失败", "error");
+    setStatus(error.message || "查询失败", "error");
   } finally {
     refreshButton.disabled = false;
   }

@@ -10,13 +10,14 @@ import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, 
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
-import { addStationIfNeeded, exportState, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
+import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getJevApiKey, getLlmApiKey, getProviderApiKey, getStationCredential, hasJevApiKey, hasLlmApiKey, hasProviderApiKey, removeProviderApiKey, removeStationCredential, selectProviderApiKey, setJevApiKey, setLlmApiKey, setProviderApiKey, setStationCredential } from "./shared/credentials.js";
 import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
 
-const ALARM_NAME = "refresh-stations";
+const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
 const CHECKIN_ALARM_NAME = "checkin-stations";
 
+let comparisonCache = null;
 async function getSettings() {
   return normalizeSettings(await getValue("settings", {}));
 }
@@ -98,66 +99,91 @@ async function refreshReferences(force = false) {
   return result;
 }
 
+function notifyRefreshProgress(progress) {
+  chrome.runtime.sendMessage({ type: "REFRESH_PROGRESS", progress }, () => void chrome.runtime.lastError);
+}
+
 async function refreshAllInternal({ forceReferences = false, stationId, sourceTabId } = {}) {
   const allStations = (await getStations()).filter(station => station.enabled && (!stationId || station.id === stationId));
-  const references = await refreshReferences(forceReferences);
+  const startedAt = Date.now();
+  const total = allStations.length;
   const results = [];
-  for (const station of allStations) {
+  notifyRefreshProgress({ phase: "start", total, completed: 0 });
+
+  if (!total) {
+    const references = await getValue("references", {});
+    const summary = { total: 0, successCount: 0, errorCount: 0, totalModels: 0, durationMs: Date.now() - startedAt };
+    notifyRefreshProgress({ phase: "complete", total, completed: 0, summary });
+    return { results, references, summary };
+  }
+  notifyRefreshProgress({ phase: "references", status: "running", total, completed: 0, message: "正在确认官方参考价" });
+  let references;
+  try {
+    references = await refreshReferences(forceReferences);
+  } catch (error) {
+    notifyRefreshProgress({ phase: "error", total, completed: 0, message: `官方参考价查询失败：${error.message || String(error)}` });
+    throw error;
+  }
+  notifyRefreshProgress({ phase: "references", status: "success", total, completed: 0, message: "官方参考价已就绪" });
+  for (const [index, station] of allStations.entries()) {
+    const current = index + 1;
+    const stationStartedAt = Date.now();
+    notifyRefreshProgress({ phase: "station", status: "running", total, completed: index, current, stationId: station.id, stationName: station.name });
+    let snapshot;
     try {
-      const snapshot = await collect(station, sourceTabId);
+      snapshot = await collect(station, sourceTabId);
       await putSnapshot(snapshot);
-      results.push(snapshot);
     } catch (error) {
       const previous = (await getSnapshots({ stationId: station.id, limit: 1 }))[0];
-      const snapshot = errorSnapshot(station, error, previous);
+      snapshot = errorSnapshot(station, error, previous);
       await putSnapshot(snapshot);
-      results.push(snapshot);
     }
+    results.push(snapshot);
+    notifyRefreshProgress({
+      phase: "station",
+      status: snapshot.status === "success" ? "success" : "error",
+      total,
+      completed: current,
+      current,
+      stationId: station.id,
+      stationName: station.name,
+      modelCount: snapshot.normalized?.data?.length || 0,
+      durationMs: Date.now() - stationStartedAt,
+      error: snapshot.error || ""
+    });
   }
-  return { results, references };
+  const summary = {
+    total,
+    successCount: results.filter(snapshot => snapshot.status === "success").length,
+    errorCount: results.filter(snapshot => snapshot.status !== "success").length,
+    totalModels: results.reduce((count, snapshot) => count + (snapshot.normalized?.data?.length || 0), 0),
+    durationMs: Date.now() - startedAt
+  };
+  notifyRefreshProgress({ phase: "complete", total, completed: total, summary });
+  return { results, references, summary };
 }
 
-let refreshAllPromise = null;
+let refreshAllTask = null;
 async function refreshAll(options = {}) {
-  if (refreshAllPromise) return refreshAllPromise;
-  refreshAllPromise = refreshAllInternal(options);
+  if (refreshAllTask) {
+    const active = refreshAllTask;
+    const sameRequest = active.stationId === options.stationId
+      && active.sourceTabId === options.sourceTabId
+      && active.forceReferences === Boolean(options.forceReferences);
+    if (sameRequest) return active.promise;
+    await active.promise.catch(() => {});
+    return refreshAll(options);
+  }
+  const task = { ...options, forceReferences: Boolean(options.forceReferences), promise: refreshAllInternal(options) };
+  refreshAllTask = task;
   try {
-    return await refreshAllPromise;
+    return await task.promise;
   } finally {
-    refreshAllPromise = null;
+    if (refreshAllTask === task) refreshAllTask = null;
   }
 }
 
 
-let legacySnapshotRefreshPromise = null;
-async function refreshLegacySnapshots(stations, snapshots) {
-  if (legacySnapshotRefreshPromise) return legacySnapshotRefreshPromise;
-  const latestByStation = new Map();
-  for (const snapshot of snapshots) {
-    if (!latestByStation.has(snapshot.stationId)) latestByStation.set(snapshot.stationId, snapshot);
-  }
-  const candidates = stations.filter(station => {
-    const snapshot = latestByStation.get(station.id);
-    return station.enabled && snapshot && snapshotNeedsRefresh(station, snapshot);
-  });
-  if (!candidates.length) return false;
-  legacySnapshotRefreshPromise = (async () => {
-    for (const station of candidates) {
-      try {
-        await refreshAll({ stationId: station.id });
-      } catch (error) {
-        console.warn("AI Pricing: 旧版快照迁移失败", station.id, error);
-      }
-    }
-    return true;
-  })();
-  try {
-    await legacySnapshotRefreshPromise;
-  } finally {
-    legacySnapshotRefreshPromise = null;
-  }
-  return true;
-}
 async function ensureFastAiStationPreset() {
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
@@ -169,49 +195,48 @@ async function ensureFastAiStationPreset() {
 
 async function dashboard() {
   await ensureFastAiStationPreset();
-  let [stations, snapshots, references, savedSettings] = await Promise.all([
+  const revisionAtStart = getComparisonRevision();
+  const [stations, references, savedSettings] = await Promise.all([
     getStations(),
-    getSnapshots({ limit: 500 }),
     getValue("references", {}),
     settingsForUi()
   ]);
-  const migrated = await refreshLegacySnapshots(stations, snapshots);
-  if (migrated) {
-    [stations, snapshots, references] = await Promise.all([
-      getStations(),
-      getSnapshots({ limit: 500 }),
-      getValue("references", {})
-    ]);
-  }
-  const staleAfter = savedSettings.refreshIntervalMinutes * 60 * 1000 * 2;
   const stationsById = new Map(stations.map(station => [station.id, station]));
-  const usableSnapshots = snapshots.filter(snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
-  const normalizedSnapshots = usableSnapshots.map(snapshot => ({
+  const snapshots = await getLatestSnapshots(stations.map(station => station.id), snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
+  const staleAfter = 30 * 60 * 1000;
+  const now = Date.now();
+  const normalizedSnapshots = snapshots.map(snapshot => ({
     ...snapshot,
-    stale: snapshot.status !== "success" || Date.now() - snapshot.collectedAt > staleAfter
+    stale: snapshot.status !== "success" || now - snapshot.collectedAt > staleAfter
   }));
-  const comparisons = buildComparisonRows({
-    stations,
-    snapshots: normalizedSnapshots,
-    references: { ...references, exchangeRate: savedSettings.exchangeRate || references.exchangeRate },
-    usage: savedSettings.usage,
-    rules: savedSettings.matchingRules,
-    modelMatchOverrides: savedSettings.modelMatchOverrides,
-    showUnmatched: savedSettings.showUnmatched,
-    recommendationProfile: savedSettings.recommendationProfile
-  });
   const effectiveReferences = { ...references, exchangeRate: savedSettings.exchangeRate || references.exchangeRate };
+  const revision = getComparisonRevision();
+  const cacheable = revisionAtStart === revision;
+  const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => [snapshot.id, snapshot.stale])]);
+  let comparisonResult = cacheable && comparisonCache?.key === comparisonKey ? comparisonCache : null;
+  if (!comparisonResult) {
+    const comparisons = buildComparisonRows({
+      stations,
+      snapshots: normalizedSnapshots,
+      references: effectiveReferences,
+      usage: savedSettings.usage,
+      rules: savedSettings.matchingRules,
+      modelMatchOverrides: savedSettings.modelMatchOverrides,
+      showUnmatched: savedSettings.showUnmatched,
+      recommendationProfile: savedSettings.recommendationProfile
+    });
+    comparisonResult = { key: comparisonKey, comparisons, summary: summarizeComparisons(comparisons) };
+    if (cacheable) comparisonCache = comparisonResult;
+  }
   const checkinStations = CHECKIN_PRESETS.map(preset => {
     const linked = stations.find(station => station.enabled && matchCheckinPreset(station)?.id === preset.id);
     return { id: preset.id, name: preset.name, linkedStationId: linked ? linked.id : null, autoEnabled: Boolean(linked?.checkin?.autoEnabled) };
   });
-  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons, summary: summarizeComparisons(comparisons), checkinState: await getCheckinState(), checkinStations };
+  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons: comparisonResult.comparisons, summary: comparisonResult.summary, checkinState: await getCheckinState(), checkinStations };
 }
 
-async function scheduleAlarm() {
-  const savedSettings = await getSettings();
-  await chrome.alarms.clear(ALARM_NAME);
-  chrome.alarms.create(ALARM_NAME, { periodInMinutes: Math.max(0.5, Number(savedSettings.refreshIntervalMinutes) || 15) });
+async function scheduleCheckinAlarm() {
+  await chrome.alarms.clear(LEGACY_REFRESH_ALARM_NAME);
   await chrome.alarms.clear(CHECKIN_ALARM_NAME);
   chrome.alarms.create(CHECKIN_ALARM_NAME, { periodInMinutes: 240 });
 }
@@ -359,7 +384,6 @@ async function saveSettings(input, { llmApiKey, clearLlmApiKey, jevApiKey, clear
     if (next.activeProviders.jev) await setProviderApiKey("jev", next.activeProviders.jev, jevApiKey);
   }
   await setValue("settings", next);
-  await scheduleAlarm();
   return settingsForUi();
 }
 async function saveProviderProfile({ kind, profileId, name, config = {}, apiKey, clearApiKey } = {}) {
@@ -390,7 +414,6 @@ async function saveProviderProfile({ kind, profileId, name, config = {}, apiKey,
   if (normalizedKind === "jev") await setJevApiKey(storedKey);
   else await setLlmApiKey(storedKey);
   await setValue("settings", next);
-  await scheduleAlarm();
   return settingsForUi();
 }
 async function switchProvider({ kind, profileId } = {}) {
@@ -407,7 +430,6 @@ async function switchProvider({ kind, profileId } = {}) {
   if (normalizedKind === "jev") await setJevApiKey(key);
   else await setLlmApiKey(key);
   await setValue("settings", next);
-  await scheduleAlarm();
   return dashboard();
 }
 async function deleteProviderProfile({ kind, profileId } = {}) {
@@ -431,7 +453,6 @@ async function deleteProviderProfile({ kind, profileId } = {}) {
     else await setLlmApiKey(key);
   }
   await setValue("settings", next);
-  await scheduleAlarm();
   return settingsForUi();
 }
 
@@ -625,12 +646,14 @@ async function handle(message, sender) {
       return checkinAll({ stationId: message.stationId, stationOrigin: message.stationOrigin, claim: true, autoOnly: false });
     case "SAVE_CHECKIN":
       return saveCheckinConfig(message);
-    case "REFRESH_ALL":
-      await refreshAll({ forceReferences: Boolean(message.forceReferences) });
-      return dashboard();
-    case "REFRESH_STATION":
-      await refreshAll({ stationId: message.stationId, sourceTabId: message.sourceTabId });
-      return dashboard();
+    case "REFRESH_ALL": {
+      const result = await refreshAll({ forceReferences: Boolean(message.forceReferences) });
+      return { ...(await dashboard()), refreshSummary: result.summary };
+    }
+    case "REFRESH_STATION": {
+      const result = await refreshAll({ stationId: message.stationId, sourceTabId: message.sourceTabId });
+      return { ...(await dashboard()), refreshSummary: result.summary };
+    }
     case "FETCH_REFERENCES":
       await refreshReferences(true);
       return dashboard();
@@ -644,7 +667,6 @@ async function handle(message, sender) {
         if (!next || String(next.baseUrl || "") !== current.baseUrl || String(next.auth?.type || "none") !== current.auth?.type) await removeStationCredential(current.id);
       }
       await importState(message.state);
-      await scheduleAlarm();
       return dashboard();
     }
     case "TEST_STATION": {
@@ -656,13 +678,13 @@ async function handle(message, sender) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message?.type === "REFRESH_PROGRESS") return;
   handle(message, sender).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || String(error) }));
   return true;
 });
 
-chrome.runtime.onInstalled.addListener(() => scheduleAlarm());
-chrome.runtime.onStartup.addListener(() => scheduleAlarm());
+chrome.runtime.onInstalled.addListener(() => scheduleCheckinAlarm());
+chrome.runtime.onStartup.addListener(() => scheduleCheckinAlarm());
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === ALARM_NAME) refreshAll().catch(() => {});
   if (alarm.name === CHECKIN_ALARM_NAME) checkinAll({ claim: true, autoOnly: true }).catch(() => {});
 });
