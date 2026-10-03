@@ -34,10 +34,16 @@ test("normalizes check-in records", () => {
 
 test("performs check-in when the API reports canClaim", async () => {
   const calls = [];
+  let statusCalls = 0;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (url, options = {}) => {
     calls.push({ url: String(url), method: String(options.method || "GET"), headers: options.headers });
-    if (String(url).endsWith("/user/daily-reward")) return jsonResponse({ canClaim: true, streak: 4, streakBonusPercent: 10, rewardAmount: 0.2, totalClaimed: 12, lastClaim: "2026-09-30" });
+    if (String(url).endsWith("/user/daily-reward")) {
+      const status = statusCalls++ === 0
+        ? { canClaim: true, streak: 4, streakBonusPercent: 10, rewardAmount: 0.2, totalClaimed: 12, lastClaim: "2026-09-30" }
+        : { canClaim: false, streak: 5, streakBonusPercent: 10, rewardAmount: 0.2, totalClaimed: 12, lastClaim: "2026-09-30" };
+      return jsonResponse(status);
+    }
     if (String(url).endsWith("/user/daily-reward/claim")) return jsonResponse({ amount: 0.22, streak: 5 });
     return jsonResponse({ error: { message: "unexpected" } });
   };
@@ -45,15 +51,48 @@ test("performs check-in when the API reports canClaim", async () => {
     const result = await performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" });
     assert.equal(result.ok, true);
     assert.equal(result.claimed, true);
-    assert.equal(result.canClaim, true);
+    assert.equal(result.canClaim, false);
     assert.equal(result.streak, 5);
     assert.equal(result.message.includes("0.22"), true);
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
     assert.equal(calls[0].method, "GET");
     assert.equal(calls[1].method, "POST");
+    assert.equal(calls[2].method, "GET");
     assert.equal(calls[0].headers.Authorization, "Bearer tok-1");
     assert.equal(calls[0].url, "https://vyceai.com/user/daily-reward");
     assert.equal(result.lastClaimDate, "2026-09-30");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("rejects business-level claim failures returned with HTTP 200", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (String(url).endsWith("/user/daily-reward")) return jsonResponse({ canClaim: true });
+    return jsonResponse({ message: "Already claimed today" });
+  };
+  try {
+    await assert.rejects(
+      () => performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" }),
+      error => error.code === "CHECKIN_REJECTED" && error.message === "Already claimed today"
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("rejects when the claim is not reflected by the status endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async url => {
+    if (String(url).endsWith("/user/daily-reward")) return jsonResponse({ canClaim: true });
+    return jsonResponse({ amount: 0.22 });
+  };
+  try {
+    await assert.rejects(
+      () => performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" }),
+      error => error.code === "CHECKIN_NOT_CONFIRMED" && error.message.includes("未确认到账")
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

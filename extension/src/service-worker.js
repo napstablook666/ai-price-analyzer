@@ -54,11 +54,9 @@ async function stationWithCredentials(station) {
 }
 
 
-async function collect(stationInput, preferredTabId) {
-  const station = prepareStationInput(await stationWithCredentials(stationInput));
-  if (station.mode !== "page") return collectStation(station);
+async function withPageFetch(station, preferredTabId, task) {
   const { tab, temporary } = await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
-  if (!tab?.id) throw new Error("无法确定站点标签页；请先登录目标站点后重试");
+  if (!tab?.id) throw new Error("请先打开并登录目标站点后重试");
   try {
     let pendingCapture = await ensurePageBridge(chrome.scripting, tab.id);
     const bridgeFetch = createPageFetch((message, callback) => chrome.tabs.sendMessage(tab.id, message, callback));
@@ -71,10 +69,20 @@ async function collect(stationInput, preferredTabId) {
       return bridgeFetch(request);
     };
     pageFetch.supportsCapture = true;
-    return await collectStation(station, { pageFetch });
+    return await task(pageFetch);
   } finally {
     if (temporary) await chrome.tabs.remove(tab.id).catch(() => {});
   }
+}
+
+async function collect(stationInput, preferredTabId) {
+  const station = prepareStationInput(await stationWithCredentials(stationInput));
+  if (station.mode !== "page") return collectStation(station);
+  return withPageFetch(station, preferredTabId, pageFetch => collectStation(station, { pageFetch }));
+}
+
+async function performPageCheckin(station, preset, claim) {
+  return withPageFetch(station, undefined, pageFetch => performCheckin({ station, claim, preset, fetchImpl: pageFetch }));
 }
 
 function errorSnapshot(station, error, previous) {
@@ -261,7 +269,7 @@ async function runCheckinForStation(station, { claim = true, autoOnly = false } 
   // 冷却期内（cooldownHours）不重复查询状态，减少无效请求
   if (record.lastClaimedAt && Date.now() - record.lastClaimedAt < preset.cooldownHours * 60 * 60 * 1000) return null;
   try {
-    const result = await performCheckin({ station, claim, preset });
+    const result = await performPageCheckin(station, preset, claim);
     await updateCheckinRecord(preset.id, prev => ({
       ...prev,
       lastCheckedAt: Date.now(),

@@ -40,22 +40,39 @@ function extractData(payload) {
   return null;
 }
 
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, options);
+async function fetchJson(url, options = {}, fetchImpl = fetch) {
+  const response = await fetchImpl(url, options);
   let payload = null;
-  const contentType = response.headers.get("content-type") || "";
-  try {
-    payload = contentType.includes("application/json") ? await response.json() : JSON.parse(await response.text());
-  } catch {
-    payload = response.ok ? {} : null;
+  if (Object.prototype.hasOwnProperty.call(response || {}, "body") && typeof response?.json !== "function") {
+    payload = response.body;
+  } else {
+    const contentType = response?.headers?.get?.("content-type") || "";
+    try {
+      payload = contentType.includes("application/json") ? await response.json() : JSON.parse(await response.text());
+    } catch {
+      payload = response?.ok ? {} : null;
+    }
   }
-  if (!response.ok) {
-    const message = payload?.error?.message || payload?.error || payload?.message || `HTTP ${response.status}`;
+  if (!response?.ok) {
+    const message = payload?.error?.message || (typeof payload?.error === "string" ? payload.error : "") || payload?.message || `HTTP ${response?.status || 0}`;
     const error = new Error(message);
-    error.status = response.status;
+    error.status = response?.status;
     throw error;
   }
   return payload;
+}
+
+function assertBusinessSuccess(payload) {
+  const data = extractData(payload);
+  if (!data || typeof data !== "object") return data;
+  let message = "";
+  if (data.error) message = typeof data.error === "string" ? data.error : data.error.message || "签到请求被站点拒绝";
+  else if (data.success === false || data.ok === false) message = data.message || "签到请求被站点拒绝";
+  else if (/already\s+claimed|already\s+checked|今日已签到|已签到/i.test(String(data.message || ""))) message = data.message;
+  if (!message) return data;
+  const error = new Error(String(message));
+  error.code = "CHECKIN_REJECTED";
+  throw error;
 }
 
 function buildHeaders(preset, token) {
@@ -123,14 +140,20 @@ export function normalizeCheckinRecord(raw = {}) {
 }
 
 // 执行一次签到（或仅查状态）。返回签到结果 + 最新状态。
-export async function performCheckin({ station, claim = true, preset = null, token = "" } = {}) {
+export async function performCheckin({ station, claim = true, preset = null, token = "", fetchImpl = fetch } = {}) {
   const sitePreset = preset || matchCheckinPreset(station);
   if (!sitePreset) throw new Error("该站点暂无签到适配");
   const origin = new URL(station.baseUrl).origin;
   const resolvedToken = token || await resolveToken(sitePreset, station);
   const headers = buildHeaders(sitePreset, resolvedToken);
-  const status = extractData(await fetchJson(`${origin}${sitePreset.statusPath}`, { headers, credentials: "include" }));
+  const requestJson = (url, options) => fetchJson(url, options, fetchImpl);
   const fields = sitePreset.fields;
+  const readStatus = async () => {
+    const status = assertBusinessSuccess(await requestJson(`${origin}${sitePreset.statusPath}`, { headers, credentials: "include", cache: "no-store" }));
+    if (typeof status?.[fields.canClaim] !== "boolean") throw new Error("签到状态响应无效");
+    return status;
+  };
+  const status = await readStatus();
   const result = {
     ok: true,
     claimed: false,
@@ -146,9 +169,21 @@ export async function performCheckin({ station, claim = true, preset = null, tok
     result.message = result.canClaim ? "可签到" : "今日已签到";
     return result;
   }
-  const claimData = extractData(await fetchJson(`${origin}${sitePreset.claimPath}`, { method: sitePreset.claimMethod, headers, credentials: "include" }));
+  const claimData = assertBusinessSuccess(await requestJson(`${origin}${sitePreset.claimPath}`, { method: sitePreset.claimMethod, headers, credentials: "include" }));
+  const verifiedStatus = await readStatus();
+  if (verifiedStatus?.[fields.canClaim] !== false) {
+    const error = new Error("签到请求已返回，但网站状态未确认到账");
+    error.code = "CHECKIN_NOT_CONFIRMED";
+    throw error;
+  }
   result.claimed = true;
-  result.message = `签到成功，奖励 ${claimData?.amount ?? "?"}`;
+  result.canClaim = false;
+  result.lastClaimDate = String(verifiedStatus?.[fields.lastClaim] || result.lastClaimDate);
+  result.streak = Number(verifiedStatus?.[fields.streak]) || result.streak;
+  result.rewardAmount = Number.isFinite(Number(verifiedStatus?.[fields.rewardAmount])) ? Number(verifiedStatus[fields.rewardAmount]) : result.rewardAmount;
+  result.bonusPercent = Number.isFinite(Number(verifiedStatus?.[fields.bonusPercent])) ? Number(verifiedStatus[fields.bonusPercent]) : result.bonusPercent;
+  result.totalClaimed = Number(verifiedStatus?.[fields.totalClaimed]) || result.totalClaimed;
+  result.message = `签到成功，奖励 ${claimData?.amount ?? result.rewardAmount ?? "?"}`;
   if (Number.isFinite(Number(claimData?.streak))) result.streak = Number(claimData.streak);
   return result;
 }
