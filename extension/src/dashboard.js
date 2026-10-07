@@ -240,7 +240,7 @@ function renderRows() {
     const delta = Number.isFinite(row.diffPercent) ? row.diffPercent : null;
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
     const deltaLabel = delta === null ? "无官方价" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
-    const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore} 分` : "暂无评分";
+    const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore}分` : "暂无评分";
     const rating = RATING_LABELS[row.category] || "";
     const dailyCost = formatPrice(row.dailyCost, currency);
     const hasOfficialCost = Number.isFinite(row.officialDailyCost);
@@ -260,7 +260,7 @@ function renderRows() {
       <td data-label="官方单价">${unitPricesMarkup(row.officialPrices, currency, row, true)}</td>
       <td data-label="24 小时成本"><div class="cost-cell"><strong>${dailyCost}<small> / 天</small></strong><span class="cost-meta">官方 ${hasOfficialCost ? `${formatPrice(row.officialDailyCost, currency)} / 天` : "暂无参考"}</span>${dailyDifference === null ? "" : `<span class="cost-gap ${dailyDifference >= 0 ? "is-saving" : "is-extra"}">${dailyDifference >= 0 ? "日省" : "日多付"} ${formatPrice(Math.abs(dailyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方"><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
-      <td data-label="推荐与状态"><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信 ${row.confidenceScore}%</span>${statusMarkup(row)}${comparisonJevMarkup(row)}</div></td>
+      <td data-label="推荐与状态"><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}${comparisonJevMarkup(row)}</div></td>
     </tr>`;
   }).join("");
   for (const heading of document.querySelectorAll("th[data-sort-keys]")) {

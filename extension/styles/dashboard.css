@@ -138,7 +138,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .delta-tag.cheaper, .recommendation-tag.is-best, .rating-tag.rating-excellent, .rating-tag.rating-good { color: #17633f; background: #e8f5ed; }
 .delta-tag.expensive, .rating-tag.rating-bad { color: #a3342c; background: #fcedeb; }
 .delta-tag.neutral, .recommendation-tag, .rating-tag.rating-fair { color: #4b5966; background: #edf1f4; }
-.recommendation-cell { display: grid; justify-items: start; gap: 4px; }
+.recommendation-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .recommendation-cell .model-meta { font-variant-numeric: tabular-nums; }
 .status-cluster { display: flex; flex-wrap: wrap; gap: 4px; }
 .status-tag { color: #17633f; background: #e8f5ed; }
