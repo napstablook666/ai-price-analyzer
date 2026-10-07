@@ -1,5 +1,5 @@
 import { NORMALIZATION_VERSION, normalizeCapturedData } from "./normalizers.js";
-import { CHEAP_ROUTER_PRICING_ENDPOINT, PUBLIC_PRICING_HOSTS } from "./station-presets.js";
+import { CHEAP_ROUTER_PRICING_ENDPOINT, NEXA_CHANNEL_CATALOG_ENDPOINT, PUBLIC_PRICING_HOSTS } from "./station-presets.js";
 import { normalizeStation } from "../shared/schema.js";
 
 function number(value, fallback = null) {
@@ -66,6 +66,15 @@ export function prepareStationInput(stationInput = {}) {
         method: "GET",
         responseFormat: "auto"
       }
+    };
+  }
+  if (hostname === "nexavlinks.com") {
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}/modelsmarket`,
+      mode: "page",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), endpoint: NEXA_CHANNEL_CATALOG_ENDPOINT, method: "GET", responseFormat: "auto" }
     };
   }
   if (hostname === "fastaitoken.com") {

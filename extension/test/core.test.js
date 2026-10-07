@@ -18,7 +18,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addCheapRouterStationPreset, addFastAiStationPreset } from "../src/core/station-presets.js";
+import { addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset } from "../src/core/station-presets.js";
 
 const pqhFixture = {
   pricing_version: 1,
@@ -419,6 +419,21 @@ test("adds the missing FastAIToken station once for an existing registry", () =>
   assert.equal(collision[1].id, "fastaitoken-2");
   assert.equal(addFastAiStationPreset([]).length, 0);
 });
+
+test("adds the missing NexaVlinks station once for an existing registry", () => {
+  const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
+  const stations = addNexaStationPreset(current);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[0], current[0]);
+  assert.equal(stations[1].baseUrl, "https://www.nexavlinks.com/modelsmarket");
+  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].adapter.endpoint, "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai");
+  assert.equal(addNexaStationPreset(stations), stations);
+  assert.equal(addNexaStationPreset([]).length, 0);
+  const collision = addNexaStationPreset([{ id: "nexavlinks", baseUrl: "https://other.example" }]);
+  assert.equal(collision[1].id, "nexavlinks-2");
+});
+
 test("adds the missing CheapRouter station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
   const stations = addCheapRouterStationPreset(current);
@@ -599,6 +614,43 @@ test("collects CheapRouter prices from the authenticated model page", async () =
   assert.equal(snapshot.normalized.data[0].output_price, 1.08);
   assert.equal(snapshot.normalized.data[0].price_currency, "USD");
 });
+
+test("collects NexaVlinks token and request prices through the logged-in page", async () => {
+  const station = { id: "station-nexa", name: "NexaVlinks", baseUrl: "https://www.nexavlinks.com/modelsmarket" };
+  const adapter = inferStationAdapter(station);
+  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.authType, "none");
+  assert.equal(adapter.endpoint, "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai");
+  assert.equal(adapter.method, "GET");
+  const prepared = prepareStationInput({ baseUrl: "https://nexavlinks.com" });
+  assert.equal(prepared.baseUrl, "https://nexavlinks.com/modelsmarket");
+  assert.equal(prepared.mode, "page");
+  const requests = [];
+  const pageFetch = async request => {
+    if (request.capture) return { ok: false, status: 404, body: { data: [] } };
+    requests.push(request);
+    return response({ code: 0, data: [{ name: "Standard", platforms: [{
+      platform: "openai",
+      groups: [{ id: 19, name: "Stable", rate_multiplier: 0.3 }],
+      supported_models: [
+        { name: "gpt-5.4", platform: "openai", pricing: { billing_mode: "token", input_price: 0.0000025, output_price: 0.000015 } },
+        { name: "image-request", platform: "openai", mode: "image_generation", pricing: { billing_mode: "per_request", per_request_price: 0.07 } }
+      ]
+    }] }] });
+  };
+  pageFetch.supportsCapture = true;
+  const snapshot = await collectStation({ ...station, adapter }, { pageFetch });
+  assert.equal(requests[0].url, "https://www.nexavlinks.com/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai");
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.sourceFormat, "fastaitoken");
+  assert.equal(snapshot.normalized.data.length, 2);
+  const tokenModel = snapshot.normalized.data.find(model => model.model_name === "gpt-5.4");
+  const imageModel = snapshot.normalized.data.find(model => model.model_name === "image-request");
+  assert.equal(tokenModel.input_price, 0.75);
+  assert.equal(tokenModel.output_price, 4.5);
+  assert.equal(imageModel.request_price, 0.021);
+});
+
 test("auto format uses the existing PQH strategy", () => {
   const normalized = normalizePricingPayload(pqhFixture, "auto", { basePricePerMillion: 0.55 });
   assert.equal(normalized.sourceFormat, "pqh");
@@ -1085,6 +1137,24 @@ test("opens a temporary FastAIToken tab when no site tab is available", async ()
   assert.equal(result.temporary, true);
   assert.equal(result.tab.id, 42);
   assert.deepEqual(opened, [{ url: "https://www.fastaitoken.com/available-channels", active: false }]);
+});
+
+test("opens a temporary NexaVlinks tab when no site tab is available", async () => {
+  const opened = [];
+  const tabs = {
+    query: async () => [],
+    create: async options => {
+      opened.push(options);
+      return { id: 43, url: options.url, status: "complete" };
+    },
+    get: async tabId => ({ id: tabId, url: "https://www.nexavlinks.com/modelsmarket", status: "complete" }),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { baseUrl: "https://www.nexavlinks.com/modelsmarket", mode: "page" });
+  assert.equal(result.temporary, true);
+  assert.equal(result.tab.id, 43);
+  assert.deepEqual(opened, [{ url: "https://www.nexavlinks.com/modelsmarket", active: false }]);
 });
 
 test("reuses an existing matching FastAIToken tab", async () => {

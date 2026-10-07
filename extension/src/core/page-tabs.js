@@ -46,8 +46,9 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId) {
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.pathname);
   const isFastAiToken = url.hostname.toLowerCase().replace(/^www\./, "") === "fastaitoken.com";
+  const isNexa = url.hostname.toLowerCase().replace(/^www\./, "") === "nexavlinks.com";
   const isCheapRouter = url.hostname.toLowerCase().replace(/^www\./, "") === "cheaprouter.cc" && url.pathname.replace(/\/$/, "") === "/models";
-  if (tab || !(isFastAiToken || isCheapRouter)) return { tab, temporary: false };
+  if (tab || !(isFastAiToken || isNexa || isCheapRouter)) return { tab, temporary: false };
   tab = candidates.find(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`));
   if (tab) return { tab, temporary: false };
   const created = await tabs.create({ url: url.toString(), active: false });

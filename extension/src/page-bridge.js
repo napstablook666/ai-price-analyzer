@@ -33,7 +33,7 @@ function isFastAiChannelsUrl(value) {
 function isPricingUrl(value) {
   try {
     const path = new URL(String(value || ""), window.location.href).pathname;
-    return isFastAiChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
+    return isFastAiChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
   } catch {
     return false;
   }
