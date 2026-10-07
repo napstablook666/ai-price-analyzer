@@ -18,12 +18,36 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset } from "../src/core/station-presets.js";
 
 const pqhFixture = {
   pricing_version: 1,
   group_ratio: { "余额": 1.2 },
   data: [{ model_name: "gpt-4o", model_ratio: 2, completion_ratio: 3, enable_groups: ["余额"] }]
+};
+const aiApiFixture = {
+  ok: true,
+  data: {
+    version: 2,
+    source: "cnaiapi",
+    provider: "AIAPI",
+    groups: [{
+      id: "starter",
+      code: "starter",
+      name: "Starter 0.25x",
+      billingMultiplier: 0.25,
+      pricedModelCount: 1,
+      availableModelCount: 1,
+      models: [{
+        id: "gpt-5.6-luna",
+        displayName: "GPT-5.6 Luna",
+        available: true,
+        base: { inputPer1M: 1, outputPer1M: 6, cacheReadPer1M: 0.1, cacheCreatePer1M: 0.4 },
+        effective: { inputPer1M: 0.25, outputPer1M: 1.5, cacheReadPer1M: 0.025, cacheCreatePer1M: 0.1 }
+      }]
+    }],
+    models: []
+  }
 };
 
 const response = body => ({
@@ -31,6 +55,104 @@ const response = body => ({
   status: 200,
   headers: { get: () => "application/json" },
   json: async () => body
+});
+test("adds the missing AIAPI station once for an existing registry", () => {
+  const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
+  const stations = addAiApiStationPreset(current);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].baseUrl, "https://cn.aiapi.bot/dashboard/model-prices");
+  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].adapter.kind, "aiapi-model-catalog");
+  assert.equal(addAiApiStationPreset(stations), stations);
+  assert.equal(addAiApiStationPreset([]).length, 0);
+});
+
+test("collects AIAPI prices through its logged-in model page", async () => {
+  const station = {
+    id: "station-aiapi",
+    name: "AIAPI",
+    baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
+    auth: { type: "bearer", token: "must-not-be-sent" },
+    adapter: { endpoint: "/wrong", method: "POST", responseFormat: "pqh" }
+  };
+  const adapter = inferStationAdapter(station);
+  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.endpoint, "/api/me/model-catalog");
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.authType, "none");
+  const prepared = prepareStationInput({ ...station, adapter });
+  assert.equal(prepared.baseUrl, "https://cn.aiapi.bot/dashboard/model-prices");
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.adapter.kind, "aiapi-model-catalog");
+  const requests = [];
+  const pageFetch = async request => {
+    requests.push(request);
+    return request.capture
+      ? { ok: true, status: 404, body: { data: [] } }
+      : { ok: true, status: 200, body: aiApiFixture };
+  };
+  pageFetch.supportsCapture = true;
+  const snapshot = await collectStation({ ...station, adapter }, { pageFetch });
+  assert.equal(requests[1].url, "https://cn.aiapi.bot/api/me/model-catalog");
+  assert.equal(requests[1].headers.Authorization, undefined);
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.sourceFormat, "aiapi-model-catalog");
+  const model = snapshot.normalized.data[0];
+  assert.equal(model.model_name, "gpt-5.6-luna");
+  assert.equal(model.proxy_group_name, "Starter 0.25x");
+  assert.equal(snapshot.normalized.group_ratio[model.proxy_group_name], 0.25);
+  assert.deepEqual(getProxyPrices(model, snapshot.normalized.group_ratio[model.proxy_group_name]), {
+    input: 0.25, output: 1.5, cacheRead: 0.025, cacheWrite: 0.1, request: null, imageOutput: null, imagePrice: null
+  });
+});
+
+test("captures the AIAPI model catalog from page requests", async () => {
+  const origin = "https://cn.aiapi.bot";
+  const listeners = new Map();
+  const posted = [];
+  const document = { body: { innerText: "" }, querySelectorAll: () => [] };
+  const pageWindow = {
+    location: { hostname: "cn.aiapi.bot", origin, href: `${origin}/dashboard/model-prices` },
+    history: { pushState() {}, replaceState() {} },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener() {},
+    postMessage(message) { posted.push(message); },
+    fetch: async () => ({ headers: { get: () => null }, clone: () => ({ json: async () => aiApiFixture }) })
+  };
+  function MockXHR() {}
+  MockXHR.prototype.open = function() {};
+  MockXHR.prototype.send = function() {};
+  runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), {
+    window: pageWindow, document, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR,
+    URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise
+  });
+  await pageWindow.fetch(`${origin}/api/me/model-catalog`);
+  await new Promise(resolve => setImmediate(resolve));
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST", id: "aiapi-capture" }
+  });
+  assert.equal(posted.at(-1).response.ok, true);
+  assert.equal(posted.at(-1).response.body.data.groups[0].models[0].effective.inputPer1M, 0.25);
+});
+
+test("opens a temporary AIAPI model-price page when no site tab is available", async () => {
+  const opened = [];
+  const tabs = {
+    query: async () => [],
+    create: async options => {
+      opened.push(options);
+      return { id: 44, url: options.url, status: "complete" };
+    },
+    get: async tabId => ({ id: tabId, url: "https://cn.aiapi.bot/dashboard/model-prices", status: "complete" }),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { baseUrl: "https://cn.aiapi.bot/dashboard/model-prices", mode: "page" });
+  assert.equal(result.temporary, true);
+  assert.equal(result.tab.id, 44);
+  assert.deepEqual(opened, [{ url: "https://cn.aiapi.bot/dashboard/model-prices", active: false }]);
 });
 
 

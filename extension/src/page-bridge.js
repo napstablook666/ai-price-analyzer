@@ -14,11 +14,11 @@ const PRICING_KEYS = new Set([
   "model_ratio", "ratio", "input_ratio", "input_price", "inputPrice", "input", "prompt_price",
   "output_price", "outputPrice", "output", "completion_price", "cache_read_price", "cacheReadPrice",
   "cache_write_price", "cacheWritePrice", "request_price", "requestPrice", "image_price", "imagePrice",
-  "per_image_price", "image_output_price", "imageOutputPrice", "image_token_price", "billing_expr", "price"
+  "per_image_price", "image_output_price", "imageOutputPrice", "image_token_price", "inputPer1M", "outputPer1M", "cacheReadPer1M", "cacheCreatePer1M", "cacheCreate1hPer1M", "billing_expr", "price"
 ].map(key => key.toLowerCase()));
 const PRICING_CONTAINERS = new Set([
   "data", "models", "pricing", "groups", "providers", "channels", "platforms", "supported_models", "group_pricing", "sections",
-  "model_info", "group_prices", "model_group", "modelprice", "modelratio", "price_info", "billing", "default"
+  "model_info", "group_prices", "model_group", "modelprice", "modelratio", "price_info", "billing", "effective", "base", "default"
 ].map(key => key.toLowerCase()));
 
 function isFastAiChannelsUrl(value) {
@@ -33,7 +33,7 @@ function isFastAiChannelsUrl(value) {
 function isPricingUrl(value) {
   try {
     const path = new URL(String(value || ""), window.location.href).pathname;
-    return isFastAiChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
+    return isFastAiChannelsUrl(value) || path.toLowerCase().includes("/api/me/model-catalog") || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
   } catch {
     return false;
   }

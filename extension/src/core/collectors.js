@@ -1,5 +1,5 @@
 import { NORMALIZATION_VERSION, normalizeCapturedData } from "./normalizers.js";
-import { CHEAP_ROUTER_PRICING_ENDPOINT, NEXA_CHANNEL_CATALOG_ENDPOINT, PUBLIC_PRICING_HOSTS } from "./station-presets.js";
+import { AIAPI_MODEL_CATALOG_ENDPOINT, CHEAP_ROUTER_PRICING_ENDPOINT, NEXA_CHANNEL_CATALOG_ENDPOINT, PUBLIC_PRICING_HOSTS } from "./station-presets.js";
 import { normalizeStation } from "../shared/schema.js";
 
 function number(value, fallback = null) {
@@ -99,6 +99,15 @@ export function prepareStationInput(stationInput = {}) {
       mode: "page",
       auth: { type: "none" },
       adapter: { ...(stationInput.adapter || {}), kind: "cheaprouter", endpoint: CHEAP_ROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
+    };
+  }
+  if (hostname === "cn.aiapi.bot" && ["/dashboard/model-prices", "/dashboard/model-prices/"].includes(url.pathname)) {
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}/dashboard/model-prices`,
+      mode: "page",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "aiapi-model-catalog", endpoint: AIAPI_MODEL_CATALOG_ENDPOINT, method: "GET", responseFormat: "auto" }
     };
   }
   const config = jijiRequestConfig(stationInput.baseUrl);

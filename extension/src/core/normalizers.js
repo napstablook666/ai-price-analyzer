@@ -1,5 +1,5 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
-export const NORMALIZATION_VERSION = 9;
+export const NORMALIZATION_VERSION = 10;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -525,6 +525,52 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
   }
 }
 
+export class AiApiModelCatalogStrategy extends ParsingStrategy {
+  canParse(raw) {
+    return raw?.data?.source === "cnaiapi" && Array.isArray(raw.data.groups) && raw.data.groups.some(group => Array.isArray(group?.models));
+  }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    for (const group of raw.data.groups) {
+      const groupName = String(group?.name || group?.code || group?.id || "").trim();
+      if (!groupName) continue;
+      const multiplier = finitePrice(group.billingMultiplier) ?? 1;
+      groupRatio[groupName] = multiplier;
+      for (const model of Array.isArray(group.models) ? group.models : []) {
+        const modelName = String(model?.id || "").trim();
+        if (!modelName || model.available === false) continue;
+        const effective = model.effective || {};
+        const input = finitePrice(effective.inputPer1M);
+        const output = finitePrice(effective.outputPer1M);
+        const cacheRead = finitePrice(effective.cacheReadPer1M);
+        const cacheWrite = finitePrice(effective.cacheCreatePer1M);
+        const cacheWrite1h = finitePrice(effective.cacheCreate1hPer1M);
+        if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) continue;
+        data.push({
+          model_name: modelName,
+          model_display_name: String(model.displayName || modelName),
+          model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+          completion_ratio: input > 0 && output !== null ? output / input : 1,
+          input_price: input,
+          output_price: output,
+          cache_read_price: cacheRead,
+          cache_write_price: cacheWrite,
+          cache_write_1h_price: cacheWrite1h,
+          price_currency: "CNY",
+          enable_groups: [groupName],
+          proxy_group_name: groupName,
+          group_ratio: multiplier,
+          evidence: "exact"
+        });
+      }
+    }
+    if (!data.length) throw new Error("AIAPI 模型价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "aiapi-model-catalog" };
+  }
+}
+
 export function normalizeProxyData(raw, options = {}) {
   const strategies = [
     new SoleApiPublicModelsStrategy(),
@@ -532,6 +578,7 @@ export function normalizeProxyData(raw, options = {}) {
     new FastAiChannelsStrategy(),
     new JijiModelPlazaStrategy(),
     new JijiModelMarketStrategy(),
+    new AiApiModelCatalogStrategy(),
     new PqhPricingStrategy(),
     new StandardNewApiStrategy(),
     new LegacyStrategy(),
