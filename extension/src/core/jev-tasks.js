@@ -1,4 +1,4 @@
-import { JEV_MODEL_CANDIDATE_LIMIT } from "./matching.js";
+import { JEV_MODEL_CANDIDATE_LIMIT, normalizeProxyModelName } from "./matching.js";
 export const JEV_NO_MATCH = "__no_match__";
 
 function safeLabel(value) {
@@ -28,6 +28,17 @@ export function resolveJevTaskConfig(settings, apiKey) {
 
 export function isExtensionPageSender(sender, extensionRootUrl) {
   return Boolean(extensionRootUrl && String(extensionRootUrl).endsWith("/") && String(sender?.url || "").startsWith(extensionRootUrl));
+}
+
+export function getJevModelBatchTargets(rows = []) {
+  const seen = new Set();
+  return rows.filter(row => {
+    if (!row?.stationId || !row?.modelName || row.matchRuleId === "manual" || (row.matchCandidateCount === 1 && Number(row.matchConfidence) >= 1)) return false;
+    const key = JSON.stringify([row.stationId, normalizeProxyModelName(row.modelName)]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function buildJevModelMatchTask(proxyModelName, candidates = []) {

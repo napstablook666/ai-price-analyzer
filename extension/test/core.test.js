@@ -16,7 +16,7 @@ import { ensurePageBridge, findOrOpenPageTab, selectPageTab } from "../src/core/
 import { inferStationAdapter, parseAdapterSuggestion } from "../src/core/adapters.js";
 import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnapshots, putSnapshot, putStations, redactStation } from "../src/shared/db.js";
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
-import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
+import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
 import { addFastAiStationPreset } from "../src/core/station-presets.js";
 
@@ -1093,6 +1093,41 @@ test("builds bounded JEV choices and sends only comparison fields", () => {
   const serialized = JSON.stringify(reviewTask);
   assert.doesNotMatch(serialized, /private-station-id|private group|private\.example|station-secret/);
   assert.doesNotMatch(serialized, /"input":1|"output":2|"officialPrices"|-75/);
+});
+
+
+test("selects unique unresolved rows for batch JEV matching", () => {
+  const targets = getJevModelBatchTargets([
+    { stationId: "station-a", modelName: "relay-gpt-4o", matchRuleId: "fuzzy", matchCandidateCount: 1, matchConfidence: 0.75 },
+    { stationId: "station-a", modelName: "relay-gpt-4o", matchRuleId: "fuzzy", matchCandidateCount: 1, matchConfidence: 0.75 },
+    { stationId: "station-a", modelName: "[Provider] RELAY-GPT-4O-EXPIRES-ON-2026-10-07", matchRuleId: "fuzzy", matchCandidateCount: 1, matchConfidence: 0.75 },
+    { stationId: "station-a", modelName: "gpt-4o", matchRuleId: "exact", matchCandidateCount: 1, matchConfidence: 1 },
+    { stationId: "station-a", modelName: "duplicate-gpt", matchRuleId: "exact", matchCandidateCount: 2, matchConfidence: 1 },
+    { stationId: "station-b", modelName: "gpt-4o", matchRuleId: "manual", matchCandidateCount: 1, matchConfidence: 1 },
+    { stationId: "station-b", modelName: "relay-claude", matchRuleId: "unmatched", matchCandidateCount: 0, matchConfidence: 0 }
+  ]);
+  assert.deepEqual(targets.map(({ stationId, modelName }) => [stationId, modelName]), [["station-a", "relay-gpt-4o"], ["station-a", "duplicate-gpt"], ["station-b", "relay-claude"]]);
+});
+
+test("blocks batch JEV during worker and official-reference refreshes", () => {
+  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url), "utf8");
+  assert.ok(worker.includes('refreshInProgress: !["complete", "error"].includes(progress.phase) || Boolean(refreshReferencesTask)'));
+  assert.ok(worker.includes('references = await refreshOfficialReferences(forceReferences)'));
+  assert.ok(worker.includes('await refreshOfficialReferences(true)'));
+  assert.ok(worker.includes('const activeForced = refreshReferencesForced'));
+  assert.ok(worker.includes("if (!force || activeForced) return result"));
+  assert.ok(worker.includes("return refreshOfficialReferences(true)"));
+  assert.ok(worker.includes("notifyReferencesRefresh(true)"));
+  assert.ok(worker.includes("notifyReferencesRefresh(false)"));
+  assert.ok(dashboard.includes('message?.type === "REFERENCES_REFRESHING"'));
+  assert.ok(dashboard.includes("state.refreshInProgress = Boolean(data.refreshInProgress)"));
+  assert.ok(dashboard.includes('state.refreshInProgress = progress.refreshInProgress ?? !["complete", "error"].includes(progress.phase)'));
+  assert.ok(dashboard.includes('if (state.refreshInProgress || ["#refresh-all", "#fetch-references"]'));
+  assert.ok(worker.includes("function assertModelMatchJevIdle()"));
+  assert.equal(worker.match(/assertModelMatchJevIdle\(\);/g)?.length, 4);
+  assert.ok(dashboard.includes('error.message === "数据刷新中，模型匹配核验已停止"'));
+  assert.ok(dashboard.includes("interrupted = rows.length - index"));
 });
 
 test("requires a dedicated JEV profile and validates typed JEV Choice answers", async () => {

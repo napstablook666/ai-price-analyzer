@@ -1,5 +1,5 @@
 import { flattenComparisonRows } from "./core/pricing.js";
-import { buildJevComparisonTask, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
+import { buildJevComparisonTask, getJevModelBatchTargets, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
 import { getJevModelCandidates } from "./core/matching.js";
 import { callService, escapeHtml, formatMoney, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
@@ -8,7 +8,8 @@ import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
-const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
+const JEV_AUTO_MATCH_CONFIDENCE = 0.5;
+const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), jevBatchRunning: false, jevBatchControlStates: new Map(), refreshInProgress: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
 const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
@@ -175,6 +176,65 @@ function activeJevProfile() {
   return settings?.providerProfiles?.jev?.find(profile => profile.id === settings.activeProviders?.jev) || settings?.jev || {};
 }
 
+function jevRequestPayload(task, row) {
+  const settings = state.data?.settings || {};
+  const profile = activeJevProfile();
+  return {
+    task,
+    stationId: row.stationId,
+    modelName: row.modelName,
+    groupName: row.groupName || "",
+    tierName: row.tierName || "",
+    officialName: row.officialName || "",
+    collectedAt: Number(row.collectedAt),
+    referencesFetchedAt: state.data?.references?.fetchedAt ?? null,
+    jevProfileId: settings.activeProviders?.jev,
+    jevBaseUrl: profile.baseUrl,
+    jevModelId: profile.modelId
+  };
+}
+
+function setBatchJevButton(running, current = 0, total = 0) {
+  const button = $("#batch-jev-match");
+  if (!button) return;
+  button.disabled = running;
+  const label = running ? `JEV 核验模型匹配 ${current}/${total}` : "批量 JEV 核验模型匹配 ≥50%";
+  button.innerHTML = `${icon(running ? "loader-circle" : "sparkles", { className: running ? "icon spin" : "icon" })}<span>${label}</span>`;
+  setBatchControlsLocked(running);
+}
+
+function setBatchControlsLocked(locked) {
+  if (locked) {
+    for (const selector of ["#refresh-all", "#refresh-station", "#fetch-references", "#llm-provider-switch", "#jev-provider-switch"]) {
+      const element = $(selector);
+      if (!element) continue;
+      if (!state.jevBatchControlStates.has(element)) state.jevBatchControlStates.set(element, element.disabled);
+      element.disabled = true;
+    }
+    return;
+  }
+  for (const [element, wasDisabled] of state.jevBatchControlStates) element.disabled = wasDisabled;
+  state.jevBatchControlStates.clear();
+}
+
+async function analyzeJev(task, row) {
+  return callService("ANALYZE_JEV", jevRequestPayload(task, row));
+}
+
+async function saveJevModelMatch(row, result) {
+  return callService("SAVE_JEV_MODEL_MATCH", {
+    stationId: row.stationId,
+    modelName: row.modelName,
+    officialModelId: result.choice,
+    collectedAt: result.collectedAt,
+    referencesFetchedAt: result.referencesFetchedAt,
+    jevProfileId: result.jevProfileId,
+    jevBaseUrl: result.jevBaseUrl,
+    jevModelId: result.jevModelId,
+    candidateIds: result.candidateIds
+  });
+}
+
 function jevResultFor(task, row) {
   const result = state.jevResults.get(jevResultKey(task, row));
   const settings = state.data?.settings;
@@ -193,20 +253,22 @@ function jevActionButton(task, row, label) {
   if (!config.baseUrl || !config.modelId || !config.hasApiKey) return `<a class="jev-config-link" href="options.html">配置 JEV</a>`;
   const key = jevResultKey(task, row);
   const pending = state.jevPending.has(key);
-  const shownLabel = pending ? "判断中" : state.jevIgnored.has(key) ? "再次建议" : label;
-  return `<button class="jev-action" type="button" data-jev-action="analyze" data-jev-task="${escapeHtml(task)}" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" data-group-name="${escapeHtml(row.groupName || "")}" data-tier-name="${escapeHtml(row.tierName || "")}" data-official-name="${escapeHtml(row.officialName || "")}" data-collected-at="${escapeHtml(row.collectedAt || "")}" aria-label="${escapeHtml(shownLabel)}：${escapeHtml(row.displayNameOverride || row.modelName)}"${pending ? " disabled aria-busy=\"true\"" : ""}><span class="jev-action-icon" aria-hidden="true">${icon(pending ? "loader-circle" : "sparkles", { className: pending ? "icon spin" : "icon" })}</span><span>${shownLabel}</span></button>`;
+  const locked = pending || state.jevBatchRunning;
+  const shownLabel = pending ? "判断中" : state.jevBatchRunning && task === "model_match" ? "批量核验中" : state.jevIgnored.has(key) ? "再次建议" : label;
+  return `<button class="jev-action" type="button" data-jev-action="analyze" data-jev-task="${escapeHtml(task)}" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" data-group-name="${escapeHtml(row.groupName || "")}" data-tier-name="${escapeHtml(row.tierName || "")}" data-official-name="${escapeHtml(row.officialName || "")}" data-collected-at="${escapeHtml(row.collectedAt || "")}" aria-label="${escapeHtml(shownLabel)}：${escapeHtml(row.displayNameOverride || row.modelName)}"${locked ? " disabled" : ""}${pending ? " aria-busy=\"true\"" : ""}><span class="jev-action-icon" aria-hidden="true">${icon(pending ? "loader-circle" : "sparkles", { className: pending ? "icon spin" : "icon" })}</span><span>${shownLabel}</span></button>`;
 }
 
 function modelJevMarkup(row, showAction) {
   if (!showAction) return "";
-  if (row.matchRuleId === "manual") return `<div class="jev-assist"><span class="jev-result" role="status">人工确认匹配</span><button class="jev-icon-action" type="button" data-jev-action="remove" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="取消人工匹配" aria-label="取消 ${escapeHtml(row.modelName)} 的人工匹配">${icon("x", { className: "icon" })}</button></div>`;
+  if (row.matchRuleId === "manual") return `<div class="jev-assist"><span class="jev-result" role="status">人工确认匹配</span><button class="jev-icon-action" type="button" data-jev-action="remove"${state.jevBatchRunning ? " disabled" : ""} data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="取消人工匹配" aria-label="取消 ${escapeHtml(row.modelName)} 的人工匹配">${icon("x", { className: "icon" })}</button></div>`;
   const result = jevResultFor("model_match", row);
-  if (!result) return `<div class="jev-assist">${jevActionButton("model_match", row, "JEV 建议")}</div>`;
+  if (!result) return `<div class="jev-assist">${jevActionButton("model_match", row, "JEV 核验")}</div>`;
   const confidence = `${Math.round(result.confidence * 100)}%`;
-  if (result.choice === JEV_NO_MATCH) return `<div class="jev-assist"><span class="jev-result" role="status">JEV 未选出候选 · ${confidence}</span><button class="jev-icon-action" type="button" data-jev-action="ignore" data-jev-task="model_match" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="忽略此建议" aria-label="忽略 ${escapeHtml(row.modelName)} 的 JEV 建议">${icon("x", { className: "icon" })}</button>${jevActionButton("model_match", row, "重新建议")}</div>`;
+  const locked = state.jevBatchRunning || state.jevPending.has(jevResultKey("model_match", row));
+  if (result.choice === JEV_NO_MATCH) return `<div class="jev-assist"><span class="jev-result" role="status">JEV 未确认官方匹配 · ${confidence}</span><button class="jev-icon-action" type="button" data-jev-action="ignore"${locked ? " disabled" : ""} data-jev-task="model_match" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="忽略此核验结果" aria-label="忽略 ${escapeHtml(row.modelName)} 的 JEV 核验结果">${icon("x", { className: "icon" })}</button>${jevActionButton("model_match", row, "重新核验")}</div>`;
   const model = state.reference?.models?.find(item => (item.id || item.name) === result.choice);
   const name = model?.name || result.choice;
-  return `<div class="jev-assist"><span class="jev-result" role="status">JEV 建议 ${escapeHtml(name)} · ${confidence}</span><button class="jev-action" type="button" data-jev-action="apply" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" data-collected-at="${escapeHtml(row.collectedAt || "")}" aria-label="确认 ${escapeHtml(row.modelName)} 匹配到 ${escapeHtml(name)}"><span class="jev-action-icon" aria-hidden="true">${icon("check", { className: "icon" })}</span><span>确认匹配</span></button><button class="jev-icon-action" type="button" data-jev-action="ignore" data-jev-task="model_match" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="忽略此建议" aria-label="忽略 ${escapeHtml(row.modelName)} 的 JEV 建议">${icon("x", { className: "icon" })}</button></div>`;
+  return `<div class="jev-assist"><span class="jev-result" role="status">JEV 核验建议 ${escapeHtml(name)} · ${confidence}</span><button class="jev-action" type="button" data-jev-action="apply"${locked ? " disabled" : ""} data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" data-collected-at="${escapeHtml(row.collectedAt || "")}" aria-label="确认 ${escapeHtml(row.modelName)} 匹配到 ${escapeHtml(name)}"><span class="jev-action-icon" aria-hidden="true">${icon("check", { className: "icon" })}</span><span>确认匹配</span></button><button class="jev-icon-action" type="button" data-jev-action="ignore"${locked ? " disabled" : ""} data-jev-task="model_match" data-station-id="${escapeHtml(row.stationId)}" data-model-name="${escapeHtml(row.modelName)}" title="忽略此核验结果" aria-label="忽略 ${escapeHtml(row.modelName)} 的 JEV 核验结果">${icon("x", { className: "icon" })}</button></div>`;
 }
 
 function comparisonJevMarkup(row) {
@@ -312,6 +374,7 @@ function renderCheckin(data) {
 
 function render(data) {
   state.data = data;
+  state.refreshInProgress = Boolean(data.refreshInProgress);
   state.page = 0;
   pageFilterKey = null;
   state.rows = flattenComparisonRows(data.comparisons || []);
@@ -343,6 +406,7 @@ function render(data) {
   $("#last-updated").textContent = data.snapshots?.[0]?.collectedAt ? `更新于 ${new Date(data.snapshots[0].collectedAt).toLocaleTimeString("zh-CN", { hour12: false })}` : "尚未刷新";
   $("#connection-dot").classList.toggle("is-live", state.rows.length > 0);
   hydrateIcons();
+  setBatchControlsLocked(state.jevBatchRunning);
 }
 
 async function load() {
@@ -446,24 +510,15 @@ async function handleJevAction(button) {
       state.jevPending.add(key);
       state.jevIgnored.delete(key);
       renderRows();
-      const settings = state.data?.settings || {};
-      const profile = activeJevProfile();
-      const result = await callService("ANALYZE_JEV", {
-        task, ...row, referencesFetchedAt: state.data?.references?.fetchedAt ?? null,
-        jevProfileId: settings.activeProviders?.jev, jevBaseUrl: profile.baseUrl, jevModelId: profile.modelId
-      });
+      const result = await analyzeJev(task, row);
       state.jevResults.set(key, result);
-      toast(task === "model_match" ? "JEV 匹配建议已返回" : "JEV 复核已完成");
+      toast(task === "model_match" ? "JEV 模型 / 官方匹配核验已返回" : "JEV 复核已完成");
       return;
     }
     if (action === "apply") {
       const result = jevResultFor("model_match", row);
       if (!result || result.choice === JEV_NO_MATCH) return;
-      const data = await callService("SAVE_JEV_MODEL_MATCH", {
-        stationId: row.stationId, modelName: row.modelName, officialModelId: result.choice,
-        collectedAt: result.collectedAt, referencesFetchedAt: result.referencesFetchedAt,
-        jevProfileId: result.jevProfileId, jevBaseUrl: result.jevBaseUrl, jevModelId: result.jevModelId, candidateIds: result.candidateIds
-      });
+      const data = await saveJevModelMatch(row, result);
       state.jevResults.delete(jevResultKey("model_match", row));
       state.jevIgnored.delete(jevResultKey("model_match", row));
       render(data);
@@ -484,7 +539,92 @@ async function handleJevAction(button) {
 }
 
 
+async function runBatchJevMatches() {
+  if (state.jevBatchRunning) return;
+  const profile = activeJevProfile();
+  if (!profile.baseUrl || !profile.modelId || !profile.hasApiKey) {
+    toast("请先在设置中配置 JEV");
+    return;
+  }
+  if (state.jevPending.size) {
+    toast("当前有 JEV 请求进行中，请完成后再试");
+    return;
+  }
+
+  if (state.refreshInProgress || ["#refresh-all", "#fetch-references"].some(selector => $(selector)?.disabled)) {
+    toast("当前正在刷新或更新官方价，请稍后再试");
+    return;
+  }
+  const rows = getJevModelBatchTargets(state.rows);
+  if (!rows.length) {
+    toast("没有需要 JEV 核验的模型 / 官方匹配");
+    return;
+  }
+
+  state.jevBatchRunning = true;
+  let applied = 0;
+  let waiting = 0;
+  let noMatch = 0;
+  let failed = 0;
+  let interrupted = 0;
+  try {
+    for (let index = 0; index < rows.length; index += 1) {
+      if (state.refreshInProgress) {
+        interrupted = rows.length - index;
+        break;
+      }
+      const row = rows[index];
+      const key = jevResultKey("model_match", row);
+      setBatchJevButton(true, index + 1, rows.length);
+      state.jevPending.add(key);
+      renderRows();
+      try {
+        const result = await analyzeJev("model_match", row);
+        if (state.refreshInProgress) {
+          interrupted = rows.length - index;
+          break;
+        }
+        state.jevResults.set(key, result);
+        if (result.choice === JEV_NO_MATCH) {
+          noMatch += 1;
+          continue;
+        }
+        if (!Number.isFinite(Number(result.confidence)) || Number(result.confidence) < JEV_AUTO_MATCH_CONFIDENCE) {
+          waiting += 1;
+          continue;
+        }
+        const data = await saveJevModelMatch(row, result);
+        state.jevResults.delete(key);
+        state.jevIgnored.delete(key);
+        render(data);
+        applied += 1;
+      } catch (error) {
+        if (state.refreshInProgress
+          || error.message === "数据刷新中，模型匹配核验已停止"
+          || error.message === "报价、官方目录或 JEV 配置已变化，请刷新页面后重试") {
+          interrupted = rows.length - index;
+          break;
+        }
+        failed += 1;
+      } finally {
+        state.jevPending.delete(key);
+        renderRows();
+      }
+    }
+    const summary = `自动确认 ${applied} 个，待人工确认 ${waiting} 个，未匹配 ${noMatch} 个${failed ? `，失败 ${failed} 个` : ""}`;
+    toast(interrupted
+      ? `数据或配置已变化，批量 JEV 核验已停止：${summary}，剩余 ${interrupted} 个未处理`
+      : `批量 JEV 模型匹配核验完成：${summary}`);
+  } finally {
+    state.jevBatchRunning = false;
+    setBatchJevButton(false);
+    renderRows();
+  }
+}
+
+
 function renderRefreshProgress(progress) {
+  state.refreshInProgress = progress.refreshInProgress ?? !["complete", "error"].includes(progress.phase);
   const panel = $("#refresh-progress-panel");
   panel.hidden = false;
   const total = Math.max(0, Number(progress.total) || 0);
@@ -561,6 +701,7 @@ $("#refresh-all").addEventListener("click", async event => {
   finally { button.disabled = false; button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`; }
 });
 
+$("#batch-jev-match").addEventListener("click", runBatchJevMatches);
 $("#fetch-references").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
@@ -614,6 +755,9 @@ hydrateIcons();
 const cards = initCollapsibleCards("dashboard");
 $("#expand-all").addEventListener("click", () => cards.setAll(false));
 $("#collapse-all").addEventListener("click", () => cards.setAll(true));
+chrome.runtime.onMessage.addListener(message => {
+  if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
+});
 onRefreshProgress(renderRefreshProgress);
 load();
 

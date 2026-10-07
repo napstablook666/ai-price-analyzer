@@ -108,7 +108,11 @@ async function refreshReferences(force = false) {
 }
 
 function notifyRefreshProgress(progress) {
-  chrome.runtime.sendMessage({ type: "REFRESH_PROGRESS", progress }, () => void chrome.runtime.lastError);
+  chrome.runtime.sendMessage({ type: "REFRESH_PROGRESS", progress: { ...progress, refreshInProgress: !["complete", "error"].includes(progress.phase) || Boolean(refreshReferencesTask) } }, () => void chrome.runtime.lastError);
+}
+
+function notifyReferencesRefresh(active) {
+  chrome.runtime.sendMessage({ type: "REFERENCES_REFRESHING", active: Boolean(refreshAllTask || active) }, () => void chrome.runtime.lastError);
 }
 
 async function refreshAllInternal({ forceReferences = false, stationId, sourceTabId } = {}) {
@@ -127,7 +131,7 @@ async function refreshAllInternal({ forceReferences = false, stationId, sourceTa
   notifyRefreshProgress({ phase: "references", status: "running", total, completed: 0, message: "正在确认官方参考价" });
   let references;
   try {
-    references = await refreshReferences(forceReferences);
+    references = await refreshOfficialReferences(forceReferences);
   } catch (error) {
     notifyRefreshProgress({ phase: "error", total, completed: 0, message: `官方参考价查询失败：${error.message || String(error)}` });
     throw error;
@@ -172,6 +176,39 @@ async function refreshAllInternal({ forceReferences = false, stationId, sourceTa
 }
 
 let refreshAllTask = null;
+let refreshReferencesTask = null;
+let refreshReferencesForced = false;
+
+async function refreshOfficialReferences(force = false) {
+  if (refreshReferencesTask) {
+    const activeTask = refreshReferencesTask;
+    const activeForced = refreshReferencesForced;
+    try {
+      const result = await activeTask;
+      if (!force || activeForced) return result;
+    } catch (error) {
+      if (!force || activeForced) throw error;
+    }
+    return refreshOfficialReferences(true);
+  }
+
+  let task;
+  task = Promise.resolve().then(() => refreshReferences(force)).finally(() => {
+    if (refreshReferencesTask === task) {
+      refreshReferencesTask = null;
+      refreshReferencesForced = false;
+      notifyReferencesRefresh(false);
+    }
+  });
+  refreshReferencesTask = task;
+  refreshReferencesForced = Boolean(force);
+  notifyReferencesRefresh(true);
+  return task;
+}
+function assertModelMatchJevIdle() {
+  if (refreshAllTask || refreshReferencesTask) throw new Error("数据刷新中，模型匹配核验已停止");
+}
+
 async function refreshAll(options = {}) {
   if (refreshAllTask) {
     const active = refreshAllTask;
@@ -240,7 +277,7 @@ async function dashboard() {
     const linked = stations.find(station => station.enabled && matchCheckinPreset(station)?.id === preset.id);
     return { id: preset.id, name: preset.name, linkedStationId: linked ? linked.id : null, autoEnabled: Boolean(linked?.checkin?.autoEnabled) };
   });
-  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons: comparisonResult.comparisons, summary: comparisonResult.summary, checkinState: await getCheckinState(), checkinStations };
+  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons: comparisonResult.comparisons, summary: comparisonResult.summary, checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask) };
 }
 
 async function scheduleCheckinAlarm() {
@@ -544,6 +581,7 @@ async function jevRequestConfig(settings) {
 async function runJevTask(message) {
   const task = message.task === "model_match" ? "model_match" : message.task === "comparison_review" ? "comparison_review" : "";
   if (!task) throw new Error("未知 JEV 任务");
+  if (task === "model_match") assertModelMatchJevIdle();
   const stationId = String(message.stationId || "").trim();
   const modelName = String(message.modelName || "").trim();
   if (!stationId || !modelName) throw new Error("缺少站点或模型标识");
@@ -579,6 +617,7 @@ async function runJevTask(message) {
   }
 
   const result = await requestJevChoices({ ...config, ...requestTask });
+  if (task === "model_match") assertModelMatchJevIdle();
   return {
     task, stationId, modelName, groupName: String(message.groupName || ""), tierName: String(message.tierName || ""), collectedAt,
     jevProfileId: settings.activeProviders.jev, jevBaseUrl: config.baseUrl, jevModelId: config.model,
@@ -589,6 +628,7 @@ async function runJevTask(message) {
 }
 
 async function saveJevModelMatch(message) {
+  assertModelMatchJevIdle();
   const stationId = String(message.stationId || "").trim();
   const modelName = String(message.modelName || "").trim();
   const officialModelId = String(message.officialModelId || "").trim();
@@ -609,6 +649,7 @@ async function saveJevModelMatch(message) {
   if (directMatches.length === 1 && directMatches[0].ruleId === "exact") throw new Error("该模型已有精确匹配，无需人工覆盖");
   if (officialModelId === JEV_NO_MATCH || !candidates.some(model => (model.id || model.name) === officialModelId)) throw new Error("模型不在当前 JEV 候选范围内");
   const modelMatchOverrides = [...settings.modelMatchOverrides, { stationId, modelName, officialModelId }];
+  assertModelMatchJevIdle();
   await setValue("settings", normalizeSettings({ ...settings, modelMatchOverrides }));
   return dashboard();
 }
@@ -662,9 +703,10 @@ async function handle(message, sender) {
       const result = await refreshAll({ stationId: message.stationId, sourceTabId: message.sourceTabId });
       return { ...(await dashboard()), refreshSummary: result.summary };
     }
-    case "FETCH_REFERENCES":
-      await refreshReferences(true);
+    case "FETCH_REFERENCES": {
+      await refreshOfficialReferences(true);
       return dashboard();
+    }
     case "EXPORT_STATE": return exportState();
     case "IMPORT_STATE": {
       const imported = Array.isArray(message.state?.stations) ? message.state.stations : [];
