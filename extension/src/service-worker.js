@@ -264,9 +264,10 @@ async function ensureAiApiStationPreset() {
 
 
 async function ensureSidruneStationPreset() {
+  const { exchangeRate } = await settingsForUi();
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
-    const next = addSidruneStationPreset(stations);
+    const next = addSidruneStationPreset(stations, exchangeRate);
     return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
   });
 }

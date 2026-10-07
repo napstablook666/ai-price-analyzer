@@ -9,7 +9,7 @@ import { addRecommendationScores, buildComparisonRows, getProxyPrices, getTierSh
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
 import { buildModelMatchIndex, getJevModelCandidates, matchModel, matchModelWithOverrides, matchOne, suggestModelCandidates } from "../src/core/matching.js";
 import { normalizePricingPayload } from "../src/core/collectors.js";
-import { convertRechargeAmount, DEFAULT_DAILY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
+import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_DAILY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
 import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
 import { ensurePageBridge, findOrOpenPageTab, selectPageTab } from "../src/core/page-tabs.js";
@@ -961,9 +961,12 @@ test("adapts the Sidrune model plaza URL and station preset", () => {
   assert.equal(stations[1].baseUrl, "https://sidrune.ai/model-plaza");
   const sidrune = normalizeStation(stations[1]);
   assert.equal(sidrune.rechargeCurrency, "USD");
-  assert.equal(sidrune.rechargeRmb, 1);
+  assert.equal(sidrune.rechargeRmb, DEFAULT_EXCHANGE_RATE);
   assert.equal(sidrune.rechargeCredits, 1);
-  assert.equal(sidrune.rechargeRate, 1);
+  assert.equal(sidrune.rechargeRate, DEFAULT_EXCHANGE_RATE);
+  assert.equal(convertRechargeAmount(sidrune.rechargeRmb, "CNY", "USD", DEFAULT_EXCHANGE_RATE), 1);
+  const customRate = addSidruneStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }], 8.2);
+  assert.equal(normalizeStation(customRate[1]).rechargeRate, 8.2);
   const customSidrune = normalizeStation({
     baseUrl: "https://sidrune.ai/model-plaza",
     rechargeCurrency: "CNY",
@@ -971,8 +974,8 @@ test("adapts the Sidrune model plaza URL and station preset", () => {
     rechargeCredits: 2,
     rechargeRate: 4
   });
-  assert.equal(customSidrune.rechargeCurrency, "USD");
-  assert.equal(customSidrune.rechargeRate, 1);
+  assert.equal(customSidrune.rechargeCurrency, "CNY");
+  assert.equal(customSidrune.rechargeRate, 4);
   assert.equal(addSidruneStationPreset(stations), stations);
 });
 

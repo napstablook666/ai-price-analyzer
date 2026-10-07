@@ -1,3 +1,4 @@
+import { DEFAULT_EXCHANGE_RATE } from "../shared/schema.js";
 export const PUBLIC_PRICING_HOSTS = new Set(["nomissapi.com", "yorhamc.com", "token123.cfd"]);
 export const CHEAP_ROUTER_PRICING_ENDPOINT = "/api/v1/pricing/public?timezone=Asia%2FShanghai";
 export const AIAPI_MODEL_CATALOG_ENDPOINT = "/api/me/model-catalog";
@@ -41,7 +42,7 @@ const sidrunePreset = {
   baseUrl: "https://sidrune.ai/model-plaza",
   enabled: true,
   mode: "direct",
-  rechargeRmb: 1,
+  rechargeRmb: DEFAULT_EXCHANGE_RATE,
   rechargeCurrency: "USD",
   rechargeCredits: 1,
   auth: { type: "none" },
@@ -68,7 +69,7 @@ const cheapRouterPreset = {
   adapter: { kind: "cheaprouter", endpoint: CHEAP_ROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
-export function addSidruneStationPreset(stations) {
+export function addSidruneStationPreset(stations, exchangeRate = DEFAULT_EXCHANGE_RATE) {
   if (!stations.length || stations.some(station => {
     try { return new URL(station.baseUrl).hostname.toLowerCase().replace(/^www\./, "") === "sidrune.ai"; }
     catch { return false; }
@@ -76,7 +77,7 @@ export function addSidruneStationPreset(stations) {
   const ids = new Set(stations.map(station => station.id));
   let id = sidrunePreset.id;
   for (let suffix = 2; ids.has(id); suffix++) id = `${sidrunePreset.id}-${suffix}`;
-  return [...stations, { ...sidrunePreset, id, auth: { ...sidrunePreset.auth }, adapter: { ...sidrunePreset.adapter } }];
+  return [...stations, { ...sidrunePreset, id, rechargeRmb: exchangeRate, auth: { ...sidrunePreset.auth }, adapter: { ...sidrunePreset.adapter } }];
 }
 export function addCheapRouterStationPreset(stations) {
   if (!stations.length || stations.some(station => {
