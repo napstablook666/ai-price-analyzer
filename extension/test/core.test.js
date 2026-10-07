@@ -18,7 +18,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset, addSidruneStationPreset } from "../src/core/station-presets.js";
 
 const pqhFixture = {
   pricing_version: 1,
@@ -877,6 +877,46 @@ test("keeps Jiji model-plaza prices in CNY per-million units", () => {
   assert.equal(model.price_currency, "CNY");
 });
 
+test("normalizes Sidrune model-plaza public pricing", () => {
+  const normalized = normalizePricingPayload({
+    code: 0,
+    data: {
+      groups: [
+        { id: "default", name: "Default", rate_multiplier: 2 },
+        { id: "promo", name: "Promo", rate_multiplier: 3, promo_active: true, promo_rate_multiplier: 1.5 }
+      ],
+      pricing: [
+        {
+          name: "gpt-sidrune",
+          group_ids: ["default", "promo"],
+          input_price: 0.000002,
+          output_price: 0.000008,
+          cache_read_price: 0.0000002,
+          cache_write_price: 0.0000005
+        },
+        {
+          name: "image-sidrune",
+          group_ids: ["promo"],
+          billing_mode: "image",
+          intervals: [{ tier_label: "1K", per_request_price: 0.15 }]
+        }
+      ]
+    }
+  });
+  assert.equal(normalized.sourceFormat, "sidrune-model-plaza");
+  assert.deepEqual(normalized.group_ratio, { Default: 2, Promo: 1.5 });
+  const defaultModel = normalized.data.find(model => model.proxy_group_name === "Default");
+  const promoModel = normalized.data.find(model => model.proxy_group_name === "Promo" && model.model_name === "gpt-sidrune");
+  const imageModel = normalized.data.find(model => model.model_name === "image-sidrune");
+  assert.equal(defaultModel.input_price, 4);
+  assert.equal(defaultModel.output_price, 16);
+  assert.ok(Math.abs(defaultModel.cache_read_price - 0.4) < 1e-12);
+  assert.equal(promoModel.input_price, 3);
+  assert.equal(promoModel.group_ratio, 1.5);
+  assert.equal(imageModel.tier_name, "1K");
+  assert.ok(Math.abs(imageModel.request_price - 0.225) < 1e-12);
+});
+
 test("reads native fetch JSON bodies before normalizing", async () => {
   const payload = [{ result: { data: { json: { providers: [{ name: "OpenAI", models: [{ model_id: "gpt-6-luna", input_price: "0.1", output_price: "0.5", group_prices: [{ group_name: "Codex Luna", input_price: "0.02", output_price: "0.1", multiplier: "0.2" }] }] }] } } } }];
   const snapshot = await collectStation({ id: "station-jiji-native", name: "Jiji", baseUrl: "https://www.jiji.cc/extension/models?token=test-token", adapter: { endpoint: "/api/ai/pricing" } }, {
@@ -904,6 +944,60 @@ test("adapts Jiji model page URLs to the authenticated model-market API", async 
   assert.equal(request.init.headers.Authorization, "Bearer test-token");
   assert.equal(request.init.headers["x-trpc-source"], "browser-client");
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
+});
+
+test("adapts the Sidrune model plaza URL and station preset", () => {
+  const adapter = inferStationAdapter({ baseUrl: "https://sidrune.ai/model-plaza" });
+  assert.equal(adapter.mode, "direct");
+  assert.equal(adapter.endpoint, "/api/v1/model-plaza/public");
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.authType, "none");
+  const prepared = prepareStationInput({ baseUrl: "https://www.sidrune.ai/model-plaza?tab=all", auth: { type: "bearer", token: "must-not-be-sent" } });
+  assert.equal(prepared.baseUrl, "https://www.sidrune.ai/model-plaza");
+  assert.equal(prepared.mode, "direct");
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.adapter.kind, "sidrune-model-plaza");
+  const stations = addSidruneStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+  assert.equal(stations[1].baseUrl, "https://sidrune.ai/model-plaza");
+  const sidrune = normalizeStation(stations[1]);
+  assert.equal(sidrune.rechargeCurrency, "USD");
+  assert.equal(sidrune.rechargeRmb, 1);
+  assert.equal(sidrune.rechargeCredits, 1);
+  assert.equal(sidrune.rechargeRate, 1);
+  const customSidrune = normalizeStation({
+    baseUrl: "https://sidrune.ai/model-plaza",
+    rechargeCurrency: "CNY",
+    rechargeRmb: 8,
+    rechargeCredits: 2,
+    rechargeRate: 4
+  });
+  assert.equal(customSidrune.rechargeCurrency, "USD");
+  assert.equal(customSidrune.rechargeRate, 1);
+  assert.equal(addSidruneStationPreset(stations), stations);
+});
+
+
+test("collects Sidrune public model prices without credentials", async () => {
+  let request;
+  const snapshot = await collectStation({
+    id: "station-sidrune-public",
+    name: "Sidrune",
+    baseUrl: "https://sidrune.ai/model-plaza?tab=all",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response({ code: 0, data: {
+        groups: [{ id: "default", name: "Default", rate_multiplier: 2 }],
+        pricing: [{ name: "gpt-sidrune", group_ids: ["default"], input_price: 0.000002, output_price: 0.000008 }]
+      } });
+    }
+  });
+  assert.equal(request.url, "https://sidrune.ai/api/v1/model-plaza/public");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.data[0].input_price, 4);
 });
 
 test("suggests official candidates for unmatched proxy names and scopes confirmed mappings", () => {

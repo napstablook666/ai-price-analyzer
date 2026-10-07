@@ -2,6 +2,7 @@ export const PUBLIC_PRICING_HOSTS = new Set(["nomissapi.com", "yorhamc.com", "to
 export const CHEAP_ROUTER_PRICING_ENDPOINT = "/api/v1/pricing/public?timezone=Asia%2FShanghai";
 export const AIAPI_MODEL_CATALOG_ENDPOINT = "/api/me/model-catalog";
 export const NEXA_CHANNEL_CATALOG_ENDPOINT = "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai";
+export const SIDRUNE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza/public";
 
 const fastAiPreset = {
   id: "fastaitoken",
@@ -34,6 +35,19 @@ export function addFastAiStationPreset(stations) {
   return [...stations, { ...fastAiPreset, id, auth: { ...fastAiPreset.auth }, adapter: { ...fastAiPreset.adapter } }];
 }
 
+const sidrunePreset = {
+  id: "sidrune",
+  name: "sidrune.ai",
+  baseUrl: "https://sidrune.ai/model-plaza",
+  enabled: true,
+  mode: "direct",
+  rechargeRmb: 1,
+  rechargeCurrency: "USD",
+  rechargeCredits: 1,
+  auth: { type: "none" },
+  adapter: { kind: "sidrune-model-plaza", endpoint: SIDRUNE_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "auto" }
+};
+
 export function addNexaStationPreset(stations) {
   if (!stations.length || stations.some(station => {
     try { return new URL(station.baseUrl).hostname.toLowerCase().replace(/^www\./, "") === "nexavlinks.com"; }
@@ -44,7 +58,6 @@ export function addNexaStationPreset(stations) {
   for (let suffix = 2; ids.has(id); suffix++) id = `${nexaPreset.id}-${suffix}`;
   return [...stations, { ...nexaPreset, id, auth: { ...nexaPreset.auth }, adapter: { ...nexaPreset.adapter } }];
 }
-
 const cheapRouterPreset = {
   id: "cheaprouter",
   name: "cheaprouter.cc",
@@ -55,6 +68,16 @@ const cheapRouterPreset = {
   adapter: { kind: "cheaprouter", endpoint: CHEAP_ROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
+export function addSidruneStationPreset(stations) {
+  if (!stations.length || stations.some(station => {
+    try { return new URL(station.baseUrl).hostname.toLowerCase().replace(/^www\./, "") === "sidrune.ai"; }
+    catch { return false; }
+  })) return stations;
+  const ids = new Set(stations.map(station => station.id));
+  let id = sidrunePreset.id;
+  for (let suffix = 2; ids.has(id); suffix++) id = `${sidrunePreset.id}-${suffix}`;
+  return [...stations, { ...sidrunePreset, id, auth: { ...sidrunePreset.auth }, adapter: { ...sidrunePreset.adapter } }];
+}
 export function addCheapRouterStationPreset(stations) {
   if (!stations.length || stations.some(station => {
     try { return new URL(station.baseUrl).hostname.toLowerCase().replace(/^www\./, "") === "cheaprouter.cc"; }

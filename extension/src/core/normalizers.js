@@ -419,6 +419,84 @@ export class CheapRouterPricingStrategy extends ParsingStrategy {
 }
 
 
+const sidruneMultiplier = group => {
+  if (group?.promo_active === true) {
+    const promo = finitePrice(group.promo_rate_multiplier);
+    if (promo !== null) return promo;
+  }
+  return finitePrice(group?.effective_rate_multiplier) ?? finitePrice(group?.rate_multiplier) ?? 1;
+};
+
+export class SidruneModelPlazaStrategy extends ParsingStrategy {
+  canParse(raw) {
+    return raw?.code === 0 && Array.isArray(raw?.data?.groups) && Array.isArray(raw?.data?.pricing);
+  }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    const groups = new Map((raw.data.groups || []).map(group => [String(group?.id), group]));
+    const perMillion = value => {
+      const parsed = finitePrice(value);
+      return parsed === null ? null : parsed * 1_000_000;
+    };
+
+    for (const pricing of raw.data.pricing) {
+      const groupTargets = (Array.isArray(pricing?.group_ids) ? pricing.group_ids : [])
+        .map(id => groups.get(String(id)))
+        .filter(Boolean);
+      if (!pricing?.name || !groupTargets.length) continue;
+      const intervals = Array.isArray(pricing.intervals) && pricing.intervals.length ? pricing.intervals : [null];
+
+      for (const group of groupTargets) {
+        const groupName = String(group.name || group.id || "Sidrune").trim();
+        const multiplier = sidruneMultiplier(group);
+        groupRatio[groupName] = multiplier;
+        for (const interval of intervals) {
+          const price = field => {
+            const value = interval?.[field] ?? pricing[field];
+            const parsed = perMillion(value);
+            return parsed === null ? null : parsed * multiplier;
+          };
+          const requestValue = interval?.per_request_price ?? pricing.per_request_price;
+          const request = finitePrice(requestValue);
+          const input = price("input_price");
+          const output = price("output_price");
+          const cacheRead = price("cache_read_price");
+          const cacheWrite = price("cache_write_price");
+          const cacheWrite1h = price("cache_write_1h_price");
+          const imageOutput = price("image_output_price");
+          const imageInput = price("image_input_price");
+          if ([input, output, cacheRead, cacheWrite, cacheWrite1h, imageOutput, imageInput, request].every(value => value === null)) continue;
+          const tierName = intervals.length > 1 || interval?.tier_label ? String(interval?.tier_label || "标准") : "";
+          data.push({
+            model_name: String(pricing.name),
+            model_display_name: String(pricing.name),
+            model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+            completion_ratio: input > 0 && output !== null ? output / input : 1,
+            input_price: input,
+            output_price: output,
+            cache_read_price: cacheRead,
+            cache_write_price: cacheWrite,
+            cache_write_1h_price: cacheWrite1h,
+            request_price: request === null ? null : request * multiplier,
+            image_input_price: imageInput,
+            image_output_price: imageOutput,
+            price_currency: "USD",
+            enable_groups: [groupName],
+            proxy_group_name: groupName,
+            group_ratio: multiplier,
+            tier_name: tierName,
+            evidence: "exact"
+          });
+        }
+      }
+    }
+    if (!data.length) throw new Error("Sidrune 模型广场价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "sidrune-model-plaza" };
+  }
+}
+
 export class JijiModelPlazaStrategy extends ParsingStrategy {
   canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.groups); }
 
@@ -576,6 +654,7 @@ export function normalizeProxyData(raw, options = {}) {
     new SoleApiPublicModelsStrategy(),
     new CheapRouterPricingStrategy(),
     new FastAiChannelsStrategy(),
+    new SidruneModelPlazaStrategy(),
     new JijiModelPlazaStrategy(),
     new JijiModelMarketStrategy(),
     new AiApiModelCatalogStrategy(),

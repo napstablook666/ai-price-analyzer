@@ -224,6 +224,10 @@ export function normalizeStation(input = {}) {
   station.mode = station.mode === "page" ? "page" : "direct";
   station.adapter = { ...DEFAULT_STATION.adapter, ...(input.adapter || {}) };
   station.auth = { ...DEFAULT_STATION.auth, ...(input.auth || {}) };
+  const stationUrl = new URL(station.baseUrl);
+  const isSidrune = station.adapter.kind === "sidrune-model-plaza" || (
+    stationUrl.hostname.toLowerCase().replace(/^www\./, "") === "sidrune.ai" && stationUrl.pathname === "/model-plaza"
+  );
   station.checkin = { token: String(input.checkin?.token || "").trim(), autoEnabled: Boolean(input.checkin?.autoEnabled) };
   const hasRatioInputs = Object.prototype.hasOwnProperty.call(input, "rechargeRmb") || Object.prototype.hasOwnProperty.call(input, "rechargeCredits");
   const rechargeRmb = Number(input.rechargeRmb);
@@ -236,6 +240,12 @@ export function normalizeStation(input = {}) {
   station.rechargeCredits = Number.isFinite(rechargeCredits) && rechargeCredits > 0 ? rechargeCredits : 1;
   station.rechargeRate = rechargeRate;
   station.rechargeCurrency = input.rechargeCurrency === "USD" ? "USD" : "CNY";
+  if (isSidrune) {
+    station.rechargeRmb = 1;
+    station.rechargeCredits = 1;
+    station.rechargeRate = 1;
+    station.rechargeCurrency = "USD";
+  }
   const basePricePerMillion = Number(station.basePricePerMillion);
   station.basePricePerMillion = Number.isFinite(basePricePerMillion) && basePricePerMillion >= 0 ? basePricePerMillion : SYSTEM_BASE_PRICE_PER_1M;
   return station;
