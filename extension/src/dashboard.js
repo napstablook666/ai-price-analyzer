@@ -7,7 +7,7 @@ import { initCollapsibleCards } from "./shared/collapse.js";
 import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
-const PAGE_SIZE = 100;
+const PAGE_SIZE = 20;
 const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
 const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
@@ -225,11 +225,11 @@ function renderRows() {
   if (pageFilterKey !== null && pageFilterKey !== filterKey) state.page = 0;
   pageFilterKey = filterKey;
   const filtered = sortRows(state.rows.filter(row => rowMatches(row, query)));
-  const page = paginateRows(filtered, state.page, PAGE_SIZE);
+  const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
   state.page = page.page;
   const visible = page.rows;
   const pagination = $("#comparison-pagination");
-  pagination.hidden = page.pageCount <= 1;
+  pagination.hidden = filtered.length === 0;
   $("#comparison-page").textContent = page.pageCount ? `第 ${page.page + 1} / ${page.pageCount} 页` : "";
   $("#comparison-previous").disabled = page.page === 0;
   $("#comparison-next").disabled = page.page + 1 >= page.pageCount;
@@ -528,6 +528,10 @@ function renderRefreshProgress(progress) {
 
 $("#comparison-previous").addEventListener("click", () => { state.page--; renderRows(); });
 $("#comparison-next").addEventListener("click", () => { state.page++; renderRows(); });
+$("#page-size").addEventListener("change", () => { state.page = 0; renderRows(); });
+const backToTop = $("#back-to-top");
+window.addEventListener("scroll", () => { backToTop.hidden = window.scrollY < 400; }, { passive: true });
+backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
 $("#comparison-body").addEventListener("click", async event => {
   const action = event.target.closest("[data-jev-action]");
   if (action) {

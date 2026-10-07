@@ -82,6 +82,7 @@
         </table>
       </div>
       <nav class="comparison-pagination" id="comparison-pagination" aria-label="报价分页" hidden>
+        <label class="page-size-field"><span>每页</span><select id="page-size" aria-label="每页显示数量"><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option><option value="200">200</option><option value="500">500</option></select><span>条</span></label>
         <button class="button button-quiet" id="comparison-previous" type="button" aria-label="上一页" title="上一页"><span data-icon="chevron-left" class="icon"></span><span>上一页</span></button>
         <span id="comparison-page" aria-live="polite"></span>
         <button class="button button-quiet" id="comparison-next" type="button" aria-label="下一页" title="下一页"><span>下一页</span><span data-icon="chevron-right" class="icon"></span></button>
@@ -96,6 +97,7 @@
 
   </main>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <button class="back-to-top" id="back-to-top" type="button" aria-label="回到顶部" title="回到顶部" hidden><span data-icon="arrow-up" class="icon"></span></button>
   <script type="module" src="src/dashboard.js"></script>
 </body>
 </html>

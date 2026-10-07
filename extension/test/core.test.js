@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
+import { icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation, prepareStationInput } from "../src/core/collectors.js";
@@ -1316,6 +1317,23 @@ test("labels global section controls for icon-only mobile layout", () => {
     assert.match(html, /id="expand-all"[^>]*aria-label="展开全部卡片"/);
     assert.match(html, /id="collapse-all"[^>]*aria-label="折叠全部卡片"/);
   }
+});
+
+test("provides configurable dashboard pagination and back-to-top controls", () => {
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
+  assert.deepEqual([...html.matchAll(/<option value="(\d+)"/g)].map(([, value]) => Number(value)), [20, 50, 100, 200, 500]);
+  assert.match(html, /<option value="20" selected>20<\/option>/);
+  assert.match(source, /const PAGE_SIZE = 20;/);
+  assert.match(css, /\.comparison-pagination\s*\{[^}]*flex-wrap:\s*wrap/);
+  assert.match(source, /paginateRows\(filtered, state\.page, Number\(\$\("#page-size"\)\.value\) \|\| PAGE_SIZE\)/);
+  assert.match(source, /\$\("#page-size"\)\.addEventListener\("change"/);
+  assert.match(html, /id="back-to-top"[^>]*aria-label="回到顶部"/);
+  assert.match(html, /id="back-to-top"[^>]*>.*?data-icon="arrow-up"/);
+  assert.match(icon("arrow-up"), /<path d="M12 19V5"\/>/);
+  assert.match(source, /window\.addEventListener\("scroll"/);
+  assert.match(source, /backToTop\.addEventListener\("click"/);
 });
 
 test("filters quotes by any entered model across all stations", () => {
