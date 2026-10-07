@@ -376,6 +376,47 @@ export class JijiModelMarketStrategy extends ParsingStrategy {
     return { data, group_ratio: groupRatio, sourceFormat: "jiji" };
   }
 }
+export class CheapRouterPricingStrategy extends ParsingStrategy {
+  canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.items); }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    for (const item of raw.data.items) {
+      const modelName = String(item?.model || item?.display_name || "").trim();
+      const pricing = item?.effective_pricing_usd || item?.official_pricing || {};
+      if (!modelName || !pricing || typeof pricing !== "object") continue;
+      const input = finitePrice(pricing.input_per_mtok_usd);
+      const output = finitePrice(pricing.output_per_mtok_usd);
+      const cacheRead = finitePrice(pricing.cache_read_per_mtok_usd);
+      const cacheWrite = finitePrice(pricing.cache_write_per_mtok_usd);
+      const request = finitePrice(pricing.per_request_usd);
+      const image = finitePrice(pricing.per_image_usd);
+      if ([input, output, cacheRead, cacheWrite, request, image].every(value => value === null)) continue;
+      const groupName = String(item?.group?.name || "cheaprouter.cc").trim();
+      groupRatio[groupName] = 1;
+      data.push({
+        model_name: modelName,
+        model_display_name: String(item?.display_name || modelName),
+        model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+        completion_ratio: input > 0 && output !== null ? output / input : 1,
+        input_price: input,
+        output_price: output,
+        cache_read_price: cacheRead,
+        cache_write_price: cacheWrite,
+        request_price: request,
+        image_price: image,
+        price_currency: "USD",
+        enable_groups: [groupName],
+        proxy_group_name: groupName,
+        group_ratio: 1,
+        evidence: "exact"
+      });
+    }
+    if (!data.length) throw new Error("CheapRouter 公开模型价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "cheaprouter-public-api" };
+  }
+}
 
 
 export class JijiModelPlazaStrategy extends ParsingStrategy {
@@ -487,6 +528,7 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
 export function normalizeProxyData(raw, options = {}) {
   const strategies = [
     new SoleApiPublicModelsStrategy(),
+    new CheapRouterPricingStrategy(),
     new FastAiChannelsStrategy(),
     new JijiModelPlazaStrategy(),
     new JijiModelMarketStrategy(),

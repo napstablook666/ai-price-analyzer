@@ -1,5 +1,5 @@
 import { isSecureRemoteUrl } from "../shared/schema.js";
-import { PUBLIC_PRICING_HOSTS } from "./station-presets.js";
+import { CHEAP_ROUTER_PRICING_ENDPOINT, PUBLIC_PRICING_HOSTS } from "./station-presets.js";
 const RESPONSE_FORMATS = new Set(["auto", "pqh", "sora"]);
 const AUTH_TYPES = new Set(["none", "bearer", "api-key", "basic"]);
 
@@ -22,27 +22,29 @@ export function inferStationAdapter(station = {}, jev = {}) {
   const isSoleApi = hostname === "soleapi.com";
   const isPublicPricing = PUBLIC_PRICING_HOSTS.has(hostname);
   const isFastAiToken = hostname === "fastaitoken.com";
+  const isCheapRouter = hostname === "cheaprouter.cc";
   const isJiji = hostname === "jiji.cc";
   const inferredPath = url?.pathname && url.pathname !== "/" ? url.pathname : "/api/ai/pricing";
   const inferredEndpoint = /^\/(?:api|v\d+|openai|anthropic|extension)(?:\/|$)/i.test(inferredPath) ? inferredPath : `/api${inferredPath}`;
-  const knownEndpoint = isFastAiToken ? "/api/v1/channels/available" : isSoleApi ? "/api/public/models" : isPublicPricing ? "/api/pricing" : "";
+  const knownEndpoint = isFastAiToken ? "/api/v1/channels/available" : isSoleApi ? "/api/public/models" : isPublicPricing ? "/api/pricing" : isCheapRouter ? CHEAP_ROUTER_PRICING_ENDPOINT : "";
   const endpoint = knownEndpoint || (current.endpoint && current.endpoint !== "/api/ai/pricing"
     ? normalizeEndpoint(current.endpoint)
     : isJiji ? "/extension/api/trpc/extension.modelMarket" : normalizeEndpoint(jev.enabled && jev.endpoint) || inferredEndpoint);
   const isKnownApi = isSoleApi || isPublicPricing || isJiji;
-  const responseFormat = isKnownApi || isFastAiToken ? "auto" : jev.enabled && RESPONSE_FORMATS.has(jev.responseFormat) && jev.responseFormat !== "auto"
+  const isKnownPage = isFastAiToken || isCheapRouter;
+  const responseFormat = isKnownApi || isKnownPage ? "auto" : jev.enabled && RESPONSE_FORMATS.has(jev.responseFormat) && jev.responseFormat !== "auto"
     ? jev.responseFormat
     : signal.includes("sora") ? "sora" : signal.includes("pqh") || signal.includes("p站") ? "pqh" : "auto";
-  const mode = isKnownApi ? "direct" : isFastAiToken || station.mode === "page" ? "page" : "direct";
+  const mode = isKnownApi ? "direct" : isKnownPage || station.mode === "page" ? "page" : "direct";
   return {
     mode,
     endpoint,
-    method: isKnownApi || isFastAiToken ? "GET" : current.method === "POST" ? "POST" : "GET",
+    method: isKnownApi || isKnownPage ? "GET" : current.method === "POST" ? "POST" : "GET",
     responseFormat,
     authType: isSoleApi || isPublicPricing ? "none" : AUTH_TYPES.has(station.auth?.type) ? station.auth.type : "none",
     source: "local",
-    confidence: isKnownApi || isFastAiToken ? 96 : responseFormat === "auto" && endpoint === "/api/ai/pricing" ? 48 : 72,
-    rationale: isFastAiToken ? "FastAIToken 通过已登录页面读取可用渠道" : isSoleApi ? "SoleAPI 通过公开模型价格 API 采集" : isPublicPricing ? "通过公开价格 API 直连采集" : isJiji ? "通过吉吉模型市场 API 直连采集" : jev.enabled && (jev.endpoint || jev.responseFormat !== "auto")
+    confidence: isKnownApi || isKnownPage ? 96 : responseFormat === "auto" && endpoint === "/api/ai/pricing" ? 48 : 72,
+    rationale: isCheapRouter ? "CheapRouter 通过已登录页面读取模型价格" : isFastAiToken ? "FastAIToken 通过已登录页面读取可用渠道" : isSoleApi ? "SoleAPI 通过公开模型价格 API 采集" : isPublicPricing ? "通过公开价格 API 直连采集" : isJiji ? "通过吉吉模型市场 API 直连采集" : jev.enabled && (jev.endpoint || jev.responseFormat !== "auto")
       ? "已应用 JEV 模型资料"
       : "已按站点地址和现有采集规则推断"
   };

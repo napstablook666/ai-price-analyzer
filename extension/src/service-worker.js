@@ -1,6 +1,6 @@
 import { collectStation, createPageFetch, prepareStationInput } from "./core/collectors.js";
 import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
-import { addFastAiStationPreset } from "./core/station-presets.js";
+import { addCheapRouterStationPreset, addFastAiStationPreset } from "./core/station-presets.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { fetchReferences } from "./core/openrouter.js";
 import { fetchModelCatalog, requestJevChoices, testModelConnection } from "./core/model-api.js";
@@ -238,8 +238,18 @@ async function ensureFastAiStationPreset() {
 }
 
 
+async function ensureCheapRouterStationPreset() {
+  await addStationIfNeeded(stations => {
+    if (!stations.length) return null;
+    const next = addCheapRouterStationPreset(stations);
+    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
+  });
+}
+
+
 async function dashboard() {
   await ensureFastAiStationPreset();
+  await ensureCheapRouterStationPreset();
   const revisionAtStart = getComparisonRevision();
   const [stations, references, savedSettings] = await Promise.all([
     getStations(),

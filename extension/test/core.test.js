@@ -18,7 +18,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addFastAiStationPreset } from "../src/core/station-presets.js";
+import { addCheapRouterStationPreset, addFastAiStationPreset } from "../src/core/station-presets.js";
 
 const pqhFixture = {
   pricing_version: 1,
@@ -419,6 +419,18 @@ test("adds the missing FastAIToken station once for an existing registry", () =>
   assert.equal(collision[1].id, "fastaitoken-2");
   assert.equal(addFastAiStationPreset([]).length, 0);
 });
+test("adds the missing CheapRouter station once for an existing registry", () => {
+  const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
+  const stations = addCheapRouterStationPreset(current);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].id, "cheaprouter");
+  assert.equal(stations[1].baseUrl, "https://cheaprouter.cc/models");
+  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].adapter.kind, "cheaprouter");
+  assert.equal(stations[1].adapter.endpoint, "/api/v1/pricing/public?timezone=Asia%2FShanghai");
+  assert.equal(addCheapRouterStationPreset(stations), stations);
+  assert.equal(addCheapRouterStationPreset([]).length, 0);
+});
 
 test("adds a missing station preset in one transaction without rewriting saved stations", async () => {
   const previousIndexedDb = globalThis.indexedDB;
@@ -543,6 +555,49 @@ test("collects FastAIToken channel prices through the logged-in page", async () 
   capturedPageFetch.supportsCapture = true;
   const capturedSnapshot = await collectStation(station, { pageFetch: capturedPageFetch });
   assert.equal(capturedSnapshot.normalized.data[0].input_price, 2);
+});
+test("collects CheapRouter prices from the authenticated model page", async () => {
+  const station = { id: "station-cheaprouter", name: "CheapRouter", baseUrl: "https://cheaprouter.cc/models" };
+  const adapter = inferStationAdapter(station);
+  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.endpoint, "/api/v1/pricing/public?timezone=Asia%2FShanghai");
+  assert.equal(adapter.method, "GET");
+  const prepared = prepareStationInput({ baseUrl: "https://cheaprouter.cc/models?tab=all" });
+  assert.equal(prepared.baseUrl, "https://cheaprouter.cc/models");
+  assert.equal(prepared.mode, "page");
+  assert.equal(prepared.adapter.kind, "cheaprouter");
+  const requests = [];
+  const pageFetch = async request => {
+    if (request.capture) return { ok: false, status: 404, body: { data: [] } };
+    requests.push(request);
+    return response({
+      code: 0,
+      data: {
+        items: [{
+          model: "gpt-4o",
+          display_name: "gpt-4o",
+          group: { name: "GPT满血稳定分组" },
+          effective_pricing_usd: {
+            input_per_mtok_usd: 0.18,
+            output_per_mtok_usd: 1.08,
+            cache_read_per_mtok_usd: 0.018,
+            cache_write_per_mtok_usd: 0.225,
+            per_request_usd: null,
+            per_image_usd: null
+          }
+        }]
+      }
+    });
+  };
+  pageFetch.supportsCapture = true;
+  const snapshot = await collectStation({ ...station, mode: "page", adapter }, { pageFetch });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "https://cheaprouter.cc/api/v1/pricing/public?timezone=Asia%2FShanghai");
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
+  assert.equal(snapshot.normalized.data[0].input_price, 0.18);
+  assert.equal(snapshot.normalized.data[0].output_price, 1.08);
+  assert.equal(snapshot.normalized.data[0].price_currency, "USD");
 });
 test("auto format uses the existing PQH strategy", () => {
   const normalized = normalizePricingPayload(pqhFixture, "auto", { basePricePerMillion: 0.55 });
@@ -882,6 +937,49 @@ test("uses FastAIToken page auth only for its channel API without returning the 
   });
   assert.equal(request, null);
   assert.match(posted.at(-1).error, /未找到 FastAIToken 登录凭据/);
+});
+test("captures CheapRouter model prices from the logged-in DOM", async () => {
+  const listeners = new Map();
+  const posted = [];
+  const origin = "https://cheaprouter.cc";
+  const card = {
+    id: "",
+    dataset: {},
+    textContent: "OpenAI Token GPT满血稳定分组 gpt-4o 输入 每百万 Tokens 官方价 $2 实付价 ¥3 输出 每百万 Tokens 官方价 $10 实付价 ¥15 缓存读取 每百万 Tokens 官方价 $0.2 实付价 ¥0.3",
+    querySelector(selector) {
+      if (selector === "h2,h3,h4") return { textContent: "gpt-4o" };
+      return null;
+    },
+    querySelectorAll(selector) {
+      if (selector === "span,div,p") return [{ children: [], textContent: "GPT满血稳定分组" }];
+      return [];
+    }
+  };
+  const pageWindow = {
+    location: { href: `${origin}/models`, origin },
+    history: { pushState() {}, replaceState() {} },
+    document: { querySelectorAll: () => [card] },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener() {},
+    postMessage(message) { posted.push(message); },
+    fetch: async () => ({ clone: () => ({ json: async () => ({}) }) })
+  };
+  function MockXHR() {}
+  MockXHR.prototype.open = function() {};
+  MockXHR.prototype.send = function() {};
+  runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), { window: pageWindow, document: pageWindow.document, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR, URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise });
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST", id: "cheaprouter-1" }
+  });
+  const result = posted.at(-1).response;
+  assert.equal(result.ok, true);
+  assert.equal(result.body.sourceFormat, "cheaprouter-dom");
+  assert.equal(result.body.data[0].model_name, "gpt-4o");
+  assert.equal(result.body.data[0].input_price, 3);
+  assert.equal(result.body.data[0].output_price, 15);
+  assert.equal(result.body.data[0].price_currency, "CNY");
 });
 
 

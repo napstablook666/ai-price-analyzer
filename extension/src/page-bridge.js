@@ -197,6 +197,48 @@ function parseSinanPricingTable() {
   }).filter(Boolean);
   return data.length ? { sourceFormat: "sinan-dom", data, group_ratio: Object.fromEntries(data.map(item => [item.proxy_group_name, 1])) } : null;
 }
+function readCheapRouterPrice(card, labels) {
+  const text = String(card.textContent || "").replace(/\s+/g, " ").trim();
+  for (const label of labels) {
+    const start = text.toLowerCase().indexOf(String(label).toLowerCase());
+    if (start < 0) continue;
+    const rest = text.slice(start + String(label).length);
+    const boundary = rest.search(/(?:输入|输出|缓存|cache|按次|request|图像|image)/i);
+    const section = rest.slice(0, boundary < 0 ? 200 : boundary);
+    const match = section.match(/实付价[^0-9¥￥$€]{0,60}([¥￥$€]?)\s*(-?(?:\d+(?:\.\d+)?|\.\d+))/i);
+    if (!match) continue;
+    const value = Number(match[2]);
+    if (!Number.isFinite(value) || value < 0) continue;
+    return { value, approximateRmb: null, currency: /[¥￥]/.test(match[1]) ? "CNY" : detectPriceCurrency(section) };
+  }
+  return null;
+}
+
+function cheapRouterGroupName(card) {
+  return Array.from(card.querySelectorAll("span,div,p"))
+    .map(element => element.children.length === 0 ? element.textContent.trim() : "")
+    .find(text => text && text.length <= 80 && /分组$|group$/i.test(text) && !/同模型共/i.test(text)) || "cheaprouter.cc";
+}
+
+function parseCheapRouterPricingCards() {
+  const url = new URL(window.location.href);
+  if (url.hostname.toLowerCase().replace(/^www\./, "") !== "cheaprouter.cc" || url.pathname.replace(/\/$/, "") !== "/models") return null;
+  const data = [];
+  document.querySelectorAll('article, [role="article"]').forEach(card => {
+    if (card.querySelector('article, [role="article"]')) return;
+    addDomPricingItem(
+      data,
+      getCardModelInfo(card),
+      readCheapRouterPrice(card, ["输入", "input"]),
+      readCheapRouterPrice(card, ["输出", "output"]),
+      null,
+      readCheapRouterPrice(card, ["缓存读取", "缓存读", "cache read"]),
+      cheapRouterGroupName(card),
+      readCheapRouterPrice(card, ["缓存写入", "缓存写", "cache write"])
+    );
+  });
+  return data.length ? { sourceFormat: "cheaprouter-dom", data, group_ratio: {} } : null;
+}
 
 function parseSoleApiPricingCards() {
   if (window.location.hostname.toLowerCase().replace(/^www\./, "") !== "soleapi.com") return null;
@@ -247,7 +289,7 @@ function parseModelPricingCards() {
 }
 
 function scanPricing() {
-  return parseSinanPricingTable() || takeCapturedPricing() || parseSoleApiPricingCards() || parseModelPricingCards();
+  return parseSinanPricingTable() || parseCheapRouterPricingCards() || takeCapturedPricing() || parseSoleApiPricingCards() || parseModelPricingCards();
 }
 
 async function capturePricing() {

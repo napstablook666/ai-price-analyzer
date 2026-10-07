@@ -1,5 +1,5 @@
 import { NORMALIZATION_VERSION, normalizeCapturedData } from "./normalizers.js";
-import { PUBLIC_PRICING_HOSTS } from "./station-presets.js";
+import { CHEAP_ROUTER_PRICING_ENDPOINT, PUBLIC_PRICING_HOSTS } from "./station-presets.js";
 import { normalizeStation } from "../shared/schema.js";
 
 function number(value, fallback = null) {
@@ -33,6 +33,9 @@ const JIJI_HOST = "jiji.cc";
 const JIJI_MODEL_PAGE = "/extension/models";
 const JIJI_MODEL_API = "/extension/api/trpc/extension.modelMarket";
 const JIJI_INPUT = JSON.stringify({ 0: { json: {} } });
+
+const CHEAP_ROUTER_HOST = "cheaprouter.cc";
+const CHEAP_ROUTER_PATH = "/models";
 
 function jijiRequestConfig(value) {
   let url;
@@ -77,6 +80,16 @@ export function prepareStationInput(stationInput = {}) {
         method: "GET",
         responseFormat: "auto"
       }
+    };
+  }
+
+  if (hostname === CHEAP_ROUTER_HOST && url.pathname.replace(/\/$/, "") === CHEAP_ROUTER_PATH) {
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}${CHEAP_ROUTER_PATH}`,
+      mode: "page",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "cheaprouter", endpoint: CHEAP_ROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
     };
   }
   const config = jijiRequestConfig(stationInput.baseUrl);
