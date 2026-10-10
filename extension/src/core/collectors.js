@@ -1,5 +1,5 @@
 import { NORMALIZATION_VERSION, normalizeCapturedData } from "./normalizers.js";
-import { AIAPI_MODEL_CATALOG_ENDPOINT, CHEAP_ROUTER_PRICING_ENDPOINT, NEXA_CHANNEL_CATALOG_ENDPOINT, PUBLIC_PRICING_HOSTS, SIDRUNE_MODEL_PLAZA_ENDPOINT } from "./station-presets.js";
+import { AIAPI_MODEL_CATALOG_ENDPOINT, CHEAP_ROUTER_PRICING_ENDPOINT, NEXA_CHANNEL_CATALOG_ENDPOINT, PUBLIC_PRICING_HOSTS, SIDRUNE_MODEL_PLAZA_ENDPOINT, TRUE_SOTA_MODEL_PRICING_ENDPOINT } from "./station-presets.js";
 import { normalizeStation } from "../shared/schema.js";
 
 function number(value, fallback = null) {
@@ -52,6 +52,15 @@ export function prepareStationInput(stationInput = {}) {
   let url;
   try { url = new URL(String(stationInput.baseUrl || "")); } catch { return stationInput; }
   const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (hostname === "true-sota.com" && url.pathname.replace(/\/$/, "") === "/model-pricing") {
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}/model-pricing`,
+      mode: "direct",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "true-sota-model-pricing", endpoint: TRUE_SOTA_MODEL_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
+    };
+  }
   if (hostname === "sidrune.ai" && url.pathname.replace(/\/$/, "") === "/model-plaza") {
     return {
       ...stationInput,
@@ -293,7 +302,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
     try {
       const response = station.mode === "page" && pageFetch
         ? await pageFetch(pageRequest)
-        : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: ["public-pricing", "jiji", "sidrune-model-plaza"].includes(station.adapter?.kind) ? "omit" : "include" });
+        : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: ["public-pricing", "jiji", "sidrune-model-plaza", "true-sota-model-pricing"].includes(station.adapter?.kind) ? "omit" : "include" });
       if (!response || response.ok === false || (response.status && response.status >= 400)) {
         throw new Error(`${station.name} 请求失败（${response?.status || "无响应"}）`);
       }

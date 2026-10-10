@@ -4,6 +4,7 @@ export const CHEAP_ROUTER_PRICING_ENDPOINT = "/api/v1/pricing/public?timezone=As
 export const AIAPI_MODEL_CATALOG_ENDPOINT = "/api/me/model-catalog";
 export const NEXA_CHANNEL_CATALOG_ENDPOINT = "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai";
 export const SIDRUNE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza/public";
+export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";
 
 const fastAiPreset = {
   id: "fastaitoken",
@@ -49,6 +50,15 @@ const sidrunePreset = {
   adapter: { kind: "sidrune-model-plaza", endpoint: SIDRUNE_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
+const trueSotaPreset = {
+  id: "true-sota",
+  name: "TrueSOTA",
+  baseUrl: "https://true-sota.com/model-pricing",
+  enabled: true,
+  mode: "direct",
+  auth: { type: "none" },
+  adapter: { kind: "true-sota-model-pricing", endpoint: TRUE_SOTA_MODEL_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
+};
 export function addNexaStationPreset(stations) {
   if (!stations.length || stations.some(station => {
     try { return new URL(station.baseUrl).hostname.toLowerCase().replace(/^www\./, "") === "nexavlinks.com"; }
@@ -78,6 +88,16 @@ export function addSidruneStationPreset(stations, exchangeRate = DEFAULT_EXCHANG
   let id = sidrunePreset.id;
   for (let suffix = 2; ids.has(id); suffix++) id = `${sidrunePreset.id}-${suffix}`;
   return [...stations, { ...sidrunePreset, id, rechargeRmb: exchangeRate, auth: { ...sidrunePreset.auth }, adapter: { ...sidrunePreset.adapter } }];
+}
+export function addTrueSotaStationPreset(stations) {
+  if (!stations.length || stations.some(station => {
+    try { return new URL(station.baseUrl).hostname.toLowerCase().replace(/^www\./, "") === "true-sota.com"; }
+    catch { return false; }
+  })) return stations;
+  const ids = new Set(stations.map(station => station.id));
+  let id = trueSotaPreset.id;
+  for (let suffix = 2; ids.has(id); suffix++) id = `${trueSotaPreset.id}-${suffix}`;
+  return [...stations, { ...trueSotaPreset, id, auth: { ...trueSotaPreset.auth }, adapter: { ...trueSotaPreset.adapter } }];
 }
 export function addCheapRouterStationPreset(stations) {
   if (!stations.length || stations.some(station => {

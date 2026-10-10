@@ -18,7 +18,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset, addSidruneStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
 
 const pqhFixture = {
   pricing_version: 1,
@@ -56,6 +56,15 @@ const response = body => ({
   headers: { get: () => "application/json" },
   json: async () => body
 });
+
+const trueSotaFixture = {
+  code: 0,
+  message: "success",
+  data: {
+    groups: [{ id: 53, name: "GPT", platform: "openai", rate_multiplier: 1.5 }],
+    models: [{ name: "gpt-5.4", platform: "openai", group_id: 53, input_price: 0.000002, output_price: 0.000008, cache_price: 0.0000002 }]
+  }
+};
 test("adds the missing AIAPI station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
   const stations = addAiApiStationPreset(current);
@@ -67,6 +76,50 @@ test("adds the missing AIAPI station once for an existing registry", () => {
   assert.equal(addAiApiStationPreset([]).length, 0);
 });
 
+
+test("adds and collects TrueSOTA public model pricing", async () => {
+  const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
+  const stations = addTrueSotaStationPreset(current);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].baseUrl, "https://true-sota.com/model-pricing");
+  assert.equal(stations[1].mode, "direct");
+  assert.equal(stations[1].adapter.kind, "true-sota-model-pricing");
+  assert.equal(addTrueSotaStationPreset(stations), stations);
+  assert.equal(addTrueSotaStationPreset([]).length, 0);
+
+  const station = {
+    id: "station-true-sota",
+    name: "TrueSOTA",
+    baseUrl: "https://true-sota.com/model-pricing",
+    auth: { type: "bearer", token: "must-not-be-sent" },
+    adapter: { endpoint: "/wrong", method: "POST", responseFormat: "pqh" }
+  };
+  const adapter = inferStationAdapter(station);
+  assert.equal(adapter.mode, "direct");
+  assert.equal(adapter.endpoint, "/api/v1/model-pricing");
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.authType, "none");
+  const prepared = prepareStationInput({ ...station, adapter });
+  assert.equal(prepared.baseUrl, "https://true-sota.com/model-pricing");
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.adapter.kind, "true-sota-model-pricing");
+
+  let request;
+  const snapshot = await collectStation({ ...station, adapter }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response(trueSotaFixture);
+    }
+  });
+  assert.equal(request.url, "https://true-sota.com/api/v1/model-pricing");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.sourceFormat, "true-sota-model-pricing");
+  assert.equal(snapshot.normalized.data[0].input_price, 3);
+  assert.equal(snapshot.normalized.data[0].output_price, 12);
+  assert.equal(snapshot.normalized.data[0].cache_read_price, 0.3);
+  assert.equal(snapshot.normalized.group_ratio.GPT, 1.5);
+});
 test("collects AIAPI prices through its logged-in model page", async () => {
   const station = {
     id: "station-aiapi",

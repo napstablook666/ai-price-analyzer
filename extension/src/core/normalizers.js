@@ -497,6 +497,55 @@ export class SidruneModelPlazaStrategy extends ParsingStrategy {
   }
 }
 
+export class TrueSotaModelPricingStrategy extends ParsingStrategy {
+  canParse(raw) {
+    return raw?.code === 0 && Array.isArray(raw?.data?.groups) && Array.isArray(raw?.data?.models) &&
+      raw.data.models.some(model => model && model.group_id !== undefined && Object.prototype.hasOwnProperty.call(model, "input_price"));
+  }
+
+  parse(raw) {
+    const groups = new Map(raw.data.groups.map(group => [String(group?.id), group]));
+    const data = [];
+    const groupRatio = {};
+    const perMillion = value => {
+      const parsed = finitePrice(value);
+      return parsed === null ? null : parsed * 1_000_000;
+    };
+
+    for (const model of raw.data.models) {
+      const group = groups.get(String(model?.group_id));
+      const modelName = String(model?.name || "").trim();
+      const groupName = String(group?.name || group?.id || "").trim();
+      const multiplier = finitePrice(group?.rate_multiplier) ?? 1;
+      if (!modelName || !groupName) continue;
+      const input = perMillion(model.input_price);
+      const output = perMillion(model.output_price);
+      const cache = perMillion(model.cache_price);
+      if ([input, output, cache].every(value => value === null)) continue;
+      const scale = value => value === null ? null : value * multiplier;
+      const effectiveInput = scale(input);
+      const effectiveOutput = scale(output);
+      groupRatio[groupName] = multiplier;
+      data.push({
+        model_name: modelName,
+        model_display_name: modelName,
+        model_ratio: effectiveInput === null ? 0 : effectiveInput / SYSTEM_BASE_PRICE_PER_1M,
+        completion_ratio: effectiveInput > 0 && effectiveOutput !== null ? effectiveOutput / effectiveInput : 1,
+        input_price: effectiveInput,
+        output_price: effectiveOutput,
+        cache_read_price: scale(cache),
+        cache_write_price: null,
+        price_currency: "USD",
+        enable_groups: [groupName],
+        proxy_group_name: groupName,
+        group_ratio: multiplier,
+        evidence: "exact"
+      });
+    }
+    if (!data.length) throw new Error("TrueSOTA 模型价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "true-sota-model-pricing" };
+  }
+}
 export class JijiModelPlazaStrategy extends ParsingStrategy {
   canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.groups); }
 
@@ -655,6 +704,7 @@ export function normalizeProxyData(raw, options = {}) {
     new CheapRouterPricingStrategy(),
     new FastAiChannelsStrategy(),
     new SidruneModelPlazaStrategy(),
+    new TrueSotaModelPricingStrategy(),
     new JijiModelPlazaStrategy(),
     new JijiModelMarketStrategy(),
     new AiApiModelCatalogStrategy(),
