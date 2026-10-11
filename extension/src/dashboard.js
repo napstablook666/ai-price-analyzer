@@ -9,7 +9,7 @@ import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
 const JEV_AUTO_MATCH_CONFIDENCE = 0.5;
-const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), jevBatchRunning: false, jevBatchControlStates: new Map(), refreshInProgress: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
+const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), jevBatchRunning: false, jevBatchControlStates: new Map(), refreshInProgress: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "monthlyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
 const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
@@ -90,8 +90,16 @@ function renderStationFilter(rows) {
   const selectedName = stations.find(([id]) => id === current)?.[1];
   $("#station-filter-label").textContent = selectedName || "全部中转站";
   $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}><span>${escapeHtml(name)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
+  updateRefreshStationButton();
   filterFacetOptions("station");
 }
+function updateRefreshStationButton() {
+  const button = $("#refresh-station");
+  const station = (state.data?.stations || []).find(item => item.id === state.filters.stationId);
+  button.disabled = !station?.enabled;
+  button.title = !station ? "先在站点筛选中选择一个站点" : station.enabled ? `刷新${station.name}的数据` : "该站点未启用";
+}
+
 function filterFacetOptions(key) {
   const query = $(`[data-facet-search="${key}"]`).value.trim().toLowerCase();
   const container = $(`#${key}-filters`);
@@ -127,6 +135,11 @@ function renderModelFilter() {
   $("#model-filter-inputs").innerHTML = boxes.map((value, index) => `<input class="facet-search model-filter-input" type="search" data-model-filter="${index}" value="${escapeHtml(value)}" placeholder="模型 ${index + 1}" autocomplete="off" aria-label="模型对比 ${index + 1}">`).join("");
   updateModelFilterLabel();
 }
+
+$("#model-filter-menu").addEventListener("toggle", event => {
+  const menu = event.currentTarget;
+  if (menu.open && !menu.querySelector("input[data-model-filter]")) renderModelFilter();
+});
 
 function sortValue(row, key) {
   return key === "model" ? `${row.displayName} ${row.modelName}` : row[key];
@@ -304,9 +317,10 @@ function renderRows() {
     const deltaLabel = delta === null ? "无官方价" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore}分` : "暂无评分";
     const rating = RATING_LABELS[row.category] || "";
-    const dailyCost = formatPrice(row.dailyCost, currency);
-    const hasOfficialCost = Number.isFinite(row.officialDailyCost);
-    const dailyDifference = hasOfficialCost ? row.officialDailyCost - row.dailyCost : null;
+    const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
+    const monthlyCost = formatPrice(row.monthlyCost, currency);
+    const hasOfficialCost = Number.isFinite(row.officialMonthlyCost);
+    const monthlyDifference = hasOfficialCost ? row.officialMonthlyCost - row.monthlyCost : null;
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
     const matchNote = row.officialName
       ? `匹配 ${row.officialName} · ${row.matchRule || "官方目录"} · 置信 ${row.confidenceScore}%`
@@ -315,12 +329,12 @@ function renderRows() {
     const needsModelAssist = row.matchRuleId === "manual" || row.matchCandidateCount !== 1 || row.matchConfidence < 1;
     const showModelAssist = needsModelAssist && !seenModelAssists.has(modelAssistKey);
     if (showModelAssist) seenModelAssists.add(modelAssistKey);
-    return `<tr>
+    return `<tr${categoryClass ? ` class="category-${categoryClass}"` : ""}>
       <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(matchNote)}</span>${modelJevMarkup(row, showModelAssist)}</div></td>
       <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
       <td data-label="中转单价">${unitPricesMarkup(row.prices, currency, row)}</td>
       <td data-label="官方单价">${unitPricesMarkup(row.officialPrices, currency, row, true)}</td>
-      <td data-label="24 小时成本"><div class="cost-cell"><strong>${dailyCost}<small> / 天</small></strong><span class="cost-meta">官方 ${hasOfficialCost ? `${formatPrice(row.officialDailyCost, currency)} / 天` : "暂无参考"}</span>${dailyDifference === null ? "" : `<span class="cost-gap ${dailyDifference >= 0 ? "is-saving" : "is-extra"}">${dailyDifference >= 0 ? "日省" : "日多付"} ${formatPrice(Math.abs(dailyDifference), currency)}</span>`}</div></td>
+      <td data-label="月成本"><div class="cost-cell"><strong>${monthlyCost}<small> / 月</small></strong><span class="cost-meta">官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}</span>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方"><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
       <td data-label="推荐与状态"><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}${comparisonJevMarkup(row)}</div></td>
     </tr>`;
@@ -478,12 +492,12 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "dailyCost", sortSecondary: "recommendationScore", sortDirection: "asc" };
+  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "monthlyCost", sortSecondary: "recommendationScore", sortDirection: "asc" };
   $("#search").value = "";
   renderModelFilter();
   renderStationFilter(state.rows);
   for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
-  $("#sort-by").value = "dailyCost";
+  $("#sort-by").value = "monthlyCost";
   $("#sort-secondary").value = "recommendationScore";
   $("#sort-direction").value = "asc";
   $("#show-unmatched").checked = true;
@@ -686,9 +700,33 @@ $("#comparison-body").addEventListener("click", async event => {
   renderRows();
 });
 
+$("#refresh-station").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const station = (state.data?.stations || []).find(item => item.id === state.filters.stationId);
+  if (!station?.enabled) return;
+  button.disabled = true;
+  $("#refresh-all").disabled = true;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>查询中</span>`;
+  lastRefreshSummary = null;
+  try {
+    const data = await callService("REFRESH_STATION", { stationId: station.id });
+    lastRefreshSummary = data.refreshSummary;
+    render(data);
+    if (!lastRefreshSummary?.total) toast("该站点没有可查询的数据");
+    else toast(`${station.name}：查询完成，${lastRefreshSummary.successCount} 成功，${lastRefreshSummary.errorCount} 失败`);
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    $("#refresh-all").disabled = false;
+    button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新当前站点</span>`;
+    updateRefreshStationButton();
+  }
+});
+
 $("#refresh-all").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
+  $("#refresh-station").disabled = true;
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>查询中</span>`;
   lastRefreshSummary = null;
   try {
@@ -698,7 +736,7 @@ $("#refresh-all").addEventListener("click", async event => {
     if (!lastRefreshSummary?.total) toast("没有启用的站点可查询");
     else toast(`查询完成：${lastRefreshSummary.successCount} 成功，${lastRefreshSummary.errorCount} 失败`);
   } catch (error) { toast(error.message); }
-  finally { button.disabled = false; button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`; }
+  finally { button.disabled = false; button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`; updateRefreshStationButton(); }
 });
 
 $("#batch-jev-match").addEventListener("click", runBatchJevMatches);

@@ -1,6 +1,6 @@
 import { collectStation, createPageFetch, prepareStationInput } from "./core/collectors.js";
 import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
-import { addAiApiStationPreset, addCheapRouterStationPreset, addFastAiStationPreset, addNexaStationPreset, addSidruneStationPreset, addTrueSotaStationPreset } from "./core/station-presets.js";
+import { addAiApiStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addLiuguangStationPreset, addNexaStationPreset, addSidruneStationPreset, addTrueSotaStationPreset } from "./core/station-presets.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { fetchReferences } from "./core/openrouter.js";
 import { fetchModelCatalog, requestJevChoices, testModelConnection } from "./core/model-api.js";
@@ -10,7 +10,7 @@ import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, 
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
-import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
+import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getJevApiKey, getLlmApiKey, getProviderApiKey, getStationCredential, hasJevApiKey, hasLlmApiKey, hasProviderApiKey, removeProviderApiKey, removeStationCredential, selectProviderApiKey, setJevApiKey, setLlmApiKey, setProviderApiKey, setStationCredential } from "./shared/credentials.js";
 import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
 
@@ -60,13 +60,23 @@ async function withPageFetch(station, preferredTabId, task) {
   try {
     let pendingCapture = await ensurePageBridge(chrome.scripting, tab.id);
     const bridgeFetch = createPageFetch((message, callback) => chrome.tabs.sendMessage(tab.id, message, callback));
+    let bridgeRetryUsed = false;
+    const recoverBridge = async () => {
+      if (bridgeRetryUsed) return;
+      bridgeRetryUsed = true;
+      await ensurePageBridge(chrome.scripting, tab.id, { forceContent: true });
+    };
     const pageFetch = request => {
       if (request?.capture && pendingCapture) {
         const capture = pendingCapture;
         pendingCapture = null;
         return Promise.resolve(capture);
       }
-      return bridgeFetch(request);
+      return bridgeFetch(request).catch(async error => {
+        if (!/Receiving end does not exist|message channel closed before a response was received/i.test(error.message || "")) throw error;
+        await recoverBridge();
+        return bridgeFetch(request);
+      });
     };
     pageFetch.supportsCapture = true;
     return await task(pageFetch);
@@ -79,10 +89,6 @@ async function collect(stationInput, preferredTabId) {
   const station = prepareStationInput(await stationWithCredentials(stationInput));
   if (station.mode !== "page") return collectStation(station);
   return withPageFetch(station, preferredTabId, pageFetch => collectStation(station, { pageFetch }));
-}
-
-async function performPageCheckin(station, preset, claim) {
-  return withPageFetch(station, undefined, pageFetch => performCheckin({ station, claim, preset, fetchImpl: pageFetch }));
 }
 
 function errorSnapshot(station, error, previous) {
@@ -229,68 +235,62 @@ async function refreshAll(options = {}) {
 }
 
 
-async function ensureFastAiStationPreset() {
+async function ensureStationPresets(exchangeRate) {
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
     const next = addFastAiStationPreset(stations);
     return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
   });
-}
-
-
-async function ensureCheapRouterStationPreset() {
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
-    const next = addCheapRouterStationPreset(stations);
+    const next = addDddaiStationPreset(stations);
     return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
   });
-}
-
-async function ensureNexaStationPreset() {
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
-    const next = addNexaStationPreset(stations);
+    const next = addLiuguangStationPreset(stations);
     return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
   });
-}
-
-async function ensureAiApiStationPreset() {
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addAiApiStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-}
-
-
-async function ensureSidruneStationPreset() {
-  const { exchangeRate } = await settingsForUi();
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
     const next = addSidruneStationPreset(stations, exchangeRate);
     return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
   });
-}
-
-async function ensureTrueSotaStationPreset() {
+  await addStationIfNeeded(stations => {
+    if (!stations.length) return null;
+    const next = addCheapRouterStationPreset(stations);
+    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
+  });
+  await addStationIfNeeded(stations => {
+    if (!stations.length) return null;
+    const next = addNexaStationPreset(stations);
+    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
+  });
+  await addStationIfNeeded(stations => {
+    if (!stations.length) return null;
+    const next = addCunStationPreset(stations);
+    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
+  });
+  await addStationIfNeeded(stations => {
+    if (!stations.length) return null;
+    const next = addAiApiStationPreset(stations);
+    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
+  });
   await addStationIfNeeded(stations => {
     if (!stations.length) return null;
     const next = addTrueSotaStationPreset(stations);
     return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
   });
 }
+
+
 async function dashboard() {
-  await ensureFastAiStationPreset();
-  await ensureCheapRouterStationPreset();
-  await ensureNexaStationPreset();
-  await ensureAiApiStationPreset();
-  await ensureSidruneStationPreset();
-  await ensureTrueSotaStationPreset();
+  const savedSettings = await settingsForUi();
+  await ensureStationPresets(savedSettings.exchangeRate);
   const revisionAtStart = getComparisonRevision();
-  const [stations, references, savedSettings] = await Promise.all([
+  const [stations, references] = await Promise.all([
     getStations(),
-    getValue("references", {}),
-    settingsForUi()
+    getValue("references", {})
   ]);
   const stationsById = new Map(stations.map(station => [station.id, station]));
   const snapshots = await getLatestSnapshots(stations.map(station => station.id), snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
@@ -352,7 +352,7 @@ async function runCheckinForStation(station, { claim = true, autoOnly = false } 
   // 冷却期内（cooldownHours）不重复查询状态，减少无效请求
   if (record.lastClaimedAt && Date.now() - record.lastClaimedAt < preset.cooldownHours * 60 * 60 * 1000) return null;
   try {
-    const result = await performPageCheckin(station, preset, claim);
+    const result = await performCheckin({ station, claim, preset });
     await updateCheckinRecord(preset.id, prev => ({
       ...prev,
       lastCheckedAt: Date.now(),

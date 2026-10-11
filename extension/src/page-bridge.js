@@ -1,10 +1,15 @@
 (() => {
-  if (window.__AI_PRICING_PAGE_BRIDGE__) return;
+  const BRIDGE_VERSION = 2;
+  const legacyBridge = window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ === true;
+  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= BRIDGE_VERSION) return;
   window.__AI_PRICING_PAGE_BRIDGE__ = true;
-const legacyBridge = window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ === true;
-const REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
-const CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
-const RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
+  window.__AI_PRICING_PAGE_BRIDGE_VERSION__ = BRIDGE_VERSION;
+const REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V2";
+const CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V2";
+const LEGACY_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
+const LEGACY_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
+const RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V2";
+const LEGACY_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request"]);
 let capturedPricing = null;
@@ -30,10 +35,27 @@ function isFastAiChannelsUrl(value) {
   }
 }
 
+function isJijiModelMarketUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.href);
+    return url.hostname.toLowerCase().replace(/^www\./, "") === "jiji.cc" && url.pathname === "/extension/api/trpc/extension.modelMarket";
+  } catch {
+    return false;
+  }
+}
+function isCunPricingUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.href);
+    return url.hostname.toLowerCase().replace(/^www\./, "") === "cun.ai" && url.pathname === "/api/pricing";
+  } catch {
+    return false;
+  }
+}
+
 function isPricingUrl(value) {
   try {
     const path = new URL(String(value || ""), window.location.href).pathname;
-    return isFastAiChannelsUrl(value) || path.toLowerCase().includes("/api/me/model-catalog") || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models)/i.test(path);
+    return isFastAiChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models|\/api\/me\/model-catalog)/i.test(path);
   } catch {
     return false;
   }
@@ -197,6 +219,7 @@ function parseSinanPricingTable() {
   }).filter(Boolean);
   return data.length ? { sourceFormat: "sinan-dom", data, group_ratio: Object.fromEntries(data.map(item => [item.proxy_group_name, 1])) } : null;
 }
+
 function readCheapRouterPrice(card, labels) {
   const text = String(card.textContent || "").replace(/\s+/g, " ").trim();
   for (const label of labels) {
@@ -310,6 +333,17 @@ function validateRequest(request) {
     headers.Authorization = `Bearer ${token}`;
     headers["X-User-UI-Request"] = "1";
   }
+
+  if (isJijiModelMarketUrl(url) && !headers.Authorization) {
+    const token = window.localStorage.getItem("auth_token");
+    if (!token) throw new Error("未找到 Jiji 登录凭据，请先在当前 Chrome 配置文件登录后重试");
+    headers.Authorization = `Bearer ${token}`;
+  }
+  if (isCunPricingUrl(url)) {
+    const uid = String(window.localStorage.getItem("uid") || "").trim();
+    if (!uid) throw new Error("未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试");
+    headers["New-Api-User"] = uid;
+  }
   return { url: url.toString(), method, headers, body: method === "POST" && typeof request.body === "string" ? request.body : undefined };
 }
 
@@ -356,12 +390,12 @@ window.addEventListener("message", async event => {
   if (event.source !== window || event.origin !== window.location.origin) return;
   const { type, id, request } = event.data || {};
   if (typeof id !== "string" || !id) return;
-  if (type === CAPTURE_REQUEST_TYPE) {
+  if (type === CAPTURE_REQUEST_TYPE || (!legacyBridge && type === LEGACY_CAPTURE_REQUEST_TYPE)) {
     const payload = await capturePricing();
     window.postMessage({ type: RESPONSE_TYPE, id, ok: Boolean(payload), response: { ok: Boolean(payload), status: payload ? 200 : 404, body: payload || { data: [], group_ratio: {} } } }, window.location.origin);
     return;
   }
-  if (legacyBridge || type !== REQUEST_TYPE) return;
+  if (type !== REQUEST_TYPE && (!legacyBridge && type !== LEGACY_REQUEST_TYPE)) return;
   try {
     const safeRequest = validateRequest(request);
     const { url, ...init } = safeRequest;

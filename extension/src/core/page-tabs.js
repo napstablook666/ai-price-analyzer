@@ -30,9 +30,9 @@ function waitForTab(tabs, tabId) {
       tabs.get(tabId).then(tab => finish(null, tab), error => finish(error));
     };
     const onRemoved = removedId => {
-      if (removedId === tabId) finish(new Error("FastAIToken 页面提前关闭"));
+      if (removedId === tabId) finish(new Error("采集页面提前关闭"));
     };
-    const timer = setTimeout(() => finish(new Error("FastAIToken 页面加载超时")), 30000);
+    const timer = setTimeout(() => finish(new Error("采集页面加载超时")), 30000);
     tabs.onUpdated.addListener(onUpdated);
     tabs.onRemoved?.addListener(onRemoved);
     tabs.get(tabId).then(tab => {
@@ -46,10 +46,13 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId) {
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.pathname);
   const isFastAiToken = url.hostname.toLowerCase().replace(/^www\./, "") === "fastaitoken.com";
-  const isNexa = url.hostname.toLowerCase().replace(/^www\./, "") === "nexavlinks.com";
   const isCheapRouter = url.hostname.toLowerCase().replace(/^www\./, "") === "cheaprouter.cc" && url.pathname.replace(/\/$/, "") === "/models";
-  const isAiApi = url.hostname.toLowerCase() === "cn.aiapi.bot" && ["/dashboard/model-prices", "/dashboard/model-prices/"].includes(url.pathname);
-  if (tab || !(isFastAiToken || isNexa || isCheapRouter || isAiApi)) return { tab, temporary: false };
+  const isCun = url.hostname.toLowerCase().replace(/^www\./, "") === "cun.ai";
+  const isJiji = url.hostname.toLowerCase().replace(/^www\./, "") === "jiji.cc";
+  const isNexa = url.hostname.toLowerCase().replace(/^www\./, "") === "nexavlinks.com";
+  const isAiApi = url.hostname.toLowerCase().replace(/^www\./, "") === "cn.aiapi.bot" && url.pathname.replace(/\/$/, "") === "/dashboard/model-prices";
+  if (tab) return { tab, temporary: false };
+  if (!(isFastAiToken || isNexa || isCheapRouter || isCun || isJiji || isAiApi)) return { tab: null, temporary: false };
   tab = candidates.find(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`));
   if (tab) return { tab, temporary: false };
   const created = await tabs.create({ url: url.toString(), active: false });
@@ -63,7 +66,7 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId) {
 
 // The old MAIN-world proxy survives extension reloads and cannot be unregistered.
 function probePageBridge() {
-  if (window.__AI_PRICING_PAGE_BRIDGE__) return { current: true };
+  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= 2) return { current: true };
   const fetchSource = String(window.fetch || "");
   const xhrSendSource = String(window.XMLHttpRequest?.prototype?.send || "");
   if (fetchSource.includes("isPricingUrl") || xhrSendSource.includes("isPricingUrl")) return { legacy: true };
@@ -87,30 +90,35 @@ function probePageBridge() {
 }
 
 function probeContentBridge() {
-  if (globalThis.__AI_PRICING_CONTENT_BRIDGE__) return true;
   return new Promise(resolve => {
-    const id = `ai-pricing-probe-${Date.now()}-${Math.random()}`;
-    const eventName = `ai-relay-page-response:${id}`;
+    const id = `ai-relay-content-probe-${Date.now()}-${Math.random()}`;
     let timer;
     const finish = present => {
       clearTimeout(timer);
-      window.removeEventListener(eventName, onResponse);
+      window.removeEventListener("message", onResponse);
       resolve(present);
     };
     const onResponse = event => {
-      if (event.detail?.id === id) finish(true);
+      const message = event.data || {};
+      if (event.source !== window || event.origin !== window.location.origin || message.type !== "AI_RELAY_CONTENT_BRIDGE_PROBE_RESPONSE" || message.id !== id) return;
+      finish({ version: message.version });
     };
-    window.addEventListener(eventName, onResponse);
-    timer = setTimeout(() => finish(false), 50);
-    window.postMessage({ type: "AI_RELAY_PAGE_BRIDGE_RESPONSE", id, ok: false, error: "probe" }, window.location.origin);
+    window.addEventListener("message", onResponse);
+    timer = setTimeout(() => finish(false), 200);
+    window.postMessage({ type: "AI_RELAY_CONTENT_BRIDGE_PROBE_REQUEST", id }, window.location.origin);
   });
 }
+
+function resetContentBridge() {
+  delete globalThis.__AI_PRICING_CONTENT_BRIDGE__;
+}
+
 
 function markLegacyPageBridge() {
   window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ = true;
 }
 
-export async function ensurePageBridge(scripting, tabId) {
+export async function ensurePageBridge(scripting, tabId, { forceContent = false } = {}) {
   const target = { tabId };
   const [pageProbe] = await scripting.executeScript({ target, world: "MAIN", func: probePageBridge });
   let initialCapture = null;
@@ -122,6 +130,9 @@ export async function ensurePageBridge(scripting, tabId) {
     await scripting.executeScript({ target, files: ["src/page-bridge.js"], world: "MAIN" });
   }
   const [contentProbe] = await scripting.executeScript({ target, world: "ISOLATED", func: probeContentBridge });
-  if (!contentProbe?.result) await scripting.executeScript({ target, files: ["src/content-bridge.js"] });
+  if (forceContent || !contentProbe?.result || contentProbe.result.version < 2) {
+    await scripting.executeScript({ target, world: "ISOLATED", func: resetContentBridge });
+    await scripting.executeScript({ target, files: ["src/content-bridge.js"] });
+  }
   return initialCapture;
 }

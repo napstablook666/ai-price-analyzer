@@ -101,8 +101,8 @@ export function confidenceScore(row) {
 }
 
 function classifyOffer(offer) {
-  if (offer.dailyCost === 0 && offer.officialDailyCost > 0) return "excellent";
-  if (offer.officialDailyCost === 0 && offer.dailyCost > 0) return "bad";
+  if (offer.monthlyCost === 0 && offer.officialMonthlyCost > 0) return "excellent";
+  if (offer.officialMonthlyCost === 0 && offer.monthlyCost > 0) return "bad";
   if (offer.diffPercent < -40) return "excellent";
   if (offer.diffPercent < -2) return "good";
   if (offer.diffPercent > 50) return "bad";
@@ -112,12 +112,12 @@ function classifyOffer(offer) {
 export function addRecommendationScores(comparisons, profile = "price") {
   const weights = { balanced: [0.8, 0.2], price: [0.9, 0.1], reliability: [0.7, 0.3] }[profile] || [0.9, 0.1];
   for (const comparison of comparisons) {
-    const candidates = comparison.offers.filter(offer => Number.isFinite(offer.dailyCost));
-    const eligible = candidates.filter(offer => offer.matchRuleId === "exact" && Number(offer.officialDailyCost) > 0);
-    const minCost = candidates.length ? Math.min(...candidates.map(offer => offer.dailyCost)) : null;
-    const maxCost = candidates.length ? Math.max(...candidates.map(offer => offer.dailyCost)) : null;
+    const candidates = comparison.offers.filter(offer => Number.isFinite(offer.monthlyCost));
+    const eligible = candidates.filter(offer => offer.matchRuleId === "exact" && Number(offer.officialMonthlyCost) > 0);
+    const minCost = candidates.length ? Math.min(...candidates.map(offer => offer.monthlyCost)) : null;
+    const maxCost = candidates.length ? Math.max(...candidates.map(offer => offer.monthlyCost)) : null;
     for (const offer of comparison.offers) {
-      const costScore = minCost === null || !Number.isFinite(offer.dailyCost) ? 0 : maxCost === minCost ? 100 : Math.max(0, Math.min(100, Math.round((maxCost - offer.dailyCost) / (maxCost - minCost) * 100)));
+      const costScore = minCost === null || !Number.isFinite(offer.monthlyCost) ? 0 : maxCost === minCost ? 100 : Math.max(0, Math.min(100, Math.round((maxCost - offer.monthlyCost) / (maxCost - minCost) * 100)));
       const confidence = offer.confidenceScore;
       const score = Math.round(costScore * weights[0] + confidence * weights[1]);
       offer.recommendationScore = score;
@@ -186,8 +186,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             tierNames: new Set(),
             cacheReadEstimated: false,
             cacheWriteEstimated: false,
-            dailyCost: 0,
-            officialDailyCost: 0,
+            monthlyCost: 0,
+            officialMonthlyCost: 0,
             stationId: station.id,
             stationName: station.name,
             modelName: item.model_name,
@@ -208,8 +208,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
           if (officialPrices) addWeighted(row.officialPrices, officialPrices, share);
           if (proxyPrices.cacheRead === null) row.cacheReadEstimated = true;
           if (proxyPrices.cacheWrite === null) row.cacheWriteEstimated = true;
-          row.dailyCost += workloadCost(proxyPrices, usage) * share;
-          row.officialDailyCost += officialPrices ? workloadCost(officialPrices, usage) * share : 0;
+          row.monthlyCost += workloadCost(proxyPrices, usage) * share;
+          row.officialMonthlyCost += officialPrices ? workloadCost(officialPrices, usage) * share : 0;
           if (item.tier_name) row.tierNames.add(`${item.tier_name} ${Math.round(share * 100)}%`);
           grouped.set(rowKey, row);
         }
@@ -237,9 +237,9 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       tierName: [...row.tierNames].join(" / ") || "标准",
       prices,
       officialPrices: officialUnit,
-      dailyCost: row.dailyCost,
-      officialDailyCost: row.official ? row.officialDailyCost : null,
-      diffPercent: row.official && row.officialDailyCost > 0 ? ((row.dailyCost - row.officialDailyCost) / row.officialDailyCost) * 100 : null,
+      monthlyCost: row.monthlyCost,
+      officialMonthlyCost: row.official ? row.officialMonthlyCost : null,
+      diffPercent: row.official && row.officialMonthlyCost > 0 ? ((row.monthlyCost - row.officialMonthlyCost) / row.officialMonthlyCost) * 100 : null,
       evidence: row.evidence,
       cacheReadEstimated: row.cacheReadEstimated,
       cacheWriteEstimated: row.cacheWriteEstimated,
@@ -268,7 +268,7 @@ export function flattenComparisonRows(comparisons) {
 
 export function summarizeComparisons(comparisons) {
   const offers = flattenComparisonRows(comparisons);
-  const best = offers.filter(offer => Number.isFinite(offer.dailyCost)).sort((a, b) => a.dailyCost - b.dailyCost)[0];
+  const best = offers.filter(offer => Number.isFinite(offer.monthlyCost)).sort((a, b) => a.monthlyCost - b.monthlyCost)[0];
   return {
     modelCount: comparisons.length,
     offerCount: offers.length,

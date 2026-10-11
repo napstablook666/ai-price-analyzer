@@ -23,19 +23,20 @@ export function inferStationAdapter(station = {}, jev = {}) {
   const isAiApi = hostname === "cn.aiapi.bot" && url?.pathname === "/dashboard/model-prices";
   const isPublicPricing = PUBLIC_PRICING_HOSTS.has(hostname);
   const isFastAiToken = hostname === "fastaitoken.com";
+  const isJiji = hostname === "jiji.cc";
   const isNexa = hostname === "nexavlinks.com";
   const isCheapRouter = hostname === "cheaprouter.cc";
-  const isJiji = hostname === "jiji.cc";
+  const isCun = hostname === "cun.ai" && ["/", "/pricing"].includes(url?.pathname?.replace(/\/$/, "") || "/");
   const isSidrune = hostname === "sidrune.ai" && url?.pathname?.replace(/\/$/, "") === "/model-plaza";
   const isTrueSota = hostname === "true-sota.com" && url?.pathname?.replace(/\/$/, "") === "/model-pricing";
   const inferredPath = url?.pathname && url.pathname !== "/" ? url.pathname : "/api/ai/pricing";
-  const inferredEndpoint = /^\/(?:api|v\d+|openai|anthropic|extension)(?:\/|$)/i.test(inferredPath) ? inferredPath : `/api${inferredPath}`;
-  const knownEndpoint = isAiApi ? AIAPI_MODEL_CATALOG_ENDPOINT : isNexa ? NEXA_CHANNEL_CATALOG_ENDPOINT : isFastAiToken ? "/api/v1/channels/available" : isSoleApi ? "/api/public/models" : isPublicPricing ? "/api/pricing" : isCheapRouter ? CHEAP_ROUTER_PRICING_ENDPOINT : isSidrune ? SIDRUNE_MODEL_PLAZA_ENDPOINT : isTrueSota ? TRUE_SOTA_MODEL_PRICING_ENDPOINT : "";
+  const inferredEndpoint = /^(?:\/api|\/v\d+|\/openai|\/anthropic|\/extension)(?:\/|$)/i.test(inferredPath) ? inferredPath : `/api${inferredPath}`;
+  const knownEndpoint = isAiApi ? AIAPI_MODEL_CATALOG_ENDPOINT : isNexa ? NEXA_CHANNEL_CATALOG_ENDPOINT : isFastAiToken ? "/api/v1/channels/available" : isSoleApi ? "/api/public/models" : isPublicPricing ? (hostname === "liuguang.ai" ? "/api/models" : "/api/pricing") : isCheapRouter ? CHEAP_ROUTER_PRICING_ENDPOINT : isCun ? "/api/pricing" : isSidrune ? SIDRUNE_MODEL_PLAZA_ENDPOINT : isTrueSota ? TRUE_SOTA_MODEL_PRICING_ENDPOINT : "";
   const endpoint = knownEndpoint || (current.endpoint && current.endpoint !== "/api/ai/pricing"
     ? normalizeEndpoint(current.endpoint)
     : isJiji ? "/extension/api/trpc/extension.modelMarket" : normalizeEndpoint(jev.enabled && jev.endpoint) || inferredEndpoint);
   const isKnownApi = isSoleApi || isPublicPricing || isJiji || isSidrune || isTrueSota;
-  const isKnownPage = isFastAiToken || isNexa || isCheapRouter || isAiApi;
+  const isKnownPage = isFastAiToken || isNexa || isCheapRouter || isCun || isAiApi;
   const responseFormat = isKnownApi || isKnownPage ? "auto" : jev.enabled && RESPONSE_FORMATS.has(jev.responseFormat) && jev.responseFormat !== "auto"
     ? jev.responseFormat
     : signal.includes("sora") ? "sora" : signal.includes("pqh") || signal.includes("p站") ? "pqh" : "auto";
@@ -45,10 +46,10 @@ export function inferStationAdapter(station = {}, jev = {}) {
     endpoint,
     method: isKnownApi || isKnownPage ? "GET" : current.method === "POST" ? "POST" : "GET",
     responseFormat,
-    authType: isAiApi || isSoleApi || isPublicPricing || isNexa || isSidrune || isTrueSota ? "none" : AUTH_TYPES.has(station.auth?.type) ? station.auth.type : "none",
+    authType: isSoleApi || isPublicPricing || isCun || isSidrune || isTrueSota || isAiApi ? "none" : AUTH_TYPES.has(station.auth?.type) ? station.auth.type : "none",
     source: "local",
-    confidence: isKnownApi || isKnownPage ? 96 : responseFormat === "auto" && endpoint === "/api/ai/pricing" ? 48 : 72,
-    rationale: isAiApi ? "AIAPI 通过已登录页面读取模型价格" : isCheapRouter ? "CheapRouter 通过已登录页面读取模型价格" : isFastAiToken ? "FastAIToken 通过已登录页面读取可用渠道" : isNexa ? "NexaVlinks 通过已登录页面读取模型目录" : isSidrune ? "Sidrune 通过公开模型广场 API 采集" : isTrueSota ? "TrueSOTA 通过公开模型价格 API 采集" : isSoleApi ? "SoleAPI 通过公开模型价格 API 采集" : isPublicPricing ? "通过公开价格 API 直连采集" : isJiji ? "通过吉吉模型市场 API 直连采集" : jev.enabled && (jev.endpoint || jev.responseFormat !== "auto")
+    confidence: isAiApi || isCheapRouter || isKnownApi || isKnownPage ? 96 : responseFormat === "auto" && endpoint === "/api/ai/pricing" ? 48 : 72,
+    rationale: isAiApi ? "AIAPI 通过已登录页面读取模型价格" : isCheapRouter ? "CheapRouter 通过已登录页面读取模型价格" : isFastAiToken ? "FastAIToken 通过已登录页面读取可用渠道" : isCun ? "CUN.AI 通过已登录页面读取价格 API" : isSidrune ? "Sidrune 通过公开模型广场 API 采集" : isTrueSota ? "TrueSOTA 通过公开模型价格 API 采集" : isSoleApi ? "SoleAPI 通过公开模型价格 API 采集" : isPublicPricing ? "通过公开价格 API 直连采集" : isJiji ? "通过吉吉模型市场 API 直连采集" : jev.enabled && (jev.endpoint || jev.responseFormat !== "auto")
       ? "已应用 JEV 模型资料"
       : "已按站点地址和现有采集规则推断"
   };

@@ -1,5 +1,5 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
-export const NORMALIZATION_VERSION = 10;
+export const NORMALIZATION_VERSION = 14;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -96,11 +96,13 @@ export class PqhPricingStrategy extends ParsingStrategy {
     const usableGroups = !hasModelCatalog && raw.usable_group && typeof raw.usable_group === "object" ? Object.keys(raw.usable_group) : [];
     const activeGroups = usableGroups.filter(group => own(groupRatios, group));
     const list = [];
+    const mediaGroups = new Set(Object.values(raw.media_groups || {}).filter(Boolean).map(String));
 
     for (const item of items) {
       if (!item || typeof item.model_name !== "string") continue;
       const itemGroups = Array.isArray(item.enable_groups) ? item.enable_groups : [item.enable_groups].filter(Boolean);
       if (!hasModelCatalog && !itemGroups.length) continue;
+      if (itemGroups.some(group => mediaGroups.has(group))) continue;
       const requestBilled = hasModelCatalog && Number(item.quota_type) === 1;
       const tiers = requestBilled ? [] : parseBillingTiers(item.billing_expr);
       const variants = tiers.length ? tiers : [{
@@ -277,6 +279,107 @@ function soleApiCharge(charges, keys, multiplier, usage) {
   return null;
 }
 
+const LIUGUANG_METRICS = {
+  input_tokens: ["input_price", 1_000_000],
+  output_tokens: ["output_price", 1_000_000],
+  cached_tokens: ["cache_read_price", 1_000_000],
+  cache_write_5m_tokens: ["cache_write_price", 1_000_000],
+  calls: ["request_price", 1],
+  images: ["image_price", 1]
+};
+
+function liuguangPrice(book, metric) {
+  const rules = Array.isArray(book?.rules) ? book.rules.filter(rule => rule?.metric === metric) : [];
+  if (rules.length !== 1 || (rules[0].conditions?.length ?? 0) !== 0) return null;
+  const amount = finitePrice(rules[0].amount);
+  const per = finitePrice(rules[0].per);
+  return amount === null || per === null || per === 0 ? null : amount * LIUGUANG_METRICS[metric][1] / per;
+}
+
+export class LiuguangModelsStrategy extends ParsingStrategy {
+  canParse(raw) { return Array.isArray(raw?.models) && raw.models.some(model => Array.isArray(model?.priceBooks)); }
+
+  parse(raw) {
+    const data = [];
+    for (const model of raw.models) {
+      if (!model?.id || !Array.isArray(model.priceBooks) || (model.status && model.status !== "live") || model.callable === false) continue;
+      if (!["chat", "image"].includes(model.modality)) continue;
+      for (const priceBook of model.priceBooks) {
+        const book = priceBook?.book;
+        if (book?.basis !== "points" || String(book.currency).toLowerCase() !== "points" || !Array.isArray(book.rules)) continue;
+        const prices = Object.fromEntries(Object.keys(LIUGUANG_METRICS).map(metric => [LIUGUANG_METRICS[metric][0], liuguangPrice(book, metric)]));
+        const hasRule = metric => book.rules.some(rule => rule?.metric === metric);
+        const input = prices.input_price;
+        const output = prices.output_price;
+        if (model.modality === "chat" && (input === null || output === null)) continue;
+        if (model.modality === "image" && ["images", "calls"].some(metric => hasRule(metric) && prices[LIUGUANG_METRICS[metric][0]] === null)) continue;
+        if (model.modality === "image" && prices.image_price === null && prices.request_price === null) continue;
+        const group = String(priceBook.label || priceBook.channelId || "Default").trim();
+        data.push({
+          model_name: String(model.id),
+          model_display_name: String(model.label || model.id),
+          provider: String(model.vendor || ""),
+          model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+          completion_ratio: input > 0 && output !== null ? output / input : 0,
+          ...prices,
+          price_currency: "POINTS",
+          enable_groups: [group],
+          proxy_group_name: group,
+          group_ratio: 1,
+          evidence: "exact"
+        });
+      }
+    }
+    return { data, group_ratio: {}, sourceFormat: "liuguang-models" };
+  }
+}
+
+export class AiApiModelCatalogStrategy extends ParsingStrategy {
+  canParse(raw) {
+    return raw?.data?.source === "cnaiapi" && Array.isArray(raw.data.groups) && raw.data.groups.some(group => Array.isArray(group?.models));
+  }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    for (const group of raw.data.groups) {
+      const groupName = String(group?.name || group?.code || group?.id || "").trim();
+      if (!groupName) continue;
+      const multiplier = finitePrice(group.billingMultiplier) ?? 1;
+      groupRatio[groupName] = multiplier;
+      for (const model of Array.isArray(group.models) ? group.models : []) {
+        const modelName = String(model?.id || "").trim();
+        if (!modelName || model.available === false) continue;
+        const effective = model.effective || {};
+        const input = finitePrice(effective.inputPer1M);
+        const output = finitePrice(effective.outputPer1M);
+        const cacheRead = finitePrice(effective.cacheReadPer1M);
+        const cacheWrite = finitePrice(effective.cacheCreatePer1M);
+        const cacheWrite1h = finitePrice(effective.cacheCreate1hPer1M);
+        if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) continue;
+        data.push({
+          model_name: modelName,
+          model_display_name: String(model.displayName || modelName),
+          model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+          completion_ratio: input > 0 && output !== null ? output / input : 1,
+          input_price: input,
+          output_price: output,
+          cache_read_price: cacheRead,
+          cache_write_price: cacheWrite,
+          cache_write_1h_price: cacheWrite1h,
+          price_currency: "CNY",
+          enable_groups: [groupName],
+          proxy_group_name: groupName,
+          group_ratio: multiplier,
+          evidence: "exact"
+        });
+      }
+    }
+    if (!data.length) throw new Error("AIAPI 模型价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "aiapi-model-catalog" };
+  }
+}
+
 export class SoleApiPublicModelsStrategy extends ParsingStrategy {
   canParse(raw) { return Array.isArray(raw?.data?.list); }
 
@@ -328,6 +431,47 @@ export class SoleApiPublicModelsStrategy extends ParsingStrategy {
   }
 }
 
+export class CheapRouterPricingStrategy extends ParsingStrategy {
+  canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.items); }
+
+  parse(raw) {
+    const data = [];
+    const groupRatio = {};
+    for (const item of raw.data.items) {
+      const modelName = String(item?.model || item?.display_name || "").trim();
+      const pricing = item?.effective_pricing_usd || item?.official_pricing || {};
+      if (!modelName || !pricing || typeof pricing !== "object") continue;
+      const input = finitePrice(pricing.input_per_mtok_usd);
+      const output = finitePrice(pricing.output_per_mtok_usd);
+      const cacheRead = finitePrice(pricing.cache_read_per_mtok_usd);
+      const cacheWrite = finitePrice(pricing.cache_write_per_mtok_usd);
+      const request = finitePrice(pricing.per_request_usd);
+      const image = finitePrice(pricing.per_image_usd);
+      if ([input, output, cacheRead, cacheWrite, request, image].every(value => value === null)) continue;
+      const groupName = String(item?.group?.name || "cheaprouter.cc").trim();
+      groupRatio[groupName] = 1;
+      data.push({
+        model_name: modelName,
+        model_display_name: String(item?.display_name || modelName),
+        model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+        completion_ratio: input > 0 && output !== null ? output / input : 1,
+        input_price: input,
+        output_price: output,
+        cache_read_price: cacheRead,
+        cache_write_price: cacheWrite,
+        request_price: request,
+        image_price: image,
+        price_currency: "USD",
+        enable_groups: [groupName],
+        proxy_group_name: groupName,
+        group_ratio: 1,
+        evidence: "exact"
+      });
+    }
+    if (!data.length) throw new Error("CheapRouter 公开模型价格数据为空");
+    return { data, group_ratio: groupRatio, sourceFormat: "cheaprouter-public-api" };
+  }
+}
 
 export class JijiModelMarketStrategy extends ParsingStrategy {
   canParse(raw) { return Array.isArray(raw?.providers) && raw.providers.some(provider => Array.isArray(provider?.models)); }
@@ -376,48 +520,6 @@ export class JijiModelMarketStrategy extends ParsingStrategy {
     return { data, group_ratio: groupRatio, sourceFormat: "jiji" };
   }
 }
-export class CheapRouterPricingStrategy extends ParsingStrategy {
-  canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.items); }
-
-  parse(raw) {
-    const data = [];
-    const groupRatio = {};
-    for (const item of raw.data.items) {
-      const modelName = String(item?.model || item?.display_name || "").trim();
-      const pricing = item?.effective_pricing_usd || item?.official_pricing || {};
-      if (!modelName || !pricing || typeof pricing !== "object") continue;
-      const input = finitePrice(pricing.input_per_mtok_usd);
-      const output = finitePrice(pricing.output_per_mtok_usd);
-      const cacheRead = finitePrice(pricing.cache_read_per_mtok_usd);
-      const cacheWrite = finitePrice(pricing.cache_write_per_mtok_usd);
-      const request = finitePrice(pricing.per_request_usd);
-      const image = finitePrice(pricing.per_image_usd);
-      if ([input, output, cacheRead, cacheWrite, request, image].every(value => value === null)) continue;
-      const groupName = String(item?.group?.name || "cheaprouter.cc").trim();
-      groupRatio[groupName] = 1;
-      data.push({
-        model_name: modelName,
-        model_display_name: String(item?.display_name || modelName),
-        model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
-        completion_ratio: input > 0 && output !== null ? output / input : 1,
-        input_price: input,
-        output_price: output,
-        cache_read_price: cacheRead,
-        cache_write_price: cacheWrite,
-        request_price: request,
-        image_price: image,
-        price_currency: "USD",
-        enable_groups: [groupName],
-        proxy_group_name: groupName,
-        group_ratio: 1,
-        evidence: "exact"
-      });
-    }
-    if (!data.length) throw new Error("CheapRouter 公开模型价格数据为空");
-    return { data, group_ratio: groupRatio, sourceFormat: "cheaprouter-public-api" };
-  }
-}
-
 
 const sidruneMultiplier = group => {
   if (group?.promo_active === true) {
@@ -497,6 +599,7 @@ export class SidruneModelPlazaStrategy extends ParsingStrategy {
   }
 }
 
+
 export class TrueSotaModelPricingStrategy extends ParsingStrategy {
   canParse(raw) {
     return raw?.code === 0 && Array.isArray(raw?.data?.groups) && Array.isArray(raw?.data?.models) &&
@@ -546,6 +649,7 @@ export class TrueSotaModelPricingStrategy extends ParsingStrategy {
     return { data, group_ratio: groupRatio, sourceFormat: "true-sota-model-pricing" };
   }
 }
+
 export class JijiModelPlazaStrategy extends ParsingStrategy {
   canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.groups); }
 
@@ -652,62 +756,17 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
   }
 }
 
-export class AiApiModelCatalogStrategy extends ParsingStrategy {
-  canParse(raw) {
-    return raw?.data?.source === "cnaiapi" && Array.isArray(raw.data.groups) && raw.data.groups.some(group => Array.isArray(group?.models));
-  }
-
-  parse(raw) {
-    const data = [];
-    const groupRatio = {};
-    for (const group of raw.data.groups) {
-      const groupName = String(group?.name || group?.code || group?.id || "").trim();
-      if (!groupName) continue;
-      const multiplier = finitePrice(group.billingMultiplier) ?? 1;
-      groupRatio[groupName] = multiplier;
-      for (const model of Array.isArray(group.models) ? group.models : []) {
-        const modelName = String(model?.id || "").trim();
-        if (!modelName || model.available === false) continue;
-        const effective = model.effective || {};
-        const input = finitePrice(effective.inputPer1M);
-        const output = finitePrice(effective.outputPer1M);
-        const cacheRead = finitePrice(effective.cacheReadPer1M);
-        const cacheWrite = finitePrice(effective.cacheCreatePer1M);
-        const cacheWrite1h = finitePrice(effective.cacheCreate1hPer1M);
-        if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) continue;
-        data.push({
-          model_name: modelName,
-          model_display_name: String(model.displayName || modelName),
-          model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
-          completion_ratio: input > 0 && output !== null ? output / input : 1,
-          input_price: input,
-          output_price: output,
-          cache_read_price: cacheRead,
-          cache_write_price: cacheWrite,
-          cache_write_1h_price: cacheWrite1h,
-          price_currency: "CNY",
-          enable_groups: [groupName],
-          proxy_group_name: groupName,
-          group_ratio: multiplier,
-          evidence: "exact"
-        });
-      }
-    }
-    if (!data.length) throw new Error("AIAPI 模型价格数据为空");
-    return { data, group_ratio: groupRatio, sourceFormat: "aiapi-model-catalog" };
-  }
-}
-
 export function normalizeProxyData(raw, options = {}) {
   const strategies = [
+    new AiApiModelCatalogStrategy(),
     new SoleApiPublicModelsStrategy(),
     new CheapRouterPricingStrategy(),
+    new LiuguangModelsStrategy(),
     new FastAiChannelsStrategy(),
     new SidruneModelPlazaStrategy(),
     new TrueSotaModelPricingStrategy(),
     new JijiModelPlazaStrategy(),
     new JijiModelMarketStrategy(),
-    new AiApiModelCatalogStrategy(),
     new PqhPricingStrategy(),
     new StandardNewApiStrategy(),
     new LegacyStrategy(),

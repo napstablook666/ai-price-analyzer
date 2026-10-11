@@ -23,6 +23,7 @@
       <button class="button button-quiet" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
       <button class="button button-quiet" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
       <button class="button button-primary" id="refresh-all" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新全部</span></button>
+      <button class="button button-quiet" id="refresh-station" type="button" disabled title="先在站点筛选中选择一个站点" aria-label="刷新当前站点"><span data-icon="refresh-cw" class="icon"></span><span>刷新当前站点</span></button>
     </nav>
   </header>
 
@@ -49,25 +50,25 @@
       <div class="checkin-list" id="checkin-list"></div>
     </section>
     <section class="panel toolbar-panel" id="toolbar-panel" data-collapsible aria-label="筛选和排序">
+      <div class="panel-heading">
+        <div><p class="eyebrow">工作台</p><h2>筛选和排序</h2></div>
+      </div>
       <div class="toolbar-main">
         <label class="search-field"><span data-icon="search" class="icon"></span><span class="sr-only">搜索模型或站点</span><input id="search" type="search" placeholder="搜索模型、站点或供应商" autocomplete="off"></label>
         <details class="facet-menu station-filter-menu" id="station-filter-menu"><summary><span data-icon="building-2" class="icon"></span><span id="station-filter-label">全部中转站</span></summary><div class="facet-menu-body"><input class="facet-search" type="search" data-facet-search="station" placeholder="搜索站点" aria-label="搜索站点" autocomplete="off"><div class="facet-options" id="station-filters"></div></div></details>
         <details class="facet-menu"><summary><span data-icon="database" class="icon"></span><span>供应商</span></summary><div class="facet-menu-body"><input class="facet-search" type="search" data-facet-search="provider" placeholder="搜索供应商" aria-label="搜索供应商" autocomplete="off"><div class="facet-menu-actions"><button type="button" data-facet-action="all" data-facet-key="provider">全选</button><button type="button" data-facet-action="none" data-facet-key="provider">清空</button></div><div class="facet-options" id="provider-filters"></div></div></details>
         <details class="facet-menu"><summary><span data-icon="layers-3" class="icon"></span><span>分组</span></summary><div class="facet-menu-body"><input class="facet-search" type="search" data-facet-search="group" placeholder="搜索分组" aria-label="搜索分组" autocomplete="off"><div class="facet-menu-actions"><button type="button" data-facet-action="all" data-facet-key="group">全选</button><button type="button" data-facet-action="none" data-facet-key="group">清空</button></div><div class="facet-options" id="group-filters"></div></div></details>
-        <label class="select-field sort-field"><span class="sr-only">排序方式</span><span data-icon="arrow-down-up" class="icon"></span><select id="sort-by"><option value="groupName">分组</option><option value="provider">官方源</option><option value="model">模型名称</option><option value="dailyCost" selected>24 小时成本</option><option value="diffPercent">相对官方</option><option value="recommendationScore">推荐分</option><option value="confidenceScore">匹配置信度</option></select></label>
+        <details class="facet-menu model-filter-menu" id="model-filter-menu"><summary><span data-icon="sliders-horizontal" class="icon"></span><span id="model-filter-label">模型对比</span></summary><div class="facet-menu-body model-filter-body"><div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div></div></details>
+        <label class="select-field sort-field"><span class="sr-only">排序方式</span><span data-icon="arrow-down-up" class="icon"></span><select id="sort-by"><option value="groupName">分组</option><option value="provider">官方源</option><option value="model">模型名称</option><option value="monthlyCost" selected>月成本</option><option value="diffPercent">相对官方</option><option value="recommendationScore">推荐分</option><option value="confidenceScore">匹配置信度</option></select></label>
         <label class="select-field direction-field"><span class="sr-only">排序方向</span><select id="sort-direction"><option value="asc" selected>升序</option><option value="desc">降序</option></select></label>
         <button class="button button-primary" id="batch-jev-match" type="button" title="逐个核验“模型 / 官方匹配”，自动确认 JEV 置信度达到 50% 的结果"><span data-icon="sparkles" class="icon"></span><span>批量 JEV 核验模型匹配 ≥50%</span></button>
         <button class="button button-quiet" id="fetch-references" type="button"><span data-icon="external-link" class="icon"></span><span>更新官方价</span></button>
         <button class="button button-quiet" id="reset-filters" type="button" title="重置筛选"><span data-icon="x" class="icon"></span><span>重置</span></button>
       </div>
-      <div class="model-filter-row">
-        <span class="model-filter-label" id="model-filter-label">模型对比</span>
-        <div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div>
-      </div>
       <div class="toolbar-options">
         <label class="check-label"><input id="show-unmatched" type="checkbox"><span>显示未匹配</span></label>
         <label class="check-label"><input id="show-stale" type="checkbox" checked><span>显示过期</span></label>
-        <label class="secondary-sort"><span>次级排序</span><select id="sort-secondary"><option value="recommendationScore">推荐分</option><option value="model">模型名称</option><option value="dailyCost">日成本</option><option value="diffPercent">相对官方</option><option value="confidenceScore">匹配置信度</option><option value="none">不使用</option></select></label>
+        <label class="secondary-sort"><span>次级排序</span><select id="sort-secondary"><option value="recommendationScore">推荐分</option><option value="model">模型名称</option><option value="monthlyCost">月成本</option><option value="diffPercent">相对官方</option><option value="confidenceScore">匹配置信度</option><option value="none">不使用</option></select></label>
       </div>
     </section>
 
@@ -78,7 +79,7 @@
       </div>
       <div class="table-wrap">
         <table class="comparison-table">
-          <thead><tr><th scope="col" data-sort-keys="model provider">模型 / 官方匹配</th><th scope="col" data-sort-keys="groupName">中转站 / 分组</th><th scope="col">中转单价 <span>¥ / M token</span></th><th scope="col">官方单价 <span>¥ / M token</span></th><th scope="col" data-sort-keys="dailyCost">24 小时成本</th><th scope="col" data-sort-keys="diffPercent">相对官方</th><th scope="col" data-sort-keys="recommendationScore confidenceScore">推荐与状态</th></tr></thead>
+          <thead><tr><th scope="col" data-sort-keys="model provider">模型 / 官方匹配</th><th scope="col" data-sort-keys="groupName">中转站 / 分组</th><th scope="col">中转单价 <span>¥ / M token</span></th><th scope="col">官方单价 <span>¥ / M token</span></th><th scope="col" data-sort-keys="monthlyCost">月成本</th><th scope="col" data-sort-keys="diffPercent">相对官方</th><th scope="col" data-sort-keys="recommendationScore confidenceScore">推荐与状态</th></tr></thead>
           <tbody id="comparison-body"></tbody>
         </table>
       </div>

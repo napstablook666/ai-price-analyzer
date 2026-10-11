@@ -19,18 +19,26 @@ const RAW_PRICE_KEYS = new Set([
   "request_price", "requestPrice", "request", "image_price", "imagePrice", "per_image_price",
   "image_output_price", "imageOutputPrice", "image_token_price"
 ].map(key => key.toLowerCase()));
+const AIAPI_PRICE_KEYS = new Set([
+  "billingMultiplier", "inputPer1M", "outputPer1M", "cacheReadPer1M", "cacheCreatePer1M", "cacheCreate1hPer1M"
+].map(key => key.toLowerCase()));
 
-function hasInvalidPricingValue(value, depth = 0) {
+function hasInvalidPricingValue(value, depth = 0, priceKeys = RAW_PRICE_KEYS) {
   if (!value || depth > 6 || typeof value !== "object") return false;
   return Object.entries(value).some(([key, current]) => {
     const normalizedKey = key.toLowerCase();
-    if (RAW_PRICE_KEYS.has(normalizedKey) && current !== null && typeof current !== "object" && current !== "" && (!Number.isFinite(Number(current)) || Number(current) < 0)) return true;
-    return current && typeof current === "object" && hasInvalidPricingValue(current, depth + 1);
+    if (priceKeys.has(normalizedKey) && current !== null && typeof current !== "object" && current !== "" && (!Number.isFinite(Number(current)) || Number(current) < 0)) return true;
+    return current && typeof current === "object" && hasInvalidPricingValue(current, depth + 1, priceKeys);
   });
 }
 
+function priceKeysForStation(station) {
+  return station.adapter?.kind === "aiapi-model-catalog" ? AIAPI_PRICE_KEYS : RAW_PRICE_KEYS;
+}
+
 const JIJI_HOST = "jiji.cc";
-const JIJI_MODEL_PAGE = "/extension/models";
+const JIJI_MODEL_PAGE = "/custom/13235f4cd3f1e94e";
+const JIJI_LEGACY_MODEL_PAGE = "/extension/models";
 const JIJI_MODEL_API = "/extension/api/trpc/extension.modelMarket";
 const JIJI_INPUT = JSON.stringify({ 0: { json: {} } });
 
@@ -40,12 +48,14 @@ const CHEAP_ROUTER_PATH = "/models";
 function jijiRequestConfig(value) {
   let url;
   try { url = new URL(String(value || "")); } catch { return null; }
-  if (url.hostname.toLowerCase().replace(/^www\./, "") !== JIJI_HOST || !["/", JIJI_MODEL_PAGE, JIJI_MODEL_API].includes(url.pathname)) return null;
+  const supportedPath = ["/", JIJI_MODEL_PAGE, JIJI_LEGACY_MODEL_PAGE, JIJI_MODEL_API].includes(url.pathname);
+  if (url.hostname.toLowerCase().replace(/^www\./, "") !== JIJI_HOST || !supportedPath) return null;
   const token = url.searchParams.get("token") || "";
   const endpoint = new URL(JIJI_MODEL_API, url.origin);
   endpoint.searchParams.set("batch", "1");
   endpoint.searchParams.set("input", JIJI_INPUT);
-  return { baseUrl: `${url.origin}${url.pathname}`, endpoint: endpoint.toString(), token };
+  const pagePath = url.pathname === JIJI_MODEL_PAGE ? url.pathname : JIJI_MODEL_PAGE;
+  return { baseUrl: `${url.origin}${pagePath}`, endpoint: endpoint.toString(), token };
 }
 
 export function prepareStationInput(stationInput = {}) {
@@ -70,6 +80,15 @@ export function prepareStationInput(stationInput = {}) {
       adapter: { ...(stationInput.adapter || {}), kind: "sidrune-model-plaza", endpoint: SIDRUNE_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "auto" }
     };
   }
+  if (hostname === "cun.ai") {
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}/pricing`,
+      mode: "page",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "cun", endpoint: "/api/pricing", method: "GET", responseFormat: "auto" }
+    };
+  }
   if (hostname === "soleapi.com" || PUBLIC_PRICING_HOSTS.has(hostname)) {
     const isSoleApi = hostname === "soleapi.com";
     return {
@@ -80,10 +99,19 @@ export function prepareStationInput(stationInput = {}) {
       adapter: {
         ...(stationInput.adapter || {}),
         kind: "public-pricing",
-        endpoint: isSoleApi ? "/api/public/models" : "/api/pricing",
+        endpoint: isSoleApi ? "/api/public/models" : hostname === "liuguang.ai" ? "/api/models" : "/api/pricing",
         method: "GET",
         responseFormat: "auto"
       }
+    };
+  }
+  if (hostname === "cn.aiapi.bot" && url.pathname.replace(/\/$/, "") === "/dashboard/model-prices") {
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}/dashboard/model-prices`,
+      mode: "page",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "aiapi-model-catalog", endpoint: AIAPI_MODEL_CATALOG_ENDPOINT, method: "GET", responseFormat: "auto" }
     };
   }
   if (hostname === "nexavlinks.com") {
@@ -109,7 +137,6 @@ export function prepareStationInput(stationInput = {}) {
       }
     };
   }
-
   if (hostname === CHEAP_ROUTER_HOST && url.pathname.replace(/\/$/, "") === CHEAP_ROUTER_PATH) {
     return {
       ...stationInput,
@@ -119,15 +146,6 @@ export function prepareStationInput(stationInput = {}) {
       adapter: { ...(stationInput.adapter || {}), kind: "cheaprouter", endpoint: CHEAP_ROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
     };
   }
-  if (hostname === "cn.aiapi.bot" && ["/dashboard/model-prices", "/dashboard/model-prices/"].includes(url.pathname)) {
-    return {
-      ...stationInput,
-      baseUrl: `${url.origin}/dashboard/model-prices`,
-      mode: "page",
-      auth: { type: "none" },
-      adapter: { ...(stationInput.adapter || {}), kind: "aiapi-model-catalog", endpoint: AIAPI_MODEL_CATALOG_ENDPOINT, method: "GET", responseFormat: "auto" }
-    };
-  }
   const config = jijiRequestConfig(stationInput.baseUrl);
   if (!config) return stationInput;
   const inputAuth = stationInput.auth || {};
@@ -135,7 +153,7 @@ export function prepareStationInput(stationInput = {}) {
   return {
     ...stationInput,
     baseUrl: config.baseUrl,
-    mode: "direct",
+    mode: "page",
     auth: token ? { ...inputAuth, type: "bearer", token } : inputAuth,
     adapter: { ...(stationInput.adapter || {}), kind: "jiji", endpoint: config.endpoint, method: "GET", responseFormat: "auto" }
   };
@@ -264,7 +282,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
     } catch {
       throw new Error(`${station.name} 手动价格 JSON 无效`);
     }
-    if (hasInvalidPricingValue(payload)) throw new Error("价格数据校验失败");
+    if (hasInvalidPricingValue(payload, 0, priceKeysForStation(station))) throw new Error("价格数据校验失败");
     const normalized = normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion });
     return buildSnapshot(station, normalized, "manual://station-config", 200);
   }
@@ -275,7 +293,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
     try {
       const response = await pageFetch({ capture: true });
       const payload = typeof response?.json === "function" ? await readResponse(response) : response?.body;
-      if (payload && typeof payload === "object" && hasInvalidPricingValue(payload)) throw new Error("页面响应未通过价格数据校验");
+      if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, 0, priceKeysForStation(station))) throw new Error("页面响应未通过价格数据校验");
       const normalized = payload && typeof payload !== "string"
         ? normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion })
         : { sourceFormat: "page-capture", data: [] };
@@ -296,6 +314,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
     // The page-world bridge can be observed by the site; use its session instead of leaking extension credentials.
     const pageHeaders = { Accept: headers.Accept };
     for (const name of ["x-trpc-source"]) if (headers[name]) pageHeaders[name] = headers[name];
+    if (station.adapter?.kind === "jiji" && headers.Authorization) pageHeaders.Authorization = headers.Authorization;
     if (body) pageHeaders["Content-Type"] = headers["Content-Type"];
     const pageRequest = { ...request, headers: pageHeaders };
 
@@ -308,7 +327,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
       }
       const options = { basePricePerMillion: station.basePricePerMillion };
       const payload = typeof response.json === "function" ? await readResponse(response) : response.body;
-      if (payload && typeof payload === "object" && hasInvalidPricingValue(payload)) throw new Error("价格数据校验失败");
+      if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, 0, priceKeysForStation(station))) throw new Error("价格数据校验失败");
       const normalized = typeof payload === "string"
         ? { sourceFormat: "text", data: [], group_ratio: {}, error: "响应不是 JSON" }
         : normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", options);
@@ -330,7 +349,7 @@ export async function collectStation(stationInput, { fetchImpl = fetch, pageFetc
 
 export function createPageFetch(sendMessage) {
   const fetchPage = request => new Promise((resolve, reject) => {
-    sendMessage({ type: request?.capture ? "PAGE_CAPTURE" : "PAGE_FETCH", request }, response => {
+    sendMessage({ type: request?.capture ? "PAGE_CAPTURE_V2" : "PAGE_FETCH_V2", request }, response => {
       if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
       if (!response?.ok) return reject(new Error(response?.error || "页面请求失败"));
       const pageResponse = response.response;

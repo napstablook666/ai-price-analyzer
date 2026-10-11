@@ -14,25 +14,42 @@ export function convertRechargeAmount(amount, fromCurrency, toCurrency, exchange
 
 export const TOKENS_PER_MILLION = 1_000_000;
 
-export const DEFAULT_DAILY_USAGE = {
-  requests: 7900,
-  input: 66.5 * TOKENS_PER_MILLION,
-  cacheRead: 550.7 * TOKENS_PER_MILLION,
-  output: 5.5 * TOKENS_PER_MILLION,
-  cacheWrite: 0,
+// 实测月用量：s2api 2026-09-06 至 2026-10-07（32 天）日趋势汇总，按 30 天折算。
+const MEASURED_MONTHLY_VOLUME = {
+  requests: 45494,
+  input: 382.95 * TOKENS_PER_MILLION,
+  cacheRead: 2946.28 * TOKENS_PER_MILLION,
+  output: 30.74 * TOKENS_PER_MILLION,
+  cacheWrite: 0
+};
+
+export const DEFAULT_MONTHLY_USAGE = {
+  ...MEASURED_MONTHLY_VOLUME,
   peakShare: 7 / 24,
   imageTokens: 0,
   images: 0
 };
 
 export const USAGE_PRESETS = [
-  { id: "legacy", label: "旧版 JS 默认", usage: DEFAULT_DAILY_USAGE },
+  { id: "measured", label: "实测月用量", usage: MEASURED_MONTHLY_VOLUME },
   {
     id: "baseline",
-    label: "基础估算（100 万输入 / 20 万输出）",
-    usage: { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0 }
+    label: "基础估算（3000 万输入 / 600 万输出）",
+    usage: { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, imageTokens: 0, images: 0 }
   }
 ];
+
+
+// 兼容旧版本保存的日用量和基础预设，避免已有设置继续覆盖实测月用量。
+const LEGACY_USAGE_PROFILES = [
+  { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
+  { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
+  { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0 }
+];
+
+function isLegacyUsage(usage) {
+  return LEGACY_USAGE_PROFILES.some(profile => Object.entries(profile).every(([field, value]) => Number(usage?.[field] ?? 0) === Number(value)));
+}
 
 export function usagePresetId(usage) {
   return USAGE_PRESETS.find(preset => Object.entries(preset.usage).every(([field, value]) => Number(value) === Number(usage[field])))?.id || "custom";
@@ -89,7 +106,7 @@ export const DEFAULT_SETTINGS = {
   defaultCurrency: "CNY",
   exchangeRate: DEFAULT_EXCHANGE_RATE,
   recommendationProfile: "price",
-  usage: { ...DEFAULT_DAILY_USAGE },
+  usage: { ...DEFAULT_MONTHLY_USAGE },
   matchingRules: DEFAULT_MATCHING_RULES,
   modelMatchOverrides: [],
   showUnmatched: true,
@@ -174,10 +191,15 @@ function normalizeModelMatchOverrides(input) {
 
 export function normalizeSettings(input = {}) {
   const base = cloneDefaultSettings();
+  const rawUsage = input.usage && typeof input.usage === "object" ? input.usage : {};
+  const peakShare = Number(rawUsage.peakShare);
+  const usage = isLegacyUsage(rawUsage)
+    ? { ...base.usage, ...(Number.isFinite(peakShare) ? { peakShare } : {}) }
+    : { ...base.usage, ...rawUsage };
   const settings = {
     ...base,
     ...input,
-    usage: { ...base.usage, ...(input.usage || {}) },
+    usage,
     matchingRules: Array.isArray(input.matchingRules) ? input.matchingRules.map((rule) => ({ ...rule })) : base.matchingRules.map((rule) => ({ ...rule })),
     modelMatchOverrides: normalizeModelMatchOverrides(input.modelMatchOverrides),
     recommendationProfile: ["balanced", "price", "reliability"].includes(input.recommendationProfile) ? input.recommendationProfile : "price",
