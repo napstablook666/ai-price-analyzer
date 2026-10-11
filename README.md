@@ -120,11 +120,11 @@ The GitHub Actions workflow runs the same checks and verifies that the release s
 
 ## Release process
 
-Releases are tag-driven. Push a semantic version tag such as `v0.1.0` to run the release workflow. It creates a source ZIP, a userscript asset, and an extension ZIP, then publishes a GitHub Release with generated notes.
+Releases are tag-driven. Push a semantic version tag such as `v0.2.0` to run the release workflow. It creates a source ZIP, a userscript asset, and an extension ZIP, then publishes a GitHub Release with generated notes.
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 The workflow is defined in [`.github/workflows/release.yml`](./.github/workflows/release.yml). The `GITHUB_TOKEN` is used only by GitHub Actions to publish the release; no repository secret is needed for the default flow.

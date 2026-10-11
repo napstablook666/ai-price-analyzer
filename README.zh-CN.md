@@ -118,11 +118,11 @@ GitHub Actions 会运行相同检查，并扫描发布源文件中常见的私�
 
 ## 发布流程
 
-Release 由 Git tag 触发。推送类似 `v0.1.0` 的语义化版本标签后，发布工作流会创建源代码 ZIP、用户脚本资产和 Chromium 扩展 ZIP，并使用 GitHub 自动生成 Release notes。
+Release 由 Git tag 触发。推送类似 `v0.2.0` 的语义化版本标签后，发布工作流会创建源代码 ZIP、用户脚本资产和 Chromium 扩展 ZIP，并使用 GitHub 自动生成 Release notes。
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 工作流位于 [`.github/workflows/release.yml`](./.github/workflows/release.yml)。默认流程只使用 GitHub Actions 提供的 `GITHUB_TOKEN` 发布 Release，不需要额外配置仓库 Secret。

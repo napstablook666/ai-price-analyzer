@@ -1,16 +1,22 @@
-# AI Price Analyzer
+# AI Price Analyzer v0.2.0
 
-The following release notes summarize the first public release.
+This release expands the Chromium MV3 extension from its initial release into a multi-station pricing and account workflow.
 
 ## Added
 
-- Browser userscript for comparing gateway model prices.
-- OpenRouter model reference data and Bank of China exchange-rate lookup.
-- Configurable model matching and workload cost estimation.
-- Bilingual README, privacy notes, contribution guidance, and security policy.
-- CI checks and tag-driven GitHub Release packaging.
-- Chromium MV3 extension for scheduled multi-station collection, official-price caching, and comparison dashboard.
-- Extension release ZIP with IndexedDB snapshots, direct HTTP mode, and logged-in page bridge mode.
+- Multi-station scheduled collection with IndexedDB snapshots, manual refresh, pagination, sorting, filtering, and collapsible dashboard sections.
+- Daily check-in support for stations that expose claim and status APIs, including optional alarms.
+- JEV-assisted model matching with user-confirmed mappings and refresh-safe batch processing.
+- Pricing adapters for AIAPI, CheapRouter, CUN.AI, DDDai, Liuguang, NexaVlinks, Sidrune, and TrueSOTA.
+- Token, image, request, group-ratio, recharge-ratio, and monthly workload normalization across supported station formats.
+- Page bridges that preserve required browser login state while keeping credentials out of extension messages and portable state.
+
+## Validation
+
+- `node --check` passed for the userscript and extension entry points.
+- `node test-kbq-pricing.js` passed.
+- `node --test extension/test/*.test.js` passed with 109 tests.
+- CI and tag-driven release packaging remain unchanged.
 
 ## Privacy review
 
