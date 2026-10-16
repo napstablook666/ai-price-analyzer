@@ -20,14 +20,18 @@ const MEASURED_MONTHLY_VOLUME = {
   input: 382.95 * TOKENS_PER_MILLION,
   cacheRead: 2946.28 * TOKENS_PER_MILLION,
   output: 30.74 * TOKENS_PER_MILLION,
-  cacheWrite: 0
+  cacheWrite: 0,
+  cacheWrite1h: 0,
 };
 
 export const DEFAULT_MONTHLY_USAGE = {
   ...MEASURED_MONTHLY_VOLUME,
   peakShare: 7 / 24,
+  imageInputTokens: 0,
+  imageOutputTokens: 0,
   imageTokens: 0,
-  images: 0
+  images: 0,
+  cacheWrite1h: 0,
 };
 
 export const USAGE_PRESETS = [
@@ -35,7 +39,7 @@ export const USAGE_PRESETS = [
   {
     id: "baseline",
     label: "基础估算（3000 万输入 / 600 万输出）",
-    usage: { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, imageTokens: 0, images: 0 }
+    usage: { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0, imageInputTokens: 0, imageOutputTokens: 0, imageTokens: 0, images: 0 }
   }
 ];
 
@@ -52,7 +56,7 @@ function isLegacyUsage(usage) {
 }
 
 export function usagePresetId(usage) {
-  return USAGE_PRESETS.find(preset => Object.entries(preset.usage).every(([field, value]) => Number(value) === Number(usage[field])))?.id || "custom";
+  return USAGE_PRESETS.find(preset => Object.entries(preset.usage).every(([field, value]) => Number(value) === Number(usage[field] ?? 0)))?.id || "custom";
 }
 
 const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
@@ -127,6 +131,11 @@ export const DEFAULT_STATION = {
   rechargeCurrency: "CNY",
   rechargeCredits: 1,
   rechargeRate: 1,
+  rechargeRateVerified: true,
+  rechargeRateNote: "",
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "",
   basePricePerMillion: SYSTEM_BASE_PRICE_PER_1M,
   auth: { type: "none", token: "", username: "", password: "" },
   adapter: { kind: "custom", endpoint: "", method: "GET", responseFormat: "auto", rawJson: "" },
@@ -154,7 +163,7 @@ function normalizeModelConfig(kind, input = {}) {
     config.modelName = String(config.modelName || "").trim();
     config.version = String(config.version || "").trim();
     config.endpoint = String(config.endpoint || "").trim();
-    config.responseFormat = ["auto", "pqh", "sora"].includes(config.responseFormat) ? config.responseFormat : "auto";
+    config.responseFormat = ["auto", "pqh", "sora", "aiapi-model-catalog"].includes(config.responseFormat) ? config.responseFormat : "auto";
     config.notes = String(config.notes || "").trim();
   } else {
     config.provider = "openai-compatible";
@@ -206,8 +215,10 @@ export function normalizeSettings(input = {}) {
     llm: normalizeModelConfig("llm", input.llm),
     jev: normalizeModelConfig("jev", input.jev)
   };
+  if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
+  settings.usage.imageTokens = settings.usage.imageOutputTokens;
   delete settings.refreshIntervalMinutes;
-  for (const field of ["input", "cacheRead", "cacheWrite", "output", "requests", "imageTokens", "images", "peakShare"]) {
+  for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output", "requests", "imageInputTokens", "imageOutputTokens", "imageTokens", "images", "peakShare"]) {
     const value = Number(settings.usage[field]);
     settings.usage[field] = Number.isFinite(value) && value >= 0 ? value : base.usage[field];
   }
@@ -258,6 +269,11 @@ export function normalizeStation(input = {}) {
   station.rechargeCredits = Number.isFinite(rechargeCredits) && rechargeCredits > 0 ? rechargeCredits : 1;
   station.rechargeRate = rechargeRate;
   station.rechargeCurrency = input.rechargeCurrency === "USD" ? "USD" : "CNY";
+  station.priceCurrency = ["CNY", "USD", "CREDITS", "UNKNOWN"].includes(input.priceCurrency) ? input.priceCurrency : "CREDITS";
+  station.priceCurrencyVerified = station.priceCurrency !== "UNKNOWN" && input.priceCurrencyVerified !== false;
+  station.priceCurrencyNote = String(input.priceCurrencyNote || "").trim();
+  station.rechargeRateVerified = input.rechargeRateVerified !== false;
+  station.rechargeRateNote = String(input.rechargeRateNote || "").trim();
   const basePricePerMillion = Number(station.basePricePerMillion);
   station.basePricePerMillion = Number.isFinite(basePricePerMillion) && basePricePerMillion >= 0 ? basePricePerMillion : SYSTEM_BASE_PRICE_PER_1M;
   return station;

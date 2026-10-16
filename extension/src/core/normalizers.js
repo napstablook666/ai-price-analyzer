@@ -1,5 +1,8 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
-export const NORMALIZATION_VERSION = 14;
+import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
+import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
+import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
+export const NORMALIZATION_VERSION = 23;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -11,11 +14,60 @@ const finitePrice = value => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
+
+const normalizeCurrency = value => {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  return normalized || "UNKNOWN";
+};
+const blankCurrency = value => value === null || value === undefined || String(value).trim() === "";
+const genericFallbackCurrency = options => options.priceCurrency === "CREDITS" && options.priceCurrencyVerified === true ? "CREDITS" : "UNKNOWN";
+const rowPriceCurrency = (item, options) => {
+  const rawCurrency = blankCurrency(item?.price_currency) ? item?.currency : item?.price_currency;
+  return blankCurrency(rawCurrency) ? genericFallbackCurrency(options) : normalizeCurrency(rawCurrency);
+};
+
+const hasAiApiEffectivePrices = models => Array.isArray(models) && models.some(model => {
+  const effective = model?.effective;
+  return effective && typeof effective === "object" && AIAPI_EFFECTIVE_PRICE_FIELDS.some(key => own(effective, key));
+});
 const perMillion = value => {
   const parsed = finitePrice(value);
   return parsed === null ? null : parsed * 1_000_000;
 };
 
+
+
+export function cleanPricingRows(rows, options = {}) {
+  return (Array.isArray(rows) ? rows : []).map(item => {
+    const rawModelRatio = item.model_ratio ?? item.ratio ?? item.input_ratio;
+    const priceValues = Object.fromEntries(PRICE_FIELD_DEFINITIONS.map(field => [field.normalized, finitePrice(rawPriceValue(item, field))]));
+    const inputPrice = priceValues.input_price;
+    const outputPrice = priceValues.output_price;
+    const cacheReadPrice = priceValues.cache_read_price;
+    const cacheWritePrice = priceValues.cache_write_price;
+    const cacheWrite1hPrice = priceValues.cache_write_1h_price;
+    const requestPrice = priceValues.request_price;
+    const imageInputPrice = priceValues.image_input_price;
+    const imageOutputPrice = priceValues.image_output_price;
+    const imagePrice = priceValues.image_price;
+    const hasModelRatio = rawModelRatio !== undefined && rawModelRatio !== null && rawModelRatio !== "" && finitePrice(rawModelRatio) !== null;
+    const hasPrice = PRICE_FIELD_DEFINITIONS.some(field => priceValues[field.normalized] !== null);
+    return {
+      model_name: item.model_name || item.model || item.id || item.name || "",
+      model_display_name: item.model_display_name || item.display_name || item.name || item.model || item.id || "",
+      model_ratio: finitePrice(rawModelRatio, 0),
+      completion_ratio: finitePrice(item.completion_ratio ?? item.output_ratio, 1),
+      group_ratio: finitePrice(item.group_ratio ?? item.groupRatio, 1),
+      ...priceValues,
+      price_currency: rowPriceCurrency(item, options),
+      enable_groups: item.enable_groups || item.groups || [],
+      proxy_group_name: item.proxy_group_name || item.group_name || "",
+      tier_name: item.tier_name || item.tier || "",
+      evidence: item.evidence || "provider_payload",
+      hasPricing: hasModelRatio || hasPrice
+    };
+  }).filter(item => item.model_name).map(({ hasPricing, ...item }) => ({ ...item, catalogOnly: !hasPricing }));
+}
 export class ParsingStrategy {
   canParse() { return false; }
   parse() { return { data: [], group_ratio: {} }; }
@@ -335,14 +387,30 @@ export class LiuguangModelsStrategy extends ParsingStrategy {
 }
 
 export class AiApiModelCatalogStrategy extends ParsingStrategy {
-  canParse(raw) {
-    return raw?.data?.source === "cnaiapi" && Array.isArray(raw.data.groups) && raw.data.groups.some(group => Array.isArray(group?.models));
+  canParse(raw, options = {}) {
+    const catalog = raw?.data;
+    const source = String(catalog?.source || "").toLowerCase();
+    const provider = String(catalog?.provider || "").toLowerCase();
+    const knownSource = source === "cnaiapi" || source === "aiapi";
+    const knownProvider = provider === "aiapi" || provider === "cnaiapi";
+    const otherIdentity = (source && !knownSource) || (provider && !knownProvider);
+    const explicitFormat = options.responseFormat === "aiapi-model-catalog";
+    const canUseAiApi = explicitFormat || (!otherIdentity && (knownSource || knownProvider));
+    return Boolean(canUseAiApi && (
+      Array.isArray(catalog?.groups) || hasAiApiEffectivePrices(catalog?.models)
+    ));
   }
 
   parse(raw) {
     const data = [];
     const groupRatio = {};
-    for (const group of raw.data.groups) {
+    const grouped = Array.isArray(raw.data.groups) ? raw.data.groups : [];
+    const groups = grouped.some(group => hasAiApiEffectivePrices(group?.models))
+      ? grouped
+      : hasAiApiEffectivePrices(raw.data.models)
+        ? [{ name: String(raw.data.provider || raw.data.catalogVersion || "AIAPI"), billingMultiplier: 1, models: raw.data.models }]
+        : grouped;
+    for (const group of groups) {
       const groupName = String(group?.name || group?.code || group?.id || "").trim();
       if (!groupName) continue;
       const multiplier = finitePrice(group.billingMultiplier) ?? 1;
@@ -650,8 +718,232 @@ export class TrueSotaModelPricingStrategy extends ParsingStrategy {
   }
 }
 
+const MODEL_PLAZA_PROFILES = Object.freeze({
+  nodeai: {
+    sourceFormat: "nodeai-model-plaza",
+    label: "NodeAI",
+    currency: "CNY",
+    intervalMode: "first",
+    groupMultiplier: group => finitePrice(group?.user_rate_multiplier ?? group?.rate_multiplier) ?? 1,
+    nonTokenMultiplier: (group, _billingMode, groupMultiplier) => group?.image_rate_independent && finitePrice(group?.image_rate_multiplier) !== null
+      ? finitePrice(group.image_rate_multiplier)
+      : groupMultiplier,
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request" }),
+    nonTokenBillingFallback: billingMode => billingMode.includes("image") ? "image" : "request",
+  },
+  killai: {
+    sourceFormat: "killai-model-plaza",
+    label: "KillAI",
+    currency: null,
+    preserveImageTokenPrices: true,
+    intervalMode: "all",
+    groupMultiplier: group => finitePrice(group?.rate_multiplier) ?? 1,
+    nonTokenMultiplier: (_group, _billingMode, groupMultiplier) => groupMultiplier,
+    nonTokenBilling: Object.freeze({ image: "image" })
+  },
+  "fuck-everyone": {
+    sourceFormat: "fuck-everyone-model-plaza",
+    label: "fuck-everyone.com",
+    currency: null,
+    preserveImageTokenPrices: true,
+    intervalMode: "all",
+    rejectInvalidGroupMultiplier: true,
+    groupMultiplier: group => {
+      const value = group?.user_rate_multiplier ?? group?.rate_multiplier;
+      return value === null || value === undefined || value === "" ? 1 : finitePrice(value);
+    },
+    nonTokenMultiplier: (group, billingMode, groupMultiplier) => {
+      const independentField = billingMode === "image" ? "image_rate_independent" : billingMode === "per_request" ? "video_rate_independent" : "";
+      const multiplierField = billingMode === "image" ? "image_rate_multiplier" : billingMode === "per_request" ? "video_rate_multiplier" : "";
+      if (independentField && group?.[independentField] === true) return finitePrice(group?.[multiplierField]);
+      return groupMultiplier;
+    },
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request" })
+  }
+});
+
+export class ModelPlazaStrategy extends ParsingStrategy {
+  constructor(profileName) {
+    super();
+    this.profile = MODEL_PLAZA_PROFILES[profileName];
+    if (!this.profile) throw new Error(`未知模型广场 profile：${profileName}`);
+  }
+
+  canParse(raw, options = {}) {
+    return options.responseFormat === this.profile.sourceFormat && raw?.code === 0 &&
+      Array.isArray(raw?.data?.groups) && raw.data.groups.some(group => Array.isArray(group?.models));
+  }
+
+  parse(raw, options = {}) {
+    const { profile } = this;
+    const priceCurrency = profile.currency || (options.priceCurrency === "CNY" || options.priceCurrency === "USD" ? options.priceCurrency : "UNKNOWN");
+    const data = [];
+    const groupRatio = {};
+    const unsupportedBillingModes = new Set();
+    const invalidPricingValues = new Set();
+    const unpricedModels = new Set();
+    let modelCount = 0;
+    const invalidNumericValue = (object, fields) => fields.some(field => Object.hasOwn(object || {}, field) && object[field] !== null && object[field] !== undefined && object[field] !== "" && finitePrice(object[field]) === null);
+    const perMillion = value => {
+      const parsed = finitePrice(value);
+      return parsed === null ? null : parsed * 1_000_000;
+    };
+    const scale = (value, multiplier) => value === null ? null : value * multiplier;
+
+    for (const group of raw.data.groups) {
+      const groupName = String(group?.name || group?.id || "").trim();
+      if (!groupName) continue;
+      const invalidGroupMultiplier = invalidNumericValue(group, ["rate_multiplier", "user_rate_multiplier"]);
+      if (invalidNumericValue(group, ["rate_multiplier", "user_rate_multiplier", "image_rate_multiplier", "video_rate_multiplier"])) invalidPricingValues.add(`${groupName}:multiplier`);
+      const multiplier = profile.groupMultiplier(group);
+      if (multiplier === null || (profile.rejectInvalidGroupMultiplier && invalidGroupMultiplier)) {
+        invalidPricingValues.add(`${groupName}:multiplier`);
+        for (const model of Array.isArray(group.models) ? group.models : []) {
+          const modelName = String(model?.name || model?.id || "").trim();
+          if (!modelName) continue;
+          modelCount += 1;
+          unpricedModels.add(`${groupName}:${modelName}:default`);
+        }
+        continue;
+      }
+      groupRatio[groupName] = multiplier;
+
+      for (const model of Array.isArray(group.models) ? group.models : []) {
+        const modelName = String(model?.name || model?.id || "").trim();
+        const pricing = model?.pricing;
+        if (!modelName) continue;
+        modelCount += 1;
+        const unpricedKey = `${groupName}:${modelName}`;
+        if (!pricing || typeof pricing !== "object") {
+          unpricedModels.add(`${unpricedKey}:default`);
+          continue;
+        }
+        const billingMode = String(pricing.billing_mode || "token").toLowerCase();
+        if (invalidNumericValue(pricing, ["per_request_price", "request_price"])) {
+          invalidPricingValues.add(modelName);
+          continue;
+        }
+
+        if (billingMode !== "token") {
+          const targetField = profile.nonTokenBilling[billingMode] || profile.nonTokenBillingFallback?.(billingMode);
+          if (!targetField) {
+            unsupportedBillingModes.add(billingMode);
+            continue;
+          }
+          const multiplierForPrice = profile.nonTokenMultiplier(group, billingMode, multiplier);
+          if (multiplierForPrice === null) {
+            invalidPricingValues.add(`${modelName}:multiplier`);
+            continue;
+          }
+          const perRequest = finitePrice(pricing.per_request_price ?? pricing.request_price);
+          const imageInput = profile.preserveImageTokenPrices
+            ? scale(perMillion(pricing.image_input_price), multiplierForPrice)
+            : null;
+          const imageOutput = profile.preserveImageTokenPrices
+            ? scale(perMillion(pricing.image_output_price), multiplierForPrice)
+            : null;
+          const imageBilled = targetField === "image";
+          const fallbackPerImage = imageBilled && !profile.preserveImageTokenPrices
+            ? finitePrice(pricing.image_output_price)
+            : null;
+          const perCall = perRequest ?? fallbackPerImage;
+          if (perCall === null && imageInput === null && imageOutput === null) {
+            unpricedModels.add(`${unpricedKey}:default`);
+            continue;
+          }
+          unpricedModels.delete(`${unpricedKey}:default`);
+          const price = perCall === null ? null : perCall * multiplierForPrice;
+          data.push({
+            model_name: modelName,
+            model_display_name: String(model?.display_name || model?.label || modelName),
+            model_ratio: 0,
+            completion_ratio: 1,
+            input_price: null,
+            output_price: null,
+            cache_read_price: null,
+            cache_write_price: null,
+            request_price: targetField === "request" ? price : null,
+            image_price: targetField === "image" ? price : null,
+            image_input_price: imageInput,
+            image_output_price: imageOutput,
+            price_currency: priceCurrency,
+            enable_groups: [groupName],
+            proxy_group_name: groupName,
+            group_ratio: multiplier,
+            evidence: "exact"
+          });
+          continue;
+        }
+
+        const hasExplicitIntervals = Array.isArray(pricing.intervals) && pricing.intervals.length && profile.intervalMode === "all";
+        const intervals = hasExplicitIntervals
+          ? pricing.intervals
+          : [Array.isArray(pricing.intervals) && pricing.intervals.length ? pricing.intervals[0] : null];
+        for (const [intervalIndex, interval] of intervals.entries()) {
+          const tierLabel = String(interval?.tier_label || interval?.tier_name || interval?.tier || "").trim();
+          const diagnosticTier = hasExplicitIntervals
+            ? `${tierLabel || "interval"}:${intervalIndex}`
+            : "default";
+          const unpricedTierKey = `${unpricedKey}:${diagnosticTier}`;
+          const price = field => scale(perMillion((interval || pricing)[field]), multiplier);
+          const input = price("input_price");
+          const output = price("output_price");
+          const cacheRead = price("cache_read_price");
+          const cacheWrite = price("cache_write_price");
+          const cacheWrite1h = price("cache_write_1h_price");
+          if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) {
+            unpricedModels.add(unpricedTierKey);
+            continue;
+          }
+          unpricedModels.delete(unpricedTierKey);
+          data.push({
+            model_name: modelName,
+            model_display_name: String(model?.display_name || model?.label || modelName),
+            model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+            completion_ratio: input > 0 && output !== null ? output / input : 1,
+            input_price: input,
+            output_price: output,
+            cache_read_price: cacheRead,
+            cache_write_price: cacheWrite,
+            cache_write_1h_price: cacheWrite1h,
+            request_price: null,
+            price_currency: priceCurrency,
+            enable_groups: [groupName],
+            proxy_group_name: groupName,
+            group_ratio: multiplier,
+            ...(tierLabel ? { tier_name: tierLabel } : {}),
+            evidence: "exact"
+          });
+        }
+      }
+    }
+    if (!modelCount) throw new Error(`${profile.label} 模型广场价格数据为空`);
+    return {
+      data,
+      group_ratio: groupRatio,
+      sourceFormat: profile.sourceFormat,
+      ...(unsupportedBillingModes.size || invalidPricingValues.size || unpricedModels.size ? { incomplete: true } : {}),
+      ...(unsupportedBillingModes.size ? { unsupportedBillingModes: [...unsupportedBillingModes].sort() } : {}),
+      ...(invalidPricingValues.size ? { invalidPricingValues: [...invalidPricingValues].sort() } : {}),
+      ...(unpricedModels.size ? { unpricedModels: [...unpricedModels].sort() } : {})
+    };
+  }
+}
+
+export class NodeAiModelPlazaStrategy extends ModelPlazaStrategy {
+  constructor() {
+    super("nodeai");
+  }
+}
+
 export class JijiModelPlazaStrategy extends ParsingStrategy {
-  canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.groups); }
+  canParse(raw) {
+    return raw?.code === 0 && Array.isArray(raw?.data?.groups) && !raw.data.groups.some(group =>
+      ["user_rate_multiplier", "image_rate_independent", "image_rate_multiplier"].some(key => Object.hasOwn(group || {}, key)) ||
+      group?.models?.some(model => ["billing_mode", "intervals", "official_pricing", "image_output_price"].some(key => Object.hasOwn(model?.pricing || {}, key)))
+    );
+  }
+
 
   parse(raw) {
     const data = [];
@@ -691,6 +983,18 @@ export class JijiModelPlazaStrategy extends ParsingStrategy {
     }
     if (!data.length) throw new Error("吉吉模型价格数据为空");
     return { data, group_ratio: groupRatio, sourceFormat: "jiji" };
+  }
+}
+
+export class SoraPricingStrategy extends ParsingStrategy {
+  canParse(_raw, options = {}) {
+    return options.responseFormat === "sora";
+  }
+
+  parse(raw) {
+    const rows = raw?.data || raw?.models || raw?.pricing || raw;
+    const groupRatio = raw?.group_ratio || raw?.groupRatio || {};
+    return { sourceFormat: "sora", data: cleanPricingRows(rows), group_ratio: groupRatio };
   }
 }
 
@@ -756,7 +1060,32 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
   }
 }
 
+registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
+registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
+registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
+registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
+assertResponseFormatHandlers();
+
+function explicitStrategyFor(format) {
+  const definition = getResponseFormatDefinition(format);
+  const factory = definition && getResponseFormatHandler(definition.strategy);
+  return factory ? factory(definition) : null;
+}
+
 export function normalizeProxyData(raw, options = {}) {
+  const definition = getResponseFormatDefinition(options.responseFormat);
+  if (definition?.explicit) {
+    const strategy = explicitStrategyFor(options.responseFormat);
+    if (!strategy || !strategy.canParse(raw, options)) {
+      return { data: [], group_ratio: {}, sourceFormat: "unknown", error: `无法识别${definition.label}数据格式` };
+    }
+    try {
+      return strategy.parse(raw, options);
+    } catch (error) {
+      return { data: [], group_ratio: {}, sourceFormat: "parse-error", error: error.message };
+    }
+  }
+
   const strategies = [
     new AiApiModelCatalogStrategy(),
     new SoleApiPublicModelsStrategy(),
@@ -773,7 +1102,7 @@ export function normalizeProxyData(raw, options = {}) {
     new AdvancedNestedStrategy()
   ];
   for (const strategy of strategies) {
-    if (!strategy.canParse(raw)) continue;
+    if (!strategy.canParse(raw, options)) continue;
     try {
       return strategy.parse(raw, options);
     } catch (error) {
@@ -787,4 +1116,26 @@ export function normalizeCapturedData(raw, options = {}) {
   const payload = unwrapTrpcPayload(raw);
   if (payload?.normalized?.data) return payload.normalized;
   return normalizeProxyData(payload, options);
+}
+
+export function parseGenericPricing(payload, options = {}) {
+  if (Array.isArray(payload)) return { sourceFormat: "array", data: cleanPricingRows(payload, options), group_ratio: {} };
+  if (Array.isArray(payload?.data)) return { sourceFormat: "data", data: cleanPricingRows(payload.data, options), group_ratio: payload.group_ratio || {} };
+  if (Array.isArray(payload?.models)) return { sourceFormat: "models", data: cleanPricingRows(payload.models, options), group_ratio: payload.group_ratio || {} };
+  return { sourceFormat: "unknown", data: [], group_ratio: {} };
+}
+
+function applyModelListCurrency(normalized, options = {}) {
+  if (options.modelListCurrency !== "CREDITS" || options.priceCurrencyVerified === false || !Array.isArray(normalized?.data)) return normalized;
+  return {
+    ...normalized,
+    data: normalized.data.map(item => ({ ...item, price_currency: "CREDITS" }))
+  };
+}
+
+export function normalizePricingPayload(payload, format = "auto", options = {}) {
+  const normalizationOptions = format === "auto" ? options : { ...options, responseFormat: format };
+  const normalized = normalizeCapturedData(payload, normalizationOptions);
+  const result = format === "auto" && !normalized.data?.length ? parseGenericPricing(payload, normalizationOptions) : normalized;
+  return applyModelListCurrency(result, normalizationOptions);
 }

@@ -1,7 +1,8 @@
 import { flattenComparisonRows } from "./core/pricing.js";
+import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { buildJevComparisonTask, getJevModelBatchTargets, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
 import { getJevModelCandidates } from "./core/matching.js";
-import { callService, escapeHtml, formatMoney, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
+import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
 import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
@@ -15,6 +16,7 @@ let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();
 const RATING_LABELS = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
+const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", recharge_unverified: "充值比例待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
 
 function renderProviderSwitchers(settings) {
@@ -55,11 +57,30 @@ function rowMatches(row, query) {
   return true;
 }
 
+function pricingUnavailableLabel(row) {
+  const reasons = Array.isArray(row.pricingUnavailableReasons) ? row.pricingUnavailableReasons : [];
+  return reasons.length ? reasons.map(reason => PRICING_REASON_LABELS[reason] || "价格待核验").join("、") : "价格待核验";
+}
+
+function partialStatusLabel(row) {
+  const modes = [...new Set(row.unsupportedBillingModes || [])].filter(Boolean);
+  const invalid = [...new Set(row.invalidPricingValues || [])].filter(Boolean);
+  const unpriced = [...new Set(row.unpricedModels || [])].filter(Boolean);
+  const details = [
+    modes.length ? `未解析 ${modes.map(mode => escapeHtml(mode)).join("、")}` : "",
+    invalid.length ? `价格字段异常 ${invalid.map(value => escapeHtml(value)).join("、")}` : "",
+    unpriced.length ? `未定价模型 ${unpriced.map(value => escapeHtml(value)).join("、")}` : ""
+  ].filter(Boolean);
+  return details.length ? `部分解析：${details.join("；")}` : "部分解析";
+}
+
 function statusMarkup(row) {
   const tags = [];
+  if (row.incomplete) tags.push(`<span class="status-tag warning">${icon("triangle-alert", { className: "icon" })}${partialStatusLabel(row)}</span>`);
   if (row.stale) tags.push(`<span class="status-tag warning">${icon("clock-3", { className: "icon" })}过期</span>`);
   if (!row.officialName) tags.push(`<span class="status-tag muted">${icon("circle-help", { className: "icon" })}未匹配</span>`);
   if (row.evidence === "estimated") tags.push(`<span class="status-tag warning">${icon("calculator", { className: "icon" })}价格推导</span>`);
+  if (row.pricingUnavailable) tags.push(`<span class="status-tag warning">${icon("circle-alert", { className: "icon" })}${pricingUnavailableLabel(row)}</span>`);
   if (!tags.length) tags.push(`<span class="status-tag">${icon("badge-check", { className: "icon" })}已校准</span>`);
   return `<div class="status-cluster">${tags.join("")}</div>`;
 }
@@ -71,7 +92,12 @@ function stationFor(row) {
 function renderSummary(rows) {
   const matched = rows.filter(row => row.officialName);
   const recommended = rows.filter(row => row.recommended).length;
-  const needsReview = rows.filter(row => !row.officialName || row.evidence === "estimated" || row.stale).length;
+  const needsReview = rows.filter(row => !row.officialName || row.evidence === "estimated" || row.stale || row.incomplete || row.pricingUnavailable).length;
+  const reviewReasons = rows.flatMap(row => row.pricingUnavailableReasons || []).reduce((counts, reason) => ({ ...counts, [reason]: (counts[reason] || 0) + 1 }), {});
+  const reviewNote = [
+    rows.filter(row => row.incomplete).length ? `${rows.filter(row => row.incomplete).length} 条部分解析` : "",
+    ...Object.entries(reviewReasons).map(([reason, count]) => `${count} 条${PRICING_REASON_LABELS[reason] || "价格待核验"}`)
+  ].filter(Boolean).join("、") || "未匹配、推导或过期数据";
   const modelCount = new Set(rows.map(row => row.canonicalModel)).size;
   const stationCount = (state.data?.stations || []).filter(station => station.enabled).length;
   const matchRate = rows.length ? Math.round(matched.length / rows.length * 100) : 0;
@@ -79,7 +105,7 @@ function renderSummary(rows) {
     ["覆盖模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
     ["官方匹配", String(matched.length), `${matchRate}% 有官方参考价`],
     ["首选方案", String(recommended), "同一模型内的推荐报价"],
-    ["需核验", String(needsReview), "未匹配、推导或过期数据"]
+    ["需核验", String(needsReview), reviewNote]
   ].map(([label, value, note]) => `<article class="summary-card"><span class="summary-label">${label}</span><strong class="summary-value">${escapeHtml(value)}</strong><span class="summary-note">${escapeHtml(note)}</span></article>`).join("");
 }
 function renderStationFilter(rows) {
@@ -162,20 +188,13 @@ function sortRows(rows) {
     return `${left.stationName} ${left.modelName}`.localeCompare(`${right.stationName} ${right.modelName}`);
   });
 }
-function unitPricesMarkup(prices, currency, row, official = false) {
+function unitPricesMarkup(prices, currency, row, official = false, sourceCurrency = false) {
   if (!prices) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
-  const readEstimated = official ? prices.cacheRead === null || prices.cacheRead === undefined : row.cacheReadEstimated;
-  const writeEstimated = official ? prices.cacheWrite === null || prices.cacheWrite === undefined : row.cacheWriteEstimated;
-  const lines = [
-    ["输入", prices.input, false],
-    ["输出", prices.output, false],
-    [`缓存读${readEstimated ? "（估算）" : ""}`, prices.cacheRead ?? prices.input, false],
-    [`缓存写${writeEstimated ? "（估算）" : ""}`, prices.cacheWrite ?? prices.input, false],
-    ...(prices.request === null || prices.request === undefined ? [] : [["按次", prices.request, false]]),
-    ...(prices.imageOutput === null || prices.imageOutput === undefined ? [] : [["图 token", prices.imageOutput, true]]),
-    ...(prices.imagePrice === null || prices.imagePrice === undefined ? [] : [["图 / 张", prices.imagePrice, true]])
-  ];
-  return `<div class="price-lines">${lines.filter(([, value]) => value !== null && value !== undefined).map(([label, value, precise], index) => `<div class="price-line${index < 2 ? " price-line-primary" : ""}"><span class="price-key">${label}</span><span class="price-value">${formatPrice(value, currency, precise ? 6 : 4)}</span></div>`).join("")}</div>`;
+  const lines = dashboardPriceLines(prices, row, official);
+  const visibleLines = lines.filter(([, value]) => value !== null && value !== undefined);
+  if (!visibleLines.length) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
+  const formatter = sourceCurrency ? formatSourcePrice : formatPrice;
+  return `<div class="price-lines">${visibleLines.map(([label, value, precise], index) => `<div class="price-line${index < 2 ? " price-line-primary" : ""}"><span class="price-key">${label}</span><span class="price-value">${formatter(value, currency, precise ? 6 : 4)}</span></div>`).join("")}</div>`;
 }
 
 function jevResultKey(task, row) {
@@ -312,15 +331,16 @@ function renderRows() {
   const seenModelAssists = new Set();
   $("#comparison-body").innerHTML = visible.map(row => {
     const station = stationFor(row);
-    const delta = Number.isFinite(row.diffPercent) ? row.diffPercent : null;
+    const delta = row.pricingUnavailable || !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
-    const deltaLabel = delta === null ? "无官方价" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
+    const deltaLabel = delta === null ? (row.pricingUnavailable ? pricingUnavailableLabel(row) : "无官方价") : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore}分` : "暂无评分";
     const rating = RATING_LABELS[row.category] || "";
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
     const monthlyCost = formatPrice(row.monthlyCost, currency);
     const hasOfficialCost = Number.isFinite(row.officialMonthlyCost);
-    const monthlyDifference = hasOfficialCost ? row.officialMonthlyCost - row.monthlyCost : null;
+    const monthlyDifference = hasOfficialCost && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) ? row.officialMonthlyCost - row.monthlyCost : null;
+    const officialQuotedPrices = row.officialQuotedPrices || null;
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
     const matchNote = row.officialName
       ? `匹配 ${row.officialName} · ${row.matchRule || "官方目录"} · 置信 ${row.confidenceScore}%`
@@ -332,8 +352,8 @@ function renderRows() {
     return `<tr${categoryClass ? ` class="category-${categoryClass}"` : ""}>
       <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(matchNote)}</span>${modelJevMarkup(row, showModelAssist)}</div></td>
       <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
-      <td data-label="中转单价">${unitPricesMarkup(row.prices, currency, row)}</td>
-      <td data-label="官方单价">${unitPricesMarkup(row.officialPrices, currency, row, true)}</td>
+      <td data-label="中转单价">${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</td>
+      <td data-label="官方单价">${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</td>
       <td data-label="月成本"><div class="cost-cell"><strong>${monthlyCost}<small> / 月</small></strong><span class="cost-meta">官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}</span>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方"><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
       <td data-label="推荐与状态"><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}${comparisonJevMarkup(row)}</div></td>
@@ -352,7 +372,7 @@ function renderReferenceStatus() {
   const ref = state.reference;
   if (!ref) return;
   $("#reference-status").textContent = ref.models?.length ? `官方参考价已加载 · ${ref.models.length} 个模型` : "官方参考价未加载";
-  $("#reference-note").textContent = ref.fetchedAt ? `最近更新 ${new Date(ref.fetchedAt).toLocaleString("zh-CN", { hour12: false })}；${ref.warnings?.length ? ref.warnings.join("；") : "OpenRouter 模型目录与中国银行美元汇率"}` : "OpenRouter 模型目录与中国银行美元汇率会每日缓存，可在上方手动更新。";
+  $("#reference-note").textContent = ref.fetchedAt ? `最近更新 ${new Date(ref.fetchedAt).toLocaleString("zh-CN", { hour12: false })}；${ref.warnings?.length ? ref.warnings.join("；") : "官方模型目录；官方 USD credit 按 1:1 映射中转币，人民币成本按设置汇率"}` : "官方模型目录和中转币基准会每日缓存，可在上方手动更新。";
 }
 function renderCheckin(data) {
   const panel = $("#checkin-panel");
@@ -664,17 +684,15 @@ function renderRefreshProgress(progress) {
     }
     row.dataset.status = progress.status;
     const duration = Number.isFinite(progress.durationMs) ? ` · ${(progress.durationMs / 1000).toFixed(1)} 秒` : "";
-    const detail = progress.status === "running" ? "查询中" : progress.status === "error" ? `失败 · ${progress.error || "未知错误"}` : `${Number(progress.modelCount) || 0} 个模型${duration}`;
+    const detail = progress.status === "running" ? "查询中" : progress.status === "error" ? `失败 · ${progress.error || "未知错误"}` : progress.status === "partial" ? `部分成功 · ${Number(progress.modelCount) || 0} 个模型 · ${progress.error || "存在未解析计费模式"}` : `${Number(progress.modelCount) || 0} 个模型${duration}`;
     row.textContent = `${progress.stationName || progress.stationId} · ${detail}`;
     message.textContent = progress.status === "running"
-      ? `正在查询 ${progress.current}/${total}：${progress.stationName}`
+      ? `正在查询 ${progress.stationName}（并行槽位 ${progress.current}）`
       : `已查询 ${completed}/${total} 个站点`;
   } else if (progress.phase === "complete") {
     lastRefreshSummary = progress.summary;
     const summary = progress.summary;
-    message.textContent = total
-      ? `查询完成：${summary.successCount} 成功，${summary.errorCount} 失败，${summary.totalModels} 个模型 · ${(summary.durationMs / 1000).toFixed(1)} 秒`
-      : "没有启用的站点可查询";
+    message.textContent = formatRefreshSummary(summary);
   } else if (progress.phase === "error") {
     message.textContent = progress.message;
   }
@@ -733,8 +751,7 @@ $("#refresh-all").addEventListener("click", async event => {
     const data = await callService("REFRESH_ALL");
     lastRefreshSummary = data.refreshSummary;
     render(data);
-    if (!lastRefreshSummary?.total) toast("没有启用的站点可查询");
-    else toast(`查询完成：${lastRefreshSummary.successCount} 成功，${lastRefreshSummary.errorCount} 失败`);
+    toast(formatRefreshSummary(lastRefreshSummary));
   } catch (error) { toast(error.message); }
   finally { button.disabled = false; button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`; updateRefreshStationButton(); }
 });

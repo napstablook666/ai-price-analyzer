@@ -1,7 +1,11 @@
-import { collectStation, createPageFetch, prepareStationInput } from "./core/collectors.js";
+import { collectStation, createPageFetch } from "./core/collectors.js";
+import { prepareStationInput } from "./core/provider-registry.js";
+import { resolveStationCollection } from "./core/request-strategy.js";
 import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
-import { addAiApiStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addLiuguangStationPreset, addNexaStationPreset, addSidruneStationPreset, addTrueSotaStationPreset } from "./core/station-presets.js";
+import { addRegisteredStationPresets } from "./core/station-presets.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
+import { withKeyedLock } from "./core/concurrency.js";
+import { runRefreshAll } from "./core/refresh-scheduler.js";
 import { fetchReferences } from "./core/openrouter.js";
 import { fetchModelCatalog, requestJevChoices, testModelConnection } from "./core/model-api.js";
 import { buildComparisonRows, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
@@ -17,6 +21,7 @@ import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRE
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
 const CHECKIN_ALARM_NAME = "checkin-stations";
 
+const REFRESH_CONCURRENCY = 3;
 let comparisonCache = null;
 async function getSettings() {
   return normalizeSettings(await getValue("settings", {}));
@@ -53,42 +58,45 @@ async function stationWithCredentials(station) {
   return { ...station, auth };
 }
 
-
-async function withPageFetch(station, preferredTabId, task) {
-  const { tab, temporary } = await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
-  if (!tab?.id) throw new Error("请先打开并登录目标站点后重试");
-  try {
-    let pendingCapture = await ensurePageBridge(chrome.scripting, tab.id);
-    const bridgeFetch = createPageFetch((message, callback) => chrome.tabs.sendMessage(tab.id, message, callback));
-    let bridgeRetryUsed = false;
-    const recoverBridge = async () => {
-      if (bridgeRetryUsed) return;
-      bridgeRetryUsed = true;
-      await ensurePageBridge(chrome.scripting, tab.id, { forceContent: true });
-    };
-    const pageFetch = request => {
-      if (request?.capture && pendingCapture) {
-        const capture = pendingCapture;
-        pendingCapture = null;
-        return Promise.resolve(capture);
-      }
-      return bridgeFetch(request).catch(async error => {
-        if (!/Receiving end does not exist|message channel closed before a response was received/i.test(error.message || "")) throw error;
-        await recoverBridge();
-        return bridgeFetch(request);
-      });
-    };
-    pageFetch.supportsCapture = true;
-    return await task(pageFetch);
-  } finally {
-    if (temporary) await chrome.tabs.remove(tab.id).catch(() => {});
-  }
+export async function withPageFetch(station, preferredTabId, task) {
+  const origin = new URL(station.baseUrl).origin;
+  return withKeyedLock(origin, async () => {
+    const { tab, temporary } = await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
+    if (!tab?.id) throw new Error("请先在当前 Chrome 配置文件登录目标站点一次后重试");
+    try {
+      let pendingCapture = await ensurePageBridge(chrome.scripting, tab.id);
+      const bridgeFetch = createPageFetch((message, callback) => chrome.tabs.sendMessage(tab.id, message, callback));
+      let bridgeRetryUsed = false;
+      const recoverBridge = async () => {
+        if (bridgeRetryUsed) return;
+        bridgeRetryUsed = true;
+        await ensurePageBridge(chrome.scripting, tab.id, { forceContent: true });
+      };
+      const pageFetch = request => {
+        if (request?.capture && pendingCapture) {
+          const capture = pendingCapture;
+          pendingCapture = null;
+          return Promise.resolve(capture);
+        }
+        return bridgeFetch(request).catch(async error => {
+          if (!/Receiving end does not exist|message channel closed before a response was received/i.test(error.message || "")) throw error;
+          await recoverBridge();
+          return bridgeFetch(request);
+        });
+      };
+      pageFetch.supportsCapture = true;
+      return await task(pageFetch);
+    } finally {
+      if (temporary) await chrome.tabs.remove(tab.id).catch(() => {});
+    }
+  });
 }
 
 async function collect(stationInput, preferredTabId) {
-  const station = prepareStationInput(await stationWithCredentials(stationInput));
-  if (station.mode !== "page") return collectStation(station);
-  return withPageFetch(station, preferredTabId, pageFetch => collectStation(station, { pageFetch }));
+  const collection = resolveStationCollection(await stationWithCredentials(stationInput));
+  const { station } = collection;
+  if (station.mode !== "page") return collectStation(station, { collection });
+  return withPageFetch(station, preferredTabId, pageFetch => collectStation(station, { pageFetch, collection }));
 }
 
 function errorSnapshot(station, error, previous) {
@@ -121,64 +129,19 @@ function notifyReferencesRefresh(active) {
   chrome.runtime.sendMessage({ type: "REFERENCES_REFRESHING", active: Boolean(refreshAllTask || active) }, () => void chrome.runtime.lastError);
 }
 
-async function refreshAllInternal({ forceReferences = false, stationId, sourceTabId } = {}) {
-  const allStations = (await getStations()).filter(station => station.enabled && (!stationId || station.id === stationId));
-  const startedAt = Date.now();
-  const total = allStations.length;
-  const results = [];
-  notifyRefreshProgress({ phase: "start", total, completed: 0 });
-
-  if (!total) {
-    const references = await getValue("references", {});
-    const summary = { total: 0, successCount: 0, errorCount: 0, totalModels: 0, durationMs: Date.now() - startedAt };
-    notifyRefreshProgress({ phase: "complete", total, completed: 0, summary });
-    return { results, references, summary };
-  }
-  notifyRefreshProgress({ phase: "references", status: "running", total, completed: 0, message: "正在确认官方参考价" });
-  let references;
-  try {
-    references = await refreshOfficialReferences(forceReferences);
-  } catch (error) {
-    notifyRefreshProgress({ phase: "error", total, completed: 0, message: `官方参考价查询失败：${error.message || String(error)}` });
-    throw error;
-  }
-  notifyRefreshProgress({ phase: "references", status: "success", total, completed: 0, message: "官方参考价已就绪" });
-  for (const [index, station] of allStations.entries()) {
-    const current = index + 1;
-    const stationStartedAt = Date.now();
-    notifyRefreshProgress({ phase: "station", status: "running", total, completed: index, current, stationId: station.id, stationName: station.name });
-    let snapshot;
-    try {
-      snapshot = await collect(station, sourceTabId);
-      await putSnapshot(snapshot);
-    } catch (error) {
-      const previous = (await getSnapshots({ stationId: station.id, limit: 1 }))[0];
-      snapshot = errorSnapshot(station, error, previous);
-      await putSnapshot(snapshot);
-    }
-    results.push(snapshot);
-    notifyRefreshProgress({
-      phase: "station",
-      status: snapshot.status === "success" ? "success" : "error",
-      total,
-      completed: current,
-      current,
-      stationId: station.id,
-      stationName: station.name,
-      modelCount: snapshot.normalized?.data?.length || 0,
-      durationMs: Date.now() - stationStartedAt,
-      error: snapshot.error || ""
-    });
-  }
-  const summary = {
-    total,
-    successCount: results.filter(snapshot => snapshot.status === "success").length,
-    errorCount: results.filter(snapshot => snapshot.status !== "success").length,
-    totalModels: results.reduce((count, snapshot) => count + (snapshot.normalized?.data?.length || 0), 0),
-    durationMs: Date.now() - startedAt
-  };
-  notifyRefreshProgress({ phase: "complete", total, completed: total, summary });
-  return { results, references, summary };
+async function refreshAllInternal(options = {}) {
+  return runRefreshAll({
+    ...options,
+    concurrency: REFRESH_CONCURRENCY,
+    getStations,
+    getValue,
+    refreshOfficialReferences,
+    collect,
+    putSnapshot,
+    getSnapshots,
+    errorSnapshot,
+    notifyProgress: notifyRefreshProgress
+  });
 }
 
 let refreshAllTask = null;
@@ -236,51 +199,14 @@ async function refreshAll(options = {}) {
 
 
 async function ensureStationPresets(exchangeRate) {
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addFastAiStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addDddaiStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addLiuguangStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addSidruneStationPreset(stations, exchangeRate);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addCheapRouterStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addNexaStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addCunStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addAiApiStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
-  await addStationIfNeeded(stations => {
-    if (!stations.length) return null;
-    const next = addTrueSotaStationPreset(stations);
-    return next === stations ? null : normalizeStation(prepareStationInput(next[next.length - 1]));
-  });
+  const current = await getStations();
+  const next = addRegisteredStationPresets(current, { exchangeRate });
+  for (const station of next.slice(current.length)) {
+    await addStationIfNeeded(stations => {
+      if (stations.some(item => item.id === station.id)) return null;
+      return normalizeStation(prepareStationInput(station));
+    });
+  }
 }
 
 
@@ -298,9 +224,12 @@ async function dashboard() {
   const now = Date.now();
   const normalizedSnapshots = snapshots.map(snapshot => ({
     ...snapshot,
-    stale: snapshot.status !== "success" || now - snapshot.collectedAt > staleAfter
+    stale: snapshot.status !== "success" && snapshot.status !== "partial" || now - snapshot.collectedAt > staleAfter,
+  incomplete: snapshot.status === "partial" || Boolean(snapshot.normalized?.incomplete),
+  unsupportedBillingModes: snapshot.normalized?.unsupportedBillingModes || snapshot.rawMeta?.unsupportedBillingModes || [],
+  unpricedModels: snapshot.normalized?.unpricedModels || snapshot.rawMeta?.unpricedModels || []
   }));
-  const effectiveReferences = { ...references, exchangeRate: savedSettings.exchangeRate || references.exchangeRate };
+  const effectiveReferences = { ...references, exchangeRate: savedSettings.exchangeRate || references.exchangeRate, openRouterRechargeRate: savedSettings.exchangeRate || references.openRouterRechargeRate || references.exchangeRate };
   const revision = getComparisonRevision();
   const cacheable = revisionAtStart === revision;
   const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => [snapshot.id, snapshot.stale])]);
@@ -686,7 +615,7 @@ async function saveJevModelMatch(message) {
   if (Number(message.collectedAt) !== Number(snapshots[0]?.collectedAt) || (message.referencesFetchedAt ?? null) !== (references.fetchedAt ?? null) || message.jevProfileId !== settings.activeProviders.jev || message.jevBaseUrl !== String(activeJev.baseUrl || "").trim() || message.jevModelId !== String(activeJev.modelId || "").trim()) {
     throw new Error("报价、官方目录或 JEV 配置已变化，请刷新页面后重试");
   }
-  if (snapshots[0]?.status !== "success" || !snapshots[0].normalized?.data?.some(item => item.model_name === modelName && !item.catalogOnly)) throw new Error("最新报价已变化或采集失败，请先重新采集");
+  if (!["success", "partial"].includes(snapshots[0]?.status) || !snapshots[0].normalized?.data?.some(item => item.model_name === modelName && !item.catalogOnly)) throw new Error("最新报价已变化或采集失败，请先重新采集");
   if (!references.models?.some(model => (model.id || model.name) === officialModelId)) throw new Error("官方模型候选已失效，请重新获取官方数据");
   if (settings.modelMatchOverrides.some(item => item.stationId === stationId && normalizeProxyModelName(item.modelName) === normalizeProxyModelName(modelName))) throw new Error("该模型已有人工确认的匹配");
   const { directMatches, candidates } = getJevModelCandidates(modelName, references.models, settings.matchingRules);

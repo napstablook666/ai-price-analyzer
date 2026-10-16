@@ -1,6 +1,8 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
 import { callService, downloadJson, escapeHtml, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
+import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
+import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
 const state = { stations: [], settings: null, modelCatalog: { llm: [], jev: [] }, collapsedStationIds: new Set(), pendingStation: null, previewRequestId: 0 };
 const $ = selector => document.querySelector(selector);
@@ -15,6 +17,12 @@ function toast(message) {
 
 function selected(value, expected) { return value === expected ? " selected" : ""; }
 function checked(value) { return value ? " checked" : ""; }
+
+function responseFormatOptions(value) {
+  return Object.entries(RESPONSE_FORMAT_DEFINITIONS)
+    .map(([format, definition]) => `<option value="${escapeHtml(format)}"${selected(value, format)}>${escapeHtml(definition.label)}</option>`)
+    .join("");
+}
 
 function modelSelect(kind) {
   return $(kind === "jev" ? "#jev-model-id" : "#llm-model");
@@ -142,6 +150,11 @@ function stationCard(station, index) {
   const rechargeRmb = nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1);
   const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
   const rechargeAmount = convertRechargeAmount(rechargeRmb, "CNY", rechargeCurrency, currentExchangeRate());
+  const rechargeRateVerified = station.rechargeRateVerified !== false;
+  const rechargeRateNote = String(station.rechargeRateNote || "").trim();
+  const priceCurrency = "CREDITS";
+  const priceCurrencyVerified = station.priceCurrencyVerified !== false && priceCurrency !== "UNKNOWN";
+  const priceCurrencyNote = String(station.priceCurrencyNote || "").trim();
   const rechargeCredits = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
   const origin = currentSiteOrigin(station.baseUrl);
   const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
@@ -166,7 +179,7 @@ function stationCard(station, index) {
           <label><span>采集模式</span><select data-field="mode"><option value="direct"${selected(station.mode, "direct")}>直接接口</option><option value="page"${selected(station.mode, "page")}>页面桥接</option></select></label>
           <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
           <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
-          <label><span>响应格式</span><select data-field="responseFormat"><option value="auto"${selected(adapter.responseFormat, "auto")}>自动识别</option><option value="pqh"${selected(adapter.responseFormat, "pqh")}>P站 / PQH</option><option value="sora"${selected(adapter.responseFormat, "sora")}>Sora</option></select></label>
+          <label><span>响应格式</span><select data-field="responseFormat">${responseFormatOptions(adapter.responseFormat)}</select></label>
           <label class="wide"><span>手动价格 JSON（可选）</span><textarea data-field="rawJson" rows="3" placeholder='{"data":[{"model":"gpt-4o","input":2,"output":8}]}'>${escapeHtml(adapter.rawJson || "")}</textarea></label>
           <label><span>请求方式</span><select data-field="method"><option value="GET"${selected(adapter.method, "GET")}>GET</option><option value="POST"${selected(adapter.method, "POST")}>POST</option></select></label>
           <label><span>认证方式</span><select data-field="authType"><option value="none"${selected(auth.type, "none")}>无</option><option value="bearer"${selected(auth.type, "bearer")}>Bearer Token</option><option value="api-key"${selected(auth.type, "api-key")}>X-API-Key</option><option value="basic"${selected(auth.type, "basic")}>Basic</option></select></label>
@@ -176,10 +189,17 @@ function stationCard(station, index) {
           <div class="station-money-field"><label for="station-recharge-amount-${index}">充值金额</label><div class="station-money-input"><input id="station-recharge-amount-${index}" data-field="rechargeAmount" type="number" min="0" step="any" value="${rechargeAmount}"><select data-field="rechargeCurrency" data-previous-currency="${rechargeCurrency}" aria-label="充值金额币种"><option value="CNY"${selected(rechargeCurrency, "CNY")}>人民币 CNY</option><option value="USD"${selected(rechargeCurrency, "USD")}>美元 USD</option></select></div></div>
           <label><span>到账中转币</span><input data-field="rechargeCredits" type="number" min="0.000001" step="0.01" value="${rechargeCredits}"></label>
           <label><span>充值比例（¥ / 币）</span><input data-field="rechargeRate" type="number" min="0" step="0.0001" value="${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}" readonly><small data-recharge-rate-display>每 1 中转币成本 ¥${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}</small></label>
+          <input type="hidden" data-field="rechargeRateNote" value="${escapeHtml(rechargeRateNote)}">
+          <label class="check-label"><input data-field="rechargeRateVerified" type="checkbox"${checked(rechargeRateVerified)}><span>我已核实充值折算</span></label>
+          <label><span>模型列表单位</span><input data-field="priceCurrency" value="CREDITS" readonly aria-readonly="true"></label>
+          <label class="check-label"><input data-field="priceCurrencyVerified" type="checkbox"${checked(priceCurrencyVerified)}><span>我已核实模型价格币种</span></label>
+          <label class="wide"><span>模型单位核验备注</span><input data-field="priceCurrencyNote" value="${escapeHtml(priceCurrencyNote)}" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>
           <label><span>基础价 / 1M USD</span><input data-field="basePricePerMillion" type="number" min="0" step="0.0001" value="${nonNegativeNumber(station.basePricePerMillion, 2)}"></label>
           <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与比价与批量查询</span></label>
         </div>
         <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${stationHint}</p>
+        ${rechargeRateVerified ? "" : `<p class="station-recharge-warning" role="alert">充值折算未核实：${escapeHtml(rechargeRateNote || "当前按 CNY 1:1 估算，请按站点实际充值规则填写。")}</p>`}
+        ${priceCurrencyVerified ? "" : `<p class="station-price-warning" role="alert">模型价格映射未核实：${escapeHtml(priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。")}</p>`}
       </div>
     </details>
   </article>`;
@@ -204,7 +224,7 @@ function updateStationQueryStatus(progress) {
   status.dataset.status = progress.status || "";
   if (progress.status === "running") {
     bar.removeAttribute("value");
-    message.textContent = `正在查询${progress.total ? ` ${progress.current || 1}/${progress.total}` : ""} · ${stationName}`;
+    message.textContent = `正在查询${progress.total ? `（并行槽位 ${progress.current || 1}）` : ""} · ${stationName}`;
     return;
   }
   bar.max = 1;
@@ -212,16 +232,20 @@ function updateStationQueryStatus(progress) {
   const duration = Number.isFinite(progress.durationMs) ? ` · ${(progress.durationMs / 1000).toFixed(1)} 秒` : "";
   message.textContent = progress.status === "error"
     ? `查询失败${duration} · ${progress.error || "未知错误"}`
-    : `查询到 ${Number(progress.modelCount) || 0} 个模型${duration}`;
+    : progress.status === "partial"
+      ? `部分查询到 ${Number(progress.modelCount) || 0} 个模型${duration} · ${progress.error || "存在未解析计费模式"}`
+      : `查询到 ${Number(progress.modelCount) || 0} 个模型${duration}`;
 }
 
 const USAGE_INPUTS = [
   { field: "input", id: "usage-input", million: true },
   { field: "cacheRead", id: "usage-cache-read", million: true },
   { field: "cacheWrite", id: "usage-cache-write", million: true },
+  { field: "cacheWrite1h", id: "usage-cache-write-1h", million: true },
   { field: "output", id: "usage-output", million: true },
   { field: "requests", id: "usage-requests", million: false },
-  { field: "imageTokens", id: "usage-image-tokens", million: true },
+  { field: "imageInputTokens", id: "usage-image-input-tokens", million: true },
+  { field: "imageOutputTokens", id: "usage-image-output-tokens", million: true },
   { field: "peakShare", id: "usage-peak-share", million: false, percent: true },
   { field: "images", id: "usage-images", million: false }
 ];
@@ -296,6 +320,7 @@ function readStations() {
   return [...document.querySelectorAll(".station-card")].map(card => {
     const value = field => card.querySelector(`[data-field="${field}"]`)?.value || "";
     const rechargeCurrency = value("rechargeCurrency") === "USD" ? "USD" : "CNY";
+    const priceCurrency = "CREDITS";
     const rechargeRmb = convertRechargeAmount(value("rechargeAmount"), rechargeCurrency, "CNY", currentExchangeRate()) ?? 0;
     return {
       id: card.dataset.stationId || crypto.randomUUID(),
@@ -307,6 +332,11 @@ function readStations() {
       rechargeCurrency,
       rechargeCredits: Number(value("rechargeCredits")) > 0 ? Number(value("rechargeCredits")) : 1,
       rechargeRate: derivedRechargeRate(rechargeRmb, Number(value("rechargeCredits")) || 0),
+      rechargeRateVerified: card.querySelector('[data-field="rechargeRateVerified"]')?.checked ?? true,
+      rechargeRateNote: value("rechargeRateNote"),
+      priceCurrency,
+      priceCurrencyVerified: card.querySelector('[data-field="priceCurrencyVerified"]')?.checked ?? true,
+      priceCurrencyNote: value("priceCurrencyNote"),
       basePricePerMillion: nonNegativeNumber(value("basePricePerMillion"), 2),
       auth: { type: value("authType"), token: value("token"), username: value("username"), password: value("password") },
       adapter: { kind: "custom", endpoint: value("endpoint"), body: value("body"), rawJson: value("rawJson"), method: value("method"), responseFormat: value("responseFormat") },
@@ -406,6 +436,10 @@ async function saveStation(card) {
   }
 }
 
+function partialSnapshotMessage(snapshot) {
+  return getPartialDiagnostics(snapshot?.normalized).message;
+}
+
 async function refreshStation(card) {
   const button = card.querySelector("[data-refresh-station]");
   const station = readStations().find(item => item.id === card.dataset.stationId);
@@ -423,10 +457,10 @@ async function refreshStation(card) {
     state.stations = data.stations || state.stations;
     const snapshot = (data.snapshots || []).find(row => row.stationId === station.id);
     if (!snapshot) throw new Error("未返回该站点的查询结果");
-    const status = snapshot.status === "success" ? "success" : "error";
+    const status = snapshot.status === "success" ? "success" : snapshot.status === "partial" ? "partial" : "error";
     const modelCount = snapshot.normalized?.data?.length || 0;
-    updateStationQueryStatus({ stationId: station.id, stationName: station.name, status, modelCount, durationMs: Date.now() - startedAt, error: snapshot.error });
-    toast(status === "success" ? `已查询 ${modelCount} 个模型` : `查询失败：${snapshot.error || "请查看仪表盘"}`);
+    updateStationQueryStatus({ stationId: station.id, stationName: station.name, status, modelCount, durationMs: Date.now() - startedAt, error: snapshot.error || (status === "partial" ? partialSnapshotMessage(snapshot) : "") });
+    toast(status === "success" ? `已查询 ${modelCount} 个模型` : status === "partial" ? `部分查询：${modelCount} 个模型，${partialSnapshotMessage(snapshot)}` : `查询失败：${snapshot.error || "请查看仪表盘"}`);
   } catch (error) {
     updateStationQueryStatus({ stationId: station.id, stationName: station.name, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
     toast(error.message || String(error));
@@ -525,7 +559,7 @@ function showStationPreview(result, rechargeRatio) {
   suggestion.baseUrl = stationPreviewBaseUrl(suggestion.baseUrl, pending.station.baseUrl);
   pending.suggestion = suggestion;
   const authLabels = { none: "无", bearer: "Bearer Token", "api-key": "X-API-Key", basic: "Basic" };
-  const formatLabels = { auto: "自动识别", pqh: "P站 / PQH", sora: "Sora" };
+  const formatLabels = Object.fromEntries(Object.entries(RESPONSE_FORMAT_DEFINITIONS).map(([format, definition]) => [format, definition.label]));
   const endpoint = suggestion.endpoint || "自动探测";
   const format = `${suggestion.method || "GET"} / ${formatLabels[suggestion.responseFormat] || suggestion.responseFormat || "自动识别"}`;
   const fields = {
@@ -666,7 +700,7 @@ function commitStationPreview() {
       endpoint: suggestion.endpoint || pending.station.adapter.endpoint,
       body: suggestion.body || pending.station.adapter.body,
       method: ["GET", "POST"].includes(suggestion.method) ? suggestion.method : pending.station.adapter.method,
-      responseFormat: ["auto", "pqh", "sora"].includes(suggestion.responseFormat) ? suggestion.responseFormat : pending.station.adapter.responseFormat
+      responseFormat: isSupportedResponseFormat(suggestion.responseFormat) ? suggestion.responseFormat : pending.station.adapter.responseFormat
     }
   };
   state.collapsedStationIds.delete(station.id);
@@ -749,9 +783,9 @@ $("#stations-list").addEventListener("click", async event => {
     try {
       const result = await callService("TEST_STATION", { station });
       const snapshot = result.snapshot;
-      if (snapshot.status !== "success") throw new Error(snapshot.error || "连接失败");
-      updateStationQueryStatus({ stationId: card.dataset.stationId, status: "success", modelCount: snapshot.normalized?.data?.length || 0, durationMs: Date.now() - startedAt });
-      toast(`连接成功：${snapshot.normalized.data.length} 个模型`);
+      if (!["success", "partial"].includes(snapshot.status)) throw new Error(snapshot.error || "连接失败");
+      updateStationQueryStatus({ stationId: card.dataset.stationId, status: snapshot.status, modelCount: snapshot.normalized?.data?.length || 0, durationMs: Date.now() - startedAt, error: snapshot.status === "partial" ? partialSnapshotMessage(snapshot) : "" });
+      toast(snapshot.status === "partial" ? `连接成功，但${partialSnapshotMessage(snapshot)}` : `连接成功：${snapshot.normalized.data.length} 个模型`);
     } catch (error) {
       updateStationQueryStatus({ stationId: card.dataset.stationId, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
       toast(error.message || String(error));

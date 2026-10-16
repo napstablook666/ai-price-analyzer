@@ -38,7 +38,8 @@ export function parseOpenRouterData(json) {
       request,
       imageOutput,
       imagePrice,
-      isImageModel: Array.isArray(modalities) && modalities.includes("image")
+      isImageModel: Array.isArray(modalities) && modalities.includes("image"),
+      price_currency: "USD"
     }];
   });
 }

@@ -1,30 +1,62 @@
 import { DEFAULT_MATCHING_RULES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { buildModelMatchIndex, matchModelWithOverrides } from "./matching.js";
+import { STANDARD_PRICE_FIELDS } from "./price-fields.js";
 
-const PRICE_FIELDS = ["input", "output", "cacheRead", "cacheWrite", "request", "imageOutput", "imagePrice"];
 
 export function currencyToRmb(currency, rechargeRate = 1) {
-  const code = String(currency || "USD").toUpperCase();
+  const code = String(currency ?? "").trim().toUpperCase();
+  if (!code || ["UNKNOWN", "UNSPECIFIED", "NONE"].includes(code)) return null;
   if (["CNY", "RMB", "¥", "￥"].includes(code)) return 1;
+  if (!["USD", "CREDITS", "POINTS"].includes(code)) return null;
   const rate = Number(rechargeRate);
   return Number.isFinite(rate) ? rate : 1;
 }
 
-export function getProxyPrices(item = {}, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M) {
-  const factor = currencyToRmb(item.price_currency, rechargeRate);
+function buildProxyPrices(item = {}, groupRatio = 1, factor = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M) {
   const explicit = value => value === null || value === undefined || value === "" ? null : (Number.isFinite(Number(value)) ? Number(value) * factor : null);
   const billing = item.billing || {};
-  const fallbackInput = (Number(item.model_ratio) || 0) * (Number(groupRatio) || 1) * basePrice * factor;
-  const fallbackOutput = fallbackInput * (Number(item.completion_ratio) || 1);
+  const cacheWrite1h = explicit(item.cache_write_1h_price) ?? explicit(billing.cacheWrite1h);
+  const fallbackInput = Number.isFinite(Number(item.model_ratio)) && Number(item.model_ratio) > 0 ? Number(item.model_ratio) * (Number(groupRatio) || 1) * basePrice * factor : null;
+  const fallbackOutput = fallbackInput === null ? null : fallbackInput * (Number(item.completion_ratio) || 1);
+  const imageInput = explicit(item.image_input_price) ?? explicit(billing.imageInput);
   return {
     input: explicit(item.input_price) ?? fallbackInput,
     output: explicit(item.output_price) ?? fallbackOutput,
     cacheRead: explicit(item.cache_read_price) ?? explicit(billing.cacheRead),
     cacheWrite: explicit(item.cache_write_price) ?? explicit(billing.cacheWrite),
+    ...(cacheWrite1h === null ? {} : { cacheWrite1h }),
     request: explicit(item.request_price) ?? explicit(billing.request),
+    ...(imageInput === null ? {} : { imageInput }),
     imageOutput: explicit(item.image_output_price) ?? explicit(billing.imageOutput),
     imagePrice: explicit(item.image_price) ?? explicit(billing.imagePrice)
   };
+}
+
+function hasNumericPrice(prices = {}) {
+  return STANDARD_PRICE_FIELDS.some(field => Number.isFinite(prices[field]));
+}
+
+export function getProxyPriceQuote(item = {}, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true) {
+  const factor = currencyToRmb(item.price_currency, rechargeRate);
+  const unavailableReasons = [];
+  if (factor === null || priceCurrencyVerified === false) unavailableReasons.push("currency_unverified");
+  if (rechargeRateVerified === false) unavailableReasons.push("recharge_unverified");
+  const sourceCurrency = String(item.price_currency ?? "").trim().toUpperCase() || "UNKNOWN";
+  const quotedPrices = buildProxyPrices(item, groupRatio, 1, basePrice);
+  if (!hasNumericPrice(quotedPrices)) unavailableReasons.push("price_missing");
+  return {
+    quotedPrices,
+    costPrices: unavailableReasons.length ? null : buildProxyPrices(item, groupRatio, factor, basePrice),
+    sourceCurrency,
+    quotedInSourceCurrency: unavailableReasons.length > 0,
+    pricingUnavailable: unavailableReasons.length > 0,
+    pricingUnavailableReasons: unavailableReasons
+  };
+}
+
+export function getProxyPrices(item = {}, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true) {
+  const quote = getProxyPriceQuote(item, groupRatio, rechargeRate, basePrice, priceCurrencyVerified, rechargeRateVerified);
+  return quote.costPrices || { ...Object.fromEntries(STANDARD_PRICE_FIELDS.map(field => [field, null])), pricingUnavailable: true, pricingUnavailableReasons: quote.pricingUnavailableReasons };
 }
 
 export function workloadCost(prices = {}, usage = {}) {
@@ -32,9 +64,11 @@ export function workloadCost(prices = {}, usage = {}) {
   return perMillion(prices.input, usage.input) +
     perMillion(prices.cacheRead ?? prices.input, usage.cacheRead) +
     perMillion(prices.cacheWrite ?? prices.input, usage.cacheWrite) +
+    perMillion(prices.cacheWrite1h, usage.cacheWrite1h) +
     perMillion(prices.output, usage.output) +
     (Number(usage.requests) || 0) * (Number.isFinite(prices.request) ? prices.request : 0) +
-    perMillion(prices.imageOutput, usage.imageTokens) +
+    perMillion(prices.imageInput, usage.imageInputTokens) +
+    perMillion(prices.imageOutput, usage.imageOutputTokens ?? usage.imageTokens) +
     (Number(usage.images) || 0) * (Number.isFinite(prices.imagePrice) ? prices.imagePrice : 0);
 }
 
@@ -46,7 +80,9 @@ export function referencePrices(model, exchangeRate = 1) {
     output: (Number(model.output) || 0) * factor,
     cacheRead: Number.isFinite(model.cacheRead) ? model.cacheRead * factor : null,
     cacheWrite: Number.isFinite(model.cacheWrite) ? model.cacheWrite * factor : null,
+    ...(Number.isFinite(model.cacheWrite1h) ? { cacheWrite1h: model.cacheWrite1h * factor } : {}),
     request: Number.isFinite(model.request) ? model.request * factor : null,
+    imageInput: Number.isFinite(model.imageInput) ? model.imageInput * factor : null,
     imageOutput: Number.isFinite(model.imageOutput) ? model.imageOutput * factor : null,
     imagePrice: Number.isFinite(model.imagePrice) ? model.imagePrice * factor : null
   };
@@ -80,7 +116,7 @@ function offerGroups(item, normalized) {
 }
 
 function addWeighted(target, source, share) {
-  for (const field of PRICE_FIELDS) {
+  for (const field of STANDARD_PRICE_FIELDS) {
     const value = source[field];
     if (!Number.isFinite(value)) continue;
     target[field] = (target[field] ?? 0) + value * share;
@@ -101,6 +137,7 @@ export function confidenceScore(row) {
 }
 
 function classifyOffer(offer) {
+  if (offer.pricingUnavailable) return "pending";
   if (offer.monthlyCost === 0 && offer.officialMonthlyCost > 0) return "excellent";
   if (offer.officialMonthlyCost === 0 && offer.monthlyCost > 0) return "bad";
   if (offer.diffPercent < -40) return "excellent";
@@ -112,7 +149,7 @@ function classifyOffer(offer) {
 export function addRecommendationScores(comparisons, profile = "price") {
   const weights = { balanced: [0.8, 0.2], price: [0.9, 0.1], reliability: [0.7, 0.3] }[profile] || [0.9, 0.1];
   for (const comparison of comparisons) {
-    const candidates = comparison.offers.filter(offer => Number.isFinite(offer.monthlyCost));
+    const candidates = comparison.offers.filter(offer => !offer.pricingUnavailable && !offer.incomplete && Number.isFinite(offer.monthlyCost));
     const eligible = candidates.filter(offer => offer.matchRuleId === "exact" && Number(offer.officialMonthlyCost) > 0);
     const minCost = candidates.length ? Math.min(...candidates.map(offer => offer.monthlyCost)) : null;
     const maxCost = candidates.length ? Math.max(...candidates.map(offer => offer.monthlyCost)) : null;
@@ -150,6 +187,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     if (!station || !snapshot.normalized?.data) continue;
     const tierSharesByGroup = new Map();
     const tierItemsByGroup = new Map();
+    const rawUnpricedModelKeys = snapshot.unpricedModels || snapshot.normalized?.unpricedModels;
+    const unpricedModelKeys = Array.isArray(rawUnpricedModelKeys) ? rawUnpricedModelKeys.map(value => String(value)) : [];
     snapshot.normalized.data.forEach(item => {
       if (item.catalogOnly) return;
       if (!item.tier_name) return;
@@ -169,9 +208,15 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       for (const group of offerGroups(item, snapshot.normalized)) {
         const rawGroupRatio = item.group_ratio ?? snapshot.normalized.group_ratio?.[group] ?? snapshot.normalized.group_ratio?.[item.enable_groups?.[0]];
         const groupRatio = Number.isFinite(Number(rawGroupRatio)) ? Number(rawGroupRatio) : 1;
-        const proxyPrices = getProxyPrices(item, groupRatio, station.rechargeRate, station.basePricePerMillion);
+        const hasUnpricedPriceGap = unpricedModelKeys.some(value => value.startsWith(`${group}:${item.model_name}:`));
+        const priceCurrencyVerified = station.priceCurrencyVerified ?? snapshot.priceCurrencyVerified;
+        const rechargeRateVerified = station.rechargeRateVerified ?? snapshot.rechargeRateVerified;
+        const priceQuote = getProxyPriceQuote(item, groupRatio, station.rechargeRate, station.basePricePerMillion, priceCurrencyVerified, rechargeRateVerified);
+        const quotedPrices = priceQuote.quotedPrices;
+        const baseCostPrices = priceQuote.costPrices;
         const share = item.tier_name ? (tierSharesByGroup.get(tierKey(item, group))?.get(item) ?? 0) : 1;
         for (const result of matchResults) {
+          let costPrices = baseCostPrices;
           const official = result.match;
           const canonicalModel = official?.name || item.model_name;
           const rowKey = [station.id, item.model_name, official?.name || "", official?.provider || "", group, item.tier_name ? "tier" : `item:${itemIndex}`].join("\u0000");
@@ -182,9 +227,16 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             official,
             offers: [],
             proxyPrices: {},
+            costPrices: {},
+            officialQuotedPrices: {},
             officialPrices: {},
+            officialCurrency: "CREDITS",
+            sourceCurrency: null,
+            quotedInSourceCurrency: false,
             tierNames: new Set(),
             cacheReadEstimated: false,
+            pricingUnavailable: false,
+            pricingUnavailableReasons: new Set(),
             cacheWriteEstimated: false,
             monthlyCost: 0,
             officialMonthlyCost: 0,
@@ -199,16 +251,36 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             matchConfidence: result.confidence,
             matchCandidateCount: matches.length,
             evidence: item.evidence || "estimated",
-            stale: Boolean(snapshot.stale || snapshot.status !== "success"),
+            incomplete: Boolean(snapshot.incomplete || snapshot.status === "partial" || snapshot.normalized?.incomplete),
+            unsupportedBillingModes: snapshot.unsupportedBillingModes || snapshot.normalized?.unsupportedBillingModes || [],
+            invalidPricingValues: snapshot.invalidPricingValues || snapshot.normalized?.invalidPricingValues || [],
+            unpricedModels: snapshot.unpricedModels || snapshot.normalized?.unpricedModels || [],
+            stale: Boolean(snapshot.stale || (snapshot.status !== "success" && snapshot.status !== "partial")),
             collectedAt: snapshot.collectedAt,
             sourceFormat: snapshot.source || snapshot.normalized.sourceFormat || "unknown"
           };
-          addWeighted(row.proxyPrices, proxyPrices, share);
-          const officialPrices = referencePrices(official, references.exchangeRate || 1);
+          for (const reason of priceQuote.pricingUnavailableReasons) row.pricingUnavailableReasons.add(reason);
+          if (!row.sourceCurrency) row.sourceCurrency = priceQuote.sourceCurrency;
+          else if (row.sourceCurrency !== priceQuote.sourceCurrency) row.sourceCurrency = "MIXED";
+          row.quotedInSourceCurrency ||= priceQuote.quotedInSourceCurrency;
+          if ((Number(usage.cacheWrite1h) || 0) > 0 && !Number.isFinite(costPrices?.cacheWrite1h)) {
+            row.pricingUnavailableReasons.add("cache_write_1h_missing");
+            costPrices = null;
+          }
+          if (hasUnpricedPriceGap) {
+            row.pricingUnavailableReasons.add("unpriced_model_price_missing");
+            costPrices = null;
+          }
+          if (priceQuote.pricingUnavailable || !costPrices) row.pricingUnavailable = true;
+          addWeighted(row.proxyPrices, quotedPrices, share);
+          if (costPrices) addWeighted(row.costPrices, costPrices, share);
+          const officialQuotedPrices = referencePrices(official, 1);
+          const officialPrices = referencePrices(official, references.openRouterRechargeRate || references.exchangeRate || 1);
+          if (officialQuotedPrices) addWeighted(row.officialQuotedPrices, officialQuotedPrices, share);
           if (officialPrices) addWeighted(row.officialPrices, officialPrices, share);
-          if (proxyPrices.cacheRead === null) row.cacheReadEstimated = true;
-          if (proxyPrices.cacheWrite === null) row.cacheWriteEstimated = true;
-          row.monthlyCost += workloadCost(proxyPrices, usage) * share;
+          if (quotedPrices.cacheRead === null) row.cacheReadEstimated = true;
+          if (quotedPrices.cacheWrite === null) row.cacheWriteEstimated = true;
+          if (costPrices) row.monthlyCost += workloadCost(costPrices, usage) * share;
           row.officialMonthlyCost += officialPrices ? workloadCost(officialPrices, usage) * share : 0;
           if (item.tier_name) row.tierNames.add(`${item.tier_name} ${Math.round(share * 100)}%`);
           grouped.set(rowKey, row);
@@ -219,7 +291,9 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
 
   const comparisons = new Map();
   for (const row of grouped.values()) {
-    const prices = { ...row.proxyPrices };
+    const quotedUnit = hasNumericPrice(row.proxyPrices) ? row.proxyPrices : null;
+    const costUnit = hasNumericPrice(row.costPrices) ? row.costPrices : null;
+    const officialQuotedUnit = Object.keys(row.officialQuotedPrices).length ? row.officialQuotedPrices : null;
     const officialUnit = Object.keys(row.officialPrices).length ? row.officialPrices : null;
     const offer = {
       stationId: row.stationId,
@@ -235,12 +309,24 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       groupName: row.groupName,
       groupRatio: row.groupRatio,
       tierName: [...row.tierNames].join(" / ") || "标准",
-      prices,
+      quotedPrices: quotedUnit,
+      prices: quotedUnit,
+      costPrices: row.pricingUnavailable ? null : costUnit,
+      sourceCurrency: row.sourceCurrency || "UNKNOWN",
+      quotedInSourceCurrency: row.quotedInSourceCurrency,
       officialPrices: officialUnit,
-      monthlyCost: row.monthlyCost,
+      officialQuotedPrices: officialQuotedUnit,
+      officialCurrency: row.officialCurrency,
+      monthlyCost: row.pricingUnavailable ? null : row.monthlyCost,
       officialMonthlyCost: row.official ? row.officialMonthlyCost : null,
-      diffPercent: row.official && row.officialMonthlyCost > 0 ? ((row.monthlyCost - row.officialMonthlyCost) / row.officialMonthlyCost) * 100 : null,
+      diffPercent: !row.pricingUnavailable && Number.isFinite(row.monthlyCost) && row.official && row.officialMonthlyCost > 0 ? ((row.monthlyCost - row.officialMonthlyCost) / row.officialMonthlyCost) * 100 : null,
       evidence: row.evidence,
+      pricingUnavailable: row.pricingUnavailable,
+      pricingUnavailableReasons: [...row.pricingUnavailableReasons].sort(),
+      incomplete: row.incomplete,
+      unsupportedBillingModes: row.unsupportedBillingModes,
+      invalidPricingValues: row.invalidPricingValues,
+      unpricedModels: row.unpricedModels,
       cacheReadEstimated: row.cacheReadEstimated,
       cacheWriteEstimated: row.cacheWriteEstimated,
       stale: row.stale,

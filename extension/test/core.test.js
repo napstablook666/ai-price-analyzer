@@ -1,24 +1,50 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
-import { icon } from "../src/shared/ui.js";
+import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
-import { collectStation, prepareStationInput } from "../src/core/collectors.js";
-import { addRecommendationScores, buildComparisonRows, getProxyPrices, getTierShares, workloadCost } from "../src/core/pricing.js";
+import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
+import { HEPINGAN_CHANNELS_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
+import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
+import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
+import { addRecommendationScores, buildComparisonRows, currencyToRmb, getProxyPriceQuote, getProxyPrices, getTierShares, workloadCost } from "../src/core/pricing.js";
+import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
+import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
 import { buildModelMatchIndex, getJevModelCandidates, matchModel, matchModelWithOverrides, matchOne, suggestModelCandidates } from "../src/core/matching.js";
 import { normalizePricingPayload } from "../src/core/collectors.js";
 import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
-import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
+import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
-import { ensurePageBridge, findOrOpenPageTab, selectPageTab } from "../src/core/page-tabs.js";
+import {
+  CONTENT_BRIDGE_VERSION,
+  CONTENT_PROBE_REQUEST_TYPE,
+  CONTENT_PROBE_RESPONSE_TYPE,
+  LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE,
+  LEGACY_PAGE_WINDOW_REQUEST_TYPE,
+  LEGACY_PAGE_WINDOW_RESPONSE_TYPE,
+  PAGE_BRIDGE_VERSION,
+  PAGE_RUNTIME_CAPTURE_TYPE,
+  PAGE_RUNTIME_FETCH_TYPE,
+  PAGE_WINDOW_CAPTURE_REQUEST_TYPE,
+  PAGE_WINDOW_REQUEST_TYPE,
+  PAGE_WINDOW_RESPONSE_TYPE
+} from "../src/core/bridge-protocol.js";
+import { ensurePageBridge, findOrOpenPageTab, resetContentBridge, selectPageTab } from "../src/core/page-tabs.js";
 import { inferStationAdapter, parseAdapterSuggestion } from "../src/core/adapters.js";
-import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnapshots, putSnapshot, putStations, redactStation } from "../src/shared/db.js";
+import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, putSnapshot, putStations, redactStation } from "../src/shared/db.js";
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addLiuguangStationPreset, addNexaStationPreset, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addNodeAiStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
+import { runWithConcurrency, withKeyedLock } from "../src/core/concurrency.js";
+import { runRefreshAll } from "../src/core/refresh-scheduler.js";
+
+const collectStationInput = (stationInput, options = {}) => {
+  const collection = resolveStationCollection(stationInput);
+  return collectPreparedStation(collection.station, { ...options, collection });
+};
 
 const pqhFixture = {
   pricing_version: 1,
@@ -45,8 +71,8 @@ const aiApiFixture = {
   ok: true,
   data: {
     version: 2,
-    source: "cnaiapi",
-    provider: "AIAPI",
+    source: "model_prices",
+    provider: "configured",
     groups: [{
       id: "starter",
       code: "starter",
@@ -76,6 +102,159 @@ const trueSotaFixture = {
   }
 };
 
+
+const nodeAiFixture = {
+  code: 0,
+  message: "success",
+  data: {
+    groups: [
+      {
+        id: "image",
+        name: "Image",
+        rate_multiplier: 0.5,
+        user_rate_multiplier: 0.8,
+        image_rate_independent: true,
+        image_rate_multiplier: 1.25,
+        models: [{
+          name: "node-image",
+          pricing: {
+            billing_mode: "image",
+            input_price: 0.000001,
+            image_output_price: 0.25,
+            per_request_price: 2,
+            intervals: []
+          }
+        }, {
+          name: "node-image-generation",
+          pricing: {
+            billing_mode: "image_generation",
+            image_output_price: 0.1,
+            intervals: []
+          }
+        }]
+      },
+      {
+        id: "text",
+        name: "Text",
+        rate_multiplier: 0.5,
+        user_rate_multiplier: 1.5,
+        models: [{
+          name: "node-text",
+          pricing: {
+            billing_mode: "token",
+            input_price: 0.000001,
+            output_price: 0.000002,
+            cache_read_price: 0.0000001,
+            cache_write_price: 0.0000002,
+            intervals: [
+              { tier_label: "<200K", input_price: 0.000001, output_price: 0.000002, cache_read_price: 0.0000001 },
+              { tier_label: ">=200K", input_price: 0.000002, output_price: 0.000004, cache_read_price: 0.0000002, cache_write_price: 0.0000004 }
+            ],
+            official_pricing: { input_price: 9, output_price: 9 }
+          }
+        }, {
+          name: "node-request",
+          pricing: {
+            billing_mode: "request",
+            per_request_price: 0.4,
+            intervals: []
+          }
+        }]
+      }
+    ]
+  }
+};
+const killAiFixture = {
+  code: 0,
+  message: "success",
+  data: {
+    description: "KillAI model plaza sample",
+    groups: [
+      {
+        id: "text",
+        name: "Text",
+        platform: "openai",
+        rate_multiplier: 1.5,
+        long_context_pricing_enabled: true,
+        models: [{
+          name: "kill-text",
+          pricing: {
+            billing_mode: "token",
+            input_price: 0.000002,
+            output_price: 0.000008,
+            intervals: [
+              { tier_label: "standard", input_price: 0.000001, output_price: 0.000004, cache_read_price: 0.0000002 },
+              { tier_label: "long", input_price: 0.000002, output_price: 0.000006, cache_read_price: 0.0000004 }
+            ]
+          }
+        }]
+      },
+      {
+        id: "image",
+        name: "Image",
+        platform: "openai",
+        rate_multiplier: 2,
+        models: [{
+          name: "kill-image",
+          pricing: {
+            billing_mode: "image",
+            image_input_price: 0.000003,
+            image_output_price: 0.000004
+          }
+        }]
+      }
+    ]
+  }
+};
+
+
+
+const fuckEveryoneFixture = {
+  code: 0,
+  message: "success",
+  data: {
+    groups: [
+      {
+        name: "Text",
+        rate_multiplier: 0.5,
+        user_rate_multiplier: 1.5,
+        models: [{ name: "text-model", pricing: { billing_mode: "token", input_price: 0.000001, output_price: 0.000002, cache_write_1h_price: 0.0000003, intervals: [] } }]
+      },
+      {
+        name: "Image",
+        rate_multiplier: 0.5,
+        user_rate_multiplier: 2,
+        image_rate_independent: true,
+        image_rate_multiplier: 1.25,
+        models: [{ name: "image-model", pricing: { billing_mode: "image", image_input_price: 0.000003, image_output_price: 0.04, intervals: [] } }]
+      },
+      {
+        name: "Video",
+        rate_multiplier: 0.5,
+        user_rate_multiplier: 1,
+        video_rate_independent: true,
+        video_rate_multiplier: 1.2,
+        models: [{ name: "video-model", pricing: { billing_mode: "per_request", per_request_price: 0.2, intervals: [] } }]
+      }
+    ]
+  }
+};
+
+const fuckEveryoneScreenshotFixture = {
+  code: 0,
+  message: "success",
+  data: {
+    groups: [{
+      name: "ccmax 高智商",
+      rate_multiplier: 1,
+      user_rate_multiplier: 1,
+      models: [
+        { name: "claude-fable-5", pricing: { billing_mode: "token", input_price: 0.00001, output_price: 0.00005, cache_read_price: 0.000001, cache_write_price: 0.0000125, cache_write_1h_price: 0.0000125, intervals: [] } },
+        { name: "claude-fable-5.1", pricing: { billing_mode: "token", input_price: 0.00001, output_price: 0.00005, cache_read_price: 0.000001, cache_write_price: 0.0000125, cache_write_1h_price: 0.0000125, intervals: [] } }
+      ]
+    }]
+  }
+};
 test("adds the missing AIAPI station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
   const stations = addAiApiStationPreset(current);
@@ -83,6 +262,7 @@ test("adds the missing AIAPI station once for an existing registry", () => {
   assert.equal(stations[1].baseUrl, "https://cn.aiapi.bot/dashboard/model-prices");
   assert.equal(stations[1].mode, "page");
   assert.equal(stations[1].adapter.kind, "aiapi-model-catalog");
+  assert.equal(stations[1].adapter.responseFormat, "aiapi-model-catalog");
   assert.equal(addAiApiStationPreset(stations), stations);
   assert.equal(addAiApiStationPreset([]).length, 0);
 });
@@ -116,7 +296,7 @@ test("adds and collects TrueSOTA public model pricing", async () => {
   assert.equal(prepared.adapter.kind, "true-sota-model-pricing");
 
   let request;
-  const snapshot = await collectStation({ ...station, adapter }, {
+  const snapshot = await collectStationInput({ ...station, adapter }, {
     fetchImpl: async (url, init) => {
       request = { url, init };
       return response(trueSotaFixture);
@@ -141,14 +321,18 @@ test("collects AIAPI prices through its logged-in model page", async () => {
     adapter: { endpoint: "/wrong", method: "POST", responseFormat: "pqh" }
   };
   const adapter = inferStationAdapter(station);
+  const provider = providerForStation(station);
+  assert.equal(provider.responseFormat, "aiapi-model-catalog");
   assert.equal(adapter.mode, "page");
   assert.equal(adapter.endpoint, "/api/me/model-catalog");
   assert.equal(adapter.method, "GET");
+  assert.equal(adapter.responseFormat, "aiapi-model-catalog");
   assert.equal(adapter.authType, "none");
   const prepared = prepareStationInput({ ...station, adapter });
   assert.equal(prepared.baseUrl, "https://cn.aiapi.bot/dashboard/model-prices");
   assert.equal(prepared.auth.type, "none");
   assert.equal(prepared.adapter.kind, "aiapi-model-catalog");
+  assert.equal(prepared.adapter.responseFormat, "aiapi-model-catalog");
   const requests = [];
   const pageFetch = async request => {
     requests.push(request);
@@ -157,12 +341,14 @@ test("collects AIAPI prices through its logged-in model page", async () => {
       : { ok: true, status: 200, body: aiApiFixture };
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({ ...station, adapter }, { pageFetch });
+  const snapshot = await collectStationInput({ ...station, adapter }, { pageFetch });
   assert.equal(requests[1].url, "https://cn.aiapi.bot/api/me/model-catalog");
   assert.equal(requests[1].headers.Authorization, undefined);
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "aiapi-model-catalog");
   const model = snapshot.normalized.data[0];
+  assert.ok(snapshot.normalized.data.length > 0);
+  assert.ok(Number.isFinite(model.input_price));
   assert.equal(model.model_name, "gpt-5.6-luna");
   assert.equal(model.proxy_group_name, "Starter 0.25x");
   assert.equal(snapshot.normalized.group_ratio[model.proxy_group_name], 0.25);
@@ -180,7 +366,7 @@ test("does not treat AIAPI model metadata as price values", async () => {
     return { ok: true, status: 200, body: payload };
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({
+  const snapshot = await collectStationInput({
     id: "station-aiapi-metadata",
     name: "AIAPI",
     baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
@@ -192,18 +378,145 @@ test("does not treat AIAPI model metadata as price values", async () => {
   assert.equal(snapshot.normalized.data[0].input_price, 0.25);
 });
 
+
+test("supports top-level AIAPI model prices as a compatibility shape", async () => {
+  const payload = {
+    ok: true,
+    data: {
+      catalogVersion: "public-catalog-v1",
+      groups: [],
+      models: [{
+        id: "gpt-5.6-luna",
+        displayName: "GPT-5.6 Luna",
+        effective: { inputPer1M: 0.25, outputPer1M: 1.5, cacheReadPer1M: 0.025, cacheCreatePer1M: 0.1 }
+      }]
+    }
+  };
+  let endpoint;
+  const pageFetch = async request => {
+    if (!request.capture) endpoint = request.url;
+    return request.capture
+      ? { ok: true, status: 404, body: { data: [] } }
+      : { ok: true, status: 200, body: payload };
+  };
+  pageFetch.supportsCapture = true;
+  const snapshot = await collectStationInput({
+    id: "station-aiapi-top-level",
+    name: "AIAPI",
+    baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
+    mode: "page",
+    adapter: { kind: "aiapi-model-catalog", endpoint: "/api/me/model-catalog", method: "GET" }
+  }, { pageFetch });
+  assert.equal(snapshot.status, "success");
+  assert.equal(endpoint, "https://cn.aiapi.bot/api/me/model-catalog");
+  assert.equal(snapshot.normalized.sourceFormat, "aiapi-model-catalog");
+  assert.equal(snapshot.normalized.data[0].proxy_group_name, "public-catalog-v1");
+  assert.equal(snapshot.normalized.data[0].input_price, 0.25);
+});
+
+
+test("does not route generic effective model shapes to AIAPI", () => {
+  for (const payload of [
+    { data: { models: [{ id: "other-model", effective: { latencyMs: 12 } }] } },
+    { data: { models: [{ id: "other-model", effective: { inputPer1M: 1 } }] } },
+    { data: { provider: "other", models: [{ id: "other-model", effective: { inputPer1M: 1 } }] } },
+    { data: { catalogVersion: "other-catalog-v1", models: [{ id: "other-model", effective: { inputPer1M: 1 } }] } },
+    { data: { groups: [{ name: "other", models: [{ id: "other-model", effective: { latencyMs: 12 } }] }] } }
+  ]) {
+    const normalized = normalizePricingPayload(payload);
+    assert.notEqual(normalized.sourceFormat, "aiapi-model-catalog");
+    assert.equal(normalized.data.length, 0);
+  }
+});
+
+
+test("normalizes every registered AIAPI model price field", () => {
+  const outputByField = {
+    inputPer1M: "input_price",
+    outputPer1M: "output_price",
+    cacheReadPer1M: "cache_read_price",
+    cacheCreatePer1M: "cache_write_price",
+    cacheCreate1hPer1M: "cache_write_1h_price"
+  };
+  for (const field of AIAPI_EFFECTIVE_PRICE_FIELDS) {
+    const normalized = normalizePricingPayload({
+      data: {
+        source: "cnaiapi",
+        groups: [{ name: "Starter", billingMultiplier: 1, models: [{ id: "contract-model", effective: { [field]: 1 } }] }]
+      }
+    });
+    assert.equal(normalized.sourceFormat, "aiapi-model-catalog", field);
+    assert.equal(normalized.data.length, 1, field);
+    assert.equal(normalized.data[0][outputByField[field]], 1, field);
+  }
+});
+
+test("reports an empty AIAPI catalog separately from invalid prices", async () => {
+  const pageFetch = async request => ({
+    ok: true,
+    status: 200,
+    body: request.capture ? { data: [] } : { ok: true, data: { groups: [], models: [] } }
+  });
+  pageFetch.supportsCapture = true;
+  await assert.rejects(() => collectStationInput({
+    id: "station-aiapi-empty",
+    name: "AIAPI",
+    baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
+    mode: "page",
+    adapter: { kind: "aiapi-model-catalog", endpoint: "/api/me/model-catalog", method: "GET" }
+  }, { pageFetch }), /未生成可用价格数据/);
+});
+
+
+test("rejects invalid AIAPI price values from page capture", async () => {
+  const payload = structuredClone(aiApiFixture);
+  payload.data.groups[0].models[0].effective.inputPer1M = "not-a-price";
+  const pageFetch = async () => ({ ok: true, status: 200, body: payload });
+  pageFetch.supportsCapture = true;
+  await assert.rejects(() => collectPreparedStation({
+    id: "station-aiapi-invalid",
+    name: "AIAPI",
+    baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
+    mode: "page",
+    adapter: { kind: "aiapi-model-catalog", endpoint: "/api/me/model-catalog", method: "GET" }
+  }, {
+    pageFetch,
+    collection: { endpoints: [], priceKeys: AIAPI_PRICE_KEYS, request: {} }
+  }), /页面响应未通过价格数据校验/);
+});
+
+
+test("rejects invalid normalized prices from the AIAPI page endpoint", async () => {
+  const pageFetch = async request => request.capture
+    ? { ok: true, status: 404, body: { data: [] } }
+    : {
+      ok: true,
+      status: 200,
+      body: { normalized: { data: [{ model_name: "gpt-5.6-luna", input_price: -1, output_price: 1 }] } }
+    };
+  pageFetch.supportsCapture = true;
+  await assert.rejects(() => collectStationInput({
+    id: "station-aiapi-invalid-normalized",
+    name: "AIAPI",
+    baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
+    mode: "page",
+    adapter: { kind: "aiapi-model-catalog", endpoint: "/api/me/model-catalog", method: "GET" }
+  }, { pageFetch }), /页面响应未通过价格数据校验/);
+});
+
 test("captures the AIAPI model catalog from page requests", async () => {
   const origin = "https://cn.aiapi.bot";
   const listeners = new Map();
   const posted = [];
   const document = { body: { innerText: "" }, querySelectorAll: () => [] };
+  let capturedPayload = aiApiFixture;
   const pageWindow = {
     location: { hostname: "cn.aiapi.bot", origin, href: `${origin}/dashboard/model-prices` },
     history: { pushState() {}, replaceState() {} },
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener() {},
     postMessage(message) { posted.push(message); },
-    fetch: async () => ({ headers: { get: () => null }, clone: () => ({ json: async () => aiApiFixture }) })
+    fetch: async () => ({ headers: { get: () => null }, clone: () => ({ json: async () => capturedPayload }) })
   };
   function MockXHR() {}
   MockXHR.prototype.open = function() {};
@@ -212,15 +525,43 @@ test("captures the AIAPI model catalog from page requests", async () => {
     window: pageWindow, document, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR,
     URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise
   });
-  await pageWindow.fetch(`${origin}/api/me/model-catalog`);
-  await new Promise(resolve => setImmediate(resolve));
-  await listeners.get("message")({
-    source: pageWindow,
-    origin,
-    data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST_V2", id: "aiapi-capture" }
-  });
-  assert.equal(posted.at(-1).response.ok, true);
-  assert.equal(posted.at(-1).response.body.data.groups[0].models[0].effective.inputPer1M, 0.25);
+  const capture = async id => {
+    await pageWindow.fetch(`${origin}/api/me/model-catalog`);
+    await new Promise(resolve => setImmediate(resolve));
+    await listeners.get("message")({
+      source: pageWindow,
+      origin,
+      data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST_V3", id }
+    });
+    return posted.at(-1);
+  };
+  const initialCapture = await capture("aiapi-capture");
+  assert.equal(initialCapture.response.ok, true);
+  assert.equal(initialCapture.response.body.data.groups[0].models[0].effective.inputPer1M, 0.25);
+  for (const field of AIAPI_EFFECTIVE_PRICE_FIELDS) {
+    capturedPayload = {
+      ok: true,
+      data: {
+        source: "aiapi",
+        provider: "AIAPI",
+        groups: [{ models: [{ effective: { [field]: 1 } }] }],
+        models: []
+      }
+    };
+    const fieldCapture = await capture(`aiapi-${field}`);
+    assert.equal(fieldCapture.response.ok, true, field);
+  }
+  capturedPayload = {
+    ok: true,
+    data: {
+      source: "aiapi",
+      provider: "AIAPI",
+      groups: [{ [AIAPI_GROUP_PRICE_FIELDS[0]]: 1, models: [] }],
+      models: []
+    }
+  };
+  const groupCapture = await capture("aiapi-group-billing");
+  assert.equal(groupCapture.response.ok, true, AIAPI_GROUP_PRICE_FIELDS[0]);
 });
 
 test("opens a temporary AIAPI model-price page when no site tab is available", async () => {
@@ -338,6 +679,33 @@ test("parses OpenRouter token and image prices", () => {
   assert.equal(model.imageOutput, 80);
   assert.equal(model.imagePrice, 0.01);
   assert.ok(model.aliases.includes("gpt-4o"));
+  assert.equal(model.price_currency, "USD");
+});
+
+
+test("maps OpenRouter USD credits to the unified CREDITS benchmark", () => {
+  const [official] = parseOpenRouterData({ data: [{
+    id: "openai/gpt-4o",
+    name: "GPT-4o",
+    pricing: { prompt: "0.000005", completion: "0.000015" }
+  }] });
+  const [comparison] = buildComparisonRows({
+    stations: [{ id: "station-openrouter", name: "OpenRouter baseline", rechargeRate: 2, basePricePerMillion: 2 }],
+    snapshots: [{
+      stationId: "station-openrouter",
+      collectedAt: 1,
+      status: "success",
+      normalized: { data: [{ model_name: "gpt-4o", input_price: 5, output_price: 15, price_currency: "CREDITS" }], group_ratio: {} }
+    }],
+    references: { models: [official], exchangeRate: 5, openRouterRechargeRate: 7 },
+    usage: { input: TOKENS_PER_MILLION, output: 200_000 }
+  });
+  const [offer] = comparison.offers;
+  assert.equal(official.price_currency, "USD");
+  assert.equal(offer.officialCurrency, "CREDITS");
+  assert.equal(offer.officialQuotedPrices.input, 5);
+  assert.equal(offer.officialPrices.input, 35);
+  assert.equal(offer.officialMonthlyCost, 56);
 });
 
 test("parses China Bank HTML exchange rate", () => {
@@ -348,6 +716,7 @@ test("parses China Bank HTML exchange rate", () => {
 test("calculates token workload per million, not per token", () => {
   assert.equal(workloadCost({ input: 0.5, output: 1 }, { input: 1_000_000, output: 200_000 }), 0.7);
   assert.equal(workloadCost({ imageOutput: 0.1, imagePrice: 0.02 }, { imageTokens: 1_000_000, images: 2 }), 0.14);
+  assert.equal(workloadCost({ cacheWrite1h: 0.5 }, { cacheWrite1h: 1_000_000 }), 0.5);
 });
 
 test("uses the measured monthly workload as the default usage", () => {
@@ -356,6 +725,7 @@ test("uses the measured monthly workload as the default usage", () => {
   assert.equal(settings.usage.input, 382.95 * TOKENS_PER_MILLION);
   assert.equal(settings.usage.cacheRead, 2946.28 * TOKENS_PER_MILLION);
   assert.equal(settings.usage.output, 30.74 * TOKENS_PER_MILLION);
+  assert.equal(settings.usage.cacheWrite1h, 0);
   assert.equal(USAGE_PRESETS.find(preset => preset.id === "measured").usage.requests, 45494);
 });
 
@@ -409,6 +779,8 @@ test("applies recharge ratio only to foreign-currency prices", () => {
   assert.equal(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "USD" }, 1, 1.2).input, 2.4);
   assert.equal(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "CNY" }, 1, 1.2).input, 2);
   assert.equal(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "CREDITS" }, 1, 1.2).input, 2.4);
+  assert.deepEqual(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "CNY" }, 1, 1.2, undefined, true, false).pricingUnavailableReasons, ["recharge_unverified"]);
+  assert.equal(getProxyPrices({ input_price: 2, price_currency: "USD" }, 1, 1.2, undefined, false, true).input, null);
 });
 
 test("derives and preserves the station recharge ratio inputs", () => {
@@ -420,12 +792,43 @@ test("derives and preserves the station recharge ratio inputs", () => {
   assert.equal(defaultStation.rechargeRmb, 1);
   assert.equal(defaultStation.rechargeCredits, 1);
   assert.equal(defaultStation.rechargeRate, 1);
+  assert.equal(defaultStation.priceCurrency, "CREDITS");
   assert.equal(normalizeStation({ baseUrl: "https://relay.example", rechargeCurrency: "USD" }).rechargeCurrency, "USD");
   assert.equal(defaultStation.rechargeCurrency, "CNY");
+  const creditsStation = normalizeStation({ baseUrl: "https://relay.example", rechargeRmb: 12, rechargeCredits: 10, rechargeCurrency: "USD", priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(creditsStation.priceCurrency, "CREDITS");
+  assert.equal(creditsStation.priceCurrencyVerified, true);
+  assert.equal(creditsStation.rechargeCurrency, "USD");
+  assert.equal(creditsStation.rechargeRmb, 12);
+  assert.equal(creditsStation.rechargeCredits, 10);
 });
 
+
+
+test("blocks conversion when the source currency is missing or unverified", () => {
+  assert.equal(currencyToRmb(undefined, 1.2), null);
+  assert.equal(currencyToRmb("", 1.2), null);
+  assert.equal(currencyToRmb(" unknown ", 1.2), null);
+  assert.equal(currencyToRmb("UNSPECIFIED", 1.2), null);
+  assert.equal(currencyToRmb("NONE", 1.2), null);
+  assert.equal(currencyToRmb("CNY", 1.2), 1);
+  assert.equal(currencyToRmb("RMB", 1.2), 1);
+  assert.equal(currencyToRmb("¥", 1.2), 1);
+  assert.equal(currencyToRmb("USD", 1.2), 1.2);
+  assert.equal(currencyToRmb("CREDITS", 1.2), 1.2);
+  assert.equal(currencyToRmb("POINTS", 1.2), 1.2);
+  assert.equal(currencyToRmb("EUR", 1.2), null);
+
+  const missing = getProxyPriceQuote({ input_price: 2 }, 1, 1.2, undefined, true, true);
+  assert.equal(missing.costPrices, null);
+  assert.ok(missing.pricingUnavailableReasons.includes("currency_unverified"));
+
+  const stationUnverified = getProxyPriceQuote({ input_price: 2, price_currency: "CNY" }, 1, 1.2, undefined, false, true);
+  assert.equal(stationUnverified.costPrices, null);
+  assert.deepEqual(stationUnverified.pricingUnavailableReasons, ["currency_unverified"]);
+});
 test("uses manually configured pricing JSON without a network request", async () => {
-  const snapshot = await collectStation({
+  const snapshot = await collectStationInput({
     id: "station-manual",
     name: "Manual",
     baseUrl: "https://relay.example",
@@ -444,6 +847,35 @@ test("normalizes generic input and output price fields", () => {
   assert.equal(normalized.data[0].model_name, "generic-model");
   assert.equal(normalized.data[0].input_price, 2);
   assert.equal(normalized.data[0].output_price, 8);
+});
+
+
+test("preserves generic pricing currencies across payload shapes", () => {
+  const rows = [
+    { model_name: "generic-cny", input_price: 2, output_price: 4, price_currency: " cny " },
+    { model_name: "generic-usd", input_price: 3, output_price: 6, price_currency: " usd " },
+    { model_name: "generic-dollar-symbol", input_price: 2, output_price: 4, price_currency: "$" },
+    { model_name: "generic-yen-symbol", input_price: 2, output_price: 4, price_currency: "¥" },
+    { model_name: "generic-credits", input_price: 4, output_price: 8, price_currency: " credits " },
+    { model_name: "generic-missing", input_price: 1, output_price: 2 },
+    { model_name: "generic-empty", input_price: 1, output_price: 2, price_currency: "" },
+    { model_name: "generic-currency", input_price: 1, output_price: 2, currency: "USD" },
+    { model_name: "generic-unknown", input_price: 1, output_price: 2, price_currency: "UNKNOWN", currency: "USD" }
+  ];
+  for (const payload of [rows, { data: rows }, { models: rows }]) {
+    const normalized = normalizePricingPayload(payload);
+    assert.deepEqual(normalized.data.map(item => item.price_currency), ["CNY", "USD", "$", "¥", "CREDITS", "UNKNOWN", "UNKNOWN", "USD", "UNKNOWN"]);
+  }
+  for (const payload of [rows, { data: rows }, { models: rows }]) {
+    const stationNormalized = normalizePricingPayload(payload, "auto", { modelListCurrency: "CREDITS", priceCurrencyVerified: true });
+    assert.deepEqual(stationNormalized.data.map(item => item.price_currency), rows.map(() => "CREDITS"));
+  }
+  const confirmed = normalizePricingPayload({ data: [{ model_name: "generic-fallback", input_price: 1, output_price: 2 }] }, "auto", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(confirmed.data[0].price_currency, "CREDITS");
+  const unverified = normalizePricingPayload({ data: [{ model_name: "generic-unverified", input_price: 1, output_price: 2 }] }, "auto", { priceCurrency: "CREDITS", priceCurrencyVerified: false });
+  assert.equal(unverified.data[0].price_currency, "UNKNOWN");
+  const rechargeOnly = normalizePricingPayload({ data: [{ model_name: "generic-recharge-only", input_price: 1, output_price: 2 }] }, "auto", { priceCurrency: "CNY", priceCurrencyVerified: false });
+  assert.equal(rechargeOnly.data[0].price_currency, "UNKNOWN");
 });
 
 
@@ -486,7 +918,7 @@ test("uses the page capture fallback before configured page endpoints", async ()
   let request;
   const pageFetch = async value => { request = value; return response(pqhFixture); };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({ id: "station-capture", name: "Captured", baseUrl: "https://relay.example", mode: "page" }, { pageFetch });
+  const snapshot = await collectStationInput({ id: "station-capture", name: "Captured", baseUrl: "https://relay.example", mode: "page" }, { pageFetch });
   assert.deepEqual(request, { capture: true });
   assert.equal(snapshot.status, "success");
 });
@@ -498,7 +930,7 @@ test("reads the response body returned by the page bridge", async () => {
     return request.capture ? { ok: true, status: 404, body: { data: [] } } : { ok: true, status: 200, body: pqhFixture };
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({ id: "station-page-endpoint", name: "Page endpoint", baseUrl: "https://relay.example", mode: "page", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, { pageFetch });
+  const snapshot = await collectStationInput({ id: "station-page-endpoint", name: "Page endpoint", baseUrl: "https://relay.example", mode: "page", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, { pageFetch });
   assert.equal(requests.length, 2);
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
 });
@@ -507,7 +939,7 @@ test("collects CodeGo pricing catalog from its pricing page URL", async () => {
   const station = { id: "station-codego", name: "CodeGo", baseUrl: "https://codegoai.com/pricing" };
   const adapter = inferStationAdapter(station);
   let requestUrl;
-  const snapshot = await collectStation({ ...station, adapter }, {
+  const snapshot = await collectStationInput({ ...station, adapter }, {
     fetchImpl: async url => {
       requestUrl = url;
       return response({
@@ -564,7 +996,7 @@ test("applies DDDai group ratio once and defers media prices to the workbench", 
   assert.equal(adapter.endpoint, "/api/pricing");
   assert.equal(adapter.method, "GET");
   let request;
-  const snapshot = await collectStation({ ...station, adapter }, {
+  const snapshot = await collectStationInput({ ...station, adapter }, {
     fetchImpl: async (url, init) => {
       request = { url, init };
       return response({
@@ -600,7 +1032,7 @@ test("collects SoleAPI prices from its public API", async () => {
   assert.equal(adapter.method, "GET");
   assert.equal(adapter.responseFormat, "auto");
   const requests = [];
-  const snapshot = await collectStation({ ...station, mode: adapter.mode, adapter }, {
+  const snapshot = await collectStationInput({ ...station, mode: adapter.mode, adapter }, {
     fetchImpl: async (url, init) => {
       requests.push({ url, init });
       return response({ data: { list: [
@@ -643,9 +1075,9 @@ test("collects SoleAPI prices from its public API", async () => {
   assert.equal(model.cache_read_price, 0.504);
   assert.equal(model.cache_write_price, 11.25);
   assert.equal(model.cache_write_1h_price, 12);
-  assert.equal(model.price_currency, "CNY");
+  assert.equal(model.price_currency, "CREDITS");
   assert.equal(model.proxy_group_name, "MiniMax Official");
-  assert.equal(getProxyPrices(model, 1, 1.2).input, 2.52);
+  assert.equal(getProxyPrices(model, 1, 1.2).input, 3.024);
   assert.equal(imageModel.request_price, 0.004);
   assert.equal(imageModel.image_price, 0.4);
   assert.equal(getProxyPrices(imageModel, 1, 1.2).request, 0.0048);
@@ -667,7 +1099,7 @@ test("collects Liuguang public model price books without credentials", async () 
   assert.equal(adapter.responseFormat, "auto");
   assert.equal(prepareStationInput({ ...station, adapter }).baseUrl, "https://www.liuguang.ai");
   let request;
-  const snapshot = await collectStation({ ...station, adapter }, {
+  const snapshot = await collectStationInput({ ...station, adapter }, {
     fetchImpl: async (url, init) => {
       request = { url, init };
       return response({ models: [
@@ -696,7 +1128,7 @@ test("collects Liuguang public model price books without credentials", async () 
   assert.equal(chat.output_price, 8);
   assert.equal(chat.cache_read_price, 0.5);
   assert.equal(chat.cache_write_price, 3);
-  assert.equal(chat.price_currency, "POINTS");
+  assert.equal(chat.price_currency, "CREDITS");
   assert.equal(getProxyPrices(chat, 1, 0.02).input, 0.04);
   assert.equal(snapshot.normalized.data.find(item => item.model_name === "image-test").image_price, 0.4);
 });
@@ -718,7 +1150,7 @@ test("forces known public pricing sites to credential-free direct API collection
     assert.equal(adapter.method, "GET", name);
     assert.equal(adapter.responseFormat, "auto", name);
     let request;
-    const snapshot = await collectStation({ ...station, ...adapter }, {
+    const snapshot = await collectStationInput({ ...station, ...adapter }, {
       fetchImpl: async (url, init) => {
         request = { url, init };
         return response({ data: [{ model_name: "gpt-4o", input_price: 1, output_price: 2, price_currency: "CNY" }] });
@@ -728,6 +1160,95 @@ test("forces known public pricing sites to credential-free direct API collection
     assert.equal(request.init.headers.Authorization, undefined, name);
     assert.equal(request.init.credentials, "omit", name);
     assert.equal(snapshot.status, "success", name);
+  }
+});
+
+
+test("carries token123 pricing currencies through comparison", async () => {
+  const station = {
+    id: "token123",
+    name: "T蜜",
+    baseUrl: "https://token123.cfd",
+    priceCurrency: "CREDITS",
+    rechargeRate: 1.2,
+    rechargeRateVerified: true,
+    priceCurrencyVerified: true,
+    adapter: inferStationAdapter({ baseUrl: "https://token123.cfd" })
+  };
+  const snapshot = await collectStationInput(station, {
+    fetchImpl: async () => response({ data: [
+      { model_name: "token-cny", input_price: 2, output_price: 4, price_currency: "CNY" },
+      { model_name: "token-usd", input_price: 2, output_price: 4, price_currency: "USD" },
+      { model_name: "token-dollar", input_price: 2, output_price: 4, price_currency: "$" },
+      { model_name: "token-credits", input_price: 2, output_price: 4 }
+    ] })
+  });
+  assert.equal(snapshot.status, "success");
+  assert.deepEqual(snapshot.normalized.data.map(item => item.price_currency), ["CREDITS", "CREDITS", "CREDITS", "CREDITS"]);
+
+  const rows = buildComparisonRows({
+    stations: [station],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: snapshot.status, normalized: snapshot.normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const offers = rows.flatMap(row => row.offers);
+  const cnyOffer = offers.find(offer => offer.modelName === "token-cny");
+  const usdOffer = offers.find(offer => offer.modelName === "token-usd");
+  const dollarOffer = offers.find(offer => offer.modelName === "token-dollar");
+  const creditsOffer = offers.find(offer => offer.modelName === "token-credits");
+  assert.equal(cnyOffer.sourceCurrency, "CREDITS");
+  assert.equal(cnyOffer.pricingUnavailable, false);
+  assert.equal(cnyOffer.monthlyCost, 2.4);
+  assert.equal(usdOffer.sourceCurrency, "CREDITS");
+  assert.equal(usdOffer.pricingUnavailable, false);
+  assert.equal(usdOffer.monthlyCost, 2.4);
+  assert.equal(dollarOffer.sourceCurrency, "CREDITS");
+  assert.equal(dollarOffer.pricingUnavailable, false);
+  assert.equal(dollarOffer.monthlyCost, 2.4);
+  assert.equal(creditsOffer.sourceCurrency, "CREDITS");
+  assert.equal(creditsOffer.pricingUnavailable, false);
+  assert.equal(creditsOffer.monthlyCost, 2.4);
+
+  const blockedRows = buildComparisonRows({
+    stations: [{ ...station, priceCurrencyVerified: false }],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: snapshot.status, normalized: snapshot.normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  for (const offer of blockedRows.flatMap(row => row.offers)) {
+    assert.equal(offer.pricingUnavailable, true);
+    assert.ok(offer.pricingUnavailableReasons.includes("currency_unverified"));
+  }
+});
+
+
+test("keeps model-list credits independent from recharge payment currency", async () => {
+  for (const [rechargeCurrency, rechargeRate] of [["CNY", 2], ["USD", 8]]) {
+    const station = {
+      id: `token123-${rechargeCurrency}`,
+      name: "T蜜",
+      baseUrl: "https://token123.cfd",
+      rechargeCurrency,
+      rechargeRate,
+      rechargeRateVerified: true,
+      priceCurrencyVerified: true,
+      adapter: inferStationAdapter({ baseUrl: "https://token123.cfd" })
+    };
+    const snapshot = await collectStationInput(station, {
+      fetchImpl: async () => response({ data: [{ model_name: "token-model", input_price: 2, output_price: 4 }] })
+    });
+    assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
+    const [comparison] = buildComparisonRows({
+      stations: [station],
+      snapshots: [{ stationId: station.id, collectedAt: 1, status: snapshot.status, normalized: snapshot.normalized }],
+      references: { models: [] },
+      usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+    });
+    const offer = comparison.offers[0];
+    assert.equal(offer.sourceCurrency, "CREDITS");
+    assert.equal(offer.pricingUnavailable, false);
+    assert.equal(offer.monthlyCost, 2 * rechargeRate);
   }
 });
 
@@ -766,7 +1287,7 @@ test("adds the missing CheapRouter station once for an existing registry", () =>
   assert.equal(stations.length, 2);
   assert.equal(stations[1].id, "cheaprouter");
   assert.equal(stations[1].baseUrl, "https://cheaprouter.cc/models");
-  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].mode, "direct");
   assert.equal(stations[1].adapter.kind, "cheaprouter");
   assert.equal(stations[1].adapter.endpoint, "/api/v1/pricing/public?timezone=Asia%2FShanghai");
   assert.equal(addCheapRouterStationPreset(stations), stations);
@@ -806,6 +1327,51 @@ test("adds the missing CUN.AI station once for an existing registry", () => {
   assert.equal(addCunStationPreset(stations), stations);
   assert.equal(addCunStationPreset([]).length, 0);
 });
+
+test("adds the Hepingan station preset", () => {
+  const stations = addHepinganStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].id, "hepingan");
+  assert.equal(stations[1].baseUrl, "https://api.hepingan.top/available-channels");
+  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].adapter.endpoint, HEPINGAN_CHANNELS_ENDPOINT);
+});
+
+test("injects every registry preset and forwards the exchange rate", () => {
+  const current = [{ id: "existing", baseUrl: "https://relay.example" }];
+  const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
+  const added = stations.slice(current.length);
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "fuck-everyone", "killai"]));
+  assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
+  assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
+  const nodeAi = added.find(station => station.id === "nodeai");
+  assert.equal(nodeAi.rechargeRmb, 1);
+  assert.equal(nodeAi.rechargeCurrency, "CNY");
+  assert.equal(nodeAi.rechargeCredits, 1);
+  assert.equal(normalizeStation(nodeAi).rechargeRate, 1);
+  const fuckEveryone = added.find(station => station.id === "fuck-everyone");
+  assert.equal(fuckEveryone.rechargeRmb, 1);
+  assert.equal(fuckEveryone.rechargeCurrency, "CNY");
+  assert.equal(fuckEveryone.rechargeCredits, 1);
+  assert.equal(fuckEveryone.rechargeRateVerified, false);
+  assert.equal(fuckEveryone.rechargeRateNote, "站点未公开币种与充值折算，当前按 CNY 1:1 估算。");
+  assert.equal(normalizeStation(fuckEveryone).rechargeRateVerified, false);
+  const killAi = added.find(station => station.id === "killai");
+  assert.equal(killAi.mode, "page");
+  assert.equal(killAi.rechargeRmb, 1);
+  assert.equal(killAi.rechargeCurrency, "CNY");
+  assert.equal(killAi.rechargeCredits, 1);
+  assert.equal(killAi.rechargeRateVerified, false);
+  assert.equal(killAi.priceCurrency, "UNKNOWN");
+  assert.equal(killAi.priceCurrencyVerified, false);
+  assert.equal(normalizeStation(killAi).rechargeRateVerified, false);
+});
+test("allocates a unique preset id when an existing station uses the provider id", () => {
+  const stations = addRegisteredStationPresets([{ id: "dddai", baseUrl: "https://other.example" }]);
+  const dddai = stations.find(station => station.baseUrl === "https://dddai.dev/pricing");
+  assert.equal(dddai.id, "dddai-2");
+});
+
 
 test("adds a missing station preset in one transaction without rewriting saved stations", async () => {
   const previousIndexedDb = globalThis.indexedDB;
@@ -896,7 +1462,7 @@ test("collects FastAIToken channel prices through the logged-in page", async () 
     };
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation(station, { pageFetch });
+  const snapshot = await collectStationInput(station, { pageFetch });
   const models = snapshot.normalized.data;
   const shortContext = models.find(item => item.tier_name === "<=128K");
   const longContext = models.find(item => item.tier_name === ">128K");
@@ -928,8 +1494,32 @@ test("collects FastAIToken channel prices through the logged-in page", async () 
     }] }] } };
   };
   capturedPageFetch.supportsCapture = true;
-  const capturedSnapshot = await collectStation(station, { pageFetch: capturedPageFetch });
+  const capturedSnapshot = await collectStationInput(station, { pageFetch: capturedPageFetch });
   assert.equal(capturedSnapshot.normalized.data[0].input_price, 2);
+});
+
+test("normalizes Hepingan channel prices from an authenticated page capture", async () => {
+  const station = { id: "station-hepingan", name: "hepingan.top", baseUrl: "https://api.hepingan.top/available-channels", mode: "page" };
+  const prepared = prepareStationInput({ baseUrl: "https://api.hepingan.top" });
+  assert.equal(prepared.baseUrl, "https://api.hepingan.top/available-channels");
+  assert.equal(prepared.adapter.endpoint, HEPINGAN_CHANNELS_ENDPOINT);
+  let captureCount = 0;
+  const pageFetch = async request => {
+    assert.equal(request.capture, true);
+    captureCount += 1;
+    return {
+      ok: true,
+      status: 200,
+      body: { data: [{ name: "Hepingan", platforms: [{ platform: "OpenAI", groups: [{ id: 1, name: "default", rate_multiplier: 1 }], supported_models: [{ model_id: "gpt-4o", name: "GPT-4o", pricing: { input_price: 0.000001, output_price: 0.000002 }, group_pricing: { "1": { input_price: 0.000001, output_price: 0.000002 } } }] }] }] }
+    };
+  };
+  pageFetch.supportsCapture = true;
+  const snapshot = await collectStationInput(station, { pageFetch });
+  assert.equal(captureCount, 1);
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
+  assert.equal(snapshot.normalized.data[0].input_price, 1);
+  assert.equal(snapshot.normalized.data[0].output_price, 2);
 });
 test("auto format uses the existing PQH strategy", () => {
   const normalized = normalizePricingPayload(pqhFixture, "auto", { basePricePerMillion: 0.55 });
@@ -945,7 +1535,7 @@ test("honors a zero configured base price", () => {
 
 
 test("collects a direct station and normalizes its payload", async () => {
-  const snapshot = await collectStation({ id: "station-a", name: "A", baseUrl: "https://relay.example", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, {
+  const snapshot = await collectStationInput({ id: "station-a", name: "A", baseUrl: "https://relay.example", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, {
     fetchImpl: async () => response(pqhFixture)
   });
   assert.equal(snapshot.status, "success");
@@ -955,7 +1545,7 @@ test("collects a direct station and normalizes its payload", async () => {
 
 test("probes a public model-list URL without credentials", async () => {
   let request;
-  const snapshot = await collectStation({ id: "station-models", name: "Models", baseUrl: "https://relay.example/v1/models", adapter: { endpoint: "/v1/models", method: "GET", responseFormat: "auto" } }, {
+  const snapshot = await collectStationInput({ id: "station-models", name: "Models", baseUrl: "https://relay.example/v1/models", adapter: { endpoint: "/v1/models", method: "GET", responseFormat: "auto" } }, {
     fetchImpl: async (url, init) => {
       request = { url, init };
       return response({ data: [{ id: "gpt-4o", name: "GPT-4o" }] });
@@ -963,12 +1553,13 @@ test("probes a public model-list URL without credentials", async () => {
   });
   assert.equal(request.url, "https://relay.example/v1/models");
   assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(request.init.credentials, "omit");
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
 });
 
 test("collects New API pricing from a pricing page URL", async () => {
   const requests = [];
-  const snapshot = await collectStation({
+  const snapshot = await collectStationInput({
     id: "station-new-api",
     name: "New API",
     baseUrl: "https://relay.example",
@@ -1016,22 +1607,408 @@ test("normalizes Jiji model-market tRPC payloads", () => {
   assert.equal(model.cache_read_price, 1.5);
   assert.equal(model.group_ratio, 1.5);
 });
+test("normalizes NodeAI model-plaza pricing with explicit dispatch", () => {
+  const normalized = normalizePricingPayload(nodeAiFixture, "nodeai-model-plaza");
+  assert.equal(normalized.sourceFormat, "nodeai-model-plaza");
+  assert.deepEqual(normalized.group_ratio, { Image: 0.8, Text: 1.5 });
+  assert.equal(normalized.data.length, 4);
+
+  const image = normalized.data.find(model => model.model_name === "node-image");
+  assert.equal(image.image_price, 2.5);
+  assert.equal(image.request_price, null);
+  assert.equal(image.group_ratio, 0.8);
+  assert.equal(image.price_currency, "CNY");
+  const imagePrices = getProxyPrices(image, 1, 7.2);
+  assert.equal(imagePrices.imagePrice, 2.5);
+  assert.equal(workloadCost(imagePrices, { requests: 100, images: 2 }), 5);
+  assert.equal(workloadCost(imagePrices, { requests: 100 }), 0);
+  const imageGeneration = normalized.data.find(model => model.model_name === "node-image-generation");
+  assert.equal(imageGeneration.image_price, 0.125);
+  assert.equal(imageGeneration.request_price, null);
+
+  const request = normalized.data.find(model => model.model_name === "node-request");
+  assert.ok(Math.abs(request.request_price - 0.6) < 1e-12);
+  assert.equal(request.image_price, null);
+
+  const text = normalized.data.find(model => model.model_name === "node-text");
+  assert.equal(text.input_price, 1.5);
+  assert.equal(text.output_price, 3);
+  assert.equal(text.cache_read_price, 0.15);
+  assert.equal(text.price_currency, "CNY");
+  const textPrices = getProxyPrices(text, 1, 7.2);
+  assert.equal(textPrices.input, 1.5);
+  assert.equal(textPrices.output, 3);
+  assert.equal(text.cache_write_price, null);
+
+  const direct = normalizeProxyData(nodeAiFixture, { responseFormat: "nodeai-model-plaza" });
+  assert.equal(direct.sourceFormat, "nodeai-model-plaza");
+});
+test("normalizes KillAI model-plaza token intervals and image fields without asserting a currency", () => {
+  const normalized = normalizePricingPayload(killAiFixture, "killai-model-plaza");
+  assert.equal(normalized.sourceFormat, "killai-model-plaza");
+  assert.deepEqual(normalized.group_ratio, { Text: 1.5, Image: 2 });
+  assert.equal(normalized.data.length, 3);
+
+  const standard = normalized.data.find(model => model.tier_name === "standard");
+  assert.equal(standard.input_price, 1.5);
+  assert.equal(standard.output_price, 6);
+  assert.equal(standard.cache_read_price, 0.3);
+  const long = normalized.data.find(model => model.tier_name === "long");
+  assert.equal(long.input_price, 3);
+  assert.equal(long.output_price, 9);
+  assert.equal(long.cache_read_price, 0.6);
+
+  const image = normalized.data.find(model => model.model_name === "kill-image");
+  assert.equal(image.image_input_price, 6);
+  assert.equal(image.image_output_price, 8);
+  assert.equal(image.image_price, null);
+  assert.equal(image.price_currency, "UNKNOWN");
+});
+
+
+test("does not misclassify NodeAI model-plaza payloads in auto mode", () => {
+  const normalized = normalizePricingPayload(nodeAiFixture);
+  assert.equal(normalized.sourceFormat, "unknown");
+  assert.deepEqual(normalized.data, []);
+});
+
+test("normalizes fuck-everyone model-plaza token, image, and per-request pricing", () => {
+  const unknown = normalizePricingPayload(fuckEveryoneFixture, "fuck-everyone-model-plaza");
+  assert.equal(unknown.sourceFormat, "fuck-everyone-model-plaza");
+  assert.deepEqual(unknown.group_ratio, { Text: 1.5, Image: 2, Video: 1 });
+  assert.equal(unknown.data.length, 3);
+  assert.ok(unknown.data.every(model => model.price_currency === "UNKNOWN"));
+  assert.ok(Math.abs(unknown.data.find(model => model.model_name === "text-model").cache_write_1h_price - 0.45) < 1e-12);
+  assert.equal(unknown.data.find(model => model.model_name === "image-model").image_output_price, 50000);
+  assert.equal(unknown.data.find(model => model.model_name === "video-model").request_price, 0.24);
+
+  const confirmed = normalizePricingPayload(fuckEveryoneFixture, "fuck-everyone-model-plaza", { priceCurrency: "CNY" });
+  const image = confirmed.data.find(model => model.model_name === "image-model");
+  const text = confirmed.data.find(model => model.model_name === "text-model");
+  const imagePrices = getProxyPrices(image, 1, 1, 2, true);
+  const textPrices = getProxyPrices(text, 1, 1, 2, true);
+  assert.equal(image.price_currency, "CNY");
+  assert.equal(imagePrices.imageInput, 3.75);
+  assert.equal(imagePrices.imageOutput, 50000);
+  assert.ok(Math.abs(textPrices.cacheWrite1h - 0.45) < 1e-12);
+  assert.ok(Math.abs(workloadCost(textPrices, { cacheWrite1h: 1_000_000 }) - 0.45) < 1e-12);
+});
+test("shares partial diagnostic formatting across refresh consumers", () => {
+  const diagnostics = getPartialDiagnostics({
+    unsupportedBillingModes: ["per_second"],
+    invalidPricingValues: ["Tiered:tiered-model:interval:1"],
+    unpricedModels: ["Missing:shared-model:default"]
+  });
+  assert.deepEqual(diagnostics.reasons, [
+    { key: "unsupportedBillingModes", values: ["per_second"], message: "部分计费模式未解析：per_second" },
+    { key: "invalidPricingValues", values: ["Tiered:tiered-model:interval:1"], message: "价格字段异常：Tiered:tiered-model:interval:1" },
+    { key: "unpricedModels", values: ["Missing:shared-model:default"], message: "未定价模型：Missing:shared-model:default" }
+  ]);
+  assert.equal(diagnostics.message, "部分计费模式未解析：per_second；价格字段异常：Tiered:tiered-model:interval:1；未定价模型：Missing:shared-model:default");
+  assert.equal(getPartialDiagnostics().message, "部分解析");
+});
+
+test("keeps tier-level model-plaza gaps across unlabeled interval order", async () => {
+  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const adapter = inferStationAdapter(preset);
+  const settings = { ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true };
+  const createFixture = intervals => ({
+    code: 0,
+    message: "success",
+    data: {
+      groups: [{
+        name: "Tiered",
+        rate_multiplier: 1,
+        user_rate_multiplier: 1,
+        models: [{ name: "tiered-model", pricing: { billing_mode: "token", intervals } }]
+      }]
+    }
+  });
+
+  for (const [intervals, missingIndex] of [
+    [[{ input_price: 0.000001, output_price: 0.000002 }, {}], 1],
+    [[{}, { input_price: 0.000001, output_price: 0.000002 }], 0]
+  ]) {
+    const fixture = createFixture(intervals);
+    const normalized = normalizePricingPayload(fixture, "fuck-everyone-model-plaza", { priceCurrency: "CNY" });
+    assert.equal(normalized.data.length, 1);
+    assert.equal(normalized.incomplete, true);
+    assert.deepEqual(normalized.unpricedModels, [`Tiered:tiered-model:interval:${missingIndex}`]);
+    const snapshot = await collectStationInput(settings, { fetchImpl: async () => response(fixture) });
+    assert.equal(snapshot.status, "partial");
+    assert.deepEqual(snapshot.normalized.unpricedModels, [`Tiered:tiered-model:interval:${missingIndex}`]);
+    const [comparison] = buildComparisonRows({
+      stations: [settings],
+      snapshots: [{ stationId: settings.id, collectedAt: 1, status: snapshot.status, normalized: snapshot.normalized }],
+      references: { models: [{ name: "tiered-model", provider: "openai", input: 1, output: 1 }] },
+      usage: { input: 1_000_000, output: 1_000_000, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+    });
+    const tierOffer = comparison.offers.find(offer => offer.modelName === "tiered-model");
+    assert.ok(tierOffer);
+    assert.ok(Number.isFinite(tierOffer.quotedPrices.input));
+    assert.equal(tierOffer.costPrices, null);
+    assert.equal(tierOffer.monthlyCost, null);
+    assert.equal(tierOffer.diffPercent, null);
+    assert.equal(tierOffer.recommendationEligible, false);
+    assert.equal(tierOffer.recommended, false);
+  }
+});
+
+
+test("renders the one-hour cache write price in dashboard price lines", () => {
+  assert.deepEqual(dashboardPriceLines({ input: 1, output: 2, cacheWrite1h: 3 }).find(([label]) => label === "缓存写入（1h）"), ["缓存写入（1h）", 3, false]);
+});
+
+
+test("keeps screenshot model quotes in source USD while gating converted comparison costs", () => {
+  assert.equal(formatSourcePrice(10, "USD"), "$10");
+  const station = {
+    id: "station-fuck-everyone-screenshot",
+    name: "fuck-everyone.com",
+    rechargeRate: 7.3,
+    rechargeRateVerified: false,
+    priceCurrency: "USD",
+    priceCurrencyVerified: false,
+    basePricePerMillion: 2
+  };
+  const normalized = normalizePricingPayload(fuckEveryoneScreenshotFixture, "fuck-everyone-model-plaza", { priceCurrency: "USD" });
+  const fable = normalized.data.find(model => model.model_name === "claude-fable-5");
+  assert.equal(fable.input_price, 10);
+  assert.equal(fable.output_price, 50);
+  const [comparison] = buildComparisonRows({
+    stations: [station],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const offer = comparison.offers.find(item => item.modelName === "claude-fable-5");
+  assert.equal(offer.sourceCurrency, "USD");
+  assert.equal(offer.quotedPrices.input, 10);
+  assert.equal(offer.prices.input, 10);
+  assert.equal(offer.costPrices, null);
+  assert.equal(offer.monthlyCost, null);
+  assert.equal(offer.diffPercent, null);
+  assert.equal(offer.recommendationEligible, false);
+  assert.equal(offer.recommended, false);
+
+  const [confirmedComparison] = buildComparisonRows({
+    stations: [{ ...station, priceCurrencyVerified: true, rechargeRateVerified: true }],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const confirmedOffer = confirmedComparison.offers.find(item => item.modelName === "claude-fable-5");
+  assert.equal(confirmedOffer.quotedPrices.input, 10);
+  assert.equal(confirmedOffer.costPrices.input, 73);
+  assert.equal(confirmedOffer.monthlyCost, 73);
+
+  const [emptyComparison] = buildComparisonRows({
+    stations: [station],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized: { data: [{ model_name: "empty-model", price_currency: "USD" }] } }],
+    references: { models: [] },
+    usage: { input: 1_000_000 }
+  });
+  const emptyOffer = emptyComparison.offers[0];
+  assert.equal(emptyOffer.quotedPrices, null);
+  assert.ok(emptyOffer.pricingUnavailableReasons.includes("price_missing"));
+});
+
+test("collects fuck-everyone directly and blocks recommendations until currency is confirmed", async () => {
+  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  assert.equal(preset.priceCurrency, "USD");
+  const adapter = inferStationAdapter(preset);
+  assert.equal(adapter.endpoint, "/api/v1/model-plaza");
+  assert.equal(adapter.responseFormat, "fuck-everyone-model-plaza");
+  let request;
+  const fetchImpl = async (url, init) => {
+    request = { url, init };
+    return response(fuckEveryoneFixture);
+  };
+  const unknownSnapshot = await collectStationInput({ ...preset, adapter }, { fetchImpl });
+  assert.equal(request.url, "https://fuck-everyone.com/api/v1/model-plaza");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(unknownSnapshot.normalized.data[0].price_currency, "USD");
+
+  const confirmedSnapshot = await collectStationInput({ ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true }, { fetchImpl });
+  assert.equal(confirmedSnapshot.normalized.data[0].price_currency, "CREDITS");
+  const partialFixture = structuredClone(fuckEveryoneFixture);
+  partialFixture.data.groups[0].models.push({ name: "seconds-model", pricing: { billing_mode: "per_second", per_second_price: 0.1 } });
+  const partialSnapshot = await collectStationInput({ ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }, { fetchImpl: async () => response(partialFixture) });
+  assert.equal(partialSnapshot.status, "partial");
+  assert.deepEqual(partialSnapshot.normalized.unsupportedBillingModes, ["per_second"]);
+  assert.equal(partialSnapshot.normalized.data.some(model => model.model_name === "seconds-model"), false);
+  const partialRows = buildComparisonRows({
+    stations: [preset],
+    snapshots: [partialSnapshot],
+    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    usage: DEFAULT_MONTHLY_USAGE
+  });
+  const partialOffer = partialRows.find(row => row.canonicalModel === "image-model")?.offers[0];
+  assert.equal(partialOffer.incomplete, true);
+  assert.deepEqual(partialOffer.unsupportedBillingModes, ["per_second"]);
+  assert.equal(partialOffer.stale, false);
+  const unpricedFixture = structuredClone(fuckEveryoneFixture);
+  unpricedFixture.data.groups[0].models.push({ name: "unpriced-model", pricing: { billing_mode: "token" } });
+  const unpricedSnapshot = await collectStationInput({ ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }, { fetchImpl: async () => response(unpricedFixture) });
+  assert.equal(unpricedSnapshot.status, "partial");
+  assert.deepEqual(unpricedSnapshot.normalized.unpricedModels, ["Text:unpriced-model:default"]);
+  assert.deepEqual(unpricedSnapshot.rawMeta.unpricedModels, ["Text:unpriced-model:default"]);
+  const unpricedRows = buildComparisonRows({
+    stations: [{ ...preset, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }],
+    snapshots: [unpricedSnapshot],
+    references: { models: [{ name: "text-model", provider: "openai", input: 1, output: 1 }] },
+    usage: DEFAULT_MONTHLY_USAGE
+  });
+  const unpricedOffer = unpricedRows.find(row => row.canonicalModel === "text-model")?.offers[0];
+  assert.equal(unpricedOffer.incomplete, true);
+  assert.deepEqual(unpricedOffer.unpricedModels, ["Text:unpriced-model:default"]);
+  const verifiedSnapshot = await collectStationInput({ ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }, { fetchImpl });
+
+  const rows = addRecommendationScores(buildComparisonRows({
+    stations: [preset],
+    snapshots: [unknownSnapshot],
+    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    usage: DEFAULT_MONTHLY_USAGE
+  }));
+  const offer = rows.find(row => row.canonicalModel === "image-model")?.offers[0];
+  assert.equal(offer.pricingUnavailable, true);
+  assert.equal(offer.diffPercent, null);
+  assert.equal(offer.recommendationEligible, false);
+  assert.equal(offer.recommended, false);
+  assert.equal(offer.category, "pending");
+  const rechargeRows = buildComparisonRows({
+    stations: [{ ...preset, priceCurrency: "CNY", priceCurrencyVerified: true }],
+    snapshots: [confirmedSnapshot],
+    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    usage: DEFAULT_MONTHLY_USAGE
+  });
+  assert.equal(rechargeRows.find(row => row.canonicalModel === "image-model")?.offers[0].pricingUnavailable, true);
+
+  const incompleteRows = buildComparisonRows({
+    stations: [{ ...preset, rechargeRateVerified: true }],
+    snapshots: [verifiedSnapshot],
+    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    usage: { ...DEFAULT_MONTHLY_USAGE, cacheWrite1h: 1_000_000 }
+  });
+  assert.equal(incompleteRows.find(row => row.canonicalModel === "image-model")?.offers[0].pricingUnavailable, true);
+});
+
+
+test("keeps model-plaza unpriced diagnostics for empty and mixed groups", async () => {
+  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const adapter = inferStationAdapter(preset);
+  const settings = { ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true };
+  const emptyFixture = {
+    code: 0,
+    message: "success",
+    data: { groups: [{ name: "Empty", rate_multiplier: 1, models: [{ name: "empty-model", pricing: { billing_mode: "token" } }] }] }
+  };
+  const emptySnapshot = await collectStationInput(settings, { fetchImpl: async () => response(emptyFixture) });
+  assert.equal(emptySnapshot.status, "partial");
+  assert.deepEqual(emptySnapshot.normalized.data, []);
+  assert.deepEqual(emptySnapshot.normalized.unpricedModels, ["Empty:empty-model:default"]);
+  assert.deepEqual(emptySnapshot.rawMeta.unpricedModels, ["Empty:empty-model:default"]);
+
+  const mixedFixture = {
+    code: 0,
+    message: "success",
+    data: {
+      groups: [
+        { name: "Paid", rate_multiplier: 1, models: [{ name: "shared-model", pricing: { billing_mode: "token", input_price: 0.000001, output_price: 0.000002 } }] },
+        { name: "Missing", rate_multiplier: 1, models: [{ name: "shared-model", pricing: { billing_mode: "token" } }] }
+      ]
+    }
+  };
+  const mixedSnapshot = await collectStationInput(settings, { fetchImpl: async () => response(mixedFixture) });
+  assert.equal(mixedSnapshot.status, "partial");
+  assert.equal(mixedSnapshot.normalized.data.length, 1);
+  assert.equal(mixedSnapshot.normalized.data[0].proxy_group_name, "Paid");
+  assert.deepEqual(mixedSnapshot.normalized.unpricedModels, ["Missing:shared-model:default"]);
+  const reversedFixture = structuredClone(mixedFixture);
+  reversedFixture.data.groups.reverse();
+  const reversed = normalizePricingPayload(reversedFixture, "fuck-everyone-model-plaza", { priceCurrency: "CNY" });
+  assert.deepEqual(reversed.unpricedModels, ["Missing:shared-model:default"]);
+});
+
+test("migrates legacy fuck-everyone UNKNOWN source currency during station preparation", async () => {
+  const legacy = {
+    id: "station-fuck-everyone-legacy",
+    name: "fuck-everyone.com",
+    baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1",
+    priceCurrency: "UNKNOWN",
+  };
+  const prepared = prepareStationInput(legacy);
+  assert.equal(prepared.priceCurrency, "USD");
+  assert.equal(prepared.priceCurrencyVerified, false);
+  assert.equal(prepared.rechargeRateVerified, false);
+
+  const snapshot = await collectStationInput(legacy, { fetchImpl: async () => response(fuckEveryoneScreenshotFixture) });
+  assert.equal(snapshot.normalized.data[0].price_currency, "USD");
+
+  assert.equal(snapshot.priceCurrencyVerified, false);
+  assert.equal(snapshot.rechargeRateVerified, false);
+  const comparisons = buildComparisonRows({
+    stations: [legacy],
+    snapshots: [snapshot],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const offer = comparisons.flatMap(comparison => comparison.offers)[0];
+  assert.equal(offer.pricingUnavailable, true);
+  assert.deepEqual(offer.pricingUnavailableReasons, ["currency_unverified", "recharge_unverified"]);
+  const confirmedUnknown = prepareStationInput({ ...legacy, priceCurrencyVerified: true });
+  assert.equal(confirmedUnknown.priceCurrency, "UNKNOWN");
+});
+
+test("rejects invalid model-plaza multipliers and per-request prices", async () => {
+  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const adapter = inferStationAdapter(preset);
+  const invalidMultiplier = structuredClone(fuckEveryoneFixture);
+  invalidMultiplier.data.groups[0].rate_multiplier = -1;
+  await assert.rejects(() => collectStationInput({ ...preset, adapter }, { fetchImpl: async () => response(invalidMultiplier) }), /价格数据校验失败/);
+  const parsedInvalidRate = normalizePricingPayload(invalidMultiplier, "fuck-everyone-model-plaza");
+  assert.equal(parsedInvalidRate.data.some(row => row.model_name === "text-model"), false);
+  assert.deepEqual(parsedInvalidRate.invalidPricingValues, ["Text:multiplier"]);
+  assert.deepEqual(parsedInvalidRate.unpricedModels, ["Text:text-model:default"]);
+  const invalidGroupMultiplier = structuredClone(fuckEveryoneFixture);
+  invalidGroupMultiplier.data.groups[0].user_rate_multiplier = "not-a-multiplier";
+  const parsedInvalidGroup = normalizePricingPayload(invalidGroupMultiplier, "fuck-everyone-model-plaza");
+  assert.equal(parsedInvalidGroup.data.some(row => row.model_name === "text-model"), false);
+  assert.deepEqual(parsedInvalidGroup.invalidPricingValues, ["Text:multiplier"]);
+  assert.deepEqual(parsedInvalidGroup.unpricedModels, ["Text:text-model:default"]);
+  const invalidRequestPrice = structuredClone(fuckEveryoneFixture);
+  invalidRequestPrice.data.groups[2].models[0].pricing.per_request_price = "not-a-price";
+  await assert.rejects(() => collectStationInput({ ...preset, adapter }, { fetchImpl: async () => response(invalidRequestPrice) }), /价格数据校验失败/);
+  const parsed = normalizePricingPayload(invalidRequestPrice, "fuck-everyone-model-plaza");
+  assert.equal(parsed.incomplete, true);
+  assert.deepEqual(parsed.invalidPricingValues, ["video-model"]);
+  const invalidRows = buildComparisonRows({
+    stations: [{ ...preset, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }],
+    snapshots: [{ stationId: preset.id, status: "partial", collectedAt: 1, normalized: parsed }],
+    references: { models: [{ name: "text-model", provider: "openai", input: 1, output: 1 }] },
+    usage: DEFAULT_MONTHLY_USAGE
+  });
+  assert.deepEqual(invalidRows.find(row => row.canonicalModel === "text-model")?.offers[0].invalidPricingValues, ["video-model"]);
+});
 
 test("refreshes snapshots created before normalization changes", () => {
   const station = { baseUrl: "https://www.jiji.cc/extension/models", adapter: { kind: "jiji" } };
   assert.equal(snapshotNeedsRefresh(station, { normalizationVersion: NORMALIZATION_VERSION - 1 }), true);
+  assert.equal(snapshotNeedsRefresh(station, { normalizationVersion: 17 }), true);
+  assert.equal(snapshotNeedsRefresh(station, { normalizationVersion: 18 }), true);
   assert.equal(snapshotNeedsRefresh(station, { normalizationVersion: NORMALIZATION_VERSION }), false);
   assert.equal(snapshotNeedsRefresh({ baseUrl: "https://relay.example" }, { normalizationVersion: NORMALIZATION_VERSION - 1 }), true);
   assert.equal(snapshotNeedsRefresh({ baseUrl: "https://relay.example" }, { normalizationVersion: NORMALIZATION_VERSION }), false);
 });
 
 test("keeps Jiji model-plaza prices in CNY per-million units", () => {
-  const normalized = normalizePricingPayload({ code: 0, data: { groups: [{ name: "Claude Code Max", rate_multiplier: 1.5, models: [{ name: "claude-fable-5", pricing: { input_price: "10", output_price: "50", cache_read_price: "1" } }] }] } });
+  const normalized = normalizePricingPayload({ code: 0, data: { groups: [{ name: "Claude Code Max", rate_multiplier: 1.5, models: [{ name: "claude-fable-5", pricing: { input_price: "10", output_price: "50", cache_read_price: "1", per_request_price: "0.2" } }] }] } });
   const [model] = normalized.data;
   assert.equal(normalized.sourceFormat, "jiji");
   assert.equal(model.input_price, 15);
   assert.equal(model.output_price, 75);
   assert.equal(model.cache_read_price, 1.5);
+  assert.ok(Math.abs(model.request_price - 0.3) < 1e-12);
   assert.equal(model.price_currency, "CNY");
 });
 
@@ -1077,7 +2054,7 @@ test("normalizes Sidrune model-plaza public pricing", () => {
 
 test("reads native fetch JSON bodies before normalizing", async () => {
   const payload = [{ result: { data: { json: { providers: [{ name: "OpenAI", models: [{ model_id: "gpt-6-luna", input_price: "0.1", output_price: "0.5", group_prices: [{ group_name: "Codex Luna", input_price: "0.02", output_price: "0.1", multiplier: "0.2" }] }] }] } } } }];
-  const snapshot = await collectStation({ id: "station-jiji-native", name: "Jiji", baseUrl: "https://www.jiji.cc/extension/models?token=test-token", adapter: { endpoint: "/api/ai/pricing" } }, {
+  const snapshot = await collectStationInput({ id: "station-jiji-native", name: "Jiji", baseUrl: "https://www.jiji.cc/extension/models?token=test-token", adapter: { endpoint: "/api/ai/pricing" } }, {
     fetchImpl: async () => new Response(JSON.stringify(payload), { status: 200, headers: { "content-type": "application/json" } })
   });
   assert.equal(snapshot.status, "success");
@@ -1092,7 +2069,7 @@ test("adapts Jiji model page URLs to the authenticated model-market API", async 
   assert.equal(preparedJiji.baseUrl, "https://www.jiji.cc/custom/13235f4cd3f1e94e");
   assert.equal(preparedJiji.mode, "page");
   let request;
-  const snapshot = await collectStation({ id: "station-jiji", name: "Jiji", baseUrl: "https://www.jiji.cc/extension/models?user_id=1&token=test-token", mode: "page", adapter: { endpoint: "/api/ai/pricing" } }, {
+  const snapshot = await collectStationInput({ id: "station-jiji", name: "Jiji", baseUrl: "https://www.jiji.cc/extension/models?user_id=1&token=test-token", mode: "page", adapter: { endpoint: "/api/ai/pricing" } }, {
     fetchImpl: async (url, init) => {
       request = { url, init };
       return response([{ result: { data: { json: { providers: [{ name: "OpenAI", models: [{ model_id: "gpt-4o", input_price: "0.000005", output_price: "0.000015", group_prices: [{ name: "余额", multiplier: 1 }] }] }] } } } }]);
@@ -1105,6 +2082,137 @@ test("adapts Jiji model page URLs to the authenticated model-market API", async 
   assert.equal(request.init.headers.Authorization, "Bearer test-token");
   assert.equal(request.init.headers["x-trpc-source"], "browser-client");
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
+});
+test("leaves unsupported Jiji paths on the configured request endpoint", () => {
+  const collection = resolveStationCollection({
+    id: "station-jiji-custom",
+    name: "Jiji custom API",
+    baseUrl: "https://jiji.cc/custom-user-api",
+    adapter: { endpoint: "/custom-user-api", method: "GET" }
+  });
+  assert.equal(collection.station.adapter.endpoint, "/custom-user-api");
+  assert.equal(collection.endpoints.some(endpoint => endpoint.includes("/extension/api/trpc/extension.modelMarket")), false);
+});
+
+test("builds requests from the resolved collection strategy", () => {
+  const collection = resolveStationCollection({ baseUrl: "https://jiji.cc" });
+  const request = buildStationRequest(collection.station, collection.endpoints[0], {
+    ...collection.request,
+    headers: { "x-test": "frozen" },
+    pageHeaders: ["x-test"],
+    credentials: "same-origin"
+  });
+  assert.equal(request.headers["x-test"], "frozen");
+  assert.equal(request.credentials, "same-origin");
+  assert.equal(request.pageRequest.headers["x-test"], "frozen");
+});
+test("requires page-session providers to opt into credentials", () => {
+  for (const id of ["cun", "aiapi", "fastaitoken", "nexavlinks"]) {
+    assert.equal(providerById(id)?.request.credentials, "include", id);
+  }
+});
+
+test("adapts NodeAI model plaza to its JSON API endpoint", async () => {
+  const adapter = inferStationAdapter({ baseUrl: "https://nodeai.cc/model-plaza" });
+  assert.equal(adapter.mode, "direct");
+  assert.equal(adapter.endpoint, "/api/v1/model-plaza");
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.responseFormat, "nodeai-model-plaza");
+  assert.equal(adapter.authType, "none");
+
+  const prepared = prepareStationInput({
+    baseUrl: "https://www.nodeai.cc/model-plaza?tab=all",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  });
+  assert.equal(prepared.baseUrl, "https://nodeai.cc/model-plaza");
+  assert.equal(prepared.mode, "direct");
+  assert.equal(prepared.adapter.endpoint, "/api/v1/model-plaza");
+  assert.equal(prepared.adapter.responseFormat, "nodeai-model-plaza");
+  assert.equal(prepared.auth.type, "none");
+
+  let request;
+  const snapshot = await collectStationInput({
+    id: "station-nodeai",
+    name: "NodeAI",
+    baseUrl: "https://www.nodeai.cc/model-plaza"
+  }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response(nodeAiFixture);
+    }
+  });
+  assert.equal(request.url, "https://nodeai.cc/api/v1/model-plaza");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.sourceFormat, "nodeai-model-plaza");
+});
+test("adapts KillAI model plaza through the logged-in page", async () => {
+  const preset = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://seed.example" }])
+    .find(station => station.baseUrl === "https://api.killai.cc/model-plaza?embedded=1");
+  assert.ok(preset);
+  assert.equal(preset.mode, "page");
+  assert.equal(preset.priceCurrency, "UNKNOWN");
+  assert.equal(preset.priceCurrencyVerified, false);
+  assert.equal(preset.rechargeRateVerified, false);
+
+  const adapter = inferStationAdapter({ baseUrl: preset.baseUrl });
+  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.endpoint, "/api/v1/model-plaza?timezone=Asia%2FShanghai");
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.responseFormat, "killai-model-plaza");
+  assert.equal(adapter.authType, "none");
+
+  const prepared = prepareStationInput({
+    baseUrl: "https://api.killai.cc/model-plaza?tab=all",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  });
+  assert.equal(prepared.baseUrl, "https://api.killai.cc/model-plaza?embedded=1");
+  assert.equal(prepared.mode, "page");
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.priceCurrency, "UNKNOWN");
+  assert.equal(prepared.rechargeRateVerified, false);
+
+  let request;
+  const snapshot = await collectStationInput({
+    id: "station-killai",
+    name: "KillAI",
+    baseUrl: "https://api.killai.cc/model-plaza?embedded=1",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  }, {
+    pageFetch: async value => {
+      request = value;
+      return response(killAiFixture);
+    }
+  });
+  assert.equal(request.url, "https://api.killai.cc/api/v1/model-plaza?timezone=Asia%2FShanghai");
+  assert.equal(request.headers.Authorization, undefined);
+  assert.equal(request.pageAuth.source, "localStorage");
+  assert.equal(request.pageAuth.storageKey, "auth_token");
+  assert.equal(request.pageAuth.header, "Authorization");
+  assert.equal(request.pageAuth.scheme, "Bearer");
+  assert.equal(request.pageAuth.refresh.endpoint, "/api/v1/auth/refresh");
+  assert.equal(request.pageAuth.refresh.refreshTokenStorageKey, "refresh_token");
+  assert.equal(request.pageAuth.refresh.responsePath, "data");
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.sourceFormat, "killai-model-plaza");
+  assert.equal(snapshot.normalized.data[0].price_currency, "UNKNOWN");
+
+  const station = { ...preset, id: "station-killai-unverified" };
+  const comparisonSnapshot = { ...snapshot, stationId: station.id };
+  const [comparison] = buildComparisonRows({
+    stations: [station],
+    snapshots: [comparisonSnapshot],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const offers = comparison.offers;
+  assert.ok(offers.length > 0);
+  for (const offer of offers) {
+    assert.equal(offer.pricingUnavailable, true);
+    assert.ok(offer.pricingUnavailableReasons.includes("currency_unverified"));
+    assert.ok(offer.pricingUnavailableReasons.includes("recharge_unverified"));
+  }
 });
 test("adapts the Sidrune model plaza URL and station preset", () => {
   const adapter = inferStationAdapter({ baseUrl: "https://sidrune.ai/model-plaza" });
@@ -1142,7 +2250,7 @@ test("adapts the Sidrune model plaza URL and station preset", () => {
 
 test("collects Sidrune public model prices without credentials", async () => {
   let request;
-  const snapshot = await collectStation({
+  const snapshot = await collectStationInput({
     id: "station-sidrune-public",
     name: "Sidrune",
     baseUrl: "https://sidrune.ai/model-plaza?tab=all",
@@ -1173,7 +2281,7 @@ test("passes Jiji bearer auth through page-mode fetches", async () => {
     return response([{ result: { data: { json: { providers: [{ name: "OpenAI", models: [{ model_id: "gpt-4o", input_price: "0.1", output_price: "0.5" }] }] } } } }]);
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({
+  const snapshot = await collectStationInput({
     id: "station-jiji-page",
     name: "Jiji",
     baseUrl: "https://www.jiji.cc/extension/models?token=test-token",
@@ -1182,6 +2290,8 @@ test("passes Jiji bearer auth through page-mode fetches", async () => {
   }, { pageFetch });
   const request = requests.find(item => !item.capture);
   assert.equal(request.headers.Authorization, "Bearer test-token");
+  assert.equal(request.credentials, "omit");
+  assert.equal(request.pageAuth.source, "localStorage");
   assert.equal(snapshot.status, "success");
 });
 
@@ -1219,7 +2329,7 @@ test("collects NexaVlinks catalog prices through the logged-in page", async () =
     };
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({ ...station, adapter }, { pageFetch });
+  const snapshot = await collectStationInput({ ...station, adapter }, { pageFetch });
   assert.equal(requests[0].url, "https://www.nexavlinks.com/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai");
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "fastaitoken");
@@ -1244,26 +2354,25 @@ test("collects CUN.AI prices through the logged-in page", async () => {
     return { ok: true, status: 200, body: cunFixture };
   };
   pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({ ...station, adapter }, { pageFetch });
+  const snapshot = await collectStationInput({ ...station, adapter }, { pageFetch });
   assert.equal(requests[0].url, "https://www.cun.ai/api/pricing");
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
 });
 
-test("collects CheapRouter prices from the authenticated model page", async () => {
+test("collects CheapRouter prices from the public API directly", async () => {
   const station = { id: "station-cheaprouter", name: "CheapRouter", baseUrl: "https://cheaprouter.cc/models" };
   const adapter = inferStationAdapter(station);
-  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.mode, "direct");
   assert.equal(adapter.endpoint, "/api/v1/pricing/public?timezone=Asia%2FShanghai");
   assert.equal(adapter.method, "GET");
   const prepared = prepareStationInput({ baseUrl: "https://cheaprouter.cc/models?tab=all" });
   assert.equal(prepared.baseUrl, "https://cheaprouter.cc/models");
-  assert.equal(prepared.mode, "page");
+  assert.equal(prepared.mode, "direct");
   assert.equal(prepared.adapter.kind, "cheaprouter");
-  const requests = [];
-  const pageFetch = async request => {
-    if (request.capture) return { ok: false, status: 404, body: { data: [] } };
-    requests.push(request);
+  let request;
+  const fetchImpl = async (url, init) => {
+    request = { url, init };
     return response({
       code: 0,
       data: {
@@ -1283,15 +2392,17 @@ test("collects CheapRouter prices from the authenticated model page", async () =
       }
     });
   };
-  pageFetch.supportsCapture = true;
-  const snapshot = await collectStation({ ...station, mode: "page", adapter }, { pageFetch });
-  assert.equal(requests.length, 1);
-  assert.equal(requests[0].url, "https://cheaprouter.cc/api/v1/pricing/public?timezone=Asia%2FShanghai");
+  const pageFetch = async () => {
+    throw new Error("CheapRouter must not use pageFetch");
+  };
+  const snapshot = await collectStationInput({ ...station, adapter }, { fetchImpl, pageFetch });
+  assert.equal(request.url, "https://cheaprouter.cc/api/v1/pricing/public?timezone=Asia%2FShanghai");
+  assert.equal(request.init.credentials, "omit");
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
   assert.equal(snapshot.normalized.data[0].input_price, 0.18);
   assert.equal(snapshot.normalized.data[0].output_price, 1.08);
-  assert.equal(snapshot.normalized.data[0].price_currency, "USD");
+  assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
 });
 
 test("suggests official candidates for unmatched proxy names and scopes confirmed mappings", () => {
@@ -1377,6 +2488,30 @@ test("brackets station saves with comparison invalidation", async () => {
   });
 });
 
+
+test("persists recharge and model price currencies independently", async () => {
+  await withSnapshotDb([], async () => {
+    await putStations([{
+      id: "token123",
+      name: "T蜜",
+      baseUrl: "https://token123.cfd",
+      rechargeCurrency: "USD",
+      rechargeRmb: 72,
+      rechargeCredits: 60,
+      rechargeRate: 1.2,
+      rechargeRateVerified: true,
+      priceCurrency: "CREDITS",
+      priceCurrencyVerified: true
+    }]);
+    const [saved] = await getStations();
+    assert.equal(saved.rechargeCurrency, "USD");
+    assert.equal(saved.rechargeRmb, 72);
+    assert.equal(saved.rechargeCredits, 60);
+    assert.equal(saved.priceCurrency, "CREDITS");
+    assert.equal(saved.priceCurrencyVerified, true);
+  });
+});
+
 test("prunes old numeric and imported string timestamps without dropping fresh snapshots", async () => {
   const now = Date.now();
   const revision = getComparisonRevision();
@@ -1412,7 +2547,7 @@ test("applies only confirmed model overrides to comparison rows", () => {
 
 test("forwards POST adapter bodies", async () => {
   let request;
-  await collectStation({
+  await collectStationInput({
     id: "station-post",
     name: "POST station",
     baseUrl: "https://relay.example",
@@ -1432,7 +2567,7 @@ test("forwards POST adapter bodies", async () => {
 
 test("keeps extension credentials out of the page bridge", async () => {
   let request;
-  await collectStation({
+  await collectStationInput({
     id: "station-page",
     name: "Page station",
     baseUrl: "https://relay.example",
@@ -1447,6 +2582,336 @@ test("keeps extension credentials out of the page bridge", async () => {
   });
   assert.equal(request.headers.Authorization, undefined);
   assert.equal(request.headers["X-API-Key"], undefined);
+});
+
+test("isolates the Hepingan v3 bridge from stale v2 listeners and uses page auth", async () => {
+  const listeners = new Map();
+  const posted = [];
+  let token = "hepingan-page-token";
+  let storageReads = 0;
+  let request = null;
+  const payload = { data: [{ name: "Hepingan", platforms: [{ platform: "OpenAI", groups: [], supported_models: [] }] }] };
+  const origin = "https://api.hepingan.top";
+  const pageAuth = { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 Hepingan 登录凭据，请先在当前 Chrome 配置文件登录后重试" };
+  const pageWindow = {
+    location: { hostname: "api.hepingan.top", href: `${origin}/available-channels`, origin },
+    history: { pushState() {}, replaceState() {} },
+    document: { body: {}, querySelector: () => null, querySelectorAll: () => [] },
+    localStorage: { getItem(key) { storageReads += 1; assert.equal(key, "auth_token"); return token; } },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener() {},
+    postMessage(message) { posted.push(message); },
+    fetch: async (url, init) => {
+      request = { url, init };
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => "application/json" },
+        json: async () => payload,
+        clone: () => ({ json: async () => payload })
+      };
+    }
+  };
+  function MockXHR() {}
+  MockXHR.prototype.open = function() {};
+  MockXHR.prototype.send = function() {};
+  runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), { window: pageWindow, document: pageWindow.document, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR, URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise });
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST_V3", id: "hepingan-capture" }
+  });
+  assert.equal(posted.at(-1).type, "AI_RELAY_PAGE_BRIDGE_RESPONSE_V3");
+  assert.equal(posted.at(-1).response.ok, false);
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V2", id: "hepingan-v2", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET" } }
+  });
+  assert.equal(request, null);
+  assert.equal(posted.some(message => message.id === "hepingan-v2"), false);
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "hepingan-v3", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET", credentials: "include", headers: { Accept: "application/json" }, pageAuth } }
+  });
+  assert.equal(request.init.headers.Authorization, `Bearer ${token}`);
+  assert.equal(request.init.credentials, "include");
+  assert.equal(posted.at(-1).type, PAGE_WINDOW_RESPONSE_TYPE);
+  assert.equal(JSON.stringify(posted).includes(token), false);
+  storageReads = 0;
+  request = null;
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "hepingan-other", request: { url: `${origin}/api/v1/user/profile`, method: "GET" } }
+  });
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(storageReads, 0);
+  request = null;
+  storageReads = 0;
+  token = "";
+  await listeners.get("message")({
+    source: pageWindow,
+    origin,
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "hepingan-no-token", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET", pageAuth } }
+  });
+  assert.equal(request, null);
+  assert.equal(storageReads, 1);
+  assert.match(posted.at(-1).error, /未找到 Hepingan 登录凭据/);
+  assert.equal(posted.at(-1).type, PAGE_WINDOW_RESPONSE_TYPE);
+});
+
+test("refreshes page auth once and stops after a failed refresh", async () => {
+  const listeners = new Map();
+  const posted = [];
+  const storage = new Map([
+    ["auth_token", "expired-token"],
+    ["refresh_token", "refresh-token"]
+  ]);
+  const calls = [];
+  let refreshSucceeds = true;
+  const origin = "https://api.killai.cc";
+  const pageAuth = {
+    source: "localStorage",
+    storageKey: "auth_token",
+    header: "Authorization",
+    scheme: "Bearer",
+    sessionFailureStatuses: [401],
+    refresh: {
+      endpoint: "/api/v1/auth/refresh",
+      refreshTokenStorageKey: "refresh_token",
+      credentials: "same-origin",
+      includeAccessToken: true,
+      responsePath: "data",
+      accessTokenKey: "access_token",
+      refreshTokenKey: "refresh_token",
+      expiresInKey: "expires_in",
+      expiresAtStorageKey: "token_expires_at"
+    }
+  };
+  const jsonResponse = (body, status = 200) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: () => "application/json" },
+    json: async () => body,
+    clone: () => ({ json: async () => body })
+  });
+  const pageWindow = {
+    location: { hostname: "api.killai.cc", href: `${origin}/model-plaza?embedded=1`, origin },
+    history: { pushState() {}, replaceState() {} },
+    localStorage: { getItem: key => storage.get(key) || "", setItem: (key, value) => storage.set(key, value) },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener() {},
+    postMessage(message) { posted.push(message); },
+    fetch: async (url, init) => {
+      calls.push({ url, init });
+      if (String(url).endsWith("/api/v1/auth/refresh")) return refreshSucceeds
+        ? jsonResponse({ code: 0, data: { access_token: "fresh-token", refresh_token: "rotated-refresh-token", expires_in: 3600 } })
+        : jsonResponse({ code: 401, message: "refresh failed" }, 401);
+      if (init.headers.Authorization === "Bearer expired-token") return jsonResponse({ code: 401, message: "expired" }, 401);
+      return jsonResponse({ data: [{ model_name: "gpt-4o", model_ratio: 1, completion_ratio: 1 }] });
+    }
+  };
+  function MockXHR() {}
+  MockXHR.prototype.open = function() {};
+  MockXHR.prototype.send = function() {};
+  runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), { window: pageWindow, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR, URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise });
+  const send = async id => {
+    posted.length = 0;
+    await listeners.get("message")({
+      source: pageWindow,
+      origin,
+      data: { type: PAGE_WINDOW_REQUEST_TYPE, id, request: { url: `${origin}/api/v1/model-plaza?timezone=Asia%2FShanghai`, method: "GET", headers: { Accept: "application/json" }, pageAuth } }
+    });
+    return posted.at(-1);
+  };
+
+  const success = await send("killai-refresh-success");
+  assert.deepEqual(calls.map(call => call.url), [
+    `${origin}/api/v1/model-plaza?timezone=Asia%2FShanghai`,
+    `${origin}/api/v1/auth/refresh`,
+    `${origin}/api/v1/model-plaza?timezone=Asia%2FShanghai`
+  ]);
+  assert.equal(JSON.parse(calls[1].init.body).refresh_token, "refresh-token");
+  assert.equal(calls[1].init.credentials, "same-origin");
+  assert.equal(calls[1].init.headers.Authorization, "Bearer expired-token");
+  assert.equal(calls[2].init.headers.Authorization, "Bearer fresh-token");
+  assert.equal(storage.get("auth_token"), "fresh-token");
+  assert.equal(storage.get("refresh_token"), "rotated-refresh-token");
+  assert.ok(Number(storage.get("token_expires_at")) > Date.now());
+  assert.equal(success.response.status, 200);
+  assert.equal(JSON.stringify(posted).includes("refresh-token"), false);
+
+  calls.length = 0;
+  storage.set("auth_token", "expired-token");
+  refreshSucceeds = false;
+  const failure = await send("killai-refresh-failure");
+  assert.deepEqual(calls.map(call => call.url), [
+    `${origin}/api/v1/model-plaza?timezone=Asia%2FShanghai`,
+    `${origin}/api/v1/auth/refresh`
+  ]);
+  assert.equal(failure.response.status, 401);
+});
+test("classifies page auth failures by provider policy", async () => {
+  let status = 401;
+  const pageFetch = async () => ({ ok: false, status, body: { message: "unauthorized" } });
+  await assert.rejects(
+    () => collectStationInput({
+      id: "station-hepingan-401",
+      name: "hepingan.top",
+      baseUrl: "https://api.hepingan.top/available-channels",
+      mode: "page"
+    }, { pageFetch }),
+    /页面会话已失效，请在当前 Chrome 配置文件重新登录后重试/
+  );
+  status = 403;
+  await assert.rejects(
+    () => collectStationInput({
+      id: "station-hepingan-403",
+      name: "hepingan.top",
+      baseUrl: "https://api.hepingan.top/available-channels",
+      mode: "page"
+    }, { pageFetch }),
+    /hepingan.top 请求失败（403）/
+  );
+});
+test("treats CUN.AI 403 as an HTTP error", async () => {
+  const pageFetch = async () => ({ ok: false, status: 403, body: { message: "forbidden" } });
+  await assert.rejects(
+    () => collectStationInput({
+      id: "station-cun-403",
+      name: "CUN.AI",
+      baseUrl: "https://www.cun.ai/pricing",
+      mode: "page"
+    }, { pageFetch }),
+    /CUN.AI 请求失败（403）/
+  );
+});
+test("keeps bridge protocol constants synchronized across injected scripts", () => {
+  const pageBridge = readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8");
+  const contentBridge = readFileSync(new URL("../src/content-bridge.js", import.meta.url), "utf8");
+  const pageTabs = readFileSync(new URL("../src/core/page-tabs.js", import.meta.url), "utf8");
+  const assertLiteral = (source, name, value) => assert.ok(source.includes(`const ${name} = ${JSON.stringify(value)};`), `${name} is out of sync`);
+
+  for (const [name, value] of [
+    ["PAGE_BRIDGE_VERSION", PAGE_BRIDGE_VERSION],
+    ["PAGE_WINDOW_REQUEST_TYPE", PAGE_WINDOW_REQUEST_TYPE],
+    ["PAGE_WINDOW_CAPTURE_REQUEST_TYPE", PAGE_WINDOW_CAPTURE_REQUEST_TYPE],
+    ["PAGE_WINDOW_RESPONSE_TYPE", PAGE_WINDOW_RESPONSE_TYPE],
+    ["LEGACY_PAGE_WINDOW_REQUEST_TYPE", LEGACY_PAGE_WINDOW_REQUEST_TYPE],
+    ["LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE", LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE],
+    ["LEGACY_PAGE_WINDOW_RESPONSE_TYPE", LEGACY_PAGE_WINDOW_RESPONSE_TYPE]
+  ]) assertLiteral(pageBridge, name, value);
+
+  for (const [name, value] of [
+    ["CONTENT_BRIDGE_VERSION", CONTENT_BRIDGE_VERSION],
+    ["PAGE_WINDOW_REQUEST_TYPE", PAGE_WINDOW_REQUEST_TYPE],
+    ["PAGE_WINDOW_CAPTURE_REQUEST_TYPE", PAGE_WINDOW_CAPTURE_REQUEST_TYPE],
+    ["PAGE_WINDOW_RESPONSE_TYPE", PAGE_WINDOW_RESPONSE_TYPE],
+    ["LEGACY_PAGE_WINDOW_RESPONSE_TYPE", LEGACY_PAGE_WINDOW_RESPONSE_TYPE],
+    ["CONTENT_PROBE_REQUEST_TYPE", CONTENT_PROBE_REQUEST_TYPE],
+    ["CONTENT_PROBE_RESPONSE_TYPE", CONTENT_PROBE_RESPONSE_TYPE],
+    ["PAGE_RUNTIME_FETCH_TYPE", PAGE_RUNTIME_FETCH_TYPE],
+    ["PAGE_RUNTIME_CAPTURE_TYPE", PAGE_RUNTIME_CAPTURE_TYPE]
+  ]) assertLiteral(contentBridge, name, value);
+  const assertVersioned = (value, version) => assert.match(value, new RegExp(`V${version}$`), `${value} is out of sync with version ${version}`);
+  for (const value of [PAGE_WINDOW_REQUEST_TYPE, PAGE_WINDOW_CAPTURE_REQUEST_TYPE, PAGE_WINDOW_RESPONSE_TYPE]) assertVersioned(value, 3);
+  for (const value of [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE, PAGE_RUNTIME_FETCH_TYPE, PAGE_RUNTIME_CAPTURE_TYPE]) assertVersioned(value, CONTENT_BRIDGE_VERSION);
+
+  assert.ok(contentBridge.includes("message?.type === PAGE_RUNTIME_FETCH_TYPE"));
+  assert.ok(contentBridge.includes("message?.type === PAGE_RUNTIME_CAPTURE_TYPE"));
+  assert.ok(pageBridge.includes("type: PAGE_WINDOW_RESPONSE_TYPE"));
+  assert.ok(pageTabs.includes("function probePageBridge(requiredVersion, responseType, captureRequestType)"));
+  assert.ok(pageTabs.includes("func: probePageBridge, args: [PAGE_BRIDGE_VERSION, LEGACY_PAGE_WINDOW_RESPONSE_TYPE, LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE]"));
+  assert.ok(pageTabs.includes("func: probeContentBridge, args: [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE]"));
+  assert.ok(pageTabs.includes("contentProbe.result.version < CONTENT_BRIDGE_VERSION"));
+});
+test("keeps one content bridge listener when legacy and current listeners coexist", () => {
+  const source = readFileSync(new URL("../src/content-bridge.js", import.meta.url), "utf8");
+  const windowListeners = [];
+  const eventListeners = new Map();
+  const runtimeListeners = [message => message?.type === "PAGE_FETCH_V2" && undefined];
+  const posted = [];
+  const pageWindow = {
+    location: { origin: "https://relay.example" },
+    addEventListener(type, listener) { if (type === "message") windowListeners.push(listener); else eventListeners.set(type, listener); },
+    removeEventListener(type, listener) { if (eventListeners.get(type) === listener) eventListeners.delete(type); },
+    postMessage(message) {
+      posted.push(message);
+      if (message.type === PAGE_WINDOW_REQUEST_TYPE) eventListeners.get("ai-relay-page-response:content-probe-id")?.({ detail: { id: "content-probe-id", ok: true, response: { ok: true, status: 200, body: {} } } });
+    }
+  };
+  const context = {
+    window: pageWindow,
+    chrome: { runtime: { onMessage: { addListener(listener) { runtimeListeners.push(listener); } } } },
+    crypto: { randomUUID: () => "content-probe-id" },
+    setTimeout,
+    clearTimeout
+  };
+  windowListeners.push(event => {
+    if (event.data?.type === "AI_RELAY_CONTENT_BRIDGE_PROBE_REQUEST") pageWindow.postMessage({ type: "AI_RELAY_CONTENT_BRIDGE_PROBE_RESPONSE", id: event.data.id, version: 2 }, pageWindow.location.origin);
+  });
+
+  runInNewContext(source, context);
+  runInNewContext(source, context);
+  assert.equal(runtimeListeners.length, 2);
+
+  for (const listener of windowListeners) listener({ source: pageWindow, origin: pageWindow.location.origin, data: { type: CONTENT_PROBE_REQUEST_TYPE, id: "v3-probe" } });
+  assert.equal(posted.filter(message => message.type === CONTENT_PROBE_RESPONSE_TYPE).length, 1);
+  assert.equal(posted.filter(message => message.type === "AI_RELAY_CONTENT_BRIDGE_PROBE_RESPONSE").length, 0);
+
+  for (const listener of runtimeListeners) listener({ type: PAGE_RUNTIME_FETCH_TYPE, request: { url: "https://relay.example/pricing", method: "GET" } }, {}, () => {});
+  assert.equal(posted.filter(message => message.type === PAGE_WINDOW_REQUEST_TYPE).length, 1);
+});
+
+
+test("isolates a legacy content listener after reset and reinjection", () => {
+  const source = readFileSync(new URL("../src/content-bridge.js", import.meta.url), "utf8");
+  const windowListeners = [];
+  const eventListeners = new Map();
+  const runtimeListeners = [message => {
+    if (message?.type === "PAGE_FETCH_V3") pageWindow.postMessage({ type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "legacy" }, pageWindow.location.origin);
+  }];
+  const posted = [];
+  const pageWindow = {
+    location: { origin: "https://relay.example" },
+    addEventListener(type, listener) { if (type === "message") windowListeners.push(listener); else eventListeners.set(type, listener); },
+    removeEventListener(type, listener) {
+      if (type === "message") {
+        const index = windowListeners.indexOf(listener);
+        if (index >= 0) windowListeners.splice(index, 1);
+      } else if (eventListeners.get(type) === listener) eventListeners.delete(type);
+    },
+    postMessage(message) {
+      posted.push(message);
+      if (message.type === PAGE_WINDOW_REQUEST_TYPE) eventListeners.get(`ai-relay-page-response:${message.id}`)?.({ detail: { id: message.id, ok: true, response: { ok: true, status: 200, body: {} } } });
+    }
+  };
+  const context = {
+    window: pageWindow,
+    chrome: { runtime: { onMessage: {
+      addListener(listener) { runtimeListeners.push(listener); },
+      removeListener(listener) {
+        const index = runtimeListeners.indexOf(listener);
+        if (index >= 0) runtimeListeners.splice(index, 1);
+      }
+    } } },
+    crypto: { randomUUID: () => "content-recovery-id" },
+    setTimeout,
+    clearTimeout
+  };
+
+  runInNewContext(source, context);
+  runInNewContext(`(${resetContentBridge.toString()})()`, context);
+  runInNewContext(source, context);
+  assert.equal(runtimeListeners.length, 2);
+
+  let responseCount = 0;
+  for (const listener of runtimeListeners) listener({ type: PAGE_RUNTIME_FETCH_TYPE, request: { url: "https://relay.example/pricing", method: "GET" } }, {}, () => { responseCount += 1; });
+  assert.equal(posted.filter(message => message.type === PAGE_WINDOW_REQUEST_TYPE).length, 1);
+  assert.equal(responseCount, 1);
 });
 test("uses the CUN.AI local uid only for its pricing API", async () => {
   const listeners = new Map();
@@ -1472,7 +2937,7 @@ test("uses the CUN.AI local uid only for its pricing API", async () => {
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "cun-1", request: { url: `${origin}/api/pricing`, method: "GET", headers: { Accept: "application/json" } } }
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "cun-1", request: { url: `${origin}/api/pricing`, method: "GET", credentials: "include", headers: { Accept: "application/json" }, pageAuth: { source: "localStorage", storageKey: "uid", header: "New-Api-User", missingMessage: "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
   });
   assert.equal(request.init.headers["New-Api-User"], "cun-user-id");
   assert.equal(request.init.headers.Authorization, undefined);
@@ -1509,7 +2974,7 @@ test("uses FastAIToken page auth only for its channel API without returning the 
   runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), { window: pageWindow, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR, URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise });
   await listeners.get("message")({
     source: pageWindow, origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-1", request: { url: `${origin}/api/v1/channels/available`, method: "GET", headers: { Accept: "application/json" } } }
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-1", request: { url: `${origin}/api/v1/channels/available`, method: "GET", credentials: "include", headers: { Accept: "application/json", "X-User-UI-Request": "1" }, pageAuth: { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
   });
   assert.equal(request.init.headers.Authorization, `Bearer ${token}`);
   assert.equal(request.init.headers["X-User-UI-Request"], "1");
@@ -1527,7 +2992,7 @@ test("uses FastAIToken page auth only for its channel API without returning the 
   pageWindow.localStorage.getItem = () => "";
   await listeners.get("message")({
     source: pageWindow, origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-3", request: { url: `${origin}/api/v1/channels/available`, method: "GET", headers: { Accept: "application/json" } } }
+    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-3", request: { url: `${origin}/api/v1/channels/available`, method: "GET", headers: { Accept: "application/json" }, pageAuth: { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
   });
   assert.equal(request, null);
   assert.match(posted.at(-1).error, /未找到 FastAIToken 登录凭据/);
@@ -1718,6 +3183,51 @@ test("opens a temporary Jiji model market tab when no site tab is available", as
   assert.deepEqual(opened, [{ url: "https://www.jiji.cc/custom/13235f4cd3f1e94e", active: false }]);
 });
 
+test("opens a temporary Hepingan tab when no site tab is available", async () => {
+  const opened = [];
+  const tabs = {
+    query: async () => [],
+    create: async options => {
+      opened.push(options);
+      return { id: 44, url: options.url, status: "complete" };
+    },
+    get: async tabId => ({ id: tabId, url: "https://api.hepingan.top/available-channels", status: "complete" }),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { baseUrl: "https://api.hepingan.top/available-channels", mode: "page" });
+  assert.equal(result.temporary, true);
+  assert.equal(result.tab.id, 44);
+  assert.deepEqual(opened, [{ url: "https://api.hepingan.top/available-channels", active: false }]);
+});
+
+test("reuses an existing Hepingan login page", async () => {
+  const existing = { id: 55, url: "https://api.hepingan.top/available-channels" };
+  const tabs = {
+    query: async () => [existing],
+    create: async () => assert.fail("should reuse the existing Hepingan page"),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { baseUrl: existing.url, mode: "page" });
+  assert.equal(result.tab, existing);
+  assert.equal(result.temporary, false);
+});
+
+test("does not choose an arbitrary Hepingan tab when login pages are ambiguous", async () => {
+  const tabs = {
+    query: async () => [
+      { id: 56, url: "https://api.hepingan.top/account-a" },
+      { id: 57, url: "https://api.hepingan.top/account-b" }
+    ],
+    create: async () => assert.fail("should keep the ambiguous login context unresolved"),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { baseUrl: "https://api.hepingan.top/available-channels", mode: "page" });
+  assert.deepEqual(result, { tab: null, temporary: false });
+});
+
 test("reuses an existing matching FastAIToken tab", async () => {
   const tabs = {
     query: async () => [
@@ -1755,6 +3265,8 @@ test("installs bridge scripts when an existing page has no bridge", async () => 
   const results = [{ result: { current: false } }, { result: false }];
   const scripting = { executeScript: async script => { injections.push(script); return [script.func?.name?.startsWith("probe") ? results.shift() : {}]; } };
   assert.equal(await ensurePageBridge(scripting, 42), null);
+  assert.deepEqual(injections[0].args, [PAGE_BRIDGE_VERSION, LEGACY_PAGE_WINDOW_RESPONSE_TYPE, LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE]);
+  assert.deepEqual(injections[2].args, [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE]);
   assert.deepEqual(injections.map(({ target, world, files }) => ({ target, world, files })), [
     { target: { tabId: 42 }, world: "MAIN", files: undefined },
     { target: { tabId: 42 }, world: "MAIN", files: ["src/page-bridge.js"] },
@@ -1776,9 +3288,20 @@ test("upgrades a legacy page bridge without adding another request proxy", async
   assert.equal(injections[1].world, "MAIN");
 });
 
+test("reinstalls stale v2 page and content bridges", async () => {
+  const injections = [];
+  const results = [{ result: { current: false, version: 2 } }, { result: { version: 2 } }];
+  const scripting = { executeScript: async script => { injections.push(script); return [script.func?.name?.startsWith("probe") ? results.shift() : {}]; } };
+  await ensurePageBridge(scripting, 42);
+  assert.deepEqual(injections.filter(script => script.files).map(({ target, world, files }) => ({ target, world, files })), [
+    { target: { tabId: 42 }, world: "MAIN", files: ["src/page-bridge.js"] },
+    { target: { tabId: 42 }, world: undefined, files: ["src/content-bridge.js"] }
+  ]);
+});
+
 test("does not reinject an already installed bridge", async () => {
   const injections = [];
-  const results = [{ result: { current: true } }, { result: true }];
+  const results = [{ result: { current: true, version: 3 } }, { result: { version: CONTENT_BRIDGE_VERSION } }];
   const scripting = { executeScript: async script => { injections.push(script); return [script.func?.name?.startsWith("probe") ? results.shift() : {}]; } };
   assert.equal(await ensurePageBridge(scripting, 42), null);
   assert.equal(injections.some(script => script.files), false);
@@ -1794,7 +3317,7 @@ test("reinstalls the content bridge when a page receiver disappears", async () =
 });
 
 test("rejects invalid page-mode price payloads", async () => {
-  await assert.rejects(() => collectStation({
+  await assert.rejects(() => collectStationInput({
     id: "station-page-invalid",
     name: "Invalid page station",
     baseUrl: "https://relay.example",
@@ -1822,12 +3345,21 @@ test("builds bounded JEV choices and sends only comparison fields", () => {
   const reviewTask = buildJevComparisonTask({
     stationId: "private-station-id", stationName: "Private station", modelName: "relay-gpt-4o",
     officialName: "openai/gpt-4o", groupName: "private group", groupRatio: 1.2, tierName: "night",
-    prices: { input: 1, output: 2 }, officialPrices: { input: 5, output: 15 },
-    diffPercent: -75, stale: false, evidence: "estimated", cacheReadEstimated: true,
+    prices: { input: 1, output: 2, cacheWrite1h: 3 }, officialPrices: { input: 5, output: 15, cacheWrite1h: 6 },
+    diffPercent: -75, stale: false, evidence: "estimated", cacheReadEstimated: true, incomplete: true, unsupportedBillingModes: ["per_second"], pricingUnavailableReasons: ["recharge_rate_unverified"], invalidPricingValues: ["video-model"], unpricedModels: ["Missing:shared-model:default"],
     baseUrl: "https://private.example", rawMeta: { token: "station-secret" }
   });
   assert.equal(reviewTask.questions.comparison_review.type, "choice");
   assert.equal(reviewTask.state.comparison.price_gap_direction, "proxy_cheaper");
+  assert.ok(reviewTask.state.comparison.proxy_price_fields.includes("cacheWrite1h"));
+  assert.equal(reviewTask.state.comparison.incomplete, true);
+  assert.deepEqual(reviewTask.state.comparison.unsupported_billing_modes, ["per_second"]);
+  assert.deepEqual(reviewTask.state.comparison.invalid_pricing_values, ["video-model"]);
+  assert.deepEqual(reviewTask.state.comparison.unpriced_models, ["Missing:shared-model:default"]);
+  assert.deepEqual(reviewTask.state.comparison.pricing_unavailable_reasons, ["recharge_rate_unverified"]);
+  assert.equal(reviewTask.questions.comparison_review.criteria.partial_proxy_catalog, "中转目录部分解析，存在未支持计费模式");
+  assert.equal(reviewTask.questions.comparison_review.criteria.invalid_pricing_values, "中转目录存在异常价格字段或倍率");
+  assert.equal(reviewTask.questions.comparison_review.criteria.unpriced_models, "中转目录存在已识别但未定价模型");
   assert.equal(buildJevComparisonTask({ modelName: "relay", officialName: "openai/model", diffPercent: null }).state.comparison.price_gap_direction, "unavailable");
   const serialized = JSON.stringify(reviewTask);
   assert.doesNotMatch(serialized, /private-station-id|private group|private\.example|station-secret/);
@@ -1848,11 +3380,230 @@ test("selects unique unresolved rows for batch JEV matching", () => {
   assert.deepEqual(targets.map(({ stationId, modelName }) => [stationId, modelName]), [["station-a", "relay-gpt-4o"], ["station-a", "duplicate-gpt"], ["station-b", "relay-claude"]]);
 });
 
+test("bounds refresh workers and settles station failures in input order", async () => {
+  let active = 0;
+  let maxActive = 0;
+  const settled = await runWithConcurrency([40, 10, 20, 5], 2, async (delay, index, slot) => {
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    try {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      if (index === 1) throw new Error("station failed");
+      return { index, slot };
+    } finally {
+      active -= 1;
+    }
+  });
+  assert.equal(maxActive, 2);
+  assert.deepEqual(settled.map(result => result.status), ["fulfilled", "rejected", "fulfilled", "fulfilled"]);
+  assert.deepEqual(settled.map(result => result.value?.index ?? null), [0, null, 2, 3]);
+  assert.ok(settled.every(result => result.slot >= 1 && result.slot <= 2));
+});
+
+test("serializes same-origin page stations before temporary tab cleanup", async () => {
+  const events = [];
+  let nextTabId = 1;
+  const runPageStation = (name, delay) => withKeyedLock("https://shared.example", async () => {
+    const tabId = nextTabId;
+    events.push(`${name}:start:${tabId}`);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    events.push(`${name}:complete:${tabId}`);
+    events.push(`tab:${tabId}:removed`);
+    nextTabId += 1;
+  });
+  await Promise.all([runPageStation("first-page", 20), runPageStation("second-page", 5)]);
+  assert.deepEqual(events, [
+    "first-page:start:1",
+    "first-page:complete:1",
+    "tab:1:removed",
+    "second-page:start:2",
+    "second-page:complete:2",
+    "tab:2:removed"
+  ]);
+});
+
+test("keeps refresh progress and snapshots isolated when stations fail", async () => {
+  const stations = [
+    { id: "station-a", name: "A", enabled: true },
+    { id: "station-b", name: "B", enabled: true },
+    { id: "station-c", name: "C", enabled: true }
+  ];
+  const progress = [];
+  const saveAttempts = [];
+  const saved = [];
+  const result = await runRefreshAll({
+    concurrency: 2,
+    getStations: async () => stations,
+    getValue: async () => ({ models: [] }),
+    refreshOfficialReferences: async () => ({ models: [] }),
+    collect: async station => {
+      if (station.id === "station-a") await new Promise(resolve => setTimeout(resolve, 20));
+      if (station.id === "station-b") throw new Error("collect failed");
+      return { stationId: station.id, status: "success", normalized: { data: [{ model_name: station.id }] } };
+    },
+    putSnapshot: async snapshot => {
+      saveAttempts.push({ stationId: snapshot.stationId, status: snapshot.status });
+      if (snapshot.stationId === "station-c" && snapshot.status === "success") throw new Error("snapshot write failed");
+      saved.push(snapshot);
+    },
+    getSnapshots: async ({ stationId }) => {
+      if (stationId === "station-c") throw new Error("snapshot read failed");
+      return [];
+    },
+    errorSnapshot: (station, error) => ({ stationId: station.id, stationName: station.name, status: "error", error: error.message, normalized: { data: [] } }),
+    notifyProgress: message => progress.push(message)
+  });
+
+  assert.deepEqual(result.results.map(snapshot => snapshot.stationId), ["station-a", "station-b", "station-c"]);
+  assert.deepEqual(result.results.map(snapshot => snapshot.status), ["success", "error", "error"]);
+  assert.deepEqual(result.summary, {
+    total: 3,
+    successCount: 1,
+    partialCount: 0,
+    errorCount: 2,
+    totalModels: 1,
+    durationMs: result.summary.durationMs
+  });
+  assert.deepEqual(saveAttempts.filter(({ stationId }) => stationId === "station-c"), [
+    { stationId: "station-c", status: "success" },
+    { stationId: "station-c", status: "error" }
+  ]);
+  assert.equal(saveAttempts.some(({ stationId, status }) => stationId === "station-b" && status === "error"), true);
+  assert.equal(saved.filter(snapshot => snapshot.status === "error").length, 2);
+  const completed = progress.filter(message => message.phase === "station" && message.status !== "running").map(message => message.completed);
+  assert.deepEqual(completed, [1, 2, 3]);
+  assert.equal(progress.at(-1).phase, "complete");
+  assert.equal(progress.at(-1).completed, 3);
+});
+test("finishes refresh when error snapshot construction fails", async () => {
+  const station = { id: "station-factory", name: "Factory failure", enabled: true, adapter: { kind: "test" } };
+  const progress = [];
+  const saved = [];
+  const result = await runRefreshAll({
+    concurrency: 1,
+    getStations: async () => [station],
+    getValue: async () => ({ models: [] }),
+    refreshOfficialReferences: async () => ({ models: [] }),
+    collect: async () => { throw new Error("collect failed"); },
+    putSnapshot: async snapshot => { saved.push(snapshot); },
+    getSnapshots: async () => [],
+    errorSnapshot: () => { throw new Error("factory failed"); },
+    notifyProgress: message => progress.push(message)
+  });
+
+  const snapshot = result.results[0];
+  assert.equal(result.summary.errorCount, 1);
+  assert.equal(snapshot.status, "error");
+  assert.equal(snapshot.stationId, station.id);
+  assert.equal(snapshot.error, "collect failed；错误快照构造失败：factory failed");
+  assert.equal(Number.isFinite(snapshot.collectedAt), true);
+  assert.deepEqual(snapshot.normalized.data, []);
+  assert.deepEqual(saved, [snapshot]);
+  assert.equal(progress.at(-1).phase, "complete");
+  assert.equal(progress.at(-1).completed, 1);
+});
+
+test("serializes withPageFetch lifecycle and cleans temporary tabs after request failure", async () => {
+  const previousChrome = globalThis.chrome;
+  const events = [];
+  let nextTabId = 1;
+  globalThis.chrome = {
+    runtime: {
+      lastError: undefined,
+      onMessage: { addListener() {} },
+      onInstalled: { addListener() {} },
+      onStartup: { addListener() {} },
+      getURL: () => "chrome-extension://test-extension/"
+    },
+    alarms: { onAlarm: { addListener() {} } },
+    tabs: {
+      onUpdated: { addListener() {}, removeListener() {} },
+      onRemoved: { addListener() {}, removeListener() {} },
+      query: async () => [],
+      create: async ({ url }) => {
+        const id = nextTabId++;
+        events.push(`create:${id}:${url}`);
+        return { id };
+      },
+      get: async id => ({ id, status: "complete", url: "https://fastaitoken.com/available-channels" }),
+      remove: async id => { events.push(`remove:${id}`); },
+      sendMessage: (id, message, callback) => {
+        events.push(`request:${id}`);
+        callback(id === 1 ? { ok: false, error: "bridge failed" } : { ok: true, response: { ok: true, status: 200, body: "ok" } });
+      }
+    },
+    scripting: {
+      executeScript: async ({ target, world }) => {
+        events.push(`bridge:${target.tabId}`);
+        return [{ result: world === "MAIN" ? { current: true } : { version: 999 } }];
+      }
+    }
+  };
+
+  try {
+    const { withPageFetch } = await import(`../src/service-worker.js?page-fetch-test=${Date.now()}`);
+    const station = { id: "page-station", name: "Page station", baseUrl: "https://fastaitoken.com/available-channels", mode: "page" };
+    const run = label => withPageFetch(station, undefined, async pageFetch => {
+      events.push(`task:${label}`);
+      const response = await pageFetch({ url: "https://fastaitoken.com/api/v1/channels/available" });
+      return response.body;
+    });
+    const results = await Promise.allSettled([run("first"), run("second")]);
+
+    assert.deepEqual(results.map(result => result.status), ["rejected", "fulfilled"]);
+    assert.equal(results[1].value, "ok");
+    const firstRemoval = events.indexOf("remove:1");
+    const secondCreation = events.findIndex(event => event.startsWith("create:2:"));
+    assert.ok(firstRemoval >= 0, events.join(" | "));
+    assert.ok(secondCreation > firstRemoval, events.join(" | "));
+    assert.ok(events.includes("remove:2"));
+  } finally {
+    if (previousChrome === undefined) delete globalThis.chrome;
+    else globalThis.chrome = previousChrome;
+  }
+});
+
+test("uses shared partial diagnostics in refresh progress", async () => {
+  const progress = [];
+  await runRefreshAll({
+    getStations: async () => [{ id: "partial-station", name: "Partial", enabled: true }],
+    getValue: async () => ({}),
+    refreshOfficialReferences: async () => ({ models: [] }),
+    collect: async () => ({
+      stationId: "partial-station",
+      status: "partial",
+      normalized: {
+        data: [{ model_name: "priced-model" }],
+        unsupportedBillingModes: ["per_second"],
+        unpricedModels: ["Tiered:tiered-model:interval:1"]
+      }
+    }),
+    putSnapshot: async () => {},
+    getSnapshots: async () => [],
+    errorSnapshot: station => ({ stationId: station.id, status: "error", normalized: { data: [] } }),
+    notifyProgress: message => progress.push(message)
+  });
+  const partialProgress = progress.find(message => message.phase === "station" && message.status === "partial");
+  assert.equal(partialProgress.error, "部分计费模式未解析：per_second；未定价模型：Tiered:tiered-model:interval:1");
+});
+
+test("keeps refresh progress labels aligned with parallel-slot semantics", () => {
+  const popup = readFileSync(new URL("../src/popup.js", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  assert.ok(popup.includes("并行槽位 ${progress.current}"));
+  assert.ok(dashboard.includes("并行槽位 ${progress.current}"));
+  assert.ok(options.includes("并行槽位 ${progress.current || 1}"));
+  assert.equal(popup.includes("正在查询 ${progress.current}/${total}"), false);
+  assert.equal(options.includes("${progress.current || 1}/${progress.total}"), false);
+});
+
 test("blocks batch JEV during worker and official-reference refreshes", () => {
   const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url), "utf8");
+  const scheduler = readFileSync(new URL("../src/core/refresh-scheduler.js", import.meta.url), "utf8");
   assert.ok(worker.includes('refreshInProgress: !["complete", "error"].includes(progress.phase) || Boolean(refreshReferencesTask)'));
-  assert.ok(worker.includes('references = await refreshOfficialReferences(forceReferences)'));
+  assert.ok(scheduler.includes('references = await refreshOfficialReferences(forceReferences)'));
   assert.ok(worker.includes('await refreshOfficialReferences(true)'));
   assert.ok(worker.includes('const activeForced = refreshReferencesForced'));
   assert.ok(worker.includes("if (!force || activeForced) return result"));
@@ -1864,6 +3615,7 @@ test("blocks batch JEV during worker and official-reference refreshes", () => {
   assert.ok(worker.includes("assertModelMatchJevIdle();"));
   assert.ok(dashboard.includes('error.message === "数据刷新中，模型匹配核验已停止"'));
   assert.ok(dashboard.includes('error.message === "报价、官方目录或 JEV 配置已变化，请刷新页面后重试"'));
+  assert.ok(dashboard.includes("row.pricingUnavailable"));
   assert.ok(dashboard.includes("interrupted = rows.length - index"));
   assert.equal(worker.match(/assertModelMatchJevIdle\(\);/g)?.length, 4);
   assert.ok(dashboard.includes('message?.type === "REFERENCES_REFRESHING"'));
@@ -2120,6 +3872,11 @@ test("provides configurable dashboard pagination and back-to-top controls", () =
   assert.match(icon("arrow-up"), /<path d="M12 19V5"\/>/);
   assert.match(source, /window\.addEventListener\("scroll"/);
   assert.match(source, /backToTop\.addEventListener\("click"/);
+});
+
+test("includes partial station counts in refresh summaries", () => {
+  assert.equal(formatRefreshSummary({ total: 1, successCount: 0, partialCount: 1, errorCount: 0, totalModels: 3, durationMs: 1000 }), "查询完成：0 成功，1 部分成功，0 失败，共 3 个模型 · 1.0 秒");
+  assert.equal(formatRefreshSummary({ total: 0 }), "没有启用的站点可查询");
 });
 
 test("filters quotes by any entered model across all stations", () => {
