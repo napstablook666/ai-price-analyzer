@@ -1,17 +1,18 @@
 (() => {
-  const BRIDGE_VERSION = 2;
+  const PAGE_BRIDGE_VERSION = 5;
   const legacyBridge = window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ === true;
-  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= BRIDGE_VERSION) return;
+  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= PAGE_BRIDGE_VERSION) return;
   window.__AI_PRICING_PAGE_BRIDGE__ = true;
-  window.__AI_PRICING_PAGE_BRIDGE_VERSION__ = BRIDGE_VERSION;
-const REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V2";
-const CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V2";
-const LEGACY_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
-const LEGACY_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
-const RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V2";
-const LEGACY_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
+  window.__AI_PRICING_PAGE_BRIDGE_VERSION__ = PAGE_BRIDGE_VERSION;
+const PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V3";
+const PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V3";
+const LEGACY_PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
+const LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
+const PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V3";
+const LEGACY_PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
-const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request"]);
+const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request", "new-api-user"]);
+const ALLOWED_CREDENTIALS = new Set(["omit", "same-origin", "include"]);
 let capturedPricing = null;
 const MAX_CAPTURE_BYTES = 512 * 1024;
 const CAPTURE_TTL_MS = 30_000;
@@ -19,7 +20,7 @@ const PRICING_KEYS = new Set([
   "model_ratio", "ratio", "input_ratio", "input_price", "inputPrice", "input", "prompt_price",
   "output_price", "outputPrice", "output", "completion_price", "cache_read_price", "cacheReadPrice",
   "cache_write_price", "cacheWritePrice", "request_price", "requestPrice", "image_price", "imagePrice",
-  "per_image_price", "image_output_price", "imageOutputPrice", "image_token_price", "inputPer1M", "outputPer1M", "cacheReadPer1M", "cacheCreatePer1M", "cacheCreate1hPer1M", "billing_expr", "price"
+  "per_image_price", "image_output_price", "imageOutputPrice", "image_token_price", "inputPer1M", "outputPer1M", "cacheReadPer1M", "cacheCreatePer1M", "cacheCreate1hPer1M", "billingMultiplier", "billing_expr", "price"
 ].map(key => key.toLowerCase()));
 const PRICING_CONTAINERS = new Set([
   "data", "models", "pricing", "groups", "providers", "channels", "platforms", "supported_models", "group_pricing", "sections",
@@ -35,27 +36,20 @@ function isFastAiChannelsUrl(value) {
   }
 }
 
-function isJijiModelMarketUrl(value) {
+function isHepinganChannelsUrl(value) {
   try {
     const url = new URL(String(value || ""), window.location.href);
-    return url.hostname.toLowerCase().replace(/^www\./, "") === "jiji.cc" && url.pathname === "/extension/api/trpc/extension.modelMarket";
-  } catch {
-    return false;
-  }
-}
-function isCunPricingUrl(value) {
-  try {
-    const url = new URL(String(value || ""), window.location.href);
-    return url.hostname.toLowerCase().replace(/^www\./, "") === "cun.ai" && url.pathname === "/api/pricing";
+    return url.hostname.toLowerCase() === "api.hepingan.top" && url.pathname === "/api/v1/channels/available";
   } catch {
     return false;
   }
 }
 
+
 function isPricingUrl(value) {
   try {
     const path = new URL(String(value || ""), window.location.href).pathname;
-    return isFastAiChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models|\/api\/me\/model-catalog)/i.test(path);
+    return isFastAiChannelsUrl(value) || isHepinganChannelsUrl(value) || /(?:\/api\/(?:ai\/)?pricing|\/api\/v1\/model-plaza|\/api\/v1\/channels\/catalog|\/extension\/api\/trpc\/extension\.modelMarket|\/api\/models|\/api\/me\/model-catalog)/i.test(path);
   } catch {
     return false;
   }
@@ -319,32 +313,93 @@ async function capturePricing() {
   return scanPricing();
 }
 
+function hasHeader(headers, name) {
+  return Object.keys(headers).some(current => current.toLowerCase() === name.toLowerCase());
+}
+
+function applyPageAuth(headers, pageAuth) {
+  if (!pageAuth) return;
+  if (typeof pageAuth !== "object" || !["cookie", "localStorage"].includes(pageAuth.source)) throw new Error("页面认证策略不受支持");
+  if (pageAuth.source === "cookie") return;
+  const header = String(pageAuth.header || "");
+  if (!ALLOWED_HEADERS.has(header.toLowerCase())) throw new Error("页面认证请求头不受支持");
+  if (hasHeader(headers, header)) return;
+  const storageKey = String(pageAuth.storageKey || "");
+  if (!storageKey) throw new Error("页面认证策略缺少存储键");
+  const token = String(window.localStorage.getItem(storageKey) || "").trim();
+  if (!token) throw new Error(pageAuth.missingMessage || "未找到页面登录凭据，请先在当前 Chrome 配置文件登录后重试");
+  headers[header] = pageAuth.scheme ? `${pageAuth.scheme} ${token}` : token;
+}
+
 function validateRequest(request) {
   if (!request || typeof request.url !== "string") throw new Error("页面请求缺少地址");
   const url = new URL(request.url, window.location.href);
   if (url.origin !== window.location.origin) throw new Error("页面请求必须同源");
   const method = String(request.method || "GET").toUpperCase();
   if (!ALLOWED_METHODS.has(method)) throw new Error("页面请求方式不受支持");
+  const credentials = request.credentials == null ? "omit" : String(request.credentials);
+  if (!ALLOWED_CREDENTIALS.has(credentials)) throw new Error("页面请求 credentials 不受支持");
   const headers = {};
   for (const [name, value] of Object.entries(request.headers || {})) if (ALLOWED_HEADERS.has(name.toLowerCase()) && typeof value === "string") headers[name] = value;
-  if (isFastAiChannelsUrl(url)) {
-    const token = window.localStorage.getItem("auth_token");
-    if (!token) throw new Error("未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试");
-    headers.Authorization = `Bearer ${token}`;
-    headers["X-User-UI-Request"] = "1";
-  }
+  applyPageAuth(headers, request.pageAuth);
+  return { url: url.toString(), method, headers, credentials, body: method === "POST" && typeof request.body === "string" ? request.body : undefined };
+}
 
-  if (isJijiModelMarketUrl(url) && !headers.Authorization) {
-    const token = window.localStorage.getItem("auth_token");
-    if (!token) throw new Error("未找到 Jiji 登录凭据，请先在当前 Chrome 配置文件登录后重试");
-    headers.Authorization = `Bearer ${token}`;
+function pathValue(value, path) {
+  return String(path || "").split(".").filter(Boolean).reduce((current, key) => current && typeof current === "object" ? current[key] : undefined, value);
+}
+
+async function refreshPageAuth(pageAuth) {
+  const refresh = pageAuth?.refresh;
+  if (!refresh || typeof refresh !== "object") return false;
+  let refreshUrl;
+  try { refreshUrl = new URL(String(refresh.endpoint || ""), window.location.href); } catch { return false; }
+  if (refreshUrl.origin !== window.location.origin) return false;
+  const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
+  const refreshToken = String(window.localStorage.getItem(refreshTokenKey) || "").trim();
+  if (!refreshToken) return false;
+  const headers = { Accept: "application/json", "Content-Type": "application/json" };
+  const accessToken = String(window.localStorage.getItem(String(pageAuth.storageKey || "")) || "").trim();
+  const authHeader = String(pageAuth.header || "");
+  if (refresh.includeAccessToken === true && accessToken && ALLOWED_HEADERS.has(authHeader.toLowerCase())) headers[authHeader] = pageAuth.scheme ? `${pageAuth.scheme} ${accessToken}` : accessToken;
+  const credentials = ALLOWED_CREDENTIALS.has(String(refresh.credentials || "omit")) ? String(refresh.credentials || "omit") : "omit";
+  let response;
+  try {
+    response = await fetch(refreshUrl.toString(), {
+      method: "POST",
+      headers,
+      credentials,
+      body: JSON.stringify({ [String(refresh.requestTokenKey || "refresh_token")]: refreshToken })
+    });
+    if (!response.ok) return false;
+    const payload = await response.json();
+    const data = pathValue(payload, refresh.responsePath || "data");
+    if (!data || typeof data !== "object") return false;
+    const accessKey = String(refresh.accessTokenKey || "access_token");
+    const nextAccessToken = String(data[accessKey] || "").trim();
+    if (!nextAccessToken) return false;
+    window.localStorage.setItem(String(pageAuth.storageKey || ""), nextAccessToken);
+    const nextRefreshToken = String(data[String(refresh.refreshTokenKey || "refresh_token")] || "").trim();
+    if (nextRefreshToken) window.localStorage.setItem(refreshTokenKey, nextRefreshToken);
+    const expiresIn = Number(data[String(refresh.expiresInKey || "")]);
+    const expiresAtKey = String(refresh.expiresAtStorageKey || "");
+    if (expiresAtKey && Number.isFinite(expiresIn) && expiresIn > 0) window.localStorage.setItem(expiresAtKey, String(Date.now() + Math.ceil(expiresIn * 1000)));
+    return true;
+  } catch {
+    return false;
   }
-  if (isCunPricingUrl(url)) {
-    const uid = String(window.localStorage.getItem("uid") || "").trim();
-    if (!uid) throw new Error("未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试");
-    headers["New-Api-User"] = uid;
-  }
-  return { url: url.toString(), method, headers, body: method === "POST" && typeof request.body === "string" ? request.body : undefined };
+}
+
+function shouldRefreshPageAuth(pageAuth, response) {
+  const refresh = pageAuth?.refresh;
+  const statuses = Array.isArray(refresh?.statuses) ? refresh.statuses : pageAuth?.sessionFailureStatuses;
+  return Boolean(refresh && Array.isArray(statuses) && statuses.includes(Number(response?.status)));
+}
+
+async function executeRequest(request) {
+  const safeRequest = validateRequest(request);
+  const { url, ...init } = safeRequest;
+  return fetch(url, init);
 }
 
 function clearCapturedPricing() {
@@ -390,23 +445,22 @@ window.addEventListener("message", async event => {
   if (event.source !== window || event.origin !== window.location.origin) return;
   const { type, id, request } = event.data || {};
   if (typeof id !== "string" || !id) return;
-  if (type === CAPTURE_REQUEST_TYPE || (!legacyBridge && type === LEGACY_CAPTURE_REQUEST_TYPE)) {
+  if (type === PAGE_WINDOW_CAPTURE_REQUEST_TYPE || (!legacyBridge && type === LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE)) {
     const payload = await capturePricing();
-    window.postMessage({ type: RESPONSE_TYPE, id, ok: Boolean(payload), response: { ok: Boolean(payload), status: payload ? 200 : 404, body: payload || { data: [], group_ratio: {} } } }, window.location.origin);
+    window.postMessage({ type: PAGE_WINDOW_RESPONSE_TYPE, id, ok: Boolean(payload), response: { ok: Boolean(payload), status: payload ? 200 : 404, body: payload || { data: [], group_ratio: {} } } }, window.location.origin);
     return;
   }
-  if (type !== REQUEST_TYPE && (!legacyBridge && type !== LEGACY_REQUEST_TYPE)) return;
+  if (type !== PAGE_WINDOW_REQUEST_TYPE && (!legacyBridge && type !== LEGACY_PAGE_WINDOW_REQUEST_TYPE)) return;
   try {
-    const safeRequest = validateRequest(request);
-    const { url, ...init } = safeRequest;
-    const response = await fetch(url, { ...init, credentials: "include" });
+    let response = await executeRequest(request);
+    if (!response.ok && shouldRefreshPageAuth(request?.pageAuth, response) && await refreshPageAuth(request.pageAuth)) response = await executeRequest(request);
     const contentType = response.headers.get("content-type") || "";
     const body = contentType.includes("json") ? await response.json() : await response.text();
     if (!payloadFitsCaptureLimit(body)) throw new Error("页面响应过大");
     rememberPricing(body, "bridge");
-    window.postMessage({ type: RESPONSE_TYPE, id, ok: true, response: { ok: response.ok, status: response.status, body } }, window.location.origin);
+    window.postMessage({ type: PAGE_WINDOW_RESPONSE_TYPE, id, ok: true, response: { ok: response.ok, status: response.status, body } }, window.location.origin);
   } catch (error) {
-    window.postMessage({ type: RESPONSE_TYPE, id, ok: false, error: error.message }, window.location.origin);
+    window.postMessage({ type: PAGE_WINDOW_RESPONSE_TYPE, id, ok: false, error: error.message }, window.location.origin);
   }
 });
 })();

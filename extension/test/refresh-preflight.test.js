@@ -257,6 +257,7 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     for (const id of ["killai", "fuck-everyone"]) {
       const protectedStation = dashboard.stations.find(value => value.id === id);
       const protectedOffer = offers.find(offer => offer.stationId === id);
+      assert.equal(protectedStation.priceCurrency, "CREDITS");
       assert.equal(protectedStation.priceCurrencyVerified, false);
       assert.equal(protectedStation.rechargeRateVerified, false);
       assert.ok(protectedOffer.pricingUnavailableReasons.includes("currency_unverified"));

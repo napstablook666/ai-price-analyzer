@@ -1,33 +1,32 @@
 (() => {
-  const BRIDGE_VERSION = 2;
-  if (globalThis.__AI_PRICING_CONTENT_BRIDGE__ && globalThis.__AI_PRICING_CONTENT_BRIDGE_VERSION__ >= BRIDGE_VERSION) return;
+  const CONTENT_BRIDGE_VERSION = 4;
+  if (globalThis.__AI_PRICING_CONTENT_BRIDGE__ && globalThis.__AI_PRICING_CONTENT_BRIDGE_VERSION__ >= CONTENT_BRIDGE_VERSION) return;
   globalThis.__AI_PRICING_CONTENT_BRIDGE__ = true;
-  globalThis.__AI_PRICING_CONTENT_BRIDGE_VERSION__ = BRIDGE_VERSION;
-const RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V2";
-const LEGACY_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
-const REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V2";
-const CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V2";
-const LEGACY_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
-const LEGACY_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
-const PROBE_REQUEST_TYPE = "AI_RELAY_CONTENT_BRIDGE_PROBE_REQUEST";
-const PROBE_RESPONSE_TYPE = "AI_RELAY_CONTENT_BRIDGE_PROBE_RESPONSE";
-
+  globalThis.__AI_PRICING_CONTENT_BRIDGE_VERSION__ = CONTENT_BRIDGE_VERSION;
+const PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V3";
+const LEGACY_PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
+const PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V3";
+const PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V3";
+const CONTENT_PROBE_REQUEST_TYPE = "AI_RELAY_CONTENT_BRIDGE_PROBE_REQUEST_V4";
+const CONTENT_PROBE_RESPONSE_TYPE = "AI_RELAY_CONTENT_BRIDGE_PROBE_RESPONSE_V4";
+const PAGE_RUNTIME_FETCH_TYPE = "PAGE_FETCH_V4";
+const PAGE_RUNTIME_CAPTURE_TYPE = "PAGE_CAPTURE_V4";
 function onWindowMessage(event) {
   const message = event.data || {};
   if (event.source !== window || event.origin !== window.location.origin) return;
-  if (message.type === PROBE_REQUEST_TYPE) {
-    if (typeof message.id === "string" && message.id) window.postMessage({ type: PROBE_RESPONSE_TYPE, id: message.id, version: BRIDGE_VERSION }, window.location.origin);
+  if (message.type === CONTENT_PROBE_REQUEST_TYPE) {
+    if (typeof message.id === "string" && message.id) window.postMessage({ type: CONTENT_PROBE_RESPONSE_TYPE, id: message.id, version: CONTENT_BRIDGE_VERSION }, window.location.origin);
     return;
   }
-  if (message.type !== RESPONSE_TYPE && message.type !== LEGACY_RESPONSE_TYPE) return;
+  if (message.type !== PAGE_WINDOW_RESPONSE_TYPE && message.type !== LEGACY_PAGE_WINDOW_RESPONSE_TYPE) return;
   window.dispatchEvent(new CustomEvent(`ai-relay-page-response:${message.id}`, { detail: message }));
 }
 
 window.addEventListener("message", onWindowMessage);
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  const isFetch = message?.type === "PAGE_FETCH_V2";
-  const isCapture = message?.type === "PAGE_CAPTURE_V2";
+function onRuntimeMessage(message, _sender, sendResponse) {
+  const isFetch = message?.type === PAGE_RUNTIME_FETCH_TYPE;
+  const isCapture = message?.type === PAGE_RUNTIME_CAPTURE_TYPE;
   if (!isFetch && !isCapture) return undefined;
   const id = crypto.randomUUID();
   const eventName = `ai-relay-page-response:${id}`;
@@ -47,7 +46,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse(detail.ok ? { ok: true, response: detail.response } : { ok: false, error: detail.error });
   }
   window.addEventListener(eventName, onResponse);
-  window.postMessage({ type: isCapture ? CAPTURE_REQUEST_TYPE : REQUEST_TYPE, id, request: message.request }, window.location.origin);
+  window.postMessage({ type: isCapture ? PAGE_WINDOW_CAPTURE_REQUEST_TYPE : PAGE_WINDOW_REQUEST_TYPE, id, request: message.request }, window.location.origin);
   return true;
-});
+}
+
+chrome.runtime.onMessage.addListener(onRuntimeMessage);
+globalThis.__AI_PRICING_CONTENT_BRIDGE_DISPOSE__ = () => {
+  window.removeEventListener("message", onWindowMessage);
+  chrome.runtime.onMessage.removeListener?.(onRuntimeMessage);
+};
 })();

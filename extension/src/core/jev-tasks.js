@@ -1,3 +1,4 @@
+import { STANDARD_PRICE_FIELDS } from "./price-fields.js";
 import { JEV_MODEL_CANDIDATE_LIMIT, normalizeProxyModelName } from "./matching.js";
 export const JEV_NO_MATCH = "__no_match__";
 
@@ -10,6 +11,9 @@ export const JEV_COMPARISON_LABELS = {
   estimated_proxy_prices: "部分中转价格为估算值",
   tiered_or_group_pricing: "报价受分组或时段影响",
   incomplete_official_reference: "官方参考价格字段不完整",
+  partial_proxy_catalog: "中转目录部分解析，存在未支持计费模式",
+  invalid_pricing_values: "中转目录存在异常价格字段或倍率",
+  unpriced_models: "中转目录存在已识别但未定价模型",
   uncertain_model_match: "官方模型匹配置信度较低",
   no_obvious_issue: "未发现明显可比性问题",
   insufficient_evidence: "现有字段不足，建议人工核对"
@@ -76,9 +80,9 @@ export function buildJevModelMatchTask(proxyModelName, candidates = []) {
 }
 
 export function buildJevComparisonTask(offer = {}) {
-  const fields = ["input", "output", "cacheRead", "cacheWrite", "request", "imageOutput", "imagePrice"];
+  const fields = STANDARD_PRICE_FIELDS;
   const presentFields = prices => fields.filter(field => Number.isFinite(prices?.[field]));
-  const delta = offer.diffPercent === null || offer.diffPercent === undefined ? NaN : Number(offer.diffPercent);
+  const delta = offer.pricingUnavailable || offer.diffPercent === null || offer.diffPercent === undefined ? NaN : Number(offer.diffPercent);
   const priceGapDirection = !Number.isFinite(delta)
     ? "unavailable"
     : Math.abs(delta) < 0.005 ? "near_equal" : delta > 0 ? "proxy_higher" : "proxy_cheaper";
@@ -92,6 +96,9 @@ export function buildJevComparisonTask(offer = {}) {
     stale_data: JEV_COMPARISON_LABELS.stale_data,
     estimated_proxy_prices: JEV_COMPARISON_LABELS.estimated_proxy_prices,
     tiered_or_group_pricing: JEV_COMPARISON_LABELS.tiered_or_group_pricing,
+    partial_proxy_catalog: JEV_COMPARISON_LABELS.partial_proxy_catalog,
+    invalid_pricing_values: JEV_COMPARISON_LABELS.invalid_pricing_values,
+    unpriced_models: JEV_COMPARISON_LABELS.unpriced_models,
     incomplete_official_reference: JEV_COMPARISON_LABELS.incomplete_official_reference,
     uncertain_model_match: JEV_COMPARISON_LABELS.uncertain_model_match,
     no_obvious_issue: JEV_COMPARISON_LABELS.no_obvious_issue,
@@ -106,7 +113,13 @@ export function buildJevComparisonTask(offer = {}) {
         proxy_price_fields: presentFields(offer.prices),
         official_price_fields: presentFields(offer.officialPrices),
         stale: Boolean(offer.stale),
+        pricing_unavailable: Boolean(offer.pricingUnavailable),
         estimated_proxy_fields: estimatedProxyFields,
+        incomplete: Boolean(offer.incomplete),
+        unsupported_billing_modes: Array.isArray(offer.unsupportedBillingModes) ? offer.unsupportedBillingModes.slice(0, 8).map(value => safeLabel(value)).filter(Boolean) : [],
+        invalid_pricing_values: Array.isArray(offer.invalidPricingValues) ? offer.invalidPricingValues.slice(0, 8).map(value => safeLabel(value)).filter(Boolean) : [],
+        unpriced_models: Array.isArray(offer.unpricedModels) ? offer.unpricedModels.slice(0, 8).map(value => safeLabel(value)).filter(Boolean) : [],
+        pricing_unavailable_reasons: Array.isArray(offer.pricingUnavailableReasons) ? offer.pricingUnavailableReasons.slice(0, 8).map(value => safeLabel(value)).filter(Boolean) : [],
         tiered_pricing: Boolean(offer.tierName && offer.tierName !== "标准"),
         group_ratio_applied: Number.isFinite(groupRatio) && Math.abs(groupRatio - 1) > 0.0001,
         uncertain_model_match: Number.isFinite(matchConfidence) && matchConfidence < 0.8 || offer.matchRuleId === "fuzzy",
@@ -116,7 +129,7 @@ export function buildJevComparisonTask(offer = {}) {
     questions: {
       comparison_review: {
         type: "choice",
-        instructions: "Choose the single most relevant review reason using only the supplied fields. Do not calculate prices or infer missing data. Choose insufficient_evidence when the fields do not support a conclusion.",
+        instructions: "Choose the single most relevant review reason using only the supplied fields. Do not calculate prices or infer missing data. Choose partial_proxy_catalog when unsupported_billing_modes is present, unpriced_models when identified models lack price fields, invalid_pricing_values when abnormal price fields or multipliers are present, or insufficient_evidence when incomplete or pricing_unavailable_reasons is present.",
         criteria
       }
     }

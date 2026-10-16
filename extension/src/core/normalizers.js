@@ -1126,7 +1126,7 @@ export function parseGenericPricing(payload, options = {}) {
 }
 
 function applyModelListCurrency(normalized, options = {}) {
-  if (options.modelListCurrency !== "CREDITS" || options.priceCurrencyVerified === false || !Array.isArray(normalized?.data)) return normalized;
+  if (options.modelListCurrency !== "CREDITS" || !Array.isArray(normalized?.data)) return normalized;
   return {
     ...normalized,
     data: normalized.data.map(item => ({ ...item, price_currency: "CREDITS" }))
