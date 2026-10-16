@@ -1,0 +1,4 @@
+{"file":".trellis/tasks/10-16-fix-recharge-ratio-verification-count/research/dashboard-recharge-verification-count.md","reason":"Read-only investigation of the 125-row dashboard count, current data flow, and likely disabled-station boundary bug."}
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Verify the existing prepared-station, CREDITS, and protected rechargeRateVerified contract; no pricing rule should be weakened."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Review the source-to-snapshot-to-comparison-to-dashboard boundary before implementation."}
+{"file":".trellis/tasks/10-16-fix-recharge-ratio-verification-count/design.md","reason":"Follow the approved data-flow design and preserve options-page station metadata compatibility."}

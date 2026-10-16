@@ -375,8 +375,9 @@ async function dashboard() {
     getPreparedStations(),
     getValue("references", {})
   ]);
-  const stationsById = new Map(stations.map(station => [station.id, station]));
-  const snapshots = await getLatestSnapshots(stations.map(station => station.id), snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
+  const comparisonStations = stations.filter(station => station.enabled === true);
+  const stationsById = new Map(comparisonStations.map(station => [station.id, station]));
+  const snapshots = await getLatestSnapshots(comparisonStations.map(station => station.id), snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
   const staleAfter = 30 * 60 * 1000;
   const now = Date.now();
   const normalizedSnapshots = snapshots.map(snapshot => ({
@@ -393,7 +394,7 @@ async function dashboard() {
   let comparisonResult = cacheable && comparisonCache?.key === comparisonKey ? comparisonCache : null;
   if (!comparisonResult) {
     const comparisons = buildComparisonRows({
-      stations,
+      stations: comparisonStations,
       snapshots: normalizedSnapshots,
       references: effectiveReferences,
       usage: savedSettings.usage,

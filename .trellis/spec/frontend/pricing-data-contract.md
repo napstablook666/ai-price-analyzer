@@ -32,6 +32,8 @@ This contract covers station pricing from collection through snapshots and dashb
 - `getProxyPriceQuote()` adds `currency_unverified` when conversion is unavailable or `priceCurrencyVerified === false`. It must not globally ignore the false flag.
 - `rechargeRateVerified === false` independently produces `recharge_unverified`.
 - Runtime dashboard comparison and refresh scheduling must use the same prepared station shape. A station false value must not survive for an ordinary provider in one path while being repaired in the other.
+- `GET_DASHBOARD` retains all prepared station metadata in `stations`, but latest snapshots, comparisons, and summary must be built only from stations where `enabled === true`; disabled cached snapshots cannot create offer rows or verification reasons.
+- Dashboard comparison prioritizes station-level verification over snapshot metadata. A persisted station `rechargeRateVerified: true` overrides stale snapshot `false`; a missing value for a protected provider is prepared as `false` and remains blocking.
 - `REFRESH_PREFLIGHT` checks only enabled page-mode stations whose provider request policy requires page credentials. Use a read-only GET through the existing page bridge; do not run collection, refresh page credentials, write snapshots, or read the extension's stored station credentials. Direct public API stations bypass the login check.
 - Preflight may close a station tab only when this extension's preflight created it and the session check is ready. Reused tabs and tabs needing login or manual review remain open.
 - `REFRESH_ALL` requires an unexpired one-use preflight confirmation. Preflight results never change currency or recharge verification flags; protected provider and recharge blocks remain authoritative.
@@ -49,12 +51,16 @@ This contract covers station pricing from collection through snapshots and dashb
 | `rechargeRateVerified: false` | Preserve station flag | `recharge_unverified`; no usable cost |
 | Raw OpenRouter reference price | `USD` | Preserve API semantics |
 | OpenRouter comparison quote | `CREDITS` | Numeric USD-credit value stays 1:1; RMB cost is separate |
+| Enabled protected station with station `rechargeRateVerified: true` and snapshot `false` | Station `true` wins | No `recharge_unverified` |
+| Disabled station with a cached snapshot | Retain station metadata | Omit snapshot, comparisons, summary offer, and verification-reason counts |
 
 ## Good/Base/Bad Cases
 
 - Good: a stale ordinary station with `priceCurrencyVerified: false` is prepared as CREDITS/true before refresh and dashboard comparison.
 - Good: `{ input_price: 2, price_currency: "USD" }` becomes `price_currency: "CREDITS"` at an ordinary station model-list boundary.
 - Good: stale KillAI/fuck-everyone currency flags normalize to CREDITS/verified because collection already applies `modelListCurrency: "CREDITS"`; unknown recharge ratios remain blocked.
+- Good: `GET_DASHBOARD` returns a disabled station in `stations` for editing but excludes its cached snapshot from comparison rows and reason counts.
+- Bad: passing every prepared station into dashboard snapshot lookup and comparison because refresh scheduling already filters disabled stations; this leaves stale disabled offers visible.
 - Bad: a stale protected-provider currency flag produces `currency_unverified` after its collected rows are already normalized to CREDITS.
 - Bad: changing `getProxyPriceQuote()` to ignore every `priceCurrencyVerified: false` for generic or unsupported source currencies.
 - Bad: treating recharge USD/CNY as the source unit of a model row.
@@ -67,6 +73,7 @@ This contract covers station pricing from collection through snapshots and dashb
 - Test KillAI/fuck-everyone collection applies CREDITS and preparation repairs false/missing currency flags before comparison; only an unknown recharge rate remains blocking, while explicit recharge confirmation removes that reason.
 - Test `currencyToRmb()` for missing, blank, unknown, unsupported, CNY, USD, CREDITS, and POINTS.
 - Test both `currency_unverified` branches and `recharge_unverified` separately.
+- Test `GET_DASHBOARD` with enabled confirmed stations, stale snapshot `rechargeRateVerified: false` metadata, and a disabled station with cached rows; assert full station metadata remains, disabled rows are absent, summary offer count excludes them, and flattened `recharge_unverified` count is zero.
 - Test OpenRouter raw USD reference and 1:1 comparison CREDITS mapping without purchase fees.
 - Test that an older normalization version requires snapshot refresh.
 

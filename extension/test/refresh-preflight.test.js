@@ -223,14 +223,32 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: rows, group_ratio: { default: 1 } }) }
   };
   const protectedStations = [
-    { id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", priceCurrency: "UNKNOWN", priceCurrencyVerified: false, rechargeRateVerified: false },
-    { id: "fuck-everyone", name: "fuck-everyone", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", enabled: true, mode: "direct", priceCurrency: "USD", priceCurrencyVerified: false, rechargeRateVerified: false }
+    { id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", priceCurrency: "UNKNOWN", priceCurrencyVerified: false, rechargeRateVerified: true },
+    { id: "fuck-everyone", name: "fuck-everyone", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", enabled: true, mode: "direct", priceCurrency: "USD", priceCurrencyVerified: false, rechargeRateVerified: true }
   ];
   const protectedSnapshots = protectedStations.map(station => ({
     id: `${station.id}:legacy`, stationId: station.id, stationName: station.name, collectedAt: Date.now(),
-    normalizationVersion: NORMALIZATION_VERSION, status: "success", source: "legacy-fixture",
+    normalizationVersion: NORMALIZATION_VERSION, status: "success", source: "legacy-fixture", rechargeRateVerified: false,
     normalized: { sourceFormat: "generic", group_ratio: { default: 1 }, data: [{ model_name: `${station.id}-model`, input_price: 1, output_price: 2, price_currency: "CREDITS" }] }
   }));
+  const disabledRows = Array.from({ length: 125 }, (_, index) => ({ model_name: `disabled-killai-model-${index}`, input_price: 1 + index / 100, output_price: 2 + index / 100, price_currency: "CREDITS" }));
+  const disabledProtected = {
+    id: "disabled-killai", name: "Disabled KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: false, mode: "page",
+    priceCurrency: "UNKNOWN", priceCurrencyVerified: false, rechargeRateVerified: false
+  };
+  const disabledSnapshot = {
+    id: `${disabledProtected.id}:legacy`, stationId: disabledProtected.id, stationName: disabledProtected.name, collectedAt: Date.now(),
+    normalizationVersion: NORMALIZATION_VERSION, status: "success", source: "legacy-fixture", rechargeRateVerified: false,
+    normalized: { sourceFormat: "generic", group_ratio: { default: 1 }, data: disabledRows }
+  };
+  const stringDisabledProtected = {
+    ...disabledProtected, id: "disabled-string-killai", name: "Disabled String KillAI", enabled: "false"
+  };
+  const stringDisabledSnapshot = {
+    ...disabledSnapshot,
+    id: `${stringDisabledProtected.id}:legacy`, stationId: stringDisabledProtected.id, stationName: stringDisabledProtected.name,
+    normalized: { ...disabledSnapshot.normalized, data: [{ model_name: "disabled-string-model", input_price: 1, output_price: 2, price_currency: "CREDITS" }] }
+  };
   const rechargeUnverified = {
     id: "recharge-unverified", name: "Recharge Unverified", baseUrl: "https://recharge-unverified.example/pricing", enabled: true, mode: "direct",
     rechargeRmb: 2, rechargeCurrency: "CNY", rechargeCredits: 1, rechargeRateVerified: false, priceCurrency: "CREDITS", priceCurrencyVerified: false,
@@ -241,7 +259,7 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     normalizationVersion: NORMALIZATION_VERSION, status: "success", source: "legacy-fixture",
     normalized: { sourceFormat: "generic", group_ratio: { default: 1 }, data: [{ model_name: "recharge-model", input_price: 1, output_price: 2, price_currency: "CREDITS" }] }
   };
-  await withWorker({ stations: [station, ...protectedStations, rechargeUnverified], snapshots: [snapshot, ...protectedSnapshots, rechargeSnapshot], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations: [station, ...protectedStations, disabledProtected, stringDisabledProtected, rechargeUnverified], snapshots: [snapshot, ...protectedSnapshots, disabledSnapshot, stringDisabledSnapshot, rechargeSnapshot], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const dashboard = responseData(await worker.send("GET_DASHBOARD"));
     const prepared = dashboard.stations.find(value => value.id === stationId);
     const offers = flattenComparisonRows(dashboard.comparisons);
@@ -253,18 +271,32 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     assert.ok(ordinaryOffers.every(offer => !(offer.pricingUnavailableReasons || []).includes("currency_unverified")));
     assert.ok(ordinaryOffers.every(offer => !(offer.pricingUnavailableReasons || []).includes("recharge_unverified")));
     assert.equal(dashboard.summary.offerCount, 148);
+    assert.equal(offers.length, 148);
+    assert.equal(offers.filter(offer => offer.pricingUnavailableReasons.includes("recharge_unverified")).length, 0);
 
     for (const id of ["killai", "fuck-everyone"]) {
       const protectedStation = dashboard.stations.find(value => value.id === id);
-      const protectedOffer = offers.find(offer => offer.stationId === id);
+      const protectedOffers = offers.filter(offer => offer.stationId === id);
+      const protectedSnapshot = dashboard.snapshots.find(value => value.stationId === id);
       assert.equal(protectedStation.priceCurrency, "CREDITS");
       assert.equal(protectedStation.priceCurrencyVerified, true);
-      assert.equal(protectedStation.rechargeRateVerified, false);
-      assert.ok(!protectedOffer.pricingUnavailableReasons.includes("currency_unverified"));
-      assert.ok(protectedOffer.pricingUnavailableReasons.includes("recharge_unverified"));
+      assert.equal(protectedStation.rechargeRateVerified, true);
+      assert.equal(protectedSnapshot.rechargeRateVerified, false);
+      assert.equal(protectedOffers.length, 1);
+      assert.ok(protectedOffers.every(offer => !offer.pricingUnavailableReasons.includes("currency_unverified")));
+      assert.ok(protectedOffers.every(offer => !offer.pricingUnavailableReasons.includes("recharge_unverified")));
       const quote = getProxyPriceQuote({ input_price: 1, output_price: 2, price_currency: protectedStation.priceCurrency }, 1, protectedStation.rechargeRate, protectedStation.basePricePerMillion, protectedStation.priceCurrencyVerified, protectedStation.rechargeRateVerified);
-      assert.deepEqual(quote.pricingUnavailableReasons, ["recharge_unverified"]);
+      assert.deepEqual(quote.pricingUnavailableReasons, []);
     }
+    const disabledStation = dashboard.stations.find(value => value.id === disabledProtected.id);
+    assert.equal(disabledStation.enabled, false);
+    assert.equal(disabledStation.rechargeRateVerified, false);
+    assert.equal(stores.snapshots.has(disabledSnapshot.id), true);
+    assert.equal(dashboard.snapshots.some(value => value.stationId === disabledProtected.id), false);
+    assert.equal(offers.some(offer => offer.stationId === disabledProtected.id), false);
+    assert.equal(dashboard.stations.find(value => value.id === stringDisabledProtected.id).enabled, "false");
+    assert.equal(dashboard.snapshots.some(value => value.stationId === stringDisabledProtected.id), false);
+    assert.equal(offers.some(offer => offer.stationId === stringDisabledProtected.id), false);
     const rechargeOffer = offers.find(offer => offer.stationId === rechargeUnverified.id);
     assert.equal(dashboard.stations.find(value => value.id === rechargeUnverified.id).priceCurrencyVerified, true);
     assert.equal(dashboard.stations.find(value => value.id === rechargeUnverified.id).rechargeRateVerified, true);
@@ -276,6 +308,38 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     assert.equal(saved.priceCurrencyVerified, true);
     assert.equal(saved.rechargeRateVerified, true);
     assert.equal(saved.normalized.data.length, 145);
+  });
+});
+
+test("GET_DASHBOARD keeps protected recharge blockers for false and missing station flags", async () => {
+  const confirmedStation = { id: "killai-confirmed", name: "KillAI confirmed", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", rechargeRateVerified: true };
+  const stations = [
+    { id: "killai-unverified", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", rechargeRateVerified: false },
+    { id: "fuck-everyone-unverified", name: "fuck-everyone", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", enabled: true, mode: "direct" },
+    confirmedStation
+  ];
+  const snapshots = stations.map(station => ({
+    id: `${station.id}:legacy`, stationId: station.id, stationName: station.name, collectedAt: Date.now(),
+    normalizationVersion: NORMALIZATION_VERSION, status: "success", source: "legacy-fixture",
+    ...(station.id === confirmedStation.id ? {} : { rechargeRateVerified: true }),
+    normalized: { sourceFormat: "generic", group_ratio: { default: 1 }, data: [{ model_name: `${station.id}-model`, input_price: 1, output_price: 2, price_currency: "CREDITS" }] }
+  }));
+
+  await withWorker({ stations, snapshots, values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async worker => {
+    const dashboard = responseData(await worker.send("GET_DASHBOARD"));
+    const offers = flattenComparisonRows(dashboard.comparisons);
+    assert.equal(offers.length, 3);
+    for (const station of stations.slice(0, 2)) {
+      assert.equal(dashboard.stations.find(value => value.id === station.id).rechargeRateVerified, false);
+      const offer = offers.find(value => value.stationId === station.id);
+      assert.ok(offer.pricingUnavailableReasons.includes("recharge_unverified"));
+    }
+    const preparedConfirmed = dashboard.stations.find(value => value.id === confirmedStation.id);
+    const confirmedSnapshot = dashboard.snapshots.find(value => value.stationId === confirmedStation.id);
+    const confirmedOffer = offers.find(value => value.stationId === confirmedStation.id);
+    assert.equal(preparedConfirmed.rechargeRateVerified, true);
+    assert.equal("rechargeRateVerified" in confirmedSnapshot, false);
+    assert.ok(!confirmedOffer.pricingUnavailableReasons.includes("recharge_unverified"));
   });
 });
 
