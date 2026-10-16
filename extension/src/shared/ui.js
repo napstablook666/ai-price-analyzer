@@ -42,7 +42,11 @@ export function callService(type, payload = {}) {
   return new Promise((resolve, reject) => {
     chrome.runtime.sendMessage({ type, ...payload }, response => {
       if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
-      if (!response?.ok) return reject(new Error(response?.error || "操作失败"));
+      if (!response?.ok) {
+        const error = new Error(response?.error || "操作失败");
+        if (response?.code) error.code = response.code;
+        return reject(error);
+      }
       resolve(response.data);
     });
   });
@@ -75,6 +79,12 @@ export function hydrateIcons(root = document) {
 export function formatMoney(value, currency = "¥") {
   if (value === null || value === undefined || value === "") return "—";
   return Number.isFinite(Number(value)) ? `${currency}${Number(value).toFixed(4)}` : "—";
+}
+
+export function formatRefreshSummary(summary = {}) {
+  if (!summary.total) return "没有启用的站点可查询";
+  const duration = Number.isFinite(Number(summary.durationMs)) ? ` · ${(Number(summary.durationMs) / 1000).toFixed(1)} 秒` : "";
+  return `查询完成：${Number(summary.successCount) || 0} 成功，${Number(summary.partialCount) || 0} 部分成功，${Number(summary.errorCount) || 0} 失败，共 ${Number(summary.totalModels) || 0} 个模型${duration}`;
 }
 
 export function formatDate(value) {

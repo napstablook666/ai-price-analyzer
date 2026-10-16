@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Check real verification semantics are preserved and no UI fallback hides currency or recharge uncertainty."}
+{"file":".trellis/spec/frontend/index.md","reason":"Review dashboard interaction, state, and error-handling conventions."}
+{"file":".trellis/workflow.md","reason":"Verify final task checks, spec synchronization, and commit boundaries."}

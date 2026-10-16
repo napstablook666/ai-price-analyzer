@@ -25,6 +25,9 @@ This contract covers station pricing from collection through snapshots and dashb
 - `getProxyPriceQuote()` adds `currency_unverified` when conversion is unavailable or `priceCurrencyVerified === false`. It must not globally ignore the false flag.
 - `rechargeRateVerified === false` independently produces `recharge_unverified`.
 - Runtime dashboard comparison and refresh scheduling must use the same prepared station shape. A station false value must not survive for an ordinary provider in one path while being repaired in the other.
+- `REFRESH_PREFLIGHT` checks only enabled page-mode stations whose provider request policy requires page credentials. Use a read-only GET through the existing page bridge; do not run collection, refresh page credentials, write snapshots, or read the extension's stored station credentials. Direct public API stations bypass the login check.
+- Preflight may close a station tab only when this extension's preflight created it and the session check is ready. Reused tabs and tabs needing login or manual review remain open.
+- `REFRESH_ALL` requires an unexpired one-use preflight confirmation. Preflight results never change currency or recharge verification flags; protected provider and recharge blocks remain authoritative.
 - `NORMALIZATION_VERSION` changes whenever old normalized snapshots could encode a different trust decision. Version `24` is required after ordinary stale verification repair; `snapshotNeedsRefresh()` rejects older versions.
 - Raw official OpenRouter API reference prices remain USD. Comparison maps the same numeric USD-credit value 1:1 to `CREDITS` and computes RMB benchmark cost separately with the configured `openRouterRechargeRate`. OpenRouter purchase fees are not model prices.
 

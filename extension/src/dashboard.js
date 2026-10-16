@@ -10,7 +10,7 @@ import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
 const JEV_AUTO_MATCH_CONFIDENCE = 0.5;
-const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), jevBatchRunning: false, jevBatchControlStates: new Map(), refreshInProgress: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "monthlyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
+const state = { data: null, rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, jevResults: new Map(), jevPending: new Set(), jevIgnored: new Set(), jevBatchRunning: false, jevBatchControlStates: new Map(), refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "monthlyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
 const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
@@ -406,9 +406,37 @@ function renderCheckin(data) {
   hydrateIcons(list);
 }
 
+const REFRESH_PREFLIGHT_LABELS = { ready: "已登录", needsLogin: "需要登录", uncertain: "需人工确认", noLoginRequired: "无需登录" };
+function renderRefreshPreflight(preflight = state.refreshPreflight) {
+  const panel = $("#refresh-preflight-panel");
+  panel.hidden = !preflight && !state.preflightLoading;
+  const status = $("#refresh-preflight-status");
+  const list = $("#refresh-preflight-results");
+  const confirm = $("#confirm-refresh-all");
+  const cancel = $("#cancel-refresh-preflight");
+  if (state.preflightLoading) {
+    status.textContent = "正在检查启用站点的页面会话";
+    list.replaceChildren();
+  } else if (preflight) {
+    const needsLogin = preflight.results.filter(result => result.status === "needsLogin").length;
+    const uncertain = preflight.results.filter(result => result.status === "uncertain").length;
+    status.textContent = needsLogin || uncertain
+      ? `${needsLogin} 个站点需要登录，${uncertain} 个站点无法确认。登录或检查页面后再确认开始。`
+      : "页面预检已完成。确认后开始刷新全部启用站点。";
+    list.innerHTML = preflight.results.map(result => `<li class="preflight-result preflight-${escapeHtml(result.status)}"><span class="preflight-site">${escapeHtml(result.stationName)}</span><span class="preflight-label">${REFRESH_PREFLIGHT_LABELS[result.status] || "需人工确认"}</span><span class="preflight-reason">${escapeHtml(result.reason || "")}</span></li>`).join("");
+  } else {
+    status.textContent = "";
+    list.replaceChildren();
+  }
+  confirm.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
+  cancel.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
+}
+
 function render(data) {
   state.data = data;
   state.refreshInProgress = Boolean(data.refreshInProgress);
+  state.refreshPreflight = data.refreshPreflight || null;
+  renderRefreshPreflight();
   state.page = 0;
   pageFilterKey = null;
   state.rows = flattenComparisonRows(data.comparisons || []);
@@ -742,18 +770,72 @@ $("#refresh-station").addEventListener("click", async event => {
 });
 
 $("#refresh-all").addEventListener("click", async event => {
+  if (state.preflightLoading || state.refreshInProgress) return;
   const button = event.currentTarget;
   button.disabled = true;
   $("#refresh-station").disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>查询中</span>`;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>检查登录状态</span>`;
+  state.refreshPreflight = null;
+  state.preflightLoading = true;
+  renderRefreshPreflight();
+  try {
+    const data = await callService("REFRESH_PREFLIGHT");
+    state.refreshPreflight = data;
+    renderRefreshPreflight();
+    const needsLogin = data.results.filter(result => result.status === "needsLogin").length;
+    const uncertain = data.results.filter(result => result.status === "uncertain").length;
+    toast(needsLogin || uncertain ? `预检完成：${needsLogin} 个站点需要登录，${uncertain} 个站点需人工确认` : "预检完成，请确认开始刷新全部");
+  } catch (error) { toast(error.message); }
+  finally {
+    state.preflightLoading = false;
+    button.disabled = false;
+    button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`;
+    $("#refresh-station").disabled = false;
+    updateRefreshStationButton();
+    renderRefreshPreflight();
+  }
+});
+
+$("#confirm-refresh-all").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const preflight = state.refreshPreflight;
+  if (!preflight) return;
+  button.disabled = true;
+  $("#cancel-refresh-preflight").disabled = true;
+  $("#refresh-all").disabled = true;
+  $("#refresh-station").disabled = true;
+  state.refreshPreflight = null;
+  state.preflightLoading = true;
+  renderRefreshPreflight();
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>正在刷新</span>`;
   lastRefreshSummary = null;
   try {
-    const data = await callService("REFRESH_ALL");
+    const data = await callService("REFRESH_ALL", { preflightToken: preflight.token, confirmed: true });
     lastRefreshSummary = data.refreshSummary;
     render(data);
     toast(formatRefreshSummary(lastRefreshSummary));
+  } catch (error) {
+    toast(error.message);
+    if (error.code === "REFRESH_CONFIRMATION_REQUIRED") {
+      await callService("CANCEL_REFRESH_PREFLIGHT").catch(() => {});
+      state.refreshPreflight = null;
+    }
+  } finally {
+    state.preflightLoading = false;
+    $("#refresh-all").disabled = false;
+    $("#refresh-station").disabled = false;
+    button.innerHTML = `${icon("check", { className: "icon" })}<span>确认开始刷新全部</span>`;
+    updateRefreshStationButton();
+    renderRefreshPreflight();
+  }
+});
+
+$("#cancel-refresh-preflight").addEventListener("click", async () => {
+  try {
+    await callService("CANCEL_REFRESH_PREFLIGHT");
+    state.refreshPreflight = null;
+    renderRefreshPreflight();
   } catch (error) { toast(error.message); }
-  finally { button.disabled = false; button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新全部</span>`; updateRefreshStationButton(); }
 });
 
 $("#batch-jev-match").addEventListener("click", runBatchJevMatches);

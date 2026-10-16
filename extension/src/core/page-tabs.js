@@ -1,3 +1,12 @@
+import {
+  CONTENT_BRIDGE_VERSION,
+  CONTENT_PROBE_REQUEST_TYPE,
+  CONTENT_PROBE_RESPONSE_TYPE,
+  LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE,
+  LEGACY_PAGE_WINDOW_RESPONSE_TYPE,
+  PAGE_BRIDGE_VERSION
+} from "./bridge-protocol.js";
+import { providerForStation } from "./provider-registry.js";
 export function selectPageTab(tabs, origin, preferredTabId, preferredPath) {
   const matchingTabs = tabs.filter(tab => tab.id !== undefined && tab.url?.startsWith(`${origin}/`));
   const preferred = matchingTabs.find(tab => tab.id === preferredTabId);
@@ -41,32 +50,31 @@ function waitForTab(tabs, tabId) {
   });
 }
 
-export async function findOrOpenPageTab(tabs, station, preferredTabId) {
+export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTemporaryWhenAmbiguous = false, keepOnLoadFailure = false } = {}) {
   const url = new URL(station.baseUrl);
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.pathname);
-  const isFastAiToken = url.hostname.toLowerCase().replace(/^www\./, "") === "fastaitoken.com";
-  const isCheapRouter = url.hostname.toLowerCase().replace(/^www\./, "") === "cheaprouter.cc" && url.pathname.replace(/\/$/, "") === "/models";
-  const isCun = url.hostname.toLowerCase().replace(/^www\./, "") === "cun.ai";
-  const isJiji = url.hostname.toLowerCase().replace(/^www\./, "") === "jiji.cc";
-  const isNexa = url.hostname.toLowerCase().replace(/^www\./, "") === "nexavlinks.com";
-  const isAiApi = url.hostname.toLowerCase().replace(/^www\./, "") === "cn.aiapi.bot" && url.pathname.replace(/\/$/, "") === "/dashboard/model-prices";
+  const provider = providerForStation(station, { forPrepare: true });
   if (tab) return { tab, temporary: false };
-  if (!(isFastAiToken || isNexa || isCheapRouter || isCun || isJiji || isAiApi)) return { tab: null, temporary: false };
-  tab = candidates.find(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`));
-  if (tab) return { tab, temporary: false };
+  if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`)).length > 1) return { tab: null, temporary: false };
+  if (provider?.openTemporaryPage !== true) return { tab: null, temporary: false };
   const created = await tabs.create({ url: url.toString(), active: false });
   try {
     return { tab: await waitForTab(tabs, created.id), temporary: true };
   } catch (error) {
-    await tabs.remove(created.id).catch(() => {});
+    if (keepOnLoadFailure) {
+      error.tabId = created.id;
+      error.temporary = true;
+    } else {
+      await tabs.remove(created.id).catch(() => {});
+    }
     throw error;
   }
 }
 
 // The old MAIN-world proxy survives extension reloads and cannot be unregistered.
-function probePageBridge() {
-  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= 2) return { current: true };
+function probePageBridge(requiredVersion, responseType, captureRequestType) {
+  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= requiredVersion) return { current: true };
   const fetchSource = String(window.fetch || "");
   const xhrSendSource = String(window.XMLHttpRequest?.prototype?.send || "");
   if (fetchSource.includes("isPricingUrl") || xhrSendSource.includes("isPricingUrl")) return { legacy: true };
@@ -80,16 +88,16 @@ function probePageBridge() {
     };
     const onMessage = event => {
       const message = event.data || {};
-      if (event.source !== window || event.origin !== window.location.origin || message.type !== "AI_RELAY_PAGE_BRIDGE_RESPONSE" || message.id !== id) return;
+      if (event.source !== window || event.origin !== window.location.origin || message.type !== responseType || message.id !== id) return;
       finish({ legacy: true, capture: message.response });
     };
     window.addEventListener("message", onMessage);
     timer = setTimeout(() => finish({ current: false }), 100);
-    window.postMessage({ type: "AI_RELAY_PAGE_CAPTURE_REQUEST", id }, window.location.origin);
+    window.postMessage({ type: captureRequestType, id }, window.location.origin);
   });
 }
 
-function probeContentBridge() {
+function probeContentBridge(requestType, responseType) {
   return new Promise(resolve => {
     const id = `ai-relay-content-probe-${Date.now()}-${Math.random()}`;
     let timer;
@@ -100,17 +108,22 @@ function probeContentBridge() {
     };
     const onResponse = event => {
       const message = event.data || {};
-      if (event.source !== window || event.origin !== window.location.origin || message.type !== "AI_RELAY_CONTENT_BRIDGE_PROBE_RESPONSE" || message.id !== id) return;
+      if (event.source !== window || event.origin !== window.location.origin || message.type !== responseType || message.id !== id) return;
       finish({ version: message.version });
     };
     window.addEventListener("message", onResponse);
     timer = setTimeout(() => finish(false), 200);
-    window.postMessage({ type: "AI_RELAY_CONTENT_BRIDGE_PROBE_REQUEST", id }, window.location.origin);
+    window.postMessage({ type: requestType, id }, window.location.origin);
   });
 }
 
-function resetContentBridge() {
+
+export function resetContentBridge() {
+  const dispose = globalThis.__AI_PRICING_CONTENT_BRIDGE_DISPOSE__;
+  if (typeof dispose === "function") dispose();
   delete globalThis.__AI_PRICING_CONTENT_BRIDGE__;
+  delete globalThis.__AI_PRICING_CONTENT_BRIDGE_VERSION__;
+  delete globalThis.__AI_PRICING_CONTENT_BRIDGE_DISPOSE__;
 }
 
 
@@ -120,7 +133,7 @@ function markLegacyPageBridge() {
 
 export async function ensurePageBridge(scripting, tabId, { forceContent = false } = {}) {
   const target = { tabId };
-  const [pageProbe] = await scripting.executeScript({ target, world: "MAIN", func: probePageBridge });
+  const [pageProbe] = await scripting.executeScript({ target, world: "MAIN", func: probePageBridge, args: [PAGE_BRIDGE_VERSION, LEGACY_PAGE_WINDOW_RESPONSE_TYPE, LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE] });
   let initialCapture = null;
   if (pageProbe?.result?.legacy) {
     if (pageProbe.result.capture?.ok) initialCapture = pageProbe.result.capture;
@@ -129,8 +142,8 @@ export async function ensurePageBridge(scripting, tabId, { forceContent = false 
   } else if (!pageProbe?.result?.current) {
     await scripting.executeScript({ target, files: ["src/page-bridge.js"], world: "MAIN" });
   }
-  const [contentProbe] = await scripting.executeScript({ target, world: "ISOLATED", func: probeContentBridge });
-  if (forceContent || !contentProbe?.result || contentProbe.result.version < 2) {
+  const [contentProbe] = await scripting.executeScript({ target, world: "ISOLATED", func: probeContentBridge, args: [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE] });
+  if (forceContent || !contentProbe?.result || contentProbe.result.version < CONTENT_BRIDGE_VERSION) {
     await scripting.executeScript({ target, world: "ISOLATED", func: resetContentBridge });
     await scripting.executeScript({ target, files: ["src/content-bridge.js"] });
   }

@@ -1,6 +1,7 @@
 import { collectStation, createPageFetch } from "./core/collectors.js";
-import { prepareStationInput } from "./core/provider-registry.js";
-import { resolveStationCollection } from "./core/request-strategy.js";
+import { prepareStationInput, providerForStation } from "./core/provider-registry.js";
+import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
+import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
 import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
 import { addRegisteredStationPresets } from "./core/station-presets.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
@@ -22,6 +23,8 @@ const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
 const CHECKIN_ALARM_NAME = "checkin-stations";
 
 const REFRESH_CONCURRENCY = 3;
+const REFRESH_PREFLIGHT_SESSION_KEY = "ai-price-analyzer:refresh-preflight";
+const REFRESH_PREFLIGHT_TABS_SESSION_KEY = "ai-price-analyzer:refresh-preflight-tabs";
 let comparisonCache = null;
 async function getSettings() {
   return normalizeSettings(await getValue("settings", {}));
@@ -138,11 +141,154 @@ async function getPreparedStations() {
   return stations.map(prepareComparisonStation);
 }
 
+let activeRefreshPreflight = null;
+let refreshConfirmationInProgress = false;
+const refreshPreflightCreatedTabIds = new Set();
+
+function newRefreshPreflightToken() {
+  return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+
+async function restoreRefreshPreflightState() {
+  const session = chrome.storage?.session;
+  if (!session) return;
+  const stored = await session.get([REFRESH_PREFLIGHT_SESSION_KEY, REFRESH_PREFLIGHT_TABS_SESSION_KEY]);
+  if (!activeRefreshPreflight && stored[REFRESH_PREFLIGHT_SESSION_KEY]) activeRefreshPreflight = stored[REFRESH_PREFLIGHT_SESSION_KEY];
+  if (Array.isArray(stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY])) {
+    refreshPreflightCreatedTabIds.clear();
+    for (const tabId of stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY]) if (Number.isInteger(tabId)) refreshPreflightCreatedTabIds.add(tabId);
+  }
+}
+
+async function persistRefreshPreflightState() {
+  const session = chrome.storage?.session;
+  if (!session) return;
+  await session.set({
+    [REFRESH_PREFLIGHT_SESSION_KEY]: activeRefreshPreflight,
+    [REFRESH_PREFLIGHT_TABS_SESSION_KEY]: [...refreshPreflightCreatedTabIds]
+  });
+}
+
+async function clearRefreshPreflightState() {
+  activeRefreshPreflight = null;
+  if (chrome.storage?.session) await chrome.storage.session.remove(REFRESH_PREFLIGHT_SESSION_KEY);
+}
+
+function safePreflightTabUrl(value) {
+  return sanitizePreflightUrl(value);
+}
+
+function pageSessionStatusReason(status) {
+  if (status === "ready") return "页面会话检查通过";
+  if (status === "needsLogin") return "未找到有效登录会话，请在打开的页面手动登录";
+  return "无法确认登录状态，请检查页面后再手动确认";
+}
+
+async function preflightPageStation(station) {
+  let opened;
+  try {
+    opened = await findOrOpenPageTab(chrome.tabs, station, undefined, { allowTemporaryWhenAmbiguous: true, keepOnLoadFailure: true });
+  } catch (error) {
+    if (error.temporary && Number.isInteger(error.tabId)) {
+      refreshPreflightCreatedTabIds.add(error.tabId);
+      await persistRefreshPreflightState();
+    }
+    return {
+      stationId: station.id,
+      stationName: station.name,
+      status: "uncertain",
+      reason: pageSessionStatusReason("uncertain"),
+      tabId: Number.isInteger(error.tabId) ? error.tabId : null,
+      tabUrl: safePreflightTabUrl(station.baseUrl)
+    };
+  }
+
+  const tab = opened?.tab;
+  if (!tab?.id) return {
+    stationId: station.id,
+    stationName: station.name,
+    status: "uncertain",
+    reason: pageSessionStatusReason("uncertain"),
+    tabId: null,
+    tabUrl: safePreflightTabUrl(station.baseUrl)
+  };
+  if (opened.temporary) {
+    refreshPreflightCreatedTabIds.add(tab.id);
+    await persistRefreshPreflightState();
+  }
+
+  let status = "uncertain";
+  try {
+    const collection = resolveStationCollection(station);
+    if (String(collection.station.adapter?.method || "GET").toUpperCase() !== "GET") {
+      throw new Error("No safe GET session probe is available");
+    }
+    const request = buildStationRequest(collection.station, collection.endpoints[0], collection.request);
+    const pageAuth = request.pageRequest.pageAuth ? { ...request.pageRequest.pageAuth, refresh: undefined } : undefined;
+    const pageRequest = { ...request.pageRequest, method: "GET", body: undefined, pageAuth };
+    const response = await withPageFetch(station, tab.id, pageFetch => pageFetch(pageRequest));
+    status = classifyPageSessionResponse(response);
+  } catch (error) {
+    status = classifyPageSessionError(error);
+  }
+
+  const ownedTemporary = refreshPreflightCreatedTabIds.has(tab.id);
+  let closedTemporary = false;
+  if (status === "ready" && ownedTemporary) {
+    try {
+      await chrome.tabs.remove(tab.id);
+      refreshPreflightCreatedTabIds.delete(tab.id);
+      closedTemporary = true;
+    } catch {}
+    await persistRefreshPreflightState();
+  }
+  return {
+    stationId: station.id,
+    stationName: station.name,
+    status,
+    reason: pageSessionStatusReason(status),
+    tabId: closedTemporary ? null : tab.id,
+    tabUrl: closedTemporary ? "" : safePreflightTabUrl(tab.url || station.baseUrl)
+  };
+}
+
+async function createRefreshPreflight() {
+  await restoreRefreshPreflightState();
+  if (refreshAllTask || refreshReferencesTask) throw new Error("当前正在刷新，请稍后再执行登录预检");
+  activeRefreshPreflight = null;
+  await persistRefreshPreflightState();
+  const stations = (await getPreparedStations()).filter(station => station.enabled);
+  const results = [];
+  for (const station of stations) {
+    const provider = providerForStation(station);
+    if (!requiresPageSessionPreflight(station, provider)) {
+      results.push({ stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "无需页面登录预检" });
+      continue;
+    }
+    results.push(await preflightPageStation(station));
+  }
+  activeRefreshPreflight = {
+    token: newRefreshPreflightToken(),
+    expiresAt: Date.now() + REFRESH_PREFLIGHT_TTL_MS,
+    stationSignature: refreshStationSignature(stations),
+    results
+  };
+  await persistRefreshPreflightState();
+  return { ...activeRefreshPreflight, results: activeRefreshPreflight.results };
+}
+
+async function cancelRefreshPreflight() {
+  await restoreRefreshPreflightState();
+  await clearRefreshPreflightState();
+  return { cancelled: true };
+}
+
 async function refreshAllInternal(options = {}) {
+  const { preparedStations, ...refreshOptions } = options;
   return runRefreshAll({
-    ...options,
+    ...refreshOptions,
     concurrency: REFRESH_CONCURRENCY,
-    getStations: getPreparedStations,
+    getStations: preparedStations ? async () => preparedStations : getPreparedStations,
     getValue,
     refreshOfficialReferences,
     collect,
@@ -220,8 +366,10 @@ async function ensureStationPresets(exchangeRate) {
 
 
 async function dashboard() {
+  await restoreRefreshPreflightState();
   const savedSettings = await settingsForUi();
   await ensureStationPresets(savedSettings.exchangeRate);
+  if (activeRefreshPreflight?.expiresAt <= Date.now()) await clearRefreshPreflightState();
   const revisionAtStart = getComparisonRevision();
   const [stations, references] = await Promise.all([
     getPreparedStations(),
@@ -261,7 +409,10 @@ async function dashboard() {
     const linked = stations.find(station => station.enabled && matchCheckinPreset(station)?.id === preset.id);
     return { id: preset.id, name: preset.name, linkedStationId: linked ? linked.id : null, autoEnabled: Boolean(linked?.checkin?.autoEnabled) };
   });
-  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons: comparisonResult.comparisons, summary: comparisonResult.summary, checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask) };
+  const refreshPreflight = activeRefreshPreflight?.stationSignature === refreshStationSignature(stations)
+    ? { token: activeRefreshPreflight.token, expiresAt: activeRefreshPreflight.expiresAt, results: activeRefreshPreflight.results }
+    : null;
+  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons: comparisonResult.comparisons, summary: comparisonResult.summary, checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshPreflight };
 }
 
 async function scheduleCheckinAlarm() {
@@ -679,9 +830,25 @@ async function handle(message, sender) {
       return checkinAll({ stationId: message.stationId, stationOrigin: message.stationOrigin, claim: true, autoOnly: false });
     case "SAVE_CHECKIN":
       return saveCheckinConfig(message);
+    case "REFRESH_PREFLIGHT": return createRefreshPreflight();
+    case "CANCEL_REFRESH_PREFLIGHT": return cancelRefreshPreflight();
     case "REFRESH_ALL": {
-      const result = await refreshAll({ forceReferences: Boolean(message.forceReferences) });
-      return { ...(await dashboard()), refreshSummary: result.summary };
+      if (refreshConfirmationInProgress) {
+        const error = new Error(REFRESH_CONFIRMATION_REQUIRED_MESSAGE);
+        error.code = REFRESH_CONFIRMATION_REQUIRED_CODE;
+        throw error;
+      }
+      refreshConfirmationInProgress = true;
+      try {
+        await restoreRefreshPreflightState();
+        const stations = await getPreparedStations();
+        assertRefreshConfirmation(activeRefreshPreflight, message, stations);
+        await clearRefreshPreflightState();
+        const result = await refreshAll({ forceReferences: Boolean(message.forceReferences), preparedStations: stations });
+        return { ...(await dashboard()), refreshSummary: result.summary };
+      } finally {
+        refreshConfirmationInProgress = false;
+      }
     }
     case "REFRESH_STATION": {
       const result = await refreshAll({ stationId: message.stationId, sourceTabId: message.sourceTabId });
@@ -713,9 +880,13 @@ async function handle(message, sender) {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "REFRESH_PROGRESS") return;
-  handle(message, sender).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || String(error) }));
+  handle(message, sender).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || String(error), ...(error.code ? { code: error.code } : {}) }));
   return true;
 });
+
+chrome.tabs?.onRemoved?.addListener(tabId => restoreRefreshPreflightState().then(() => {
+  if (refreshPreflightCreatedTabIds.delete(tabId)) return persistRefreshPreflightState();
+}).catch(() => {}));
 
 chrome.runtime.onInstalled.addListener(() => scheduleCheckinAlarm());
 chrome.runtime.onStartup.addListener(() => scheduleCheckinAlarm());

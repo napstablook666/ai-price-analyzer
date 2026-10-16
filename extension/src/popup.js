@@ -1,5 +1,5 @@
 import { currentSiteOrigin } from "./shared/schema.js";
-import { callService, hydrateIcons, onRefreshProgress } from "./shared/ui.js";
+import { callService, formatRefreshSummary, hydrateIcons, onRefreshProgress } from "./shared/ui.js";
 
 const activePage = document.querySelector("#current-page");
 const addCurrentSiteButton = document.querySelector("#add-current-site");
@@ -9,6 +9,7 @@ const checkinNote = document.querySelector("#checkin-note");
 const status = document.querySelector("#popup-status");
 const refreshProgress = document.querySelector("#refresh-progress");
 let lastRefreshSummary = null;
+let activeRefreshPreflight = null;
 let activeTab;
 let siteOrigin = "";
 
@@ -30,15 +31,14 @@ onRefreshProgress(progress => {
   } else if (progress.phase === "references") {
     setStatus(progress.message);
   } else if (progress.phase === "station") {
-    if (progress.status === "running") setStatus(`正在查询 ${progress.current}/${total}：${progress.stationName}`);
+    if (progress.status === "running") setStatus(`正在查询 ${progress.stationName}（并行槽位 ${progress.current}）`);
     else if (progress.status === "error") setStatus(`${progress.stationName} 查询失败：${progress.error}`, "error");
+    else if (progress.status === "partial") setStatus(`${progress.stationName} 部分查询到 ${progress.modelCount} 个模型：${progress.error || "存在未解析计费模式"}`);
     else setStatus(`${progress.stationName} 已查询 ${progress.modelCount} 个模型`);
   } else if (progress.phase === "complete") {
     lastRefreshSummary = progress.summary;
     const summary = progress.summary;
-    const message = summary.total
-      ? `查询完成：${summary.successCount} 成功，${summary.errorCount} 失败，共 ${summary.totalModels} 个模型 · ${(summary.durationMs / 1000).toFixed(1)} 秒`
-      : "没有启用的站点可查询";
+    const message = formatRefreshSummary(summary);
     setStatus(message, summary.errorCount ? "error" : "success");
   } else if (progress.phase === "error") {
     setStatus(progress.message, "error");
@@ -87,22 +87,46 @@ document.querySelector("#open-dashboard").addEventListener("click", () => {
 });
 document.querySelector("#open-settings").addEventListener("click", () => openPage("options.html"));
 addCurrentSiteButton.addEventListener("click", () => openPage("options.html", siteParams("addSite")));
+function setRefreshButtonStage(preflight) {
+  const title = refreshButton.querySelector("strong");
+  const detail = refreshButton.querySelector("small");
+  title.textContent = preflight ? "确认开始刷新全部" : "检查登录状态";
+  detail.textContent = preflight ? "登录后再次点击以开始采集" : "先检查需要登录的站点";
+}
+
 refreshButton.addEventListener("click", async () => {
   refreshButton.disabled = true;
-  refreshProgress.hidden = false;
-  lastRefreshSummary = null;
-  setStatus("正在准备查询站点模型");
   try {
-    const data = await callService("REFRESH_ALL");
+    if (!activeRefreshPreflight) {
+      const preflight = await callService("REFRESH_PREFLIGHT");
+      activeRefreshPreflight = preflight;
+      const counts = { ready: 0, needsLogin: 0, uncertain: 0, noLoginRequired: 0 };
+      for (const result of preflight.results) counts[result.status] = (counts[result.status] || 0) + 1;
+      const needsLogin = preflight.results.filter(result => result.status === "needsLogin").map(result => result.stationName);
+      const uncertain = preflight.results.filter(result => result.status === "uncertain").map(result => result.stationName);
+      const summary = [`已登录 ${counts.ready}`, `需要登录 ${counts.needsLogin}`, `需人工确认 ${counts.uncertain}`, `无需登录 ${counts.noLoginRequired}`];
+      if (needsLogin.length) summary.push(`登录站点：${needsLogin.join("、")}`);
+      if (uncertain.length) summary.push(`待确认站点：${uncertain.join("、")}`);
+      setStatus(`预检完成：${summary.join("；")}。再次点击确认开始刷新全部`);
+      setRefreshButtonStage(true);
+      return;
+    }
+
+    refreshProgress.hidden = false;
+    lastRefreshSummary = null;
+    setStatus("正在开始刷新");
+    const data = await callService("REFRESH_ALL", { preflightToken: activeRefreshPreflight.token, confirmed: true });
+    activeRefreshPreflight = null;
     lastRefreshSummary = data.refreshSummary || lastRefreshSummary;
     if (lastRefreshSummary) {
-      const { successCount, errorCount, total } = lastRefreshSummary;
-      setStatus(total ? `查询完成：${successCount} 成功，${errorCount} 失败` : "没有启用的站点可查询", errorCount ? "error" : "success");
+      setStatus(formatRefreshSummary(lastRefreshSummary), lastRefreshSummary.errorCount ? "error" : "success");
     }
   } catch (error) {
     setStatus(error.message || "查询失败", "error");
+    if (error.code === "REFRESH_CONFIRMATION_REQUIRED") activeRefreshPreflight = null;
   } finally {
     refreshButton.disabled = false;
+    if (!activeRefreshPreflight) setRefreshButtonStage(false);
   }
 });
 
