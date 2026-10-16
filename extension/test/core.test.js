@@ -1222,6 +1222,72 @@ test("carries token123 pricing currencies through comparison", async () => {
   }
 });
 
+test("repairs stale ordinary station currency verification before comparison", async () => {
+  const savedStation = {
+    id: "token123-stale",
+    name: "T蜜",
+    baseUrl: "https://token123.cfd",
+    priceCurrency: "UNKNOWN",
+    priceCurrencyVerified: false,
+    rechargeRate: 1.2,
+    rechargeRateVerified: true,
+    adapter: inferStationAdapter({ baseUrl: "https://token123.cfd" })
+  };
+  const prepared = prepareStationInput(savedStation);
+  assert.equal(prepared.priceCurrency, "CREDITS");
+  assert.equal(prepared.priceCurrencyVerified, true);
+
+  const snapshot = await collectStationInput(savedStation, {
+    fetchImpl: async () => response({ data: [{ model_name: "stale-token-model", input_price: 2, output_price: 4 }] })
+  });
+  const [comparison] = buildComparisonRows({
+    stations: [prepared],
+    snapshots: [{ stationId: savedStation.id, collectedAt: 1, status: snapshot.status, normalized: snapshot.normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const offer = comparison.offers[0];
+  assert.equal(offer.sourceCurrency, "CREDITS");
+  assert.equal(offer.pricingUnavailable, false);
+  assert.equal(offer.monthlyCost, 2.4);
+});
+
+test("canonicalizes stale ordinary stations and preserves protected provider currency state", async () => {
+  const ordinaryStations = [
+    { id: "dddai-stale", baseUrl: "https://dddai.dev/pricing", priceCurrency: "USD", priceCurrencyVerified: false, rechargeRate: 1.5, rechargeRateVerified: true },
+    { id: "custom-stale", baseUrl: "https://custom-relay.example/pricing", priceCurrency: "UNKNOWN", priceCurrencyVerified: false }
+  ];
+  for (const station of ordinaryStations) {
+    const prepared = prepareStationInput(station);
+    assert.equal(prepared.priceCurrency, "CREDITS");
+    assert.equal(prepared.priceCurrencyVerified, true);
+  }
+
+  const dddai = ordinaryStations[0];
+  const preparedDddai = prepareStationInput(dddai);
+  const snapshot = await collectStationInput(dddai, {
+    fetchImpl: async () => response({ data: [{ model_name: "stale-dddai-model", input_price: 2, output_price: 4 }] })
+  });
+  assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
+  const [comparison] = buildComparisonRows({
+    stations: [preparedDddai],
+    snapshots: [{ stationId: dddai.id, collectedAt: 1, status: snapshot.status, normalized: snapshot.normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  assert.equal(comparison.offers[0].sourceCurrency, "CREDITS");
+  assert.equal(comparison.offers[0].pricingUnavailable, false);
+  assert.equal(comparison.offers[0].monthlyCost, 3);
+
+  for (const station of [
+    { id: "killai-stale", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", priceCurrency: "UNKNOWN", priceCurrencyVerified: false },
+    { id: "fuck-stale", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", priceCurrency: "USD", priceCurrencyVerified: false }
+  ]) {
+    const prepared = prepareStationInput(station);
+    assert.equal(prepared.priceCurrencyVerified, false);
+  }
+});
+
 
 test("keeps model-list credits independent from recharge payment currency", async () => {
   for (const [rechargeCurrency, rechargeRate] of [["CNY", 2], ["USD", 8]]) {

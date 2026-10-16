@@ -129,11 +129,20 @@ function notifyReferencesRefresh(active) {
   chrome.runtime.sendMessage({ type: "REFERENCES_REFRESHING", active: Boolean(refreshAllTask || active) }, () => void chrome.runtime.lastError);
 }
 
+function prepareComparisonStation(station) {
+  return normalizeStation(prepareStationInput(station));
+}
+
+async function getPreparedStations() {
+  const stations = await getStations();
+  return stations.map(prepareComparisonStation);
+}
+
 async function refreshAllInternal(options = {}) {
   return runRefreshAll({
     ...options,
     concurrency: REFRESH_CONCURRENCY,
-    getStations,
+    getStations: getPreparedStations,
     getValue,
     refreshOfficialReferences,
     collect,
@@ -215,7 +224,7 @@ async function dashboard() {
   await ensureStationPresets(savedSettings.exchangeRate);
   const revisionAtStart = getComparisonRevision();
   const [stations, references] = await Promise.all([
-    getStations(),
+    getPreparedStations(),
     getValue("references", {})
   ]);
   const stationsById = new Map(stations.map(station => [station.id, station]));

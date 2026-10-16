@@ -2,7 +2,7 @@ import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
-export const NORMALIZATION_VERSION = 23;
+export const NORMALIZATION_VERSION = 24;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {

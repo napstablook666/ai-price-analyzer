@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Check that the fix only repairs known public pricing records and preserves explicit false/unknown blocking semantics."}
+{"file":".trellis/spec/frontend/index.md","reason":"Review cross-layer frontend quality rules for refresh, dashboard, provider preparation, and regression tests."}
+{"file":".trellis/tasks/10-16-fix-tmi-currency-gate/research/reproduction.md","reason":"Validate the review against the actual T蜜 symptom and identified station-versus-snapshot precedence."}

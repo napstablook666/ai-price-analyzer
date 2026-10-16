@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Pricing comparison contract, station currency verification precedence, CREDITS normalization, snapshot versioning, and blocking states."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend layer conventions for the service-worker, provider registry, dashboard data flow, and tests."}
+{"file":".trellis/tasks/10-16-fix-tmi-currency-gate/research/reproduction.md","reason":"Observed T蜜 screenshot and repository-backed stale verification root cause."}

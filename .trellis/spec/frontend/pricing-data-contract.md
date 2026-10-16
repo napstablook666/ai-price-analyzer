@@ -1,69 +1,76 @@
 # Pricing Data Contract
 
-## Scenario: Generic pricing currency preservation
+## Scenario: Station model-list comparison
 
-### 1. Scope / Trigger
+This contract covers station pricing from collection through snapshots and dashboard comparison. OpenRouter reference data remains a separate official pricing pipeline.
 
-This contract applies when a station exposes generic pricing through an array payload, `data`, or `models`. It protects source currency data between collection, normalization, snapshots, and dashboard comparison.
+## Signatures
 
-### 2. Signatures
+- `prepareStationInput(stationInput = {})` returns a station prepared for collection and comparison.
+- `cleanPricingRows(rows, options = {})` returns normalized pricing rows.
+- `normalizePricingPayload(payload, format = "auto", options = {})` applies station model-list normalization after the selected parser.
+- `currencyToRmb(currency, rechargeRate = 1)` returns the RMB conversion factor or `null` for an unconfirmed source currency.
+- `getProxyPriceQuote(item, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true)` returns quote costs, source currency, and blocking reasons.
 
-- `cleanPricingRows(rows, options = {})` returns normalized pricing rows; direct parser callers preserve explicit source labels, while station collection passes `modelListCurrency: "CREDITS"`.
-- `parseGenericPricing(payload, options = {})` accepts an array, `{ data: [] }`, or `{ models: [] }` and returns `{ sourceFormat, data, group_ratio }`.
-- `normalizePricingPayload(payload, format = "auto", options = {})` applies the station model-list unit after the selected parser.
-- `currencyToRmb(currency, rechargeRate = 1)` returns the RMB conversion factor or `null` when the source currency cannot be confirmed.
-- `getProxyPriceQuote(item, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true)` returns quoted prices, converted cost prices, source currency, and unavailable reasons.
-### 3. Contracts
+## Contracts
 
-- Station model-list normalization with `modelListCurrency: "CREDITS"` writes `price_currency: "CREDITS"` for every normalized station row unless `priceCurrencyVerified === false`; raw `$`, `USD`, `CNY`, or blank source labels do not change a verified ordinary station's business unit.
-- Without the station model-list option, generic parser calls still preserve explicit `price_currency`/`currency` as an uppercase, trimmed string; this keeps parser behavior testable and avoids changing unrelated raw-data consumers.
-- `rechargeCurrency` is only the payment currency used to derive `rechargeRate`; it never supplies or overrides a model-list source currency.
-- `currencyToRmb()` returns `null` for an empty value, `UNKNOWN`, `UNSPECIFIED`, `NONE`, or any unsupported currency; CNY/RMB symbols use factor `1`, and USD/CREDITS/POINTS use the configured recharge-rate factor.
-- `getProxyPriceQuote()` adds `currency_unverified` when conversion is unavailable or `priceCurrencyVerified === false`. Such quotes have no converted cost and cannot enter comparison or recommendation calculations.
+- Every ordinary station model list uses the project's business unit `CREDITS`, regardless of raw `$`, `¥`, `USD`, CNY, or missing labels.
+- `prepareStationInput()` canonicalizes ordinary registered and unregistered stations to `{ priceCurrency: "CREDITS", priceCurrencyVerified: true }` after provider-specific URL/adapter preparation.
+- A provider that explicitly declares `preservePriceCurrencyVerification: true` keeps its own false/UNKNOWN state. This is the protection contract for KillAI, fuck-everyone, and any future provider whose currency is deliberately unverified.
+- `rechargeCurrency` is only the payment currency used to derive a station's `rechargeRate`; it never supplies a model-list source currency.
+- With station collection option `modelListCurrency: "CREDITS"`, normalized rows use `price_currency: "CREDITS"` for ordinary stations. Protected provider diagnostics may retain their raw marker.
+- Without `modelListCurrency`, generic parser calls preserve explicit source markers after trimming and uppercasing; missing or blank markers remain `UNKNOWN`. This parser behavior does not establish a trusted currency for station comparison.
+- An explicit `priceCurrencyVerified: false` keeps the raw source marker during station normalization; do not bypass this guard globally.
+- `currencyToRmb()` returns `null` for an empty value, `UNKNOWN`, `UNSPECIFIED`, `NONE`, or unsupported currency. CNY/RMB symbols use factor `1`; USD/CREDITS/POINTS use the configured recharge-rate factor.
+- `getProxyPriceQuote()` adds `currency_unverified` when conversion is unavailable or `priceCurrencyVerified === false`. It must not globally ignore the false flag.
 - `rechargeRateVerified === false` independently produces `recharge_unverified`.
-- `NORMALIZATION_VERSION` changes whenever the normalized row contract changes. `snapshotNeedsRefresh()` must reject snapshots created with an older version.
-- Raw official OpenRouter reference data does not pass through station model-list normalization and remains USD.
-- In comparison rows, map the same numeric OpenRouter USD credit price 1:1 to `CREDITS` for `officialQuotedPrices`; compute the RMB benchmark cost separately with the project-configured `openRouterRechargeRate` / RMB-per-USD rate. The rate affects cost only, not the quoted price.
-- OpenRouter recharge-account fees are not modeled or included in benchmark prices.
-### 4. Validation & Error Matrix
+- Runtime dashboard comparison and refresh scheduling must use the same prepared station shape. A station false value must not survive for an ordinary provider in one path while being repaired in the other.
+- `NORMALIZATION_VERSION` changes whenever old normalized snapshots could encode a different trust decision. Version `24` is required after ordinary stale verification repair; `snapshotNeedsRefresh()` rejects older versions.
+- Raw official OpenRouter API reference prices remain USD. Comparison maps the same numeric USD-credit value 1:1 to `CREDITS` and computes RMB benchmark cost separately with the configured `openRouterRechargeRate`. OpenRouter purchase fees are not model prices.
 
-| Condition | Normalized value | Comparison result |
+## Validation & Error Matrix
+
+| Condition | Prepared/normalized value | Comparison result |
 |---|---|---|
-| Station model-list row with `modelListCurrency: "CREDITS"` | `CREDITS` | Converted with the configured recharge rate |
-| Generic parser called without station model-list option and `price_currency: "CNY"` | `CNY` | Converted with factor `1` |
-| Generic parser called without station model-list option and `price_currency: "USD"` | `USD` | Converted with the configured recharge rate |
-| Missing/blank row currency in station model-list normalization | `CREDITS` | Converted with the configured recharge rate |
+| Ordinary registered station | `priceCurrency=CREDITS`, verified | CREDITS row converted with station recharge rate |
+| Ordinary unregistered station | `priceCurrency=CREDITS`, verified | CREDITS row converted with station recharge rate |
+| Protected provider with explicit false | Preserve provider marker/false | `currency_unverified`; no converted cost |
+| Missing/blank raw currency on ordinary station | `CREDITS` | Converted with station recharge rate |
 | `rechargeRateVerified: false` | Preserve station flag | `recharge_unverified`; no usable cost |
-| Station `priceCurrencyVerified: false` | Preserve station flag and source marker | `currency_unverified`; no converted cost |
-| Raw official OpenRouter API reference price | `USD` | Preserve API semantics; do not pass through station normalization |
-| OpenRouter comparison quote | `CREDITS` | Preserve the numeric USD-credit value 1:1; calculate RMB cost separately with the configured benchmark rate |
-### 5. Good/Base/Bad Cases
+| Raw OpenRouter reference price | `USD` | Preserve API semantics |
+| OpenRouter comparison quote | `CREDITS` | Numeric USD-credit value stays 1:1; RMB cost is separate |
 
-- Good: a station row with `{ input_price: 2 }` becomes `price_currency: "CREDITS"` when collected with `modelListCurrency: "CREDITS"`.
-- Good: a station row with `{ input_price: 2, price_currency: "USD" }` is still normalized to `price_currency: "CREDITS"` at the station model-list boundary.
-- Good: `{ input_price: 2, price_currency: " CNY " }` remains `CNY` when using the raw generic parser without station model-list options.
-- Bad: recharge-only `rechargeCurrency: "USD"` without the station model-list normalization option cannot prove an unknown model source currency.
-- Bad: a station with `priceCurrencyVerified: false` keeps its diagnostic source marker and remains unavailable even if the raw list contains `$` or `USD`.
-### 6. Tests Required
+## Good/Base/Bad Cases
 
-- Test array, `data`, and `models` generic payloads through station normalization and assert every row uses CREDITS; also retain raw parser tests for explicit CNY/USD preservation.
-- Test `currencyToRmb()` for missing, blank, unknown, unsupported, CNY, USD, CREDITS, and POINTS values.
-- Test both `currency_unverified` branches: unavailable item currency and explicit station verification failure; test `recharge_unverified` separately.
-- Test the `token123.cfd` collection-to-comparison flow with recharge payment currency set to both CNY and USD; assert the model source remains CREDITS and monthly costs use the configured recharge rate.
-- Test KillAI/fuck-everyone explicit unverified provider states remain blocked.
-- Test official OpenRouter reference prices remain USD and are not rewritten by station normalization.
+- Good: a stale ordinary station with `priceCurrencyVerified: false` is prepared as CREDITS/true before refresh and dashboard comparison.
+- Good: `{ input_price: 2, price_currency: "USD" }` becomes `price_currency: "CREDITS"` at an ordinary station model-list boundary.
+- Good: a protected provider remains false even when its payload contains `$` or `USD`.
+- Bad: adding a dashboard-only label that hides `currency_unverified` without preparing the station.
+- Bad: changing `getProxyPriceQuote()` to ignore every `priceCurrencyVerified: false`.
+- Bad: treating recharge USD/CNY as the source unit of a model row.
+
+## Tests Required
+
+- Test array, `data`, and `models` generic payloads without station options preserve explicit source markers and keep missing/blank markers `UNKNOWN`; the station collection boundary overrides ordinary rows to CREDITS.
+- Test T蜜 and another ordinary station with stale false input through preparation, collection, snapshot, and comparison; assert usable RMB costs.
+- Test an unregistered ordinary station receives CREDITS/true.
+- Test KillAI/fuck-everyone preserve false and remain unavailable.
+- Test `currencyToRmb()` for missing, blank, unknown, unsupported, CNY, USD, CREDITS, and POINTS.
+- Test both `currency_unverified` branches and `recharge_unverified` separately.
+- Test OpenRouter raw USD reference and 1:1 comparison CREDITS mapping without purchase fees.
 - Test that an older normalization version requires snapshot refresh.
-### 7. Wrong vs Correct
 
-#### Wrong
+## Wrong vs Correct
+
+### Wrong
 
 ```js
 const code = String(currency || "USD").toUpperCase();
 ```
 
-This turns a missing source currency into a false USD claim.
+This turns a missing source into a false USD claim.
 
-#### Correct
+### Correct
 
 ```js
 const code = String(currency ?? "").trim().toUpperCase();
@@ -72,4 +79,4 @@ if (["CNY", "RMB", "¥", "￥"].includes(code)) return 1;
 if (!["USD", "CREDITS", "POINTS"].includes(code)) return null;
 ```
 
-This preserves the official reference currency while making the station model-list unit explicit at collection time. Missing station row labels no longer enter comparison as unknown, but explicit provider verification failures and unverified recharge ratios remain blocking states.
+The station contract establishes CREDITS before comparison, while protected provider state remains an explicit blocking decision.
