@@ -22,6 +22,8 @@ jobs:
         with:
           node-version: 20
 
+      - name: Check synchronized versions
+        run: node scripts/sync-version.mjs --check
       - name: Check userscript syntax
         run: node --check "AI中转站价格分析工具.js"
 
@@ -43,6 +45,11 @@ jobs:
           node --check extension/src/popup.js
           node -e "const m = JSON.parse(require('fs').readFileSync('extension/manifest.json', 'utf8')); if (m.action?.default_popup !== 'popup.html') process.exit(1)"
           test -f extension/popup.html
+          test -s extension/icons/icon.svg
+          test -s extension/icons/icon-16.png
+          test -s extension/icons/icon-32.png
+          test -s extension/icons/icon-48.png
+          test -s extension/icons/icon-128.png
       - name: Run extension unit tests
         run: node --test extension/test/*.test.js
       - name: Check public repository files

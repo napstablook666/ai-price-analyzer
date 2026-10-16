@@ -1,0 +1,12 @@
+{
+  "name": "ai-price-analyzer",
+  "private": true,
+  "version": "0.2.1",
+  "userscriptVersion": "4.15.14",
+  "scripts": {
+    "version:patch": "node scripts/sync-version.mjs patch",
+    "version:minor": "node scripts/sync-version.mjs minor",
+    "version:major": "node scripts/sync-version.mjs major",
+    "version:check": "node scripts/sync-version.mjs --check"
+  }
+}

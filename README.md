@@ -109,6 +109,7 @@ The extension has no Docker, Playwright, bundler, or third-party runtime depende
 ## Development
 
 No build toolchain is required for the userscript source. Use Node.js for syntax checks and the included pricing self-check:
+The root `package.json` stores separate project and userscript version tracks. Run `npm run version:patch` (or `version:minor` / `version:major`) for an update; it increments both tracks and syncs every release file. Use `npm run version:check` to verify them.
 
 ```bash
 node --check "AI中转站价格分析工具.js"
@@ -120,11 +121,14 @@ The GitHub Actions workflow runs the same checks and verifies that the release s
 
 ## Release process
 
-Releases are tag-driven. Push a semantic version tag such as `v0.2.0` to run the release workflow. It creates a source ZIP, a userscript asset, and an extension ZIP, then publishes a GitHub Release with generated notes.
+Releases are tag-driven. Run `npm run version:patch` (or `version:minor` / `version:major`) before tagging; the command increments both version tracks and updates every release file. The release workflow then verifies the project version matches the tag.
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+npm run version:patch
+npm run version:check
+version=$(node -p "require('./package.json').version")
+git tag "v$version"
+git push origin "v$version"
 ```
 
 The workflow is defined in [`.github/workflows/release.yml`](./.github/workflows/release.yml). The `GITHUB_TOKEN` is used only by GitHub Actions to publish the release; no repository secret is needed for the default flow.

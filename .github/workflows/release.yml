@@ -22,6 +22,13 @@ jobs:
         with:
           node-version: 20
 
+      - name: Check synchronized versions and release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/sync-version.mjs --check
+          node --input-type=module -e 'import { readFileSync } from "node:fs"; const version = JSON.parse(readFileSync("package.json", "utf8")).version; if ("v" + version !== process.env.GITHUB_REF_NAME) process.exit(1);'
+
       - name: Validate source
         run: |
           node --check "AI中转站价格分析工具.js"

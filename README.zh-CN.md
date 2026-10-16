@@ -107,6 +107,7 @@ AI Price Analyzer 是一个浏览器用户脚本，用于比较受支持 AI 中�
 ## 开发
 
 用户脚本源文件不需要构建工具链。使用 Node.js 执行语法检查和随附的价格计算自检：
+根目录 `package.json` 保存扩展项目和用户脚本两条版本轨道。更新时运行 `npm run version:patch`，也可以使用 `version:minor` 或 `version:major`；脚本会同时递增并同步所有发布文件。使用 `npm run version:check` 检查版本是否一致。
 
 ```bash
 node --check "AI中转站价格分析工具.js"
@@ -118,11 +119,14 @@ GitHub Actions 会运行相同检查，并扫描发布源文件中常见的私�
 
 ## 发布流程
 
-Release 由 Git tag 触发。推送类似 `v0.2.0` 的语义化版本标签后，发布工作流会创建源代码 ZIP、用户脚本资产和 Chromium 扩展 ZIP，并使用 GitHub 自动生成 Release notes。
+Release 由 Git tag 触发。打 tag 前运行 `npm run version:patch`，也可以使用 `version:minor` 或 `version:major`；命令会同时递增两条版本轨道并同步所有发布文件。发布工作流会检查项目版本是否与 tag 一致。
 
 ```bash
-git tag v0.2.0
-git push origin v0.2.0
+npm run version:patch
+npm run version:check
+version=$(node -p "require('./package.json').version")
+git tag "v$version"
+git push origin "v$version"
 ```
 
 工作流位于 [`.github/workflows/release.yml`](./.github/workflows/release.yml)。默认流程只使用 GitHub Actions 提供的 `GITHUB_TOKEN` 发布 Release，不需要额外配置仓库 Secret。

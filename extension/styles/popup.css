@@ -1,7 +1,7 @@
 .popup-page { width: 360px; max-width: calc(100vw - 16px); }
 .popup-shell { display: grid; gap: 14px; padding: 16px; }
 .popup-header { display: flex; align-items: center; gap: 11px; }
-.popup-brand-mark { display: grid; place-items: center; width: 36px; height: 36px; color: var(--paper); background: var(--ink); border-radius: 2px; }
+.popup-brand-mark { display: grid; place-items: center; width: 36px; height: 36px; color: var(--paper); background: var(--ink); border-radius: 2px; overflow: hidden; }
 .popup-brand-mark .icon { width: 20px; height: 20px; }
 .popup-header .eyebrow { margin-bottom: 2px; }
 .popup-header h1 { margin: 0; font-size: 18px; line-height: 1.25; }

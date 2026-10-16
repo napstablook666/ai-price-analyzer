@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         AI中转站价格分析工具 (v4.15.13)
+// @name         AI中转站价格分析工具 (v4.15.14)
 // @namespace    http://tampermonkey.net/
-// @version      4.15.13
+// @version      4.15.14
 // @author       37012 & Gemini
 // @license      GPL-3.0
 // @match        https://*/model*
@@ -39,7 +39,7 @@ const SYSTEM_BASE_PRICE_PER_1M = 2.0; // 系统基准 $2/1M tokens
 const OFFICIAL_EXCHANGE_RATE_SOURCE = "https://www.boc.cn/sourcedb/whpj/";
 const DEFAULT_EXCHANGE_RATE = 7.3;
 const DEFAULT_USAGE_PROFILE = { requests: 7900, input: 66.5, cacheRead: 550.7, output: 5.5, cacheWrite: 0, peakShare: 7 / 24 };
-const SCRIPT_VERSION = "4.15.13";
+const SCRIPT_VERSION = "4.15.14";
 
     // 默认匹配规则配置
     const DEFAULT_MATCHING_RULES = [
