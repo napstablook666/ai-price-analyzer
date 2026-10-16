@@ -51,3 +51,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: 修复币种核验状态
+<!-- trellis-session: v=2 fp=bb60b59651c14c59 -->
+
+**Date**: 2026-10-16
+**Task**: 修复币种核验状态
+**Branch**: `main`
+
+### Summary
+
+定位并修复 KillAI 与 fuck-everyone 模型价格已按 CREDITS 采集、但准备阶段仍保留 priceCurrencyVerified=false 导致币种待核验的问题。现在旧 false/missing 状态会在准备阶段规范为 CREDITS/true，充值比例核验仍独立保留；新增两类受保护站点的采集、比较、仪表盘回归测试。核心测试 155 条、刷新仪表盘测试 11 条通过，提交 d379b8e。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d379b8e` | fix(extension): clear stale protected currency warnings |
+
+### Status
+
+[OK] **Completed**
