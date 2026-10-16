@@ -1255,12 +1255,13 @@ test("repairs stale ordinary station currency verification before comparison", a
 test("canonicalizes stale ordinary stations and preserves protected provider currency state", async () => {
   const ordinaryStations = [
     { id: "dddai-stale", baseUrl: "https://dddai.dev/pricing", priceCurrency: "USD", priceCurrencyVerified: false, rechargeRate: 1.5, rechargeRateVerified: true },
-    { id: "custom-stale", baseUrl: "https://custom-relay.example/pricing", priceCurrency: "UNKNOWN", priceCurrencyVerified: false }
+    { id: "custom-stale", baseUrl: "https://custom-relay.example/pricing", priceCurrency: "UNKNOWN", priceCurrencyVerified: false, rechargeRmb: 2, rechargeCredits: 1, rechargeRateVerified: false }
   ];
   for (const station of ordinaryStations) {
     const prepared = prepareStationInput(station);
     assert.equal(prepared.priceCurrency, "CREDITS");
     assert.equal(prepared.priceCurrencyVerified, true);
+    assert.equal(prepared.rechargeRateVerified, true);
   }
 
   const dddai = ordinaryStations[0];

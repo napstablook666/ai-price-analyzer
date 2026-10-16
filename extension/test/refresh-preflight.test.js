@@ -219,7 +219,7 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
   };
   const station = {
     id: stationId, name: "Ordinary Relay", baseUrl: "https://legacy-relay.example/pricing", enabled: true, mode: "direct",
-    rechargeRmb: 2, rechargeCurrency: "CNY", rechargeCredits: 1, priceCurrency: "USD", priceCurrencyVerified: false,
+    rechargeRmb: 2, rechargeCurrency: "CNY", rechargeCredits: 1, priceCurrency: "USD", priceCurrencyVerified: false, rechargeRateVerified: false,
     adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: rows, group_ratio: { default: 1 } }) }
   };
   const protectedStations = [
@@ -267,7 +267,8 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     }
     const rechargeOffer = offers.find(offer => offer.stationId === rechargeUnverified.id);
     assert.equal(dashboard.stations.find(value => value.id === rechargeUnverified.id).priceCurrencyVerified, true);
-    assert.deepEqual(rechargeOffer.pricingUnavailableReasons, ["recharge_unverified"]);
+    assert.equal(dashboard.stations.find(value => value.id === rechargeUnverified.id).rechargeRateVerified, true);
+    assert.deepEqual(rechargeOffer.pricingUnavailableReasons, []);
 
     const refreshed = responseData(await worker.send("REFRESH_STATION", { stationId }));
     assert.equal(refreshed.refreshSummary.successCount, 1);

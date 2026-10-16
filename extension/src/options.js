@@ -132,12 +132,13 @@ function changeRechargeCurrency(amountInput, currencySelect) {
   currencySelect.dataset.previousCurrency = currencySelect.value;
 }
 
-function updateStationRechargeRate(card) {
+function updateStationRechargeRate(card, verify = false) {
   const amountInput = card.querySelector('[data-field="rechargeAmount"]');
   const currencySelect = card.querySelector('[data-field="rechargeCurrency"]');
   const creditsInput = card.querySelector('[data-field="rechargeCredits"]');
   const rmb = convertRechargeAmount(amountInput.value, currencySelect.value, "CNY", currentExchangeRate()) ?? 0;
   const credits = Number(creditsInput.value);
+  if (verify && rmb > 0 && credits > 0) card.dataset.rechargeRateVerified = "true";
   const rate = derivedRechargeRate(rmb, credits);
   card.querySelector('[data-field="rechargeRate"]').value = rate.toFixed(4);
   card.querySelector("[data-recharge-rate-display]").textContent = `每 1 中转币成本 ¥${rate.toFixed(4)}`;
@@ -161,7 +162,7 @@ function stationCard(station, index) {
   const stationHint = station.mode === "page"
     ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
     : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
-  return `<article class="station-card" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-index="${index}">
+  return `<article class="station-card" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-index="${index}" data-recharge-rate-verified="${rechargeRateVerified}">
     <details class="station-disclosure"${state.collapsedStationIds.has(station.id) ? "" : " open"}>
       <summary class="station-summary">
         <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><p class="station-kicker">STATION ${String(index + 1).padStart(2, "0")}</p><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
@@ -190,7 +191,6 @@ function stationCard(station, index) {
           <label><span>到账中转币</span><input data-field="rechargeCredits" type="number" min="0.000001" step="0.01" value="${rechargeCredits}"></label>
           <label><span>充值比例（¥ / 币）</span><input data-field="rechargeRate" type="number" min="0" step="0.0001" value="${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}" readonly><small data-recharge-rate-display>每 1 中转币成本 ¥${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}</small></label>
           <input type="hidden" data-field="rechargeRateNote" value="${escapeHtml(rechargeRateNote)}">
-          <label class="check-label"><input data-field="rechargeRateVerified" type="checkbox"${checked(rechargeRateVerified)}><span>我已核实充值折算</span></label>
           <label><span>模型列表单位</span><input data-field="priceCurrency" value="CREDITS" readonly aria-readonly="true"></label>
           <label class="check-label"><input data-field="priceCurrencyVerified" type="checkbox"${checked(priceCurrencyVerified)}><span>我已核实模型价格币种</span></label>
           <label class="wide"><span>模型单位核验备注</span><input data-field="priceCurrencyNote" value="${escapeHtml(priceCurrencyNote)}" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>
@@ -332,7 +332,7 @@ function readStations() {
       rechargeCurrency,
       rechargeCredits: Number(value("rechargeCredits")) > 0 ? Number(value("rechargeCredits")) : 1,
       rechargeRate: derivedRechargeRate(rechargeRmb, Number(value("rechargeCredits")) || 0),
-      rechargeRateVerified: card.querySelector('[data-field="rechargeRateVerified"]')?.checked ?? true,
+      rechargeRateVerified: card.dataset.rechargeRateVerified !== "false",
       rechargeRateNote: value("rechargeRateNote"),
       priceCurrency,
       priceCurrencyVerified: card.querySelector('[data-field="priceCurrencyVerified"]')?.checked ?? true,
@@ -808,14 +808,14 @@ $("#stations-list").addEventListener("input", event => {
     return;
   }
   if (!event.target.matches('[data-field="rechargeAmount"], [data-field="rechargeCredits"]')) return;
-  updateStationRechargeRate(card);
+  updateStationRechargeRate(card, true);
 });
 $("#stations-list").addEventListener("change", event => {
   if (!event.target.matches('[data-field="rechargeCurrency"]')) return;
   const card = event.target.closest(".station-card");
   if (!card) return;
   changeRechargeCurrency(card.querySelector('[data-field="rechargeAmount"]'), event.target);
-  updateStationRechargeRate(card);
+  updateStationRechargeRate(card, true);
 });
 
 $("#fetch-llm-models").addEventListener("click", () => runModelAction("llm", "fetch"));

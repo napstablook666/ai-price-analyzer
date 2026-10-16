@@ -578,5 +578,5 @@ export function providerById(id) {
 export function prepareStationInput(stationInput = {}) {
   const provider = providerForStation(stationInput, { forPrepare: true });
   const prepared = provider?.prepare ? provider.prepare(stationInput, stationContext(stationInput)) : stationInput;
-  return { ...prepared, priceCurrency: "CREDITS", priceCurrencyVerified: provider?.preservePriceCurrencyVerification ? false : true };
+  return { ...prepared, priceCurrency: "CREDITS", priceCurrencyVerified: provider?.preservePriceCurrencyVerification ? false : true, rechargeRateVerified: provider?.preservePriceCurrencyVerification ? prepared.rechargeRateVerified !== false : true };
 }
