@@ -29,3 +29,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 2: 迁移 CodeStable 到 Trellis
+<!-- trellis-session: v=2 fp=c821912ce2f9676d -->
+
+**Date**: 2026-10-16
+**Task**: 迁移 CodeStable 到 Trellis
+**Branch**: `main`
+
+### Summary
+
+将 CodeStable 的 durable facts 迁入 Trellis frontend specs，保留 9 份带历史标记的工作记录并建立迁移映射，删除 .codestable/ 及专属 .gitignore 规则。扩展测试 175/175、Trellis context validation 和 git diff --check 通过；产品源码及其他工作线改动未纳入本次提交。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `354ea71` | docs: migrate CodeStable knowledge to Trellis |
+
+### Status
+
+[OK] **Completed**
