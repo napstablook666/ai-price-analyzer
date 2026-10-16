@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Map generic pricing response through normalization, snapshot, comparison, and currency gating."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Reuse existing normalizer and pricing contracts; avoid parallel currency parsing."}
+{"file": "extension/src/core/collectors.js", "reason": "Existing generic pricing payload parsing and cleanPricingRows entry points to extend."}
+{"file": "extension/src/core/normalizers.js", "reason": "Normalization output contract and version to change."}
+{"file": "extension/src/core/pricing.js", "reason": "Currency conversion and comparison gating logic to fix."}
+{"file": "extension/src/core/snapshot-policy.js", "reason": "Snapshot refresh behavior keyed by normalization version."}
+{"file": "extension/test/core.test.js", "reason": "Existing regression fixture and test patterns for collectors, pricing, and snapshots."}

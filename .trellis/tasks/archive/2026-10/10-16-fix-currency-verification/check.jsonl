@@ -1,0 +1,7 @@
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Review the full pricing data flow and null/empty field boundaries."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Check that the fix reuses existing parsing and currency contracts."}
+{"file": "extension/src/core/collectors.js", "reason": "Review generic payload coverage and preserved price_currency."}
+{"file": "extension/src/core/normalizers.js", "reason": "Review normalization version and currency field contract."}
+{"file": "extension/src/core/pricing.js", "reason": "Review conversion safety and currency_unverified gating."}
+{"file": "extension/src/core/snapshot-policy.js", "reason": "Review old snapshot invalidation behavior."}
+{"file": "extension/test/core.test.js", "reason": "Review regression coverage and test isolation."}

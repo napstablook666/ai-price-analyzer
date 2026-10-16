@@ -1,0 +1,6 @@
+{"file": ".trellis/spec/frontend/pricing-data-contract.md", "reason": "Load the pricing data contract for CREDITS, UNKNOWN, currency conversion, and normalization version changes."}
+{"file": "extension/src/shared/schema.js", "reason": "Preserve independent recharge and model price currency fields and accept the explicit CREDITS station value."}
+{"file": "extension/src/core/normalizers.js", "reason": "Implement generic array/data/models currency preservation and the verified CREDITS fallback."}
+{"file": "extension/src/core/collectors.js", "reason": "Pass station price currency verification into all generic normalization collection paths and snapshots."}
+{"file": "extension/src/options.js", "reason": "Expose CREDITS as model price currency while keeping recharge currency and credits fields independent."}
+{"file": "extension/test/core.test.js", "reason": "Add regression coverage for settings, generic payloads, token123 end-to-end comparison, and unverified protections."}
