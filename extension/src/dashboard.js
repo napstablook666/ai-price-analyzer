@@ -193,8 +193,9 @@ function unitPricesMarkup(prices, currency, row, official = false, sourceCurrenc
   const lines = dashboardPriceLines(prices, row, official);
   const visibleLines = lines.filter(([, value]) => value !== null && value !== undefined);
   if (!visibleLines.length) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
+  const displayCurrency = currency === "CREDITS" ? "CR" : currency;
   const formatter = sourceCurrency ? formatSourcePrice : formatPrice;
-  return `<div class="price-lines">${visibleLines.map(([label, value, precise], index) => `<div class="price-line${index < 2 ? " price-line-primary" : ""}"><span class="price-key">${label}</span><span class="price-value">${formatter(value, currency, precise ? 6 : 4)}</span></div>`).join("")}</div>`;
+  return `<div class="price-lines">${visibleLines.map(([label, value, precise], index) => `<div class="price-line${index < 2 ? " price-line-primary" : ""}"><span class="price-key">${label}</span><span class="price-value">${formatter(value, displayCurrency, precise ? 6 : 4)}</span></div>`).join("")}</div>`;
 }
 
 function jevResultKey(task, row) {
