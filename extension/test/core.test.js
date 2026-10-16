@@ -1252,7 +1252,7 @@ test("repairs stale ordinary station currency verification before comparison", a
   assert.equal(offer.monthlyCost, 2.4);
 });
 
-test("canonicalizes stale ordinary stations and preserves protected provider currency state", async () => {
+test("canonicalizes ordinary and protected model-list currencies before comparison", async () => {
   const ordinaryStations = [
     { id: "dddai-stale", baseUrl: "https://dddai.dev/pricing", priceCurrency: "USD", priceCurrencyVerified: false, rechargeRate: 1.5, rechargeRateVerified: true },
     { id: "custom-stale", baseUrl: "https://custom-relay.example/pricing", priceCurrency: "UNKNOWN", priceCurrencyVerified: false, rechargeRmb: 2, rechargeCredits: 1, rechargeRateVerified: false }
@@ -1280,13 +1280,61 @@ test("canonicalizes stale ordinary stations and preserves protected provider cur
   assert.equal(comparison.offers[0].pricingUnavailable, false);
   assert.equal(comparison.offers[0].monthlyCost, 3);
 
-  for (const station of [
-    { id: "killai-stale", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", priceCurrency: "UNKNOWN", priceCurrencyVerified: false },
-    { id: "fuck-stale", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", priceCurrency: "USD", priceCurrencyVerified: false }
-  ]) {
-    const prepared = prepareStationInput(station);
-    assert.equal(prepared.priceCurrency, "CREDITS");
-    assert.equal(prepared.priceCurrencyVerified, false);
+  const protectedProviders = [
+    { id: "killai-stale", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", priceCurrency: "UNKNOWN", payload: killAiFixture },
+    { id: "fuck-stale", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", priceCurrency: "USD", payload: fuckEveryoneFixture }
+  ];
+  for (const provider of protectedProviders) {
+    const collectionInput = {
+      id: `${provider.id}-collection`,
+      baseUrl: provider.baseUrl,
+      priceCurrency: provider.priceCurrency,
+      priceCurrencyVerified: false,
+      rechargeRate: 1.2,
+      rechargeRateVerified: false
+    };
+    const collected = await collectStationInput(collectionInput, {
+      fetchImpl: async () => response(provider.payload)
+    });
+    assert.ok(collected.normalized.data.length > 0);
+    assert.ok(collected.normalized.data.every(item => item.price_currency === "CREDITS"));
+
+    const getReasons = stationInput => {
+      const prepared = normalizeStation(prepareStationInput(stationInput));
+      const legacySnapshot = {
+        ...collected,
+        stationId: prepared.id,
+        priceCurrencyVerified: false,
+        rechargeRateVerified: false
+      };
+      const comparisons = buildComparisonRows({
+        stations: [prepared],
+        snapshots: [legacySnapshot],
+        references: { models: [] },
+        usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+      });
+      return comparisons.flatMap(row => row.offers).flatMap(offer => offer.pricingUnavailableReasons);
+    };
+
+    for (const verification of ["missing", "false"]) {
+      const stationInput = { ...collectionInput, id: `${provider.id}-${verification}` };
+      if (verification === "missing") delete stationInput.priceCurrencyVerified;
+      const prepared = normalizeStation(prepareStationInput(stationInput));
+      assert.equal(prepared.priceCurrency, "CREDITS");
+      assert.equal(prepared.priceCurrencyVerified, true);
+      assert.equal(prepared.rechargeRateVerified, false);
+      assert.deepEqual([...new Set(getReasons(stationInput))].sort(), ["recharge_unverified"]);
+    }
+
+    const confirmedRateInput = { ...collectionInput, id: `${provider.id}-rate-confirmed`, rechargeRateVerified: true };
+    const confirmedRate = normalizeStation(prepareStationInput(confirmedRateInput));
+    assert.equal(confirmedRate.priceCurrencyVerified, true);
+    assert.equal(confirmedRate.rechargeRateVerified, true);
+    assert.deepEqual([...new Set(getReasons(confirmedRateInput))], []);
+
+    const missingRateInput = { ...collectionInput, id: `${provider.id}-rate-missing` };
+    delete missingRateInput.rechargeRateVerified;
+    assert.equal(prepareStationInput(missingRateInput).rechargeRateVerified, false);
   }
 });
 
@@ -1423,6 +1471,8 @@ test("injects every registry preset and forwards the exchange rate", () => {
   assert.equal(fuckEveryone.rechargeCredits, 1);
   assert.equal(fuckEveryone.rechargeRateVerified, false);
   assert.equal(fuckEveryone.rechargeRateNote, "站点未公开币种与充值折算，当前按 CNY 1:1 估算。");
+  assert.equal(fuckEveryone.priceCurrency, "CREDITS");
+  assert.equal(fuckEveryone.priceCurrencyVerified, true);
   assert.equal(normalizeStation(fuckEveryone).rechargeRateVerified, false);
   const killAi = added.find(station => station.id === "killai");
   assert.equal(killAi.mode, "page");
@@ -1430,8 +1480,8 @@ test("injects every registry preset and forwards the exchange rate", () => {
   assert.equal(killAi.rechargeCurrency, "CNY");
   assert.equal(killAi.rechargeCredits, 1);
   assert.equal(killAi.rechargeRateVerified, false);
-  assert.equal(killAi.priceCurrency, "UNKNOWN");
-  assert.equal(killAi.priceCurrencyVerified, false);
+  assert.equal(killAi.priceCurrency, "CREDITS");
+  assert.equal(killAi.priceCurrencyVerified, true);
   assert.equal(normalizeStation(killAi).rechargeRateVerified, false);
 });
 test("allocates a unique preset id when an existing station uses the provider id", () => {
@@ -1881,9 +1931,9 @@ test("keeps screenshot model quotes in source USD while gating converted compari
   assert.ok(emptyOffer.pricingUnavailableReasons.includes("price_missing"));
 });
 
-test("collects fuck-everyone directly and blocks recommendations until currency is confirmed", async () => {
+test("collects fuck-everyone directly and blocks recommendations until recharge rate is confirmed", async () => {
   const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
-  assert.equal(preset.priceCurrency, "USD");
+  assert.equal(preset.priceCurrency, "CREDITS");
   const adapter = inferStationAdapter(preset);
   assert.equal(adapter.endpoint, "/api/v1/model-plaza");
   assert.equal(adapter.responseFormat, "fuck-everyone-model-plaza");
@@ -2007,25 +2057,25 @@ test("migrates legacy fuck-everyone UNKNOWN source currency during station prepa
   };
   const prepared = prepareStationInput(legacy);
   assert.equal(prepared.priceCurrency, "CREDITS");
-  assert.equal(prepared.priceCurrencyVerified, false);
+  assert.equal(prepared.priceCurrencyVerified, true);
   assert.equal(prepared.rechargeRateVerified, false);
 
   const snapshot = await collectStationInput(legacy, { fetchImpl: async () => response(fuckEveryoneScreenshotFixture) });
   assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
-
-  assert.equal(snapshot.priceCurrencyVerified, false);
+  assert.equal(snapshot.priceCurrencyVerified, true);
   assert.equal(snapshot.rechargeRateVerified, false);
   const comparisons = buildComparisonRows({
-    stations: [legacy],
+    stations: [prepared],
     snapshots: [snapshot],
     references: { models: [] },
     usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
   });
   const offer = comparisons.flatMap(comparison => comparison.offers)[0];
   assert.equal(offer.pricingUnavailable, true);
-  assert.deepEqual(offer.pricingUnavailableReasons, ["currency_unverified", "recharge_unverified"]);
+  assert.deepEqual(offer.pricingUnavailableReasons, ["recharge_unverified"]);
   const confirmedUnknown = prepareStationInput({ ...legacy, priceCurrencyVerified: true });
   assert.equal(confirmedUnknown.priceCurrency, "CREDITS");
+  assert.equal(confirmedUnknown.priceCurrencyVerified, true);
 });
 
 test("rejects invalid model-plaza multipliers and per-request prices", async () => {
@@ -2220,8 +2270,8 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
     .find(station => station.baseUrl === "https://api.killai.cc/model-plaza?embedded=1");
   assert.ok(preset);
   assert.equal(preset.mode, "page");
-  assert.equal(preset.priceCurrency, "UNKNOWN");
-  assert.equal(preset.priceCurrencyVerified, false);
+  assert.equal(preset.priceCurrency, "CREDITS");
+  assert.equal(preset.priceCurrencyVerified, true);
   assert.equal(preset.rechargeRateVerified, false);
 
   const adapter = inferStationAdapter({ baseUrl: preset.baseUrl });
@@ -2239,6 +2289,7 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
   assert.equal(prepared.mode, "page");
   assert.equal(prepared.auth.type, "none");
   assert.equal(prepared.priceCurrency, "CREDITS");
+  assert.equal(prepared.priceCurrencyVerified, true);
   assert.equal(prepared.rechargeRateVerified, false);
 
   let request;
@@ -2265,6 +2316,7 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "killai-model-plaza");
   assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
+  assert.equal(snapshot.priceCurrencyVerified, true);
 
   const station = { ...preset, id: "station-killai-unverified" };
   const comparisonSnapshot = { ...snapshot, stationId: station.id };
@@ -2278,7 +2330,7 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
   assert.ok(offers.length > 0);
   for (const offer of offers) {
     assert.equal(offer.pricingUnavailable, true);
-    assert.ok(offer.pricingUnavailableReasons.includes("currency_unverified"));
+    assert.ok(!offer.pricingUnavailableReasons.includes("currency_unverified"));
     assert.ok(offer.pricingUnavailableReasons.includes("recharge_unverified"));
   }
 });

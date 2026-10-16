@@ -22,12 +22,12 @@ This contract covers station pricing from collection through snapshots and dashb
 ## Contracts
 
 - Every ordinary station model list uses the project's business unit `CREDITS`, regardless of raw `$`, `¥`, `USD`, CNY, or missing labels.
-- `prepareStationInput()` canonicalizes ordinary registered and unregistered stations to `{ priceCurrency: "CREDITS", priceCurrencyVerified: true }` after provider-specific URL/adapter preparation.
-- A provider that explicitly declares `preservePriceCurrencyVerification: true` keeps its own false/UNKNOWN state. This is the protection contract for KillAI, fuck-everyone, and any future provider whose currency is deliberately unverified.
+- `prepareStationInput()` canonicalizes every station's model-list unit to `{ priceCurrency: "CREDITS", priceCurrencyVerified: true }`. Collection passes `modelListCurrency: "CREDITS"`, so this is also the comparison unit for KillAI, fuck-everyone, and ordinary stations.
+- Protected providers retain their recharge-rate verification boundary: explicit `rechargeRateVerified: true` is preserved; missing or false remains unverified. Currency is not protected independently of the model-list unit.
 - `rechargeCurrency` is only the payment currency used to derive a station's `rechargeRate`; it never supplies a model-list source currency.
-- With station collection option `modelListCurrency: "CREDITS"`, normalized rows use `price_currency: "CREDITS"` for ordinary stations. Protected provider diagnostics may retain their raw marker.
+- With station collection option `modelListCurrency: "CREDITS"`, normalized rows use `price_currency: "CREDITS"` for ordinary and protected providers alike.
 - Without `modelListCurrency`, generic parser calls preserve explicit source markers after trimming and uppercasing; missing or blank markers remain `UNKNOWN`. This parser behavior does not establish a trusted currency for station comparison.
-- An explicit `priceCurrencyVerified: false` keeps the raw source marker during station normalization; do not bypass this guard globally.
+- An explicit `priceCurrencyVerified: false` keeps the raw source marker for generic normalization when no `modelListCurrency` override is present; do not bypass this guard globally.
 - `currencyToRmb()` returns `null` for an empty value, `UNKNOWN`, `UNSPECIFIED`, `NONE`, or unsupported currency. CNY/RMB symbols use factor `1`; USD/CREDITS/POINTS use the configured recharge-rate factor.
 - `getProxyPriceQuote()` adds `currency_unverified` when conversion is unavailable or `priceCurrencyVerified === false`. It must not globally ignore the false flag.
 - `rechargeRateVerified === false` independently produces `recharge_unverified`.
@@ -44,7 +44,7 @@ This contract covers station pricing from collection through snapshots and dashb
 |---|---|---|
 | Ordinary registered station | `priceCurrency=CREDITS`, verified | CREDITS row converted with station recharge rate |
 | Ordinary unregistered station | `priceCurrency=CREDITS`, verified | CREDITS row converted with station recharge rate |
-| Protected provider with explicit false | Preserve provider marker/false | `currency_unverified`; no converted cost |
+| Protected provider with stale false/missing currency flag and model-list collection | `CREDITS`, verified | Currency does not block; `recharge_unverified` remains when recharge ratio is unknown |
 | Missing/blank raw currency on ordinary station | `CREDITS` | Converted with station recharge rate |
 | `rechargeRateVerified: false` | Preserve station flag | `recharge_unverified`; no usable cost |
 | Raw OpenRouter reference price | `USD` | Preserve API semantics |
@@ -54,9 +54,9 @@ This contract covers station pricing from collection through snapshots and dashb
 
 - Good: a stale ordinary station with `priceCurrencyVerified: false` is prepared as CREDITS/true before refresh and dashboard comparison.
 - Good: `{ input_price: 2, price_currency: "USD" }` becomes `price_currency: "CREDITS"` at an ordinary station model-list boundary.
-- Good: a protected provider remains false even when its payload contains `$` or `USD`.
-- Bad: adding a dashboard-only label that hides `currency_unverified` without preparing the station.
-- Bad: changing `getProxyPriceQuote()` to ignore every `priceCurrencyVerified: false`.
+- Good: stale KillAI/fuck-everyone currency flags normalize to CREDITS/verified because collection already applies `modelListCurrency: "CREDITS"`; unknown recharge ratios remain blocked.
+- Bad: a stale protected-provider currency flag produces `currency_unverified` after its collected rows are already normalized to CREDITS.
+- Bad: changing `getProxyPriceQuote()` to ignore every `priceCurrencyVerified: false` for generic or unsupported source currencies.
 - Bad: treating recharge USD/CNY as the source unit of a model row.
 
 ## Tests Required
@@ -64,7 +64,7 @@ This contract covers station pricing from collection through snapshots and dashb
 - Test array, `data`, and `models` generic payloads without station options preserve explicit source markers and keep missing/blank markers `UNKNOWN`; the station collection boundary overrides ordinary rows to CREDITS.
 - Test T蜜 and another ordinary station with stale false input through preparation, collection, snapshot, and comparison; assert usable RMB costs.
 - Test an unregistered ordinary station receives CREDITS/true.
-- Test KillAI/fuck-everyone preserve false and remain unavailable.
+- Test KillAI/fuck-everyone collection applies CREDITS and preparation repairs false/missing currency flags before comparison; only an unknown recharge rate remains blocking, while explicit recharge confirmation removes that reason.
 - Test `currencyToRmb()` for missing, blank, unknown, unsupported, CNY, USD, CREDITS, and POINTS.
 - Test both `currency_unverified` branches and `recharge_unverified` separately.
 - Test OpenRouter raw USD reference and 1:1 comparison CREDITS mapping without purchase fees.

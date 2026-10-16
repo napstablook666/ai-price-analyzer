@@ -258,12 +258,12 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
       const protectedStation = dashboard.stations.find(value => value.id === id);
       const protectedOffer = offers.find(offer => offer.stationId === id);
       assert.equal(protectedStation.priceCurrency, "CREDITS");
-      assert.equal(protectedStation.priceCurrencyVerified, false);
+      assert.equal(protectedStation.priceCurrencyVerified, true);
       assert.equal(protectedStation.rechargeRateVerified, false);
-      assert.ok(protectedOffer.pricingUnavailableReasons.includes("currency_unverified"));
+      assert.ok(!protectedOffer.pricingUnavailableReasons.includes("currency_unverified"));
       assert.ok(protectedOffer.pricingUnavailableReasons.includes("recharge_unverified"));
       const quote = getProxyPriceQuote({ input_price: 1, output_price: 2, price_currency: protectedStation.priceCurrency }, 1, protectedStation.rechargeRate, protectedStation.basePricePerMillion, protectedStation.priceCurrencyVerified, protectedStation.rechargeRateVerified);
-      assert.deepEqual(quote.pricingUnavailableReasons.sort(), ["currency_unverified", "recharge_unverified"]);
+      assert.deepEqual(quote.pricingUnavailableReasons, ["recharge_unverified"]);
     }
     const rechargeOffer = offers.find(offer => offer.stationId === rechargeUnverified.id);
     assert.equal(dashboard.stations.find(value => value.id === rechargeUnverified.id).priceCurrencyVerified, true);

@@ -108,9 +108,9 @@ const killAiPreset = {
   rechargeCredits: 1,
   rechargeRateVerified: false,
   rechargeRateNote: "KillAI 充值折算尚未核验，当前不参与已验证比价推荐。",
-  priceCurrency: "UNKNOWN",
-  priceCurrencyVerified: false,
-  priceCurrencyNote: "接口未提供已核验的模型价格币种，image 价格字段的单位也需确认。",
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "",
   enabled: true,
   mode: "page",
   auth: { type: "none" },
@@ -125,9 +125,9 @@ const fuckEveryonePreset = {
   rechargeCredits: 1,
   rechargeRateVerified: false,
   rechargeRateNote: "站点未公开币种与充值折算，当前按 CNY 1:1 估算。",
-  priceCurrency: "USD",
-  priceCurrencyVerified: false,
-  priceCurrencyNote: "页面价格单位显示为 $ / 1M tokens；充值币种与折算比例仍未核实。",
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
@@ -357,7 +357,7 @@ export const PROVIDER_REGISTRY = [
   {
     id: "killai",
     host: "api.killai.cc",
-    preservePriceCurrencyVerification: true,
+    preserveRechargeRateVerification: true,
     matches: ({ hostname, path }) => hostname === "api.killai.cc" && path === "/model-plaza",
     prepare: (stationInput, { url }) => {
       const prepared = {
@@ -387,7 +387,7 @@ export const PROVIDER_REGISTRY = [
   },
   {
     id: "fuck-everyone",
-    preservePriceCurrencyVerification: true,
+    preserveRechargeRateVerification: true,
     host: "fuck-everyone.com",
     matches: ({ hostname, path }) => hostname === "fuck-everyone.com" && path === "/model-plaza",
     prepare: (stationInput, { url }) => {
@@ -578,5 +578,5 @@ export function providerById(id) {
 export function prepareStationInput(stationInput = {}) {
   const provider = providerForStation(stationInput, { forPrepare: true });
   const prepared = provider?.prepare ? provider.prepare(stationInput, stationContext(stationInput)) : stationInput;
-  return { ...prepared, priceCurrency: "CREDITS", priceCurrencyVerified: provider?.preservePriceCurrencyVerification ? false : true, rechargeRateVerified: provider?.preservePriceCurrencyVerification ? prepared.rechargeRateVerified !== false : true };
+  return { ...prepared, priceCurrency: "CREDITS", priceCurrencyVerified: true, rechargeRateVerified: provider?.preserveRechargeRateVerification ? prepared.rechargeRateVerified !== false : true };
 }
