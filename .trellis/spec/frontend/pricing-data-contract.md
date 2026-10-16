@@ -12,6 +12,13 @@ This contract covers station pricing from collection through snapshots and dashb
 - `currencyToRmb(currency, rechargeRate = 1)` returns the RMB conversion factor or `null` for an unconfirmed source currency.
 - `getProxyPriceQuote(item, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true)` returns quote costs, source currency, and blocking reasons.
 
+## Station preset registration
+
+- Adding a pricing adapter or a pricing-host allowlist entry does not by itself make a station selectable. If the station should appear in the user's station list, register its preset through the persisted station registration and upgrade-migration flow, and test that existing lists are backfilled idempotently.
+- Do not change the established empty-list default as a side effect of registering a station.
+- This observed rule applies to new pricing stations and reports that an implemented adapter is missing from the selectable list. It does not apply to standalone check-in presets, which have their own display flow.
+- Evidence: this task's migration map retains the original lesson path and evidence inventory; `extension/src/core/adapters.js`, `extension/src/core/station-presets.js`, `extension/src/core/collectors.js`, `extension/src/core/normalizers.js`, `extension/src/service-worker.js`, and `extension/test/core.test.js`.
+
 ## Contracts
 
 - Every ordinary station model list uses the project's business unit `CREDITS`, regardless of raw `$`, `¥`, `USD`, CNY, or missing labels.

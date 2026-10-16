@@ -23,9 +23,6 @@ Thumbs.db
 *.key
 *.p12
 
-# CodeStable session metadata is local working state
-.codestable/
-
 # Windows reserved-name artifact created accidentally during local testing
 /NUL
 
