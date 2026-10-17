@@ -779,8 +779,51 @@ test("applies recharge ratio only to foreign-currency prices", () => {
   assert.equal(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "USD" }, 1, 1.2).input, 2.4);
   assert.equal(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "CNY" }, 1, 1.2).input, 2);
   assert.equal(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "CREDITS" }, 1, 1.2).input, 2.4);
-  assert.deepEqual(getProxyPrices({ input_price: 2, output_price: 3, price_currency: "CNY" }, 1, 1.2, undefined, true, false).pricingUnavailableReasons, ["recharge_unverified"]);
+  const unverified = getProxyPriceQuote({ input_price: 2, output_price: 3, price_currency: "USD" }, 1, 1.2, undefined, true, false);
+  assert.equal(unverified.costPrices.input, 2);
+  assert.deepEqual(unverified.pricingUnavailableReasons, []);
   assert.equal(getProxyPrices({ input_price: 2, price_currency: "USD" }, 1, 1.2, undefined, false, true).input, null);
+});
+
+test("uses a 1:1 comparison rate unless recharge verification is explicitly true", () => {
+  const offerFor = (station, snapshotRateVerified) => {
+    const snapshot = {
+      stationId: station.id,
+      collectedAt: 1,
+      status: "success",
+      ...(snapshotRateVerified === undefined ? {} : { rechargeRateVerified: snapshotRateVerified }),
+      normalized: { data: [{ model_name: "rate-model", input_price: 2, output_price: 4, price_currency: "CREDITS" }] }
+    };
+    const [comparison] = buildComparisonRows({
+      stations: [station],
+      snapshots: [snapshot],
+      references: { models: [] },
+      usage: { input: 1_000_000, output: 0 }
+    });
+    return comparison.offers[0];
+  };
+
+  const falseStation = offerFor({ id: "rate-false", rechargeRate: 7.3, rechargeRateVerified: false, priceCurrencyVerified: true }, true);
+  assert.equal(falseStation.costPrices.input, 2);
+  assert.equal(falseStation.monthlyCost, 2);
+  assert.equal(falseStation.pricingUnavailable, false);
+  assert.deepEqual(falseStation.pricingUnavailableReasons, []);
+
+  const missingStation = offerFor({ id: "rate-missing", rechargeRate: 7.3, priceCurrencyVerified: true });
+  assert.equal(missingStation.costPrices.input, 2);
+  assert.equal(missingStation.monthlyCost, 2);
+  assert.equal(missingStation.pricingUnavailable, false);
+  assert.deepEqual(missingStation.pricingUnavailableReasons, []);
+
+  const confirmedStation = offerFor({ id: "rate-confirmed", rechargeRate: 1.2, rechargeRateVerified: true, priceCurrencyVerified: true });
+  assert.equal(confirmedStation.costPrices.input, 2.4);
+  assert.equal(confirmedStation.monthlyCost, 2.4);
+  assert.equal(confirmedStation.pricingUnavailable, false);
+
+  const unverifiedCurrency = offerFor({ id: "currency-unverified", rechargeRate: 7.3, rechargeRateVerified: false, priceCurrencyVerified: false });
+  assert.equal(unverifiedCurrency.costPrices, null);
+  assert.equal(unverifiedCurrency.pricingUnavailable, true);
+  assert.deepEqual(unverifiedCurrency.pricingUnavailableReasons, ["currency_unverified"]);
 });
 
 test("derives and preserves the station recharge ratio inputs", () => {
@@ -1323,7 +1366,7 @@ test("canonicalizes ordinary and protected model-list currencies before comparis
       assert.equal(prepared.priceCurrency, "CREDITS");
       assert.equal(prepared.priceCurrencyVerified, true);
       assert.equal(prepared.rechargeRateVerified, false);
-      assert.deepEqual([...new Set(getReasons(stationInput))].sort(), ["recharge_unverified"]);
+      assert.deepEqual([...new Set(getReasons(stationInput))].sort(), []);
     }
 
     const confirmedRateInput = { ...collectionInput, id: `${provider.id}-rate-confirmed`, rechargeRateVerified: true };
@@ -1920,6 +1963,17 @@ test("keeps screenshot model quotes in source USD while gating converted compari
   assert.equal(confirmedOffer.costPrices.input, 73);
   assert.equal(confirmedOffer.monthlyCost, 73);
 
+  const [fallbackComparison] = buildComparisonRows({
+    stations: [{ ...station, priceCurrencyVerified: true }],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const fallbackOffer = fallbackComparison.offers.find(item => item.modelName === "claude-fable-5");
+  assert.equal(fallbackOffer.costPrices.input, 10);
+  assert.equal(fallbackOffer.monthlyCost, 10);
+  assert.deepEqual(fallbackOffer.pricingUnavailableReasons, []);
+
   const [emptyComparison] = buildComparisonRows({
     stations: [station],
     snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized: { data: [{ model_name: "empty-model", price_currency: "USD" }] } }],
@@ -1931,7 +1985,7 @@ test("keeps screenshot model quotes in source USD while gating converted compari
   assert.ok(emptyOffer.pricingUnavailableReasons.includes("price_missing"));
 });
 
-test("collects fuck-everyone directly and blocks recommendations until recharge rate is confirmed", async () => {
+test("collects fuck-everyone directly and compares unconfirmed recharge rates at 1:1", async () => {
   const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
   assert.equal(preset.priceCurrency, "CREDITS");
   const adapter = inferStationAdapter(preset);
@@ -1989,18 +2043,18 @@ test("collects fuck-everyone directly and blocks recommendations until recharge 
     usage: DEFAULT_MONTHLY_USAGE
   }));
   const offer = rows.find(row => row.canonicalModel === "image-model")?.offers[0];
-  assert.equal(offer.pricingUnavailable, true);
-  assert.equal(offer.diffPercent, null);
-  assert.equal(offer.recommendationEligible, false);
-  assert.equal(offer.recommended, false);
-  assert.equal(offer.category, "pending");
+  assert.equal(offer.pricingUnavailable, false);
+  assert.equal(offer.pricingUnavailableReasons.includes("recharge_unverified"), false);
+  assert.ok(Number.isFinite(offer.monthlyCost));
+  assert.equal(offer.recommendationEligible, true);
+  assert.equal(offer.recommended, true);
   const rechargeRows = buildComparisonRows({
     stations: [{ ...preset, priceCurrency: "CNY", priceCurrencyVerified: true }],
     snapshots: [confirmedSnapshot],
     references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
     usage: DEFAULT_MONTHLY_USAGE
   });
-  assert.equal(rechargeRows.find(row => row.canonicalModel === "image-model")?.offers[0].pricingUnavailable, true);
+  assert.equal(rechargeRows.find(row => row.canonicalModel === "image-model")?.offers[0].pricingUnavailable, false);
 
   const incompleteRows = buildComparisonRows({
     stations: [{ ...preset, rechargeRateVerified: true }],
@@ -2071,8 +2125,9 @@ test("migrates legacy fuck-everyone UNKNOWN source currency during station prepa
     usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
   });
   const offer = comparisons.flatMap(comparison => comparison.offers)[0];
-  assert.equal(offer.pricingUnavailable, true);
-  assert.deepEqual(offer.pricingUnavailableReasons, ["recharge_unverified"]);
+  assert.equal(offer.pricingUnavailable, false);
+  assert.equal(offer.pricingUnavailableReasons.includes("recharge_unverified"), false);
+  assert.ok(Number.isFinite(offer.costPrices.input));
   const confirmedUnknown = prepareStationInput({ ...legacy, priceCurrencyVerified: true });
   assert.equal(confirmedUnknown.priceCurrency, "CREDITS");
   assert.equal(confirmedUnknown.priceCurrencyVerified, true);
@@ -2329,9 +2384,9 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
   const offers = comparison.offers;
   assert.ok(offers.length > 0);
   for (const offer of offers) {
-    assert.equal(offer.pricingUnavailable, true);
+    assert.equal(offer.pricingUnavailable, false);
     assert.ok(!offer.pricingUnavailableReasons.includes("currency_unverified"));
-    assert.ok(offer.pricingUnavailableReasons.includes("recharge_unverified"));
+    assert.ok(!offer.pricingUnavailableReasons.includes("recharge_unverified"));
   }
 });
 test("adapts the Sidrune model plaza URL and station preset", () => {
@@ -4014,4 +4069,19 @@ test("filters quotes by any entered model across all stations", () => {
   assert.match(html, /id="model-filter-inputs"/);
   assert.match(dashboard, /state\.modelTextByRow = index\.modelTextByRow/);
   assert.match(dashboard, /data-model-filter/);
+});
+
+test("removes recharge-rate warnings while retaining option inputs and legacy fields", () => {
+  const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  assert.doesNotMatch(options, /station-recharge-warning|充值折算未核实/);
+  assert.doesNotMatch(dashboard, /recharge_unverified|充值比例待核验/);
+  assert.match(options, /data-field="rechargeAmount"/);
+  assert.match(options, /data-field="rechargeCurrency"/);
+  assert.match(options, /data-field="rechargeCredits"/);
+  assert.match(options, /data-field="rechargeRate" type="number"[^>]*readonly/);
+  assert.match(options, /const rechargeRateVerified = station\.rechargeRateVerified === true/);
+  assert.match(options, /rechargeRateVerified: card\.dataset\.rechargeRateVerified !== "false"/);
+  assert.match(options, /const rechargeRateNote = String\(station\.rechargeRateNote \|\| ""\)\.trim\(\)/);
+  assert.match(options, /rechargeRateNote: value\("rechargeRateNote"\)/);
 });

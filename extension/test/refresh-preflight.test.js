@@ -311,11 +311,11 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
   });
 });
 
-test("GET_DASHBOARD keeps protected recharge blockers for false and missing station flags", async () => {
-  const confirmedStation = { id: "killai-confirmed", name: "KillAI confirmed", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", rechargeRateVerified: true };
+test("GET_DASHBOARD compares false and missing recharge verification at 1:1", async () => {
+  const confirmedStation = { id: "killai-confirmed", name: "KillAI confirmed", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", rechargeRmb: 1.2, rechargeCredits: 1, rechargeRateVerified: true };
   const stations = [
-    { id: "killai-unverified", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", rechargeRateVerified: false },
-    { id: "fuck-everyone-unverified", name: "fuck-everyone", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", enabled: true, mode: "direct" },
+    { id: "killai-unverified", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page", rechargeRmb: 7.3, rechargeCredits: 1, rechargeRateVerified: false },
+    { id: "fuck-everyone-unverified", name: "fuck-everyone", baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1", enabled: true, mode: "direct", rechargeRmb: 8.4, rechargeCredits: 1 },
     confirmedStation
   ];
   const snapshots = stations.map(station => ({
@@ -332,14 +332,18 @@ test("GET_DASHBOARD keeps protected recharge blockers for false and missing stat
     for (const station of stations.slice(0, 2)) {
       assert.equal(dashboard.stations.find(value => value.id === station.id).rechargeRateVerified, false);
       const offer = offers.find(value => value.stationId === station.id);
-      assert.ok(offer.pricingUnavailableReasons.includes("recharge_unverified"));
+      assert.equal(offer.pricingUnavailable, false);
+      assert.equal(offer.costPrices.input, 1);
+      assert.ok(!offer.pricingUnavailableReasons.includes("recharge_unverified"));
     }
     const preparedConfirmed = dashboard.stations.find(value => value.id === confirmedStation.id);
     const confirmedSnapshot = dashboard.snapshots.find(value => value.stationId === confirmedStation.id);
     const confirmedOffer = offers.find(value => value.stationId === confirmedStation.id);
     assert.equal(preparedConfirmed.rechargeRateVerified, true);
     assert.equal("rechargeRateVerified" in confirmedSnapshot, false);
+    assert.equal(confirmedOffer.costPrices.input, 1.2);
     assert.ok(!confirmedOffer.pricingUnavailableReasons.includes("recharge_unverified"));
+    assert.ok(offers.every(offer => !offer.pricingUnavailableReasons.includes("recharge_unverified")));
   });
 });
 

@@ -151,7 +151,7 @@ function stationCard(station, index) {
   const rechargeRmb = nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1);
   const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
   const rechargeAmount = convertRechargeAmount(rechargeRmb, "CNY", rechargeCurrency, currentExchangeRate());
-  const rechargeRateVerified = station.rechargeRateVerified !== false;
+  const rechargeRateVerified = station.rechargeRateVerified === true;
   const rechargeRateNote = String(station.rechargeRateNote || "").trim();
   const priceCurrency = "CREDITS";
   const priceCurrencyVerified = station.priceCurrencyVerified !== false && priceCurrency !== "UNKNOWN";
@@ -198,7 +198,6 @@ function stationCard(station, index) {
           <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与比价与批量查询</span></label>
         </div>
         <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${stationHint}</p>
-        ${rechargeRateVerified ? "" : `<p class="station-recharge-warning" role="alert">充值折算未核实：${escapeHtml(rechargeRateNote || "当前按 CNY 1:1 估算，请按站点实际充值规则填写。")}</p>`}
         ${priceCurrencyVerified ? "" : `<p class="station-price-warning" role="alert">模型价格映射未核实：${escapeHtml(priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。")}</p>`}
       </div>
     </details>

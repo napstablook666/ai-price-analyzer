@@ -16,7 +16,7 @@ let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();
 const RATING_LABELS = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
-const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", recharge_unverified: "充值比例待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
+const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
 
 function renderProviderSwitchers(settings) {

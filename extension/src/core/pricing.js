@@ -37,10 +37,10 @@ function hasNumericPrice(prices = {}) {
 }
 
 export function getProxyPriceQuote(item = {}, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true) {
-  const factor = currencyToRmb(item.price_currency, rechargeRate);
+  const effectiveRechargeRate = rechargeRateVerified === true ? rechargeRate : 1;
+  const factor = currencyToRmb(item.price_currency, effectiveRechargeRate);
   const unavailableReasons = [];
   if (factor === null || priceCurrencyVerified === false) unavailableReasons.push("currency_unverified");
-  if (rechargeRateVerified === false) unavailableReasons.push("recharge_unverified");
   const sourceCurrency = String(item.price_currency ?? "").trim().toUpperCase() || "UNKNOWN";
   const quotedPrices = buildProxyPrices(item, groupRatio, 1, basePrice);
   if (!hasNumericPrice(quotedPrices)) unavailableReasons.push("price_missing");
@@ -210,7 +210,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         const groupRatio = Number.isFinite(Number(rawGroupRatio)) ? Number(rawGroupRatio) : 1;
         const hasUnpricedPriceGap = unpricedModelKeys.some(value => value.startsWith(`${group}:${item.model_name}:`));
         const priceCurrencyVerified = station.priceCurrencyVerified ?? snapshot.priceCurrencyVerified;
-        const rechargeRateVerified = station.rechargeRateVerified ?? snapshot.rechargeRateVerified;
+        const rechargeRateVerified = station.rechargeRateVerified ?? snapshot.rechargeRateVerified ?? false;
         const priceQuote = getProxyPriceQuote(item, groupRatio, station.rechargeRate, station.basePricePerMillion, priceCurrencyVerified, rechargeRateVerified);
         const quotedPrices = priceQuote.quotedPrices;
         const baseCostPrices = priceQuote.costPrices;
