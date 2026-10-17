@@ -1,10 +1,12 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
 import { callService, downloadJson, escapeHtml, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
+import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pickWorkspace, readWorkspace, writeWorkspace } from "./shared/workspace.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
 const state = { stations: [], settings: null, modelCatalog: { llm: [], jev: [] }, collapsedStationIds: new Set(), pendingStation: null, previewRequestId: 0 };
+const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 
 function toast(message) {
@@ -15,6 +17,99 @@ function toast(message) {
   toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
 }
 
+function setWorkspaceStatus(message, error = false) {
+  const node = $("#workspace-status");
+  if (!node) return;
+  node.textContent = message;
+  node.dataset.error = error ? "true" : "false";
+}
+
+function updateWorkspaceControls(busy = false) {
+  const supported = isWorkspaceSupported();
+  const connected = Boolean(workspace.handle);
+  $("#workspace-connect").disabled = busy || !supported;
+  $("#workspace-load").disabled = busy || !connected;
+  $("#workspace-save").disabled = busy || !connected;
+  if (!supported) setWorkspaceStatus("当前浏览器不支持文件夹工作区，可使用 JSON 备份");
+}
+
+async function refreshWorkspaceStatus() {
+  if (!isWorkspaceSupported()) {
+    updateWorkspaceControls();
+    return;
+  }
+  try {
+    workspace.handle = await getStoredWorkspace();
+    if (!workspace.handle) {
+      setWorkspaceStatus("尚未选择工作区");
+      updateWorkspaceControls();
+      return;
+    }
+    const data = await readWorkspace(workspace.handle);
+    setWorkspaceStatus(data ? `已连接：${workspace.handle.name}` : `已连接：${workspace.handle.name}，尚无工作区文件`);
+  } catch (error) {
+    setWorkspaceStatus(`工作区不可用：${error.message || String(error)}`, true);
+  }
+  updateWorkspaceControls();
+}
+
+async function connectWorkspace() {
+  const previous = workspace.handle;
+  let picked = false;
+  updateWorkspaceControls(true);
+  try {
+    workspace.handle = await pickWorkspace();
+    picked = true;
+    const data = await readWorkspace(workspace.handle);
+    setWorkspaceStatus(data ? `已连接：${workspace.handle.name}，可从工作区加载` : `已连接：${workspace.handle.name}，请保存当前数据`);
+  } catch (error) {
+    if (!picked) workspace.handle = previous;
+    if (error.name !== "AbortError") {
+      setWorkspaceStatus(error.message || String(error), true);
+      toast(error.message || String(error));
+    }
+  } finally {
+    updateWorkspaceControls();
+  }
+}
+
+async function loadWorkspaceState() {
+  const handle = workspace.handle;
+  if (!handle) return;
+  updateWorkspaceControls(true);
+  await enqueueWorkspaceOperation(async () => {
+    try {
+      const imported = await readWorkspace(handle);
+      if (!imported) throw new Error("工作区还没有数据文件，请先保存当前数据");
+      if (!window.confirm("将用工作区数据替换当前扩展数据，继续吗？")) return;
+      await callService("IMPORT_STATE", { state: imported });
+      await load();
+      setWorkspaceStatus(`已从工作区加载：${handle.name}`);
+      toast("工作区数据已加载；密钥需要重新填写");
+    } catch (error) {
+      setWorkspaceStatus(error.message || String(error), true);
+      toast(error.message || String(error));
+    } finally {
+      updateWorkspaceControls();
+    }
+  });
+}
+
+async function saveWorkspace({ notify = true } = {}) {
+  const handle = workspace.handle;
+  if (!handle) return;
+  await enqueueWorkspaceOperation(async () => {
+    try {
+      await writeWorkspace(handle, await callService("EXPORT_STATE"));
+      setWorkspaceStatus(`已保存到工作区：${handle.name}`);
+      if (notify) toast("数据已保存到本地工作区");
+    } catch (error) {
+      const message = error.message || String(error);
+      setWorkspaceStatus(message, true);
+      toast(message);
+    }
+  });
+}
 function selected(value, expected) { return value === expected ? " selected" : ""; }
 function checked(value) { return value ? " checked" : ""; }
 
@@ -426,6 +521,7 @@ async function saveStation(card) {
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>保存中</span>`;
   try {
     await persistStations();
+    await saveWorkspace({ notify: false });
     renderStations();
     toast("站点配置已保存");
   } finally {
@@ -454,6 +550,7 @@ async function refreshStation(card) {
     await persistStations();
     const data = await callService("REFRESH_STATION", { stationId: station.id, ...(sourceTabId === undefined ? {} : { sourceTabId }) });
     state.stations = data.stations || state.stations;
+    await saveWorkspace({ notify: false });
     const snapshot = (data.snapshots || []).find(row => row.stationId === station.id);
     if (!snapshot) throw new Error("未返回该站点的查询结果");
     const status = snapshot.status === "success" ? "success" : snapshot.status === "partial" ? "partial" : "error";
@@ -484,6 +581,7 @@ async function saveProviderProfile(kind) {
   state.settings = result;
   state.modelCatalog[kind] = [];
   renderSettings();
+  await saveWorkspace({ notify: false });
   toast("供应商档案已保存");
 }
 async function saveModelSettings(kind) {
@@ -501,6 +599,7 @@ async function saveModelSettings(kind) {
   try {
     state.settings = await callService("SAVE_SETTINGS", { settings, ...keyFields });
     renderSettings();
+    await saveWorkspace({ notify: false });
     toast(`${kind === "jev" ? "JEV" : "LLM"} 配置已保存；API Key 已安全保存，不会回显`);
   } finally {
     button.disabled = false;
@@ -515,6 +614,7 @@ async function switchProvider(kind, profileId) {
   state.settings = result.settings;
   state.modelCatalog[kind] = [];
   renderSettings();
+  await saveWorkspace({ notify: false });
   toast(`已切换 ${kind === "jev" ? "JEV" : "LLM"} 供应商`);
 }
 async function deleteProviderProfile(kind) {
@@ -524,6 +624,7 @@ async function deleteProviderProfile(kind) {
   state.settings = await callService("DELETE_PROVIDER_PROFILE", { kind, profileId });
   state.modelCatalog[kind] = [];
   renderSettings();
+  await saveWorkspace({ notify: false });
   toast("供应商档案已删除");
 }
 async function load() {
@@ -876,6 +977,7 @@ $("#save-all").addEventListener("click", async event => {
       clearJevApiKey: $("#clear-jev-key").checked
     });
     renderSettings();
+    await saveWorkspace({ notify: false });
     toast("站点与设置已保存");
   } catch (error) { toast(error.message); }
   finally {
@@ -885,6 +987,9 @@ $("#save-all").addEventListener("click", async event => {
   }
 });
 
+$("#workspace-connect").addEventListener("click", connectWorkspace);
+$("#workspace-load").addEventListener("click", loadWorkspaceState);
+$("#workspace-save").addEventListener("click", () => saveWorkspace());
 $("#export-state").addEventListener("click", async () => {
   try { downloadJson(`ai-relay-price-${new Date().toISOString().slice(0, 10)}.json`, await callService("EXPORT_STATE")); }
   catch (error) { toast(error.message); }
@@ -912,4 +1017,4 @@ $("#collapse-all").addEventListener("click", () => setAllSections(true));
 onRefreshProgress(progress => {
   if (progress.phase === "station") updateStationQueryStatus(progress);
 });
-load();
+void load().then(refreshWorkspaceStatus);

@@ -100,8 +100,9 @@
     <section id="stations-list" class="stations-list" aria-live="polite"></section>
 
     <section class="panel data-panel" id="data-panel" data-collapsible>
-      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><p class="eyebrow">PORTABILITY</p><h2>数据备份</h2><p class="muted">不含站点密钥与 API Key。</p></div></div>
-      <div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json"></label></div>
+      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><p class="eyebrow">PORTABILITY</p><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
+      <div class="data-actions workspace-actions"><button class="button button-primary" id="workspace-connect" type="button"><span data-icon="folder-open" class="icon"></span><span>选择工作区</span></button><button class="button button-quiet" id="workspace-load" type="button" disabled><span data-icon="upload" class="icon"></span><span>从工作区加载</span></button><button class="button button-quiet" id="workspace-save" type="button" disabled><span data-icon="download" class="icon"></span><span>保存到工作区</span></button></div>
+      <div class="data-panel-backup"><span class="data-backup-label">JSON 备份</span><div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json"></label></div></div>
     </section>
   </main>
 

@@ -1,4 +1,4 @@
-import { normalizeSettings } from "./schema.js";
+import { normalizeSettings, normalizeStation } from "./schema.js";
 const DB_NAME = "ai-relay-price-comparison";
 const DB_VERSION = 1;
 
@@ -18,6 +18,17 @@ function isValidSnapshot(snapshot) {
   if (!isPlainObject(snapshot) || typeof snapshot.id !== "string" || typeof snapshot.stationId !== "string") return false;
   if (!Number.isFinite(Number(snapshot.collectedAt)) || !isPlainObject(snapshot.normalized) || !Array.isArray(snapshot.normalized.data) || !snapshot.normalized.data.every(isPlainObject)) return false;
   try { return JSON.stringify(snapshot).length <= MAX_IMPORTED_RECORD_BYTES; } catch { return false; }
+}
+
+function normalizeImportedStations(stations) {
+  try {
+    return stations.map(station => {
+      if (!isPlainObject(station) || typeof station.id !== "string" || !station.id.trim() || typeof station.baseUrl !== "string" || !station.baseUrl.trim()) throw new Error();
+      return redactStation(normalizeStation(station));
+    });
+  } catch {
+    throw new Error("导入站点格式不正确");
+  }
 }
 function requestToPromise(request) {
   return new Promise((resolve, reject) => {
@@ -216,14 +227,20 @@ export async function exportState() {
   };
 }
 
-export async function importState(state) {
+export function validateImportedState(state) {
   if (!state || !Array.isArray(state.stations) || state.stations.length > 100) throw new Error("导入文件格式不正确");
+  const stations = normalizeImportedStations(state.stations);
   const snapshots = state.snapshots === undefined ? [] : state.snapshots;
   if (!Array.isArray(snapshots) || snapshots.length > MAX_IMPORTED_SNAPSHOTS || snapshots.some(snapshot => !isValidSnapshot(snapshot))) throw new Error("导入快照格式不正确");
   if (state.references !== undefined && state.references !== null && (!isPlainObject(state.references) || JSON.stringify(state.references).length > MAX_IMPORTED_RECORD_BYTES)) throw new Error("导入参考数据过大或格式不正确");
+  return { ...state, stations, snapshots };
+}
+
+export async function importState(state) {
+  const imported = validateImportedState(state);
   await clearSnapshots();
-  await putStations(state.stations.map(redactStation));
-  if (state.settings) await setValue("settings", normalizeSettings(state.settings));
-  if (state.references) await setValue("references", state.references);
-  for (const snapshot of snapshots) await putSnapshot(snapshot);
+  await putStations(imported.stations);
+  if (imported.settings) await setValue("settings", normalizeSettings(imported.settings));
+  if (imported.references) await setValue("references", imported.references);
+  for (const snapshot of imported.snapshots) await putSnapshot(snapshot);
 }

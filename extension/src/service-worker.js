@@ -15,7 +15,7 @@ import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, 
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
-import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
+import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue, validateImportedState } from "./shared/db.js";
 import { getJevApiKey, getLlmApiKey, getProviderApiKey, getStationCredential, hasJevApiKey, hasLlmApiKey, hasProviderApiKey, removeProviderApiKey, removeStationCredential, selectProviderApiKey, setJevApiKey, setLlmApiKey, setProviderApiKey, setStationCredential } from "./shared/credentials.js";
 import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
 
@@ -861,14 +861,16 @@ async function handle(message, sender) {
     }
     case "EXPORT_STATE": return exportState();
     case "IMPORT_STATE": {
-      const imported = Array.isArray(message.state?.stations) ? message.state.stations : [];
+      const importedState = validateImportedState(message.state);
+      const imported = importedState.stations;
+      const current = await getStations();
+      await importState(importedState);
       const importedById = new Map(imported.map(station => [station.id, station]));
       for (const station of imported) await removeStationCredential(station.id);
-      for (const current of await getStations()) {
-        const next = importedById.get(current.id);
-        if (!next || String(next.baseUrl || "") !== current.baseUrl || String(next.auth?.type || "none") !== current.auth?.type) await removeStationCredential(current.id);
+      for (const previous of current) {
+        const next = importedById.get(previous.id);
+        if (!next || String(next.baseUrl || "") !== previous.baseUrl || String(next.auth?.type || "none") !== previous.auth?.type) await removeStationCredential(previous.id);
       }
-      await importState(message.state);
       return dashboard();
     }
     case "TEST_STATION": {
