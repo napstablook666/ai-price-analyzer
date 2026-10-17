@@ -78,7 +78,7 @@ export async function writeWorkspace(handle, state) {
   const writable = await fileHandle.createWritable();
   const document = { format: WORKSPACE_FORMAT, version: WORKSPACE_VERSION, updatedAt: Date.now(), state };
   try {
-    await writable.write(`${JSON.stringify(document, null, 2)}\n`);
+    await writable.write(`${JSON.stringify(document)}\n`);
     await writable.close();
   } catch (error) {
     try { await writable.abort?.(); } catch {}

@@ -836,6 +836,9 @@ test("derives and preserves the station recharge ratio inputs", () => {
   assert.equal(defaultStation.rechargeCredits, 1);
   assert.equal(defaultStation.rechargeRate, 1);
   assert.equal(defaultStation.priceCurrency, "CREDITS");
+  assert.equal(defaultStation.category, "paid");
+  assert.equal(normalizeStation({ baseUrl: "https://relay.example", category: "benchmark" }).category, "benchmark");
+  assert.equal(normalizeStation({ baseUrl: "https://relay.example", category: "unknown" }).category, "paid");
   assert.equal(normalizeStation({ baseUrl: "https://relay.example", rechargeCurrency: "USD" }).rechargeCurrency, "USD");
   assert.equal(defaultStation.rechargeCurrency, "CNY");
   const creditsStation = normalizeStation({ baseUrl: "https://relay.example", rechargeRmb: 12, rechargeCredits: 10, rechargeCurrency: "USD", priceCurrency: "CREDITS", priceCurrencyVerified: true });
@@ -844,6 +847,42 @@ test("derives and preserves the station recharge ratio inputs", () => {
   assert.equal(creditsStation.rechargeCurrency, "USD");
   assert.equal(creditsStation.rechargeRmb, 12);
   assert.equal(creditsStation.rechargeCredits, 10);
+});
+
+
+test("isolates public stations from paid and benchmark comparisons", () => {
+  const stations = [
+    { id: "paid", name: "Paid", category: "paid", rechargeRate: 7, rechargeRateVerified: true, priceCurrencyVerified: true },
+    { id: "benchmark", name: "Benchmark", category: "benchmark", rechargeRate: 7, rechargeRateVerified: true, priceCurrencyVerified: true },
+    { id: "public-a", name: "Public A", category: "public", rechargeRate: 7, rechargeRateVerified: false, priceCurrencyVerified: true },
+    { id: "public-b", name: "Public B", category: "public", rechargeRate: 3, rechargeRateVerified: false, priceCurrencyVerified: true }
+  ];
+  const snapshots = stations.map(station => ({
+    stationId: station.id,
+    collectedAt: 1,
+    status: "success",
+    normalized: { data: [{ model_name: "shared-model", input_price: 2, output_price: 4, price_currency: "CREDITS" }] }
+  }));
+  const comparisons = buildComparisonRows({
+    stations,
+    snapshots,
+    references: { exchangeRate: 8, openRouterRechargeRate: 8, models: [{ name: "shared-model", provider: "official", input: 1, output: 1 }] },
+    usage: { input: TOKENS_PER_MILLION, output: 0 }
+  });
+  assert.equal(comparisons.length, 2);
+
+  const paid = comparisons.find(comparison => comparison.comparisonGroup === "standard");
+  const publicComparison = comparisons.find(comparison => comparison.comparisonGroup === "public");
+  assert.equal(paid.offers.length, 2);
+  assert.equal(paid.offers[0].monthlyCost, 14);
+  assert.deepEqual(paid.offers.map(offer => offer.stationId), ["paid", "benchmark"]);
+  assert.equal(paid.offers[0].officialMonthlyCost, 8);
+  assert.equal(publicComparison.offers.length, 2);
+  assert.deepEqual(publicComparison.offers.map(offer => offer.stationId), ["public-a", "public-b"]);
+  assert.ok(publicComparison.offers.every(offer => offer.monthlyCost === 2));
+  assert.ok(publicComparison.offers.every(offer => offer.officialMonthlyCost === null && offer.diffPercent === null));
+  assert.ok(publicComparison.offers.every(offer => offer.costCurrency === "CREDITS"));
+  assert.ok(publicComparison.offers.some(offer => offer.recommended));
 });
 
 

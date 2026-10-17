@@ -1,5 +1,5 @@
-import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
-import { callService, downloadJson, escapeHtml, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
+import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
+import { callService, downloadJson, readJsonFile, escapeHtml, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
 import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pickWorkspace, readWorkspace, writeWorkspace } from "./shared/workspace.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
@@ -116,6 +116,12 @@ function checked(value) { return value ? " checked" : ""; }
 function responseFormatOptions(value) {
   return Object.entries(RESPONSE_FORMAT_DEFINITIONS)
     .map(([format, definition]) => `<option value="${escapeHtml(format)}"${selected(value, format)}>${escapeHtml(definition.label)}</option>`)
+    .join("");
+}
+
+function stationCategoryOptions(value) {
+  return Object.entries(STATION_CATEGORY_LABELS)
+    .map(([category, label]) => `<option value="${category}"${selected(value, category)}>${escapeHtml(label)}</option>`)
     .join("");
 }
 
@@ -251,6 +257,7 @@ function stationCard(station, index) {
   const priceCurrency = "CREDITS";
   const priceCurrencyVerified = station.priceCurrencyVerified !== false && priceCurrency !== "UNKNOWN";
   const priceCurrencyNote = String(station.priceCurrencyNote || "").trim();
+  const category = STATION_CATEGORY_LABELS[station.category] ? station.category : "paid";
   const rechargeCredits = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
   const origin = currentSiteOrigin(station.baseUrl);
   const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
@@ -261,7 +268,7 @@ function stationCard(station, index) {
     <details class="station-disclosure"${state.collapsedStationIds.has(station.id) ? "" : " open"}>
       <summary class="station-summary">
         <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><p class="station-kicker">STATION ${String(index + 1).padStart(2, "0")}</p><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
-        <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
+        <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${category === "public" ? "公益站：不计算汇率" : `${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币`}</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
       </summary>
       <div class="station-content">
         <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-refresh-station type="button">${icon("refresh-cw", { className: "icon" })}<span>查询模型</span></button><button class="button button-quiet button-small" data-autofill-station type="button">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
@@ -273,6 +280,7 @@ function stationCard(station, index) {
           <label><span>站点名称</span><input data-field="name" value="${escapeHtml(station.name)}" placeholder="例如：主用站"></label>
           <label class="wide"><span>模型列表 / 站点地址</span><input data-field="baseUrl" type="url" value="${escapeHtml(station.baseUrl)}" placeholder="https://relay.example.com/v1/models" required></label>
           <label><span>采集模式</span><select data-field="mode"><option value="direct"${selected(station.mode, "direct")}>直接接口</option><option value="page"${selected(station.mode, "page")}>页面桥接</option></select></label>
+          <label><span>站点类型</span><select data-field="category">${stationCategoryOptions(category)}</select></label>
           <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
           <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
           <label><span>响应格式</span><select data-field="responseFormat">${responseFormatOptions(adapter.responseFormat)}</select></label>
@@ -421,6 +429,7 @@ function readStations() {
       name: value("name"),
       baseUrl: value("baseUrl"),
       mode: value("mode"),
+      category: value("category"),
       enabled: card.querySelector('[data-field="enabled"]')?.checked ?? true,
       rechargeRmb,
       rechargeCurrency,
@@ -991,7 +1000,7 @@ $("#workspace-connect").addEventListener("click", connectWorkspace);
 $("#workspace-load").addEventListener("click", loadWorkspaceState);
 $("#workspace-save").addEventListener("click", () => saveWorkspace());
 $("#export-state").addEventListener("click", async () => {
-  try { downloadJson(`ai-relay-price-${new Date().toISOString().slice(0, 10)}.json`, await callService("EXPORT_STATE")); }
+  try { await downloadJson(`ai-relay-price-${new Date().toISOString().slice(0, 10)}.json`, await callService("EXPORT_STATE")); }
   catch (error) { toast(error.message); }
 });
 
@@ -999,7 +1008,7 @@ $("#import-file").addEventListener("change", async event => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
-    await callService("IMPORT_STATE", { state: JSON.parse(await file.text()) });
+    await callService("IMPORT_STATE", { state: await readJsonFile(file) });
     await load();
     toast("数据已导入；密钥需要重新填写");
   } catch (error) { toast(error.message); }

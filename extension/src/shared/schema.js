@@ -121,8 +121,16 @@ export const DEFAULT_SETTINGS = {
   activeProviders: DEFAULT_ACTIVE_PROVIDERS,
 };
 
+export const STATION_CATEGORY_LABELS = {
+  benchmark: "基准",
+  paid: "付费中转站",
+  public: "公益中转站"
+};
+export const STATION_CATEGORIES = Object.keys(STATION_CATEGORY_LABELS);
+
 export const DEFAULT_STATION = {
   id: "",
+  category: "paid",
   name: "",
   baseUrl: "",
   enabled: true,
@@ -255,6 +263,7 @@ export function normalizeStation(input = {}) {
   station.name = String(station.name || new URL(station.baseUrl).hostname);
   station.baseUrl = normalizeUrl(station.baseUrl);
   station.mode = station.mode === "page" ? "page" : "direct";
+  station.category = STATION_CATEGORIES.includes(input.category) ? input.category : "paid";
   station.adapter = { ...DEFAULT_STATION.adapter, ...(input.adapter || {}) };
   station.auth = { ...DEFAULT_STATION.auth, ...(input.auth || {}) };
   station.checkin = { token: String(input.checkin?.token || "").trim(), autoEnabled: Boolean(input.checkin?.autoEnabled) };

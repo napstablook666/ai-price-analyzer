@@ -1,8 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readJsonFile } from "../src/shared/ui.js";
 import { enqueueWorkspaceOperation, parseWorkspaceState } from "../src/shared/workspace.js";
 
 const state = { version: 1, stations: [] };
+
+test("reads plain and gzip JSON backups", async () => {
+  const value = { stations: [{ id: "demo" }] };
+  const plain = new File([JSON.stringify(value)], "backup.json", { type: "application/json" });
+  assert.deepEqual(await readJsonFile(plain), value);
+
+  const source = new Blob([JSON.stringify(value)]).stream().pipeThrough(new CompressionStream("gzip"));
+  const compressed = await new Response(source).blob();
+  const gzip = new File([compressed], "backup.json.gz", { type: "application/gzip" });
+  assert.deepEqual(await readJsonFile(gzip), value);
+});
 
 test("parses wrapped workspace state", () => {
   const parsed = parseWorkspaceState({ format: "ai-price-analyzer-workspace", version: 1, state });

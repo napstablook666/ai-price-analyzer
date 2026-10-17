@@ -1,4 +1,4 @@
-import { DEFAULT_MATCHING_RULES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
+import { DEFAULT_MATCHING_RULES, STATION_CATEGORIES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { buildModelMatchIndex, matchModelWithOverrides } from "./matching.js";
 import { STANDARD_PRICE_FIELDS } from "./price-fields.js";
 
@@ -127,6 +127,10 @@ function tierKey(item, group) {
   return `${item.model_name}\u0000${group}`;
 }
 
+function normalizeStationCategory(station) {
+  return STATION_CATEGORIES.includes(station.category) ? station.category : "paid";
+}
+
 export function confidenceScore(row) {
   let score = Number(row.matchConfidence ?? 0.6) * 100;
   if (row.cacheReadEstimated) score -= 10;
@@ -150,7 +154,7 @@ export function addRecommendationScores(comparisons, profile = "price") {
   const weights = { balanced: [0.8, 0.2], price: [0.9, 0.1], reliability: [0.7, 0.3] }[profile] || [0.9, 0.1];
   for (const comparison of comparisons) {
     const candidates = comparison.offers.filter(offer => !offer.pricingUnavailable && !offer.incomplete && Number.isFinite(offer.monthlyCost));
-    const eligible = candidates.filter(offer => offer.matchRuleId === "exact" && Number(offer.officialMonthlyCost) > 0);
+    const eligible = candidates.filter(offer => comparison.comparisonGroup === "public" || (offer.matchRuleId === "exact" && Number(offer.officialMonthlyCost) > 0));
     const minCost = candidates.length ? Math.min(...candidates.map(offer => offer.monthlyCost)) : null;
     const maxCost = candidates.length ? Math.max(...candidates.map(offer => offer.monthlyCost)) : null;
     for (const offer of comparison.offers) {
@@ -185,6 +189,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
   for (const snapshot of latestByStation.values()) {
     const station = stationMap.get(snapshot.stationId);
     if (!station || !snapshot.normalized?.data) continue;
+    const stationCategory = normalizeStationCategory(station);
+    const comparisonGroup = stationCategory === "public" ? "public" : "standard";
     const tierSharesByGroup = new Map();
     const tierItemsByGroup = new Map();
     const rawUnpricedModelKeys = snapshot.unpricedModels || snapshot.normalized?.unpricedModels;
@@ -211,7 +217,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         const hasUnpricedPriceGap = unpricedModelKeys.some(value => value.startsWith(`${group}:${item.model_name}:`));
         const priceCurrencyVerified = station.priceCurrencyVerified ?? snapshot.priceCurrencyVerified;
         const rechargeRateVerified = station.rechargeRateVerified ?? snapshot.rechargeRateVerified ?? false;
-        const priceQuote = getProxyPriceQuote(item, groupRatio, station.rechargeRate, station.basePricePerMillion, priceCurrencyVerified, rechargeRateVerified);
+        const priceQuote = getProxyPriceQuote(item, groupRatio, stationCategory === "public" ? 1 : station.rechargeRate, station.basePricePerMillion, priceCurrencyVerified, stationCategory === "public" ? true : rechargeRateVerified);
         const quotedPrices = priceQuote.quotedPrices;
         const baseCostPrices = priceQuote.costPrices;
         const share = item.tier_name ? (tierSharesByGroup.get(tierKey(item, group))?.get(item) ?? 0) : 1;
@@ -242,6 +248,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             officialMonthlyCost: 0,
             stationId: station.id,
             stationName: station.name,
+            stationCategory,
+            comparisonGroup,
             modelName: item.model_name,
             displayNameOverride: item.model_display_name || item.model_name,
             groupName: group,
@@ -274,8 +282,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
           if (priceQuote.pricingUnavailable || !costPrices) row.pricingUnavailable = true;
           addWeighted(row.proxyPrices, quotedPrices, share);
           if (costPrices) addWeighted(row.costPrices, costPrices, share);
-          const officialQuotedPrices = referencePrices(official, 1);
-          const officialPrices = referencePrices(official, references.openRouterRechargeRate || references.exchangeRate || 1);
+          const officialQuotedPrices = stationCategory === "public" ? null : referencePrices(official, 1);
+          const officialPrices = stationCategory === "public" ? null : referencePrices(official, references.openRouterRechargeRate || references.exchangeRate || 1);
           if (officialQuotedPrices) addWeighted(row.officialQuotedPrices, officialQuotedPrices, share);
           if (officialPrices) addWeighted(row.officialPrices, officialPrices, share);
           if (quotedPrices.cacheRead === null) row.cacheReadEstimated = true;
@@ -298,6 +306,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     const offer = {
       stationId: row.stationId,
       stationName: row.stationName,
+      stationCategory: row.stationCategory,
       modelName: row.modelName,
       displayName: row.displayNameOverride,
       provider: row.provider,
@@ -318,8 +327,9 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       officialQuotedPrices: officialQuotedUnit,
       officialCurrency: row.officialCurrency,
       monthlyCost: row.pricingUnavailable ? null : row.monthlyCost,
-      officialMonthlyCost: row.official ? row.officialMonthlyCost : null,
-      diffPercent: !row.pricingUnavailable && Number.isFinite(row.monthlyCost) && row.official && row.officialMonthlyCost > 0 ? ((row.monthlyCost - row.officialMonthlyCost) / row.officialMonthlyCost) * 100 : null,
+      costCurrency: row.stationCategory === "public" ? row.sourceCurrency : null,
+      officialMonthlyCost: row.stationCategory === "public" ? null : row.official ? row.officialMonthlyCost : null,
+      diffPercent: row.stationCategory !== "public" && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) && row.official && row.officialMonthlyCost > 0 ? ((row.monthlyCost - row.officialMonthlyCost) / row.officialMonthlyCost) * 100 : null,
       evidence: row.evidence,
       pricingUnavailable: row.pricingUnavailable,
       pricingUnavailableReasons: [...row.pricingUnavailableReasons].sort(),
@@ -334,14 +344,16 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       sourceFormat: row.sourceFormat
     };
     offer.confidenceScore = confidenceScore(offer);
-    if (!comparisons.has(row.canonicalModel)) comparisons.set(row.canonicalModel, {
+    const comparisonKey = `${row.canonicalModel}\u0000${row.comparisonGroup}`;
+    if (!comparisons.has(comparisonKey)) comparisons.set(comparisonKey, {
       canonicalModel: row.canonicalModel,
+      comparisonGroup: row.comparisonGroup,
       displayName: row.displayName,
       provider: row.provider,
       official: row.official,
       offers: []
     });
-    comparisons.get(row.canonicalModel).offers.push(offer);
+    comparisons.get(comparisonKey).offers.push(offer);
   }
   const result = [...comparisons.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
   addRecommendationScores(result, recommendationProfile);
@@ -356,7 +368,7 @@ export function summarizeComparisons(comparisons) {
   const offers = flattenComparisonRows(comparisons);
   const best = offers.filter(offer => Number.isFinite(offer.monthlyCost)).sort((a, b) => a.monthlyCost - b.monthlyCost)[0];
   return {
-    modelCount: comparisons.length,
+    modelCount: new Set(comparisons.map(comparison => comparison.canonicalModel)).size,
     offerCount: offers.length,
     stationCount: new Set(offers.map(offer => offer.stationId)).size,
     staleCount: offers.filter(offer => offer.stale).length,

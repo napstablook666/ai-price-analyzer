@@ -238,9 +238,32 @@ export function validateImportedState(state) {
 
 export async function importState(state) {
   const imported = validateImportedState(state);
-  await clearSnapshots();
-  await putStations(imported.stations);
-  if (imported.settings) await setValue("settings", normalizeSettings(imported.settings));
-  if (imported.references) await setValue("references", imported.references);
-  for (const snapshot of imported.snapshots) await putSnapshot(snapshot);
+  const db = await openDatabase();
+  await new Promise((resolve, reject) => {
+    let transaction;
+    try {
+      transaction = db.transaction(["kv", "stations", "snapshots"], "readwrite");
+      const kv = transaction.objectStore("kv");
+      const stations = transaction.objectStore("stations");
+      const snapshots = transaction.objectStore("snapshots");
+      stations.clear();
+      snapshots.clear();
+      for (const station of imported.stations) stations.put(redactStation(station));
+      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      for (const snapshot of imported.snapshots) {
+        if (Number(snapshot.collectedAt) >= cutoff) snapshots.put(snapshot);
+      }
+      if (imported.settings) kv.put(normalizeSettings(imported.settings), "settings");
+      if (imported.references) kv.put(imported.references, "references");
+    } catch (error) {
+      db.close();
+      reject(error);
+      return;
+    }
+    transaction.oncomplete = () => { db.close(); resolve(); };
+    transaction.onerror = () => { db.close(); reject(transaction.error || new Error("导入数据失败")); };
+    transaction.onabort = () => { db.close(); reject(transaction.error || new Error("导入数据失败")); };
+  });
+  comparisonRevision++;
+  return imported;
 }

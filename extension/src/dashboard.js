@@ -5,7 +5,7 @@ import { getJevModelCandidates } from "./core/matching.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
-import { DEFAULT_EXCHANGE_RATE } from "./shared/schema.js";
+import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
@@ -42,7 +42,7 @@ function formatPrice(value, currency = "CNY", precision = 4) {
   if (value === null || value === undefined || !Number.isFinite(number)) return "—";
   const rate = Number(state.data?.references?.exchangeRate) || DEFAULT_EXCHANGE_RATE;
   const displayValue = currency === "USD" ? number / rate : number;
-  const symbol = currency === "USD" ? "$" : "¥";
+  const symbol = currency === "USD" ? "$" : currency === "CREDITS" ? "CR" : "¥";
   return precision === 4 ? formatMoney(displayValue, symbol) : `${symbol}${displayValue.toFixed(precision)}`;
 }
 
@@ -189,6 +189,7 @@ function sortRows(rows) {
   });
 }
 function unitPricesMarkup(prices, currency, row, official = false, sourceCurrency = false) {
+  if (official && row.stationCategory === "public") return `<span class="price-empty">公益站仅与公益站比较</span>`;
   if (!prices) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
   const lines = dashboardPriceLines(prices, row, official);
   const visibleLines = lines.filter(([, value]) => value !== null && value !== undefined);
@@ -334,13 +335,15 @@ function renderRows() {
     const station = stationFor(row);
     const delta = row.pricingUnavailable || !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
-    const deltaLabel = delta === null ? (row.pricingUnavailable ? pricingUnavailableLabel(row) : "无官方价") : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
+    const deltaLabel = delta === null ? (row.pricingUnavailable ? pricingUnavailableLabel(row) : row.stationCategory === "public" ? "仅公益站比较" : "无官方价") : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore}分` : "暂无评分";
     const rating = RATING_LABELS[row.category] || "";
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
-    const monthlyCost = formatPrice(row.monthlyCost, currency);
+    const monthlyCostCurrency = row.costCurrency || currency;
+    const monthlyCost = formatPrice(row.monthlyCost, monthlyCostCurrency);
     const hasOfficialCost = Number.isFinite(row.officialMonthlyCost);
     const monthlyDifference = hasOfficialCost && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) ? row.officialMonthlyCost - row.monthlyCost : null;
+    const costMeta = row.stationCategory === "public" ? "仅公益站之间比较" : `官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}`;
     const officialQuotedPrices = row.officialQuotedPrices || null;
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
     const matchNote = row.officialName
@@ -352,10 +355,10 @@ function renderRows() {
     if (showModelAssist) seenModelAssists.add(modelAssistKey);
     return `<tr${categoryClass ? ` class="category-${categoryClass}"` : ""}>
       <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(matchNote)}</span>${modelJevMarkup(row, showModelAssist)}</div></td>
-      <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
+      <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(STATION_CATEGORY_LABELS[row.stationCategory] || "付费中转站")}</span><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
       <td data-label="中转单价">${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</td>
       <td data-label="官方单价">${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</td>
-      <td data-label="月成本"><div class="cost-cell"><strong>${monthlyCost}<small> / 月</small></strong><span class="cost-meta">官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}</span>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
+      <td data-label="月成本"><div class="cost-cell"><strong>${monthlyCost}<small> / 月</small></strong><span class="cost-meta">${costMeta}</span>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方"><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
       <td data-label="推荐与状态"><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}${comparisonJevMarkup(row)}</div></td>
     </tr>`;

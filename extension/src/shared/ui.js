@@ -92,14 +92,28 @@ export function formatDate(value) {
   return value ? new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "medium" }).format(new Date(value)) : "—";
 }
 
-export function downloadJson(filename, value) {
-  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
+export async function downloadJson(filename, value) {
+  const text = JSON.stringify(value);
+  let blob = new Blob([text], { type: "application/json" });
+  if (typeof CompressionStream === "function" && typeof Blob.prototype.stream === "function") {
+    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+    blob = await new Response(stream).blob();
+    if (!filename.endsWith(".gz")) filename += ".gz";
+  }
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export async function readJsonFile(file) {
+  const compressed = /\.gz$/i.test(file.name || "") || ["application/gzip", "application/x-gzip"].includes(file.type);
+  if (!compressed) return JSON.parse(await file.text());
+  if (typeof DecompressionStream !== "function" || typeof Blob.prototype.stream !== "function") throw new Error("当前浏览器不支持压缩 JSON 导入，请更新浏览器");
+  const stream = file.stream().pipeThrough(new DecompressionStream("gzip"));
+  return JSON.parse(await new Response(stream).text());
 }
 
 export function onRefreshProgress(callback) {
