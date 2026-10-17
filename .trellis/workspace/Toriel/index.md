@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 3
-- **Last Active**: 2026-10-16
+- **Total Sessions**: 4
+- **Last Active**: 2026-10-17
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~75 | Active |
+| `journal-1.md` | ~97 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 4 | 2026-10-17 | 移除充值比例核验阻断 | `2c0a5ad` | `main` |
 | 3 | 2026-10-16 | 修复币种核验状态 | `d379b8e` | `main` |
 | 2 | 2026-10-16 | 迁移 CodeStable 到 Trellis | `354ea71` | `main` |
 | 1 | 2026-10-16 | 修复币种核验与刷新登录预检 | `45ceeab`, `41dbd08`, `5e821f2` | `main` |

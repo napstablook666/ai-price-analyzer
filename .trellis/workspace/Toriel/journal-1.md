@@ -73,3 +73,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 4: 移除充值比例核验阻断
+<!-- trellis-session: v=2 fp=6bdec0e8793a0233 -->
+
+**Date**: 2026-10-17
+**Task**: 移除充值比例核验阻断
+**Branch**: `main`
+
+### Summary
+
+完成充值比例核验功能移除：未确认或缺失比例按 1:1 参与比较，删除 dashboard 和选项页提示，保留已确认比例及币种核验等独立保护。核心回归与扩展完整测试均通过；充值比例任务已归档。工作区其他并行修改和 00-bootstrap-guidelines 保持不变。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2c0a5ad` | fix(extension): remove recharge ratio verification blocker |
+
+### Status
+
+[OK] **Completed**
