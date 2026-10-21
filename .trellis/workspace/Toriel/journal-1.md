@@ -95,3 +95,27 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 5: Code Humanizer 清理
+<!-- trellis-session: v=2 fp=code-humanizer-fixes -->
+
+**Date**: 2026-10-21
+**Task**: 修复 Code Humanizer 审计发现
+**Branch**: `main`
+
+### Summary
+
+完成归档审计中的 7 个可执行问题：后台清理、预检状态恢复和定时签到失败现在会告警但保持原有结果、状态和调度语义；Trellis 配置解析异常保持 fail-open 并输出警告；站点预设和签到匹配复用 `stationContext()`；删除过时的站点专属注释。新增失败路径和标准化回归覆盖。扩展测试 187/187、预检测试 15/15、Node 语法检查、价格脚本、版本检查、Python 解析器 smoke check 和 `git diff --check` 均通过。工作区其他修改未纳入提交。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `17fae69` | fix(extension): surface background failures and reuse station context |
+| `3625d9b` | fix(trellis): warn on config parser fallback |
+| `631e8f9` | chore(task): archive code humanizer fixes |
+
+### Status
+
+[OK] **Completed**
