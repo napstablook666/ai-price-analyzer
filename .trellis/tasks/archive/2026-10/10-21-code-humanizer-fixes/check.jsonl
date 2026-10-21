@@ -1,0 +1,8 @@
+{"file":"extension/src/service-worker.js","reason":"Review all changed rejection handlers for observable unexpected failures, preserved return values, and unchanged persistence/scheduling semantics."}
+{"file":"extension/test/refresh-preflight.test.js","reason":"Run focused behavioral coverage for cleanup failures, warning output, and fallback tab-ID persistence."}
+{"file":"extension/src/core/station-presets.js","reason":"Check malformed URL behavior and valid hostname matching after stationContext reuse."}
+{"file":"extension/src/core/checkin.js","reason":"Check provider matching behavior and ensure the stale duplicate comments are removed without changing the generic contract."}
+{"file":".trellis/scripts/common/trellis_config.py","reason":"Check parser exception warning output and fail-open empty-default behavior against common/config.py."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Verify frontend error handling, test coverage, and no unrelated UI/source changes."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Verify standalone script error behavior and diagnostics."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Verify no duplicate canonical helper or speculative abstraction remains."}
