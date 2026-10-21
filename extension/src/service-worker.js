@@ -25,6 +25,10 @@ const CHECKIN_ALARM_NAME = "checkin-stations";
 const REFRESH_CONCURRENCY = 3;
 const REFRESH_PREFLIGHT_SESSION_KEY = "ai-price-analyzer:refresh-preflight";
 const REFRESH_PREFLIGHT_TABS_SESSION_KEY = "ai-price-analyzer:refresh-preflight-tabs";
+
+function isMissingTabError(error) {
+  return /No tab with id|tab not found/i.test(String(error?.message || error));
+}
 let comparisonCache = null;
 async function getSettings() {
   return normalizeSettings(await getValue("settings", {}));
@@ -90,7 +94,13 @@ export async function withPageFetch(station, preferredTabId, task) {
       pageFetch.supportsCapture = true;
       return await task(pageFetch);
     } finally {
-      if (temporary) await chrome.tabs.remove(tab.id).catch(() => {});
+      if (temporary) {
+        try {
+          await chrome.tabs.remove(tab.id);
+        } catch (error) {
+          if (!isMissingTabError(error)) console.warn("[AI比价] 临时标签页清理失败", error);
+        }
+      }
     }
   });
 }
@@ -239,7 +249,9 @@ async function preflightPageStation(station) {
       await chrome.tabs.remove(tab.id);
       refreshPreflightCreatedTabIds.delete(tab.id);
       closedTemporary = true;
-    } catch {}
+    } catch (error) {
+      if (!isMissingTabError(error)) console.warn("[AI比价] 刷新预检临时标签页清理失败", error);
+    }
     await persistRefreshPreflightState();
   }
   return {
@@ -887,10 +899,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.tabs?.onRemoved?.addListener(tabId => restoreRefreshPreflightState().then(() => {
   if (refreshPreflightCreatedTabIds.delete(tabId)) return persistRefreshPreflightState();
-}).catch(() => {}));
+}).catch(error => console.warn("[AI比价] 刷新预检状态恢复失败", error)));
 
 chrome.runtime.onInstalled.addListener(() => scheduleCheckinAlarm());
 chrome.runtime.onStartup.addListener(() => scheduleCheckinAlarm());
 chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === CHECKIN_ALARM_NAME) checkinAll({ claim: true, autoOnly: true }).catch(() => {});
+  if (alarm.name === CHECKIN_ALARM_NAME) return checkinAll({ claim: true, autoOnly: true }).catch(error => console.warn("[AI比价] 定时签到失败", error));
 });

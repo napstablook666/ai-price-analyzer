@@ -3740,7 +3740,7 @@ test("serializes withPageFetch lifecycle and cleans temporary tabs after request
         return { id };
       },
       get: async id => ({ id, status: "complete", url: "https://fastaitoken.com/available-channels" }),
-      remove: async id => { events.push(`remove:${id}`); },
+      remove: async id => { events.push(`remove:${id}`); if (id === 1) throw new Error("No tab with id: 1."); if (id === 2) throw new Error("cleanup failed"); },
       sendMessage: (id, message, callback) => {
         events.push(`request:${id}`);
         callback(id === 1 ? { ok: false, error: "bridge failed" } : { ok: true, response: { ok: true, status: 200, body: "ok" } });
@@ -3753,6 +3753,10 @@ test("serializes withPageFetch lifecycle and cleans temporary tabs after request
       }
     }
   };
+
+  const previousWarn = console.warn;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args);
 
   try {
     const { withPageFetch } = await import(`../src/service-worker.js?page-fetch-test=${Date.now()}`);
@@ -3771,7 +3775,10 @@ test("serializes withPageFetch lifecycle and cleans temporary tabs after request
     assert.ok(firstRemoval >= 0, events.join(" | "));
     assert.ok(secondCreation > firstRemoval, events.join(" | "));
     assert.ok(events.includes("remove:2"));
+    assert.equal(warnings.length, 1);
+    assert.match(String(warnings[0][0]), /临时标签页清理失败/);
   } finally {
+    console.warn = previousWarn;
     if (previousChrome === undefined) delete globalThis.chrome;
     else globalThis.chrome = previousChrome;
   }

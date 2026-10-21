@@ -18,6 +18,7 @@ test("matches check-in presets by host", () => {
   assert.equal(matchCheckinPreset({ baseUrl: "https://vyceai.com.evil.example/" }), null);
   assert.equal(matchCheckinPreset({ baseUrl: "https://example.com/" }), null);
   assert.equal(matchCheckinPreset({}), null);
+  assert.equal(matchCheckinPreset({ baseUrl: "not-a-url" }), null);
 });
 
 test("normalizes check-in records", () => {

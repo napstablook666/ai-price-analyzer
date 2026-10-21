@@ -1,14 +1,10 @@
 import { DEFAULT_EXCHANGE_RATE } from "../shared/schema.js";
-import { PROVIDER_REGISTRY, providerById } from "./provider-registry.js";
+import { PROVIDER_REGISTRY, providerById, stationContext } from "./provider-registry.js";
 
-function normalizeHostname(value) {
-  return String(value || "").toLowerCase().replace(/^www\./, "");
-}
 
 function addStationPreset(stations, preset, hostname) {
   if (!stations.length || stations.some(station => {
-    try { return normalizeHostname(new URL(station.baseUrl).hostname) === hostname; }
-    catch { return false; }
+    return stationContext(station).hostname === hostname;
   })) return stations;
   const ids = new Set(stations.map(station => station.id));
   let id = preset.id;
@@ -25,7 +21,7 @@ function addRegisteredStationPreset(stations, providerId, options = {}) {
 export function addRegisteredStationPresets(stations, options = {}) {
   return PROVIDER_REGISTRY.reduce((current, provider) => {
     const preset = typeof provider.preset === "function" ? provider.preset(options) : provider.preset;
-    return provider.host && preset ? addStationPreset(current, preset, normalizeHostname(provider.host)) : current;
+    return provider.host && preset ? addStationPreset(current, preset, provider.host) : current;
   }, stations);
 }
 

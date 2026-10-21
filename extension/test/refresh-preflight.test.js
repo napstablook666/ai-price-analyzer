@@ -72,18 +72,25 @@ function memoryDatabase(seed = {}) {
   };
   return {
     stores,
-    indexedDB: { open() { const result = { result: database }; queueMicrotask(() => result.onsuccess?.()); return result; } }
+    indexedDB: { open() { const result = { result: database }; queueMicrotask(() => seed.openError ? (result.error = seed.openError, result.onerror?.()) : result.onsuccess?.()); return result; } }
   };
 }
 
-function chromeApi({ pageResponses = {}, existingTabs = [] } = {}) {
+function chromeApi({ pageResponses = {}, existingTabs = [], removeError = null } = {}) {
   let listener;
   let nextTabId = 100;
   const tabsById = new Map(existingTabs.map(tab => [tab.id, clone(tab)]));
   const created = [], removed = [], pageRequests = [], runtimeMessages = [];
   const sessionValues = {};
+  let sessionSetError = null;
   const noOpEvent = { addListener() {}, removeListener() {} };
   const removedEvent = {
+    listeners: new Set(),
+    addListener(callback) { this.listeners.add(callback); },
+    removeListener(callback) { this.listeners.delete(callback); },
+    async emit(...args) { await Promise.all([...this.listeners].map(callback => callback(...args))); }
+  };
+  const alarmEvent = {
     listeners: new Set(),
     addListener(callback) { this.listeners.add(callback); },
     removeListener(callback) { this.listeners.delete(callback); },
@@ -92,6 +99,8 @@ function chromeApi({ pageResponses = {}, existingTabs = [] } = {}) {
   const api = {
     created, removed, pageRequests, runtimeMessages, pageResponses,
     removeUserTab(tabId) { tabsById.delete(tabId); return removedEvent.emit(tabId); },
+    fireAlarm(name) { return alarmEvent.emit({ name }); },
+    setSessionError(error) { sessionSetError = error; },
     addUserTab(tab) { tabsById.set(tab.id, clone(tab)); nextTabId = Math.max(nextTabId, Number(tab.id) + 1); },
     reboot() { removedEvent.listeners.clear(); return import(`../src/service-worker.js?preflight-test=${workerSequence++}`); },
     chrome: {
@@ -103,7 +112,7 @@ function chromeApi({ pageResponses = {}, existingTabs = [] } = {}) {
         getURL: path => `chrome-extension://test-extension/${path}`,
         sendMessage(message, callback) { runtimeMessages.push(clone(message)); callback?.(); }
       },
-      alarms: { clear: async () => true, create() {}, onAlarm: noOpEvent },
+      alarms: { clear: async () => true, create() {}, onAlarm: alarmEvent },
       storage: {
         local: { get: async () => ({}), set: async () => {}, remove: async () => {} },
         session: {
@@ -111,7 +120,7 @@ function chromeApi({ pageResponses = {}, existingTabs = [] } = {}) {
             const requested = Array.isArray(keys) ? keys : [keys];
             return Object.fromEntries(requested.filter(key => sessionValues[key] !== undefined).map(key => [key, clone(sessionValues[key])]));
           },
-          async set(values) { Object.assign(sessionValues, clone(values)); },
+          async set(values) { if (sessionSetError) throw sessionSetError; Object.assign(sessionValues, clone(values)); },
           async remove(keys) { for (const key of Array.isArray(keys) ? keys : [keys]) delete sessionValues[key]; }
         }
       },
@@ -124,7 +133,7 @@ function chromeApi({ pageResponses = {}, existingTabs = [] } = {}) {
           tabsById.set(tab.id, tab); created.push(clone(tab)); return clone(tab);
         },
         async get(tabId) { const tab = tabsById.get(tabId); if (!tab) throw new Error("tab not found"); return clone(tab); },
-        async remove(tabId) { removed.push(tabId); tabsById.delete(tabId); await removedEvent.emit(tabId); },
+        async remove(tabId) { if (removeError) throw removeError; removed.push(tabId); tabsById.delete(tabId); await removedEvent.emit(tabId); },
         sendMessage(tabId, message, callback) {
           const tab = tabsById.get(tabId);
           if (message.type === PAGE_RUNTIME_FETCH_TYPE) pageRequests.push(clone(message.request));
@@ -397,6 +406,64 @@ test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, 
   });
 });
 
+
+test("warns failed temporary preflight cleanup and preserves the fallback tab ID", async () => {
+  const previousWarn = console.warn;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args);
+  try {
+    await withWorker({ stations: [{ id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" }] }, {
+      pageResponses: { "www.fastaitoken.com": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
+      removeError: new Error("cleanup failed")
+    }, async worker => {
+      const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
+      assert.equal(preflight.results[0].status, "ready");
+      assert.equal(preflight.results[0].tabId, worker.created[0].id);
+      assert.deepEqual(worker.removed, []);
+    });
+  } finally {
+    console.warn = previousWarn;
+  }
+  assert.equal(warnings.length, 1);
+  assert.match(String(warnings[0][0]), /刷新预检临时标签页清理失败/);
+});
+
+test("warns refresh preflight state reconciliation failures after tab removal", async () => {
+  const previousWarn = console.warn;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args);
+  try {
+    await withWorker({ stations: [{ id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" }] }, {
+      pageResponses: { "www.fastaitoken.com": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
+      removeError: new Error("cleanup failed")
+    }, async worker => {
+      const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
+      warnings.length = 0;
+      worker.setSessionError(new Error("persist failed"));
+      await worker.removeUserTab(preflight.results[0].tabId);
+    });
+  } finally {
+    console.warn = previousWarn;
+  }
+  assert.equal(warnings.length, 1);
+  assert.match(String(warnings[0][0]), /刷新预检状态恢复失败/);
+});
+
+test("warns scheduled check-in failures without escaping the alarm event", async () => {
+  const previousWarn = console.warn;
+  const warnings = [];
+  console.warn = (...args) => warnings.push(args);
+  try {
+    await withWorker({ openError: new Error("station read failed") }, {}, async worker => {
+      await worker.fireAlarm("checkin-stations");
+      await new Promise(resolve => setImmediate(resolve));
+    });
+  } finally {
+    console.warn = previousWarn;
+  }
+  assert.equal(warnings.length, 1);
+  assert.match(String(warnings[0][0]), /定时签到失败/);
+});
 test("REFRESH_ALL requires live explicit confirmation, rejects expired or cancelled state, and consumes confirmation once", async () => {
   const station = {
     id: "manual-relay", name: "Manual Relay", baseUrl: "https://manual-relay.example/pricing", enabled: true, mode: "direct",

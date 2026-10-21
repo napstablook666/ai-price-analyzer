@@ -1,6 +1,7 @@
 // 站点签到模块：按域名匹配预设，复用浏览器登录态（Cookie / Bearer）直接调用签到 API。
 // 新增站点适配：在 CHECKIN_PRESETS 里加一条即可，无需改其他代码。
 
+import { stationContext } from "./provider-registry.js";
 export const CHECKIN_PRESETS = [
   {
     id: "vyceai",
@@ -22,12 +23,7 @@ export const CHECKIN_PRESETS = [
 ];
 
 export function matchCheckinPreset(station = {}) {
-  let hostname = "";
-  try {
-    hostname = new URL(String(station.baseUrl || "")).hostname.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return null;
-  }
+  const hostname = stationContext(station).hostname;
   return CHECKIN_PRESETS.find(preset => preset.matchHosts.some(host => hostname === host || hostname.endsWith(`.${host}`))) || null;
 }
 
@@ -81,8 +77,6 @@ function buildHeaders(preset, token) {
   return headers;
 }
 
-// 通过已打开的 vyceai 标签页注入脚本读取登录态（localStorage token + cookie）。
-// 无已开标签页时返回 null。
 // 通过已打开的站点标签页注入脚本读取登录态（localStorage token + cookie）。
 // 无已开标签页时返回 null。
 async function readTokenFromPage(origin, preset) {
