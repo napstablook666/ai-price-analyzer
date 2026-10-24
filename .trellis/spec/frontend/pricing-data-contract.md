@@ -42,9 +42,69 @@ This contract covers station pricing from collection through snapshots and dashb
 
 ## SevenAI Model Plaza
 
-- `sevenai.moe/model-plaza` exposes the public catalog at `GET /api/v1/model-plaza?timezone=Asia%2FShanghai`; request with `credentials: "omit"` and no authorization header.
-- The anonymous response uses `{ code: 0, data: { groups } }`; group names and `rate_multiplier` apply to model `pricing`, whose token prices are per token. Preserve all returned `pricing.intervals` and their `tier_label` values, scaling prices to per-million units and applying the group multiplier once.
-- The USD display label does not verify a recharge conversion. Collection assigns station model-list rows to `CREDITS`; keep the recharge rate unconfirmed and use the existing 1:1 fallback.
+### 1. Scope / Trigger
+
+- Trigger: a selectable public model-plaza station adds a new endpoint and response profile that flows through collection, normalization, saved presets, and comparison.
+- This contract covers the anonymous catalog only. Do not collect login-only groups or send station credentials.
+
+### 2. Signatures
+
+- `prepareStationInput(stationInput = {})` prepares SevenAI URLs through the provider registry.
+- `collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {})` collects the direct station response.
+- `normalizePricingPayload(payload, format = "auto", options = {})` dispatches `sevenai-model-plaza` to `ModelPlazaStrategy`.
+
+### 3. Contracts
+
+- Match `sevenai.moe/model-plaza`; request `GET /api/v1/model-plaza?timezone=Asia%2FShanghai` with `credentials: "omit"`, no authorization header, and no page bridge.
+- The verified envelope is `{ code: 0, data: { description, groups } }`. Each group supplies `name`, finite `rate_multiplier`, and `models`; each model supplies `name` and `pricing` with `billing_mode: "token"`. Preserve model pricing intervals and their `tier_label`, `min_tokens`, and `max_tokens`.
+- API token prices are per token. Convert each price to per-million units and apply the group `rate_multiplier` exactly once. Use model-level pricing when no intervals are present.
+- A missing, invalid, or whitespace-only `rate_multiplier` must not default to `1` or parse as zero. Mark the group multiplier invalid and do not emit its prices. Unsupported billing modes use the existing incomplete-result diagnostics.
+- The page's USD display label does not establish a recharge conversion. Collection assigns ordinary model-list rows to `CREDITS`; keep `rechargeRateVerified` false so comparison uses the existing 1:1 fallback.
+
+### 4. Validation & Error Matrix
+
+| Condition | Normalized result | Comparison behavior |
+|---|---|---|
+| `code: 0`, finite group multiplier, token prices | Per-million rows with interval labels and group ratio | Usable `CREDITS` offers |
+| Missing, invalid, or blank group multiplier | No rows for that group; `invalidPricingValues` and `unpricedModels` identify it | No fabricated zero-price or 1x offer |
+| Unsupported `billing_mode` | Existing `unsupportedBillingModes` partial diagnostic | Unsupported model is not emitted as a token price |
+| Public GET requires credentials unexpectedly | Standard request failure; request still sends no credentials | No credential fallback |
+| Recharge rate unconfirmed | Station rows remain `CREDITS` | Compare with the existing 1:1 fallback |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `input_price: 0.000002` and `rate_multiplier: 0.12` yields `0.24` per 1M; the group multiplier is applied once.
+- Base: a model with no intervals produces one row from its model-level `pricing` values.
+- Bad: defaulting a missing multiplier to `1`, accepting whitespace as numeric zero, multiplying the group ratio twice, or inferring recharge conversion from the USD display label.
+
+### 6. Tests Required
+
+- Assert the exact endpoint, GET method, `credentials: "omit"`, and absent authorization header.
+- With the GROK fixture, assert both intervals remain separate and the `<200K` input/output/cache-read prices are `0.24`, `0.72`, and `0.036` per 1M after the `0.12` multiplier.
+- Assert blank/missing group multipliers produce incomplete diagnostics and no priced model rows; assert unknown billing modes remain unsupported.
+- Assert preset registration is idempotent for existing lists and does not alter the empty-list default.
+- Assert collected rows are `CREDITS` and an unconfirmed recharge ratio remains usable at 1:1.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```js
+groupMultiplier: group => finitePrice(group?.rate_multiplier) ?? 1
+```
+
+This turns a missing group rate into a plausible but unverified price multiplier.
+
+#### Correct
+
+```js
+groupMultiplier: group => {
+  const value = group?.rate_multiplier;
+  return typeof value === "string" && !value.trim() ? null : finitePrice(value);
+}
+```
+
+A missing or malformed multiplier then follows the existing invalid-pricing diagnostic path instead of creating a misleading offer.
 
 ## Validation & Error Matrix
 
