@@ -25,12 +25,12 @@ Add `https://sevenai.moe/model-plaza?embedded=1` as a selectable pricing station
 
 ## Acceptance Criteria
 
-- [ ] SevenAI appears as a selectable station and is backfilled once for existing station lists.
-- [ ] The empty-list default and other providers' behavior remain unchanged.
-- [ ] The supplied URL is prepared for the direct public API request; collection uses `GET /api/v1/model-plaza?timezone=Asia%2FShanghai` with credentials omitted and no authorization header.
-- [ ] The observed token price intervals normalize with their tier labels, group names, price fields, and group multipliers.
-- [ ] Comparison rows use `CREDITS`; no verified recharge conversion is configured from the USD label.
-- [ ] Tests cover the observed API payload and the extension test suite passes.
+- [x] SevenAI appears as a selectable station and is backfilled once for existing station lists.
+- [x] The empty-list default and other providers' behavior remain unchanged.
+- [x] The supplied URL is prepared for the direct public API request; collection uses `GET /api/v1/model-plaza?timezone=Asia%2FShanghai` with credentials omitted and no authorization header.
+- [x] The observed token price intervals normalize with their tier labels, group names, price fields, and group multipliers.
+- [x] Comparison rows use `CREDITS`; no verified recharge conversion is configured from the USD label.
+- [x] Tests cover the observed API payload and the extension test suite passes.
 
 ## Out of Scope
 
