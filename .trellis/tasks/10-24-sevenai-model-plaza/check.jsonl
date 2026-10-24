@@ -1,0 +1,9 @@
+{"file":"extension/src/core/provider-registry.js","reason":"Review host/path matching, anonymous endpoint configuration, direct request policy, and preset registration for regressions."}
+{"file":"extension/src/core/response-formats.js","reason":"Verify the new response format dispatch is isolated and existing format detection remains unchanged."}
+{"file":"extension/src/core/normalizers.js","reason":"Check tier preservation, per-million scaling, group multiplier applied once, and malformed/unsupported billing diagnostics."}
+{"file":"extension/src/core/collectors.js","reason":"Verify actual collection sends the expected GET with credentials omitted and rows enter the CREDITS boundary."}
+{"file":"extension/src/core/station-presets.js","reason":"Check idempotent backfill and unchanged empty-list behavior for existing station users."}
+{"file":"extension/src/service-worker.js","reason":"Review preset upgrade integration and confirm unrelated station settings remain unchanged."}
+{"file":"extension/test/core.test.js","reason":"Assess fixture assertions for observed response behavior, comparison usability, and non-tautological regression coverage."}
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Check that the updated contract documents verified endpoint behavior without asserting a recharge conversion."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check URL helper reuse, test coverage, error handling, and absence of unrelated changes."}

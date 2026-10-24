@@ -40,7 +40,14 @@ This contract covers station pricing from collection through snapshots and dashb
 - `NORMALIZATION_VERSION` changes whenever old normalized snapshots could encode a different trust decision. Version `24` is required after ordinary stale verification repair; `snapshotNeedsRefresh()` rejects older versions.
 - Raw official OpenRouter API reference prices remain USD. Comparison maps the same numeric USD-credit value 1:1 to `CREDITS` and computes RMB benchmark cost separately with the configured `openRouterRechargeRate`. OpenRouter purchase fees are not model prices.
 
+## SevenAI Model Plaza
+
+- `sevenai.moe/model-plaza` exposes the public catalog at `GET /api/v1/model-plaza?timezone=Asia%2FShanghai`; request with `credentials: "omit"` and no authorization header.
+- The anonymous response uses `{ code: 0, data: { groups } }`; group names and `rate_multiplier` apply to model `pricing`, whose token prices are per token. Preserve all returned `pricing.intervals` and their `tier_label` values, scaling prices to per-million units and applying the group multiplier once.
+- The USD display label does not verify a recharge conversion. Collection assigns station model-list rows to `CREDITS`; keep the recharge rate unconfirmed and use the existing 1:1 fallback.
+
 ## Validation & Error Matrix
+
 
 | Condition | Prepared/normalized value | Comparison result |
 |---|---|---|

@@ -1539,7 +1539,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "fuck-everyone", "killai"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "fuck-everyone", "killai", "sevenai"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -2359,6 +2359,85 @@ test("adapts NodeAI model plaza to its JSON API endpoint", async () => {
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "nodeai-model-plaza");
 });
+test("collects SevenAI public model-plaza intervals as comparable CREDITS", async () => {
+  const registered = addRegisteredStationPresets([{ id: "existing", baseUrl: "https://relay.example" }]);
+  const preset = registered.find(station => station.id === "sevenai");
+  assert.ok(preset);
+  assert.equal(addRegisteredStationPresets(registered), registered);
+  assert.equal(addRegisteredStationPresets([]).length, 0);
+  assert.equal(preset.rechargeRateVerified, false);
+
+  const prepared = prepareStationInput({
+    id: "station-sevenai",
+    name: "SevenAI",
+    baseUrl: "https://www.sevenai.moe/model-plaza?embedded=1",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  });
+  assert.equal(prepared.baseUrl, "https://www.sevenai.moe/model-plaza?embedded=1");
+  assert.equal(prepared.mode, "direct");
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.adapter.responseFormat, "sevenai-model-plaza");
+
+  let request;
+  const snapshot = await collectStationInput({ ...prepared, id: "station-sevenai", name: "SevenAI" }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response({ code: 0, message: "success", data: { description: "", groups: [{
+        name: "GROK",
+        rate_multiplier: 0.12,
+        models: [{
+          name: "grok-4.5",
+          pricing: {
+            billing_mode: "token",
+            input_price: 0.000002,
+            output_price: 0.000006,
+            cache_read_price: 0.0000003,
+            intervals: [
+              { tier_label: "<200K", min_tokens: 0, max_tokens: 200000, input_price: 0.000002, output_price: 0.000006, cache_read_price: 0.0000003 },
+              { tier_label: ">200K", min_tokens: 200001, max_tokens: null, input_price: 0.000003, output_price: 0.000009, cache_read_price: 0.00000045 }
+            ]
+          }
+        }]
+      }] } });
+    }
+  });
+  assert.equal(request.url, "https://www.sevenai.moe/api/v1/model-plaza?timezone=Asia%2FShanghai");
+  assert.equal(request.init.method, "GET");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.rechargeRateVerified, false);
+  assert.equal(snapshot.normalized.data.length, 2);
+  assert.deepEqual(snapshot.normalized.group_ratio, { GROK: 0.12 });
+  assert.deepEqual(snapshot.normalized.data.map(row => row.tier_name), ["<200K", ">200K"]);
+  assert.deepEqual(snapshot.normalized.data.map(row => [row.input_price, row.output_price, row.cache_read_price].map(value => Number(value.toFixed(6)))), [
+    [0.24, 0.72, 0.036],
+    [0.36, 1.08, 0.054]
+  ]);
+  assert.ok(snapshot.normalized.data.every(row => row.price_currency === "CREDITS" && row.proxy_group_name === "GROK"));
+  const comparisons = buildComparisonRows({
+    stations: [prepared],
+    snapshots: [{ ...snapshot, stationId: prepared.id }]
+  });
+  const offer = comparisons.flatMap(row => row.offers).find(row => row.stationId === prepared.id && row.tierName.includes("<200K"));
+  assert.ok(offer);
+  assert.equal(offer.pricingUnavailable, false);
+  assert.equal(offer.costPrices.input, 0.3);
+  const blankGroupRate = normalizePricingPayload({
+    code: 0,
+    data: {
+      groups: [{
+        name: "GROK",
+        rate_multiplier: " ",
+        models: [{ name: "grok-4.5", pricing: { billing_mode: "token", input_price: 0.000002 } }]
+      }]
+    }
+  }, "sevenai-model-plaza");
+  assert.equal(blankGroupRate.incomplete, true);
+  assert.deepEqual(blankGroupRate.invalidPricingValues, ["GROK:multiplier"]);
+  assert.deepEqual(blankGroupRate.unpricedModels, ["GROK:grok-4.5:default"]);
+});
+
 test("adapts KillAI model plaza through the logged-in page", async () => {
   const preset = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://seed.example" }])
     .find(station => station.baseUrl === "https://api.killai.cc/model-plaza?embedded=1");

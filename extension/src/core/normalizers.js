@@ -719,6 +719,17 @@ export class TrueSotaModelPricingStrategy extends ParsingStrategy {
 }
 
 const MODEL_PLAZA_PROFILES = Object.freeze({
+  sevenai: {
+    sourceFormat: "sevenai-model-plaza",
+    label: "SevenAI",
+    currency: null,
+    intervalMode: "all",
+    groupMultiplier: group => {
+      const value = group?.rate_multiplier;
+      return typeof value === "string" && !value.trim() ? null : finitePrice(value);
+    },
+    nonTokenBilling: Object.freeze({})
+  },
   nodeai: {
     sourceFormat: "nodeai-model-plaza",
     label: "NodeAI",
