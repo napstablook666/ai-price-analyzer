@@ -1,6 +1,6 @@
 # SevenAI Model Plaza Implementation Plan
 
-The task remains in planning until the user reviews and approves these artifacts. Do not modify extension code or run `task.py start` before that approval.
+Task approved and activated; implementation and verification are complete. This plan is retained as the execution record.
 
 ## Checklist
 
@@ -11,7 +11,7 @@ The task remains in planning until the user reviews and approves these artifacts
 - [x] Run `npm --prefix extension test`; address failures without broadening scope.
 - [x] Perform an independent read-only review of the implementation, resolve actionable findings, and rerun the suite.
 - [x] Update `.trellis/spec/frontend/pricing-data-contract.md` with the verified SevenAI endpoint, anonymous-request policy, tier/group fields, and unverified recharge-rate boundary.
-- [ ] Review the final diff and commit only task-owned changes, preserving unrelated worktree changes.
+- [x] Review the final diff and commit only task-owned changes, preserving unrelated worktree changes.
 
 ## Acceptance Checks
 
