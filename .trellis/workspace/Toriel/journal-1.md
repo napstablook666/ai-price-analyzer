@@ -119,3 +119,25 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 6: KillAI per-request pricing adaptation
+<!-- trellis-session: v=2 fp=62b2f868b0eda906 -->
+
+**Date**: 2026-10-29
+**Task**: KillAI per-request pricing adaptation
+**Branch**: `feat/sevenai-model-plaza`
+
+### Summary
+
+Added KillAI per_request-to-request billing mapping using the shared model-plaza parser. Added regression coverage for per_request_price/request_price aliases, one-time group multiplier, empty token/image fields, no partial diagnostics, and unchanged authenticated page collection. Documented the pricing contract. Validation: extension tests 188/188 passed; JS syntax and diff checks passed.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c9ffc9d` | fix(extension): support KillAI per-request pricing |
+
+### Status
+
+[OK] **Completed**
