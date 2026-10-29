@@ -1,0 +1,5 @@
+{"file":"extension/src/core/normalizers.js","reason":"Review that KillAI alone accepts per_request as request billing, that request_price/request_price aliases use existing validation, and that group_multiplier is applied exactly once."}
+{"file":"extension/test/core.test.js","reason":"Review the regression fixture and page collection assertions for request_price output, empty token/image fields, unsupportedBillingModes removal, incomplete status, and unchanged token/image behavior."}
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Verify the contract records the authenticated endpoint, request billing fields, group multiplier, and no anonymous-auth fallback."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Check extension test coverage, syntax validation, diff hygiene, and absence of unrelated changes."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Check that the fix reuses the shared ModelPlazaStrategy and does not duplicate billing logic."}

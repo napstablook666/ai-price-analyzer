@@ -1,0 +1,7 @@
+{"file":"extension/src/core/normalizers.js","reason":"Add only KillAI's verified per_request-to-request mapping and reuse the existing request-price scaling with the group multiplier."}
+{"file":"extension/test/core.test.js","reason":"Extend the existing KillAI fixture and collection tests with request-priced models, no unsupported diagnostic, incomplete false, and one-time group-multiplier assertions while preserving token and image coverage."}
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Document KillAI's authenticated page collection, endpoint, per_request fields, request output, and group-multiplier boundary."}
+{"file":".trellis/spec/frontend/project-facts.md","reason":"Check provider-specific page-session collection conventions and existing KillAI facts before implementation."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Follow extension test, syntax-check, diff-check, error-observability, and no-unrelated-change requirements."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Reuse ModelPlazaStrategy and existing fixtures instead of adding a new parser or abstraction."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Trace the authenticated page response through collection, normalization, snapshot, and comparison boundaries."}
