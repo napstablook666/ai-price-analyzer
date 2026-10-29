@@ -106,6 +106,69 @@ groupMultiplier: group => {
 
 A missing or malformed multiplier then follows the existing invalid-pricing diagnostic path instead of creating a misleading offer.
 
+## KillAI Model Plaza
+
+### 1. Scope / Trigger
+
+- Trigger: the KillAI model plaza reports `per_request` as unsupported and must expose its request-priced models to station comparison.
+- This contract covers the existing authenticated page collection and normalization boundary; it does not change API access, page authentication, or billing algorithms.
+
+### 2. Signatures
+
+- `prepareStationInput(stationInput = {})` prepares `https://api.killai.cc/model-plaza?embedded=1` as a page-mode station.
+- `collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {})` reads the response through the logged-in page session.
+- `normalizePricingPayload(payload, format = "auto", options = {})` dispatches `killai-model-plaza` to `ModelPlazaStrategy`.
+
+### 3. Contracts
+
+- Keep `GET /api/v1/model-plaza?timezone=Asia%2FShanghai`, response format `killai-model-plaza`, and the existing page-session auth policy. Do not send extension credentials directly or fall back to anonymous access.
+- The response envelope is `{ code: 0, data: { description, groups } }`. A request-priced model uses `pricing.billing_mode: "per_request"` and `per_request_price` or the compatibility alias `request_price`.
+- Emit the amount as `request_price` without per-million conversion. Apply the group's `rate_multiplier` exactly once during normalization; for example, `0.2 * 1.5 = 0.3` per request.
+- Request rows have no token or image prices (`input_price`, `output_price`, cache prices, `image_input_price`, `image_output_price`, `image_price`). Do not alter existing token intervals or image-price handling.
+- Collection assigns ordinary model-list rows to `CREDITS`; keep `rechargeRateVerified` false so comparison uses the existing 1:1 fallback unless explicitly confirmed.
+- Anonymous API access returns `401 Authentication required` and is not a supported collection path.
+
+### 4. Validation & Error Matrix
+
+| Condition | Normalized result | Collection / comparison behavior |
+|---|---|---|
+| Authenticated response with valid `per_request` price | One `request_price` row, group multiplier applied once, no unsupported-mode diagnostic | Complete snapshot; request charge is comparable in CREDITS |
+| `per_request` has neither valid request-price field nor image price | Existing `unpricedModels` diagnostic | Snapshot is partial; no fabricated zero price |
+| Unknown non-token billing mode | Existing `unsupportedBillingModes` diagnostic | Unsupported model is not emitted |
+| Invalid request-price value | Existing invalid-price validation path | Reject invalid page response; do not coerce it to zero |
+| API request lacks the page session | `401 Authentication required` | Collection fails without anonymous or extension-credential fallback |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `{ billing_mode: "per_request", per_request_price: 0.2 }` in a group with `rate_multiplier: 1.5` emits `request_price: 0.3`.
+- Base: existing token intervals and image rows are unchanged; request rows keep token and image fields empty.
+- Bad: omitting the profile mapping, converting a per-request amount to per-million units, applying the group multiplier twice, or bypassing the authenticated page request.
+
+### 6. Tests Required
+
+- Assert the page mode, endpoint, GET method, `killai-model-plaza` format, and existing page-session auth fields remain unchanged; extension Authorization stays absent.
+- Assert both `per_request_price` and `request_price` compatibility inputs emit `request_price`; the fixture's `0.2` price with multiplier `1.5` is approximately `0.3`.
+- Assert request-row token and image prices are empty, the supported fixture has no `unsupportedBillingModes` and is not incomplete, and existing token interval/image assertions remain.
+- Assert the collected request row is CREDITS and does not introduce a recharge-verification reason.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```js
+nonTokenBilling: Object.freeze({ image: "image" })
+```
+
+`per_request` then falls through to the unsupported billing-mode diagnostic.
+
+#### Correct
+
+```js
+nonTokenBilling: Object.freeze({ image: "image", per_request: "request" })
+```
+
+This reuses the shared request-price parser and KillAI's existing group-multiplier callback.
+
 ## Validation & Error Matrix
 
 

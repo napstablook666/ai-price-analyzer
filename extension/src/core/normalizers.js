@@ -750,7 +750,7 @@ const MODEL_PLAZA_PROFILES = Object.freeze({
     intervalMode: "all",
     groupMultiplier: group => finitePrice(group?.rate_multiplier) ?? 1,
     nonTokenMultiplier: (_group, _billingMode, groupMultiplier) => groupMultiplier,
-    nonTokenBilling: Object.freeze({ image: "image" })
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request" })
   },
   "fuck-everyone": {
     sourceFormat: "fuck-everyone-model-plaza",

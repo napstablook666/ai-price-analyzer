@@ -202,6 +202,19 @@ const killAiFixture = {
             image_output_price: 0.000004
           }
         }]
+      },
+      {
+        id: "request",
+        name: "Request",
+        platform: "openai",
+        rate_multiplier: 1.5,
+        models: [{
+          name: "kill-request",
+          pricing: {
+            billing_mode: "per_request",
+            per_request_price: 0.2
+          }
+        }]
       }
     ]
   }
@@ -1846,8 +1859,10 @@ test("normalizes NodeAI model-plaza pricing with explicit dispatch", () => {
 test("normalizes KillAI model-plaza token intervals and image fields without asserting a currency", () => {
   const normalized = normalizePricingPayload(killAiFixture, "killai-model-plaza");
   assert.equal(normalized.sourceFormat, "killai-model-plaza");
-  assert.deepEqual(normalized.group_ratio, { Text: 1.5, Image: 2 });
-  assert.equal(normalized.data.length, 3);
+  assert.deepEqual(normalized.group_ratio, { Text: 1.5, Image: 2, Request: 1.5 });
+  assert.equal(normalized.data.length, 4);
+  assert.notEqual(normalized.incomplete, true);
+  assert.equal(normalized.unsupportedBillingModes, undefined);
 
   const standard = normalized.data.find(model => model.tier_name === "standard");
   assert.equal(standard.input_price, 1.5);
@@ -1863,6 +1878,35 @@ test("normalizes KillAI model-plaza token intervals and image fields without ass
   assert.equal(image.image_output_price, 8);
   assert.equal(image.image_price, null);
   assert.equal(image.price_currency, "UNKNOWN");
+
+  const request = normalized.data.find(model => model.model_name === "kill-request");
+  assert.ok(request);
+  assert.ok(Math.abs(request.request_price - 0.3) < 1e-12);
+  assert.deepEqual({
+    input: request.input_price,
+    output: request.output_price,
+    cacheRead: request.cache_read_price,
+    cacheWrite: request.cache_write_price,
+    cacheWrite1h: request.cache_write_1h_price ?? null,
+    imageInput: request.image_input_price,
+    imageOutput: request.image_output_price,
+    imagePrice: request.image_price
+  }, {
+    input: null,
+    output: null,
+    cacheRead: null,
+    cacheWrite: null,
+    cacheWrite1h: null,
+    imageInput: null,
+    imageOutput: null,
+    imagePrice: null
+  });
+  const aliasFixture = structuredClone(killAiFixture);
+  const aliasPricing = aliasFixture.data.groups.find(group => group.id === "request").models[0].pricing;
+  aliasPricing.request_price = aliasPricing.per_request_price;
+  delete aliasPricing.per_request_price;
+  const aliasRequest = normalizePricingPayload(aliasFixture, "killai-model-plaza").data.find(model => model.model_name === "kill-request");
+  assert.ok(Math.abs(aliasRequest.request_price - 0.3) < 1e-12);
 });
 
 
@@ -2489,6 +2533,13 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "killai-model-plaza");
   assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
+  assert.notEqual(snapshot.normalized.incomplete, true);
+  assert.equal(snapshot.normalized.unsupportedBillingModes, undefined);
+  assert.equal(snapshot.normalized.group_ratio.Request, 1.5);
+  const requestModel = snapshot.normalized.data.find(model => model.model_name === "kill-request");
+  assert.ok(requestModel);
+  assert.ok(Math.abs(requestModel.request_price - 0.3) < 1e-12);
+  assert.equal(requestModel.price_currency, "CREDITS");
   assert.equal(snapshot.priceCurrencyVerified, true);
 
   const station = { ...preset, id: "station-killai-unverified" };
