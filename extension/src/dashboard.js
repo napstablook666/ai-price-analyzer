@@ -5,7 +5,7 @@ import { getJevModelCandidates } from "./core/matching.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
-import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
+import { activeJevProfile, DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
@@ -198,14 +198,10 @@ function jevResultKey(task, row) {
   return JSON.stringify(identity);
 }
 
-function activeJevProfile() {
-  const settings = state.data?.settings;
-  return settings?.providerProfiles?.jev?.find(profile => profile.id === settings.activeProviders?.jev) || settings?.jev || {};
-}
 
 function jevRequestPayload(task, row) {
   const settings = state.data?.settings || {};
-  const profile = activeJevProfile();
+  const profile = activeJevProfile(settings);
   return {
     task,
     stationId: row.stationId,
@@ -265,7 +261,7 @@ async function saveJevModelMatch(row, result) {
 function jevResultFor(task, row) {
   const result = state.jevResults.get(jevResultKey(task, row));
   const settings = state.data?.settings;
-  const activeJev = activeJevProfile();
+  const activeJev = activeJevProfile(settings);
   if (Number(result?.collectedAt) !== Number(row.collectedAt) || result?.jevProfileId !== settings?.activeProviders?.jev || result?.jevBaseUrl !== activeJev.baseUrl || result?.jevModelId !== activeJev.modelId || result?.referencesFetchedAt !== (state.data?.references?.fetchedAt ?? null)) return null;
   if (task === "comparison_review" && JSON.stringify(result.taskState) !== JSON.stringify(buildJevComparisonTask(row).state)) return null;
   if (task === "model_match") {
@@ -276,7 +272,7 @@ function jevResultFor(task, row) {
 }
 
 function jevActionButton(task, row, label) {
-  const config = activeJevProfile();
+  const config = activeJevProfile(state.data?.settings);
   if (!config.baseUrl || !config.modelId || !config.hasApiKey) return `<a class="jev-config-link" href="options.html">配置 JEV</a>`;
   const key = jevResultKey(task, row);
   const pending = state.jevPending.has(key);
@@ -600,7 +596,7 @@ async function handleJevAction(button) {
 
 async function runBatchJevMatches() {
   if (state.jevBatchRunning) return;
-  const profile = activeJevProfile();
+  const profile = activeJevProfile(state.data?.settings);
   if (!profile.baseUrl || !profile.modelId || !profile.hasApiKey) {
     toast("请先在设置中配置 JEV");
     return;

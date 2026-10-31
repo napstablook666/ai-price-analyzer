@@ -14,7 +14,7 @@ import { getJevModelCandidates, matchModelWithOverrides, normalizeProxyModelName
 import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, JEV_NO_MATCH, resolveJevTaskConfig } from "./core/jev-tasks.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
-import { DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
+import { activeJevProfile, DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getJevApiKey, getLlmApiKey, getProviderApiKey, getStationCredential, hasJevApiKey, hasLlmApiKey, hasProviderApiKey, removeProviderApiKey, removeStationCredential, selectProviderApiKey, setJevApiKey, setLlmApiKey, setProviderApiKey, setStationCredential } from "./shared/credentials.js";
 import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
@@ -711,10 +711,6 @@ async function testModel(message) {
   return testModelConnection({ ...config, model: config.modelId });
 }
 
-
-function activeJevProfile(settings) {
-  return settings.providerProfiles.jev.find(item => item.id === settings.activeProviders.jev) || settings.jev;
-}
 
 
 async function jevRequestConfig(settings) {

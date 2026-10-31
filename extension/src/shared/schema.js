@@ -249,6 +249,10 @@ export function normalizeSettings(input = {}) {
   return settings;
 }
 
+export function activeJevProfile(settings) {
+  return settings?.providerProfiles?.jev?.find(profile => profile.id === settings.activeProviders?.jev) || settings?.jev || {};
+}
+
 export function normalizeUrl(value) {
   const url = new URL(String(value || ""));
   if (!isSecureRemoteUrl(url)) throw new Error("远程地址必须使用 HTTPS；仅允许 localhost 使用 HTTP");

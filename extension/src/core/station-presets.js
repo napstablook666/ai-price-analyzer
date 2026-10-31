@@ -43,9 +43,6 @@ export function addCunStationPreset(stations) {
 export function addSidruneStationPreset(stations, exchangeRate = DEFAULT_EXCHANGE_RATE) {
   return addRegisteredStationPreset(stations, "sidrune", { exchangeRate });
 }
-export function addNodeAiStationPreset(stations) {
-  return addRegisteredStationPreset(stations, "nodeai");
-}
 
 export function addFuckEveryoneStationPreset(stations) {
   return addRegisteredStationPreset(stations, "fuck-everyone");

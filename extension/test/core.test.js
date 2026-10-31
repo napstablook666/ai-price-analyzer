@@ -37,7 +37,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addAllInOneStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addNodeAiStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addAllInOneStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
 import { runWithConcurrency, withKeyedLock } from "../src/core/concurrency.js";
 import { runRefreshAll } from "../src/core/refresh-scheduler.js";
 
