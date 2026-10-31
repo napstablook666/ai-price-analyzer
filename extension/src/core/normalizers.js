@@ -1042,6 +1042,121 @@ export class NodeAiModelPlazaStrategy extends ModelPlazaStrategy {
   }
 }
 
+function allInOneModels(raw) {
+  if (raw?.code !== 0) return [];
+  for (const candidate of [raw?.data?.list, raw?.data?.data?.list, raw?.data, raw?.list]) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  return [];
+}
+
+function isAllInOneEnvelope(raw) {
+  return raw?.code === 0 && [raw?.data?.list, raw?.data?.data?.list, raw?.data, raw?.list].some(Array.isArray);
+}
+
+export class AllInOneModelsStrategy extends ParsingStrategy {
+  canParse(raw, options = {}) {
+    return options.responseFormat === "all-in-one-models" && isAllInOneEnvelope(raw);
+  }
+
+  parse(raw) {
+    const data = [];
+    const models = allInOneModels(raw);
+    const unsupportedBillingModes = new Set();
+    const invalidPricingValues = new Set();
+    const unpricedModels = new Set();
+    const modelCount = models.length;
+    const perMillion = value => {
+      const parsed = finitePrice(value);
+      return parsed === null ? null : parsed * 1_000_000;
+    };
+    const invalid = (object, fields) => fields.some(field => own(object, field) && object[field] !== null && object[field] !== undefined && object[field] !== "" && finitePrice(object[field]) === null);
+    const modelName = model => String(model?.model_id || model?.model_name || model?.id || "").trim();
+    const displayName = model => String(model?.display_name || model?.model_name_display || model?.name || modelName(model)).trim();
+    const rowsFor = (model, tier, tierIndex, tiered) => {
+      const key = `${modelName(model)}:${tiered ? `tier:${tierIndex}` : "default"}`;
+      if (tiered && (!tier || typeof tier !== "object" || Array.isArray(tier))) {
+        invalidPricingValues.add(`${key}:tier`);
+        return;
+      }
+      const source = tiered ? tier : model;
+      const fields = ["input_price", "output_price", "cache_read_price", "cache_read", "cache_creation_price", "cache_write_price", "cache_write", "cache_creation_1h_price", "cache_write_1h_price"];
+      const minTokens = tiered && own(source, "min_tokens") ? finitePrice(source.min_tokens) : null;
+      const maxTokens = tiered && own(source, "max_tokens") && source.max_tokens !== null ? finitePrice(source.max_tokens) : null;
+      const invalidBounds = tiered && ((own(source, "min_tokens") && minTokens === null) || (own(source, "max_tokens") && source.max_tokens !== null && maxTokens === null) || (minTokens !== null && maxTokens !== null && maxTokens < minTokens));
+      if (invalid(source, fields) || invalidBounds) {
+        invalidPricingValues.add(invalidBounds ? `${key}:bounds` : key);
+        return;
+      }
+      const input = perMillion(source.input_price);
+      const output = perMillion(source.output_price);
+      const cacheRead = perMillion(source.cache_read_price ?? source.cache_read);
+      const cacheWrite = perMillion(source.cache_creation_price ?? source.cache_write_price ?? source.cache_write);
+      const cacheWrite1h = perMillion(source.cache_creation_1h_price ?? source.cache_write_1h_price);
+      if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) {
+        unpricedModels.add(key);
+        return;
+      }
+      unpricedModels.delete(key);
+      const row = {
+        model_name: modelName(model),
+        model_display_name: displayName(model),
+        model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
+        completion_ratio: input > 0 && output !== null ? output / input : 1,
+        input_price: input,
+        output_price: output,
+        cache_read_price: cacheRead,
+        cache_write_price: cacheWrite,
+        cache_write_1h_price: cacheWrite1h,
+        request_price: null,
+        price_currency: "CREDITS",
+        enable_groups: [],
+        proxy_group_name: "",
+        group_ratio: 1,
+        evidence: "exact"
+      };
+      if (tiered) {
+        if (Object.hasOwn(source, "min_tokens")) row.min_tokens = source.min_tokens;
+        if (Object.hasOwn(source, "max_tokens")) row.max_tokens = source.max_tokens;
+        const tierName = String(source.tier_label || source.tier_name || source.name || "").trim();
+        if (tierName) row.tier_name = tierName;
+      }
+      data.push(row);
+    };
+
+    for (const model of models) {
+      const name = modelName(model);
+      if (!name) continue;
+      const billingMode = String(model.billing_mode || "token").trim().toLowerCase();
+      if (!["token", "tiered"].includes(billingMode)) {
+        unsupportedBillingModes.add(billingMode || "unknown");
+        continue;
+      }
+      const tiers = billingMode === "tiered" ? model.pricing_tiers : null;
+      if (billingMode === "tiered" && (!Array.isArray(tiers) || !tiers.length)) {
+        unpricedModels.add(`${name}:default`);
+        continue;
+      }
+      if (billingMode === "tiered") {
+        tiers.forEach((tier, index) => rowsFor(model, tier, index, true));
+      } else {
+        rowsFor(model, null, 0, false);
+      }
+    }
+    if (!modelCount) throw new Error("all-in-one.icu 模型价格数据为空");
+    return {
+      data,
+      group_ratio: {},
+      sourceFormat: "all-in-one-models",
+      ...(unsupportedBillingModes.size || invalidPricingValues.size || unpricedModels.size ? { incomplete: true } : {}),
+      ...(unsupportedBillingModes.size ? { unsupportedBillingModes: [...unsupportedBillingModes].sort() } : {}),
+      ...(invalidPricingValues.size ? { invalidPricingValues: [...invalidPricingValues].sort() } : {}),
+      ...(unpricedModels.size ? { unpricedModels: [...unpricedModels].sort() } : {})
+    };
+  }
+}
+
+
 export class JijiModelPlazaStrategy extends ParsingStrategy {
   canParse(raw) {
     return raw?.code === 0 && Array.isArray(raw?.data?.groups) && !raw.data.groups.some(group =>
@@ -1171,6 +1286,7 @@ registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
+registerResponseFormatHandler("all-in-one-models", () => new AllInOneModelsStrategy());
 assertResponseFormatHandlers();
 
 function explicitStrategyFor(format) {

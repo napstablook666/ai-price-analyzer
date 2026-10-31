@@ -13,10 +13,13 @@ export function selectPageTab(tabs, origin, preferredTabId, preferredPath) {
   if (preferred) return preferred;
   if (matchingTabs.length === 1) return matchingTabs[0];
   if (preferredPath) {
-    let pathname;
-    try { pathname = new URL(preferredPath, origin).pathname; } catch { return null; }
+    let preferredUrl;
+    try { preferredUrl = new URL(preferredPath, origin); } catch { return null; }
     const pathMatches = matchingTabs.filter(tab => {
-      try { return new URL(tab.url).pathname === pathname; } catch { return false; }
+      try {
+        const tabUrl = new URL(tab.url);
+        return tabUrl.pathname === preferredUrl.pathname && (!preferredUrl.hash || tabUrl.hash === preferredUrl.hash);
+      } catch { return false; }
     });
     if (pathMatches.length === 1) return pathMatches[0];
   }
@@ -51,9 +54,9 @@ function waitForTab(tabs, tabId) {
 }
 
 export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTemporaryWhenAmbiguous = false, keepOnLoadFailure = false } = {}) {
-  const url = new URL(station.baseUrl);
+  const url = new URL(station.adapter?.pageUrl || station.baseUrl);
   const candidates = await tabs.query({});
-  let tab = selectPageTab(candidates, url.origin, preferredTabId, url.pathname);
+  let tab = selectPageTab(candidates, url.origin, preferredTabId, url.toString());
   const provider = providerForStation(station, { forPrepare: true });
   if (tab) return { tab, temporary: false };
   if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`)).length > 1) return { tab: null, temporary: false };

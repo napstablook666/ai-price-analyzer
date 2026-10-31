@@ -79,7 +79,7 @@ export async function collectStation(station, { fetchImpl = fetch, pageFetch, co
   let firstEmptySnapshot = null;
   let lastError = null;
 
-  if (station.mode === "page" && pageFetch?.supportsCapture) {
+  if (station.mode === "page" && pageFetch?.supportsCapture && requestStrategy.skipCapture !== true) {
     try {
       const response = await pageFetch({ capture: true });
       if (isPageSessionFailure(requestStrategy, response)) throw new Error(requestError(station, requestStrategy, response));

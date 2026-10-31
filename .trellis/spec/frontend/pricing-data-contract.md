@@ -40,6 +40,91 @@ This contract covers station pricing from collection through snapshots and dashb
 - `NORMALIZATION_VERSION` changes whenever old normalized snapshots could encode a different trust decision. Version `24` is required after ordinary stale verification repair; `snapshotNeedsRefresh()` rejects older versions.
 - Raw official OpenRouter API reference prices remain USD. Comparison maps the same numeric USD-credit value 1:1 to `CREDITS` and computes RMB benchmark cost separately with the configured `openRouterRechargeRate`. OpenRouter purchase fees are not model prices.
 
+## TokenFlux Public Pricing
+
+### 1. Scope / Trigger
+
+- Trigger: a selectable public pricing station reads TokenFlux's anonymous pricing API.
+- This contract covers `https://tokenflux.cloud/pricing` and `GET /api/pricing`; no login or extension credential is supported.
+
+### 2. Contracts
+
+- The explicit response format is `tokenflux`; a valid envelope has `success: true`, a flat `data` array, and top-level `group_ratio`.
+- Token rows use `model_ratio` as CNY per million input tokens and `completion_ratio` as the output/input multiplier. Apply the selected group's `group_ratio` once to input, output, and cache-read prices.
+- `create_cache_ratio` is the only source for `cache_write_price`; missing values remain `null`.
+- A positive `model_price` with `quota_type: 1` emits `request_price`; a positive `model_price` with `image-generation` emits `image_price`. These rows keep token prices empty.
+- `tiered_expr` and `billing_expr` are out of scope. Skip the model, add its mode to `unsupportedBillingModes`, and mark the result `incomplete` without dropping other valid rows.
+- Collection assigns rows to `CREDITS`; `rechargeRateVerified` remains false, so comparison uses the existing 1:1 recharge fallback.
+
+### 3. Validation & Tests
+
+- Reject failed or malformed envelopes through the explicit format guard; skip individual rows with missing names or non-finite required values.
+- Test the exact public endpoint, omitted credentials, group multiplier, cache fields, image/request fields, unsupported tiered diagnostics, and idempotent preset registration.
+
+## all-in-one.icu Tenant Model Pricing
+
+### 1. Scope / Trigger
+
+- Trigger: a login-required tenant model page adds a selectable station adapter for `https://all-in-one.icu/#/tenant/models`.
+- This contract covers the authenticated page request and token/tiered model-list normalization; it does not implement site login or persist site credentials.
+
+### 2. Signatures
+
+- `prepareStationInput(stationInput = {})` matches the `all-in-one.icu` hostname and `#/tenant/models` hash route.
+- `collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {})` uses the page bridge for the tenant catalog.
+- `normalizePricingPayload(payload, format = "auto", options = {})` dispatches explicit format `all-in-one-models` to `AllInOneModelsStrategy`.
+
+### 3. Contracts
+
+- Request `GET /api/tenant/models` from the same-origin page with `credentials: "include"`; page auth reads only `localStorage.tenant_access_token` and injects `Authorization: Bearer <token>`. Extension station auth and user passwords must not cross the bridge.
+- The provider must skip the unauthenticated DOM/captured-response shortcut and make the authenticated page request. Missing token or HTTP 401/403 is a page-session failure; there is no anonymous fallback.
+- The explicit response envelope is `{ code: 0, data: { list: Model[] } }`; compatibility list wrappers are accepted only by `all-in-one-models`, never by generic auto detection.
+- `billing_mode: "token"` converts token prices to per-million units once. `billing_mode: "tiered"` emits one row per `pricing_tiers` item and preserves `min_tokens`, `max_tokens`, and tier labels. Cache read/write aliases map to the existing normalized cache fields.
+- Invalid or missing prices, malformed tier objects/bounds, and unsupported modes such as `per_request`, `per_second`, or `special` produce existing partial diagnostics and never fabricate zero or model-level fallback prices. Rows are `CREDITS`; recharge verification remains unconfirmed and comparison keeps the existing 1:1 fallback.
+
+### 4. Validation & Error Matrix
+
+| Condition | Normalized / collection result |
+|---|---|
+| Logged-in page with valid `tenant_access_token` | Authenticated GET and token/tiered rows |
+| Missing token or 401/403 | Page-session failure; no capture or anonymous fallback |
+| Generic `{ data: { list: [...] } }` without explicit format | Not classified as all-in-one |
+| Invalid price or tier boundary | `invalidPricingValues` / `unpricedModels`; no fabricated row |
+| Unsupported billing mode | `unsupportedBillingModes`, partial result, no token row |
+| Valid model rows | `price_currency: "CREDITS"`, no inferred USD recharge conversion |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `input_price: 0.000002` becomes `2` per 1M; two valid tiers remain two rows with their own boundaries.
+- Base: a missing optional cache price remains `null` while valid input/output prices are retained.
+- Bad: using a stale captured response after the local-storage token disappears, flattening tiered prices to model-level values, or sending a configured station bearer token.
+
+### 6. Tests Required
+
+- Assert preset idempotence and unchanged empty-list registration, hash-route tab selection, exact endpoint, GET/include request, explicit response format, and absent extension authorization.
+- Assert page auth configuration uses `tenant_access_token` and Bearer scheme; assert the provider skips pre-auth capture and delegates missing-token failure to the page bridge policy.
+- Assert token per-million conversion, cache aliases, multiple tier boundaries, malformed tiers, invalid prices, unsupported modes, explicit-format gating, CREDITS rows, and 1:1 recharge comparison.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```js
+if (pageFetch.supportsCapture) return pageFetch({ capture: true });
+```
+
+This can reuse stale page data without checking the current tenant token.
+
+#### Correct
+
+```js
+if (requestStrategy.skipCapture !== true && pageFetch?.supportsCapture) {
+  // use capture only for providers whose page policy permits it
+}
+```
+
+The all-in-one provider sets `skipCapture: true`, so every collection goes through the local-storage-authenticated page request.
+
 ## SevenAI Model Plaza
 
 ### 1. Scope / Trigger

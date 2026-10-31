@@ -17,6 +17,7 @@ export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";
 export const NEXA_CHANNEL_CATALOG_ENDPOINT = "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai";
 export const AIAPI_MODEL_CATALOG_ENDPOINT = "/api/me/model-catalog";
+export const ALL_IN_ONE_MODELS_ENDPOINT = "/api/tenant/models";
 const AIAPI_MODEL_CATALOG_FORMAT = "aiapi-model-catalog";
 export const HEPINGAN_CHANNELS_ENDPOINT = "/api/v1/channels/available";
 
@@ -25,6 +26,7 @@ export const RAW_PRICE_KEYS = new Set([
   ...MODEL_PLAZA_RAW_PRICE_KEYS,
   ...PRICE_FIELD_DEFINITIONS.flatMap(field => field.aliases)
 ].map(key => key.toLowerCase()));
+const ALL_IN_ONE_PRICE_KEYS = new Set([...RAW_PRICE_KEYS, "cache_read", "cache_creation_price", "cache_creation_1h_price"]);
 
 const JIJI_HOST = "jiji.cc";
 const JIJI_MODEL_PAGE = "/custom/13235f4cd3f1e94e";
@@ -189,6 +191,18 @@ const aiApiPreset = {
   adapter: { kind: "aiapi-model-catalog", endpoint: AIAPI_MODEL_CATALOG_ENDPOINT, method: "GET", responseFormat: AIAPI_MODEL_CATALOG_FORMAT }
 };
 
+const allInOnePreset = {
+  id: "all-in-one",
+  name: "all-in-one.icu",
+  baseUrl: "https://all-in-one.icu/#/tenant/models",
+  rechargeRateVerified: false,
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  enabled: true,
+  mode: "page",
+  auth: { type: "none" },
+  adapter: { kind: "all-in-one-models", endpoint: ALL_IN_ONE_MODELS_ENDPOINT, method: "GET", responseFormat: "all-in-one-models", pageUrl: "https://all-in-one.icu/#/tenant/models" }
+};
 const hepinganPreset = {
   id: "hepingan",
   name: "hepingan.top",
@@ -207,13 +221,18 @@ function normalizePath(value) {
   return path || "/";
 }
 
+function hashPath(value) {
+  const hash = String(value || "").replace(/^#/, "").split("?", 1)[0];
+  return normalizePath(hash || "/");
+}
+
 function stationUrl(station) {
   try { return new URL(String(station?.baseUrl || "")); } catch { return null; }
 }
 
 export function stationContext(station) {
   const url = stationUrl(station);
-  return { url, hostname: normalizeHostname(url?.hostname), path: normalizePath(url?.pathname) };
+  return { url, hostname: normalizeHostname(url?.hostname), path: normalizePath(url?.pathname), hashPath: hashPath(url?.hash) };
 }
 
 function exactPath(...paths) {
@@ -273,7 +292,8 @@ function requestPolicy(endpoint, options = {}) {
     credentials: options.credentials || "omit",
     priceKeys: options.priceKeys || RAW_PRICE_KEYS,
     query: options.query || null,
-    pageAuth: options.pageAuth || null
+    pageAuth: options.pageAuth || null,
+    skipCapture: options.skipCapture === true
   };
 }
 
@@ -530,6 +550,38 @@ export const PROVIDER_REGISTRY = [
     request: requestPolicy(() => HEPINGAN_CHANNELS_ENDPOINT, {
       credentials: "include",
       pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 Hepingan 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401])
+    })
+  },
+  {
+    id: "all-in-one",
+    preserveRechargeRateVerification: true,
+    host: "all-in-one.icu",
+    matches: ({ hostname, path, hashPath }, station = {}) => hostname === "all-in-one.icu" && (hashPath === "/tenant/models" || (path === "/" && station.adapter?.kind === "all-in-one-models")),
+    prepareMatches: ({ hostname, path, hashPath }, station = {}) => hostname === "all-in-one.icu" && (hashPath === "/tenant/models" || (path === "/" && station.adapter?.kind === "all-in-one-models")),
+    prepare: (stationInput, { url }) => {
+      const prepared = {
+        ...stationInput,
+        baseUrl: `${url.origin}/#/tenant/models`,
+        mode: "page",
+        auth: { type: "none" },
+        adapter: { ...(stationInput.adapter || {}), kind: "all-in-one-models", endpoint: ALL_IN_ONE_MODELS_ENDPOINT, method: "GET", responseFormat: "all-in-one-models", pageUrl: `${url.origin}/#/tenant/models` }
+      };
+      if (typeof prepared.rechargeRateVerified !== "boolean") prepared.rechargeRateVerified = allInOnePreset.rechargeRateVerified;
+      if (!prepared.priceCurrency) prepared.priceCurrency = allInOnePreset.priceCurrency;
+      if (typeof prepared.priceCurrencyVerified !== "boolean") prepared.priceCurrencyVerified = allInOnePreset.priceCurrencyVerified;
+      return prepared;
+    },
+    mode: "page",
+    openTemporaryPage: true,
+    responseFormat: "all-in-one-models",
+    authType: "none",
+    rationale: "all-in-one.icu 通过已登录页面读取租户模型价格",
+    preset: allInOnePreset,
+    request: requestPolicy(() => ALL_IN_ONE_MODELS_ENDPOINT, {
+      priceKeys: ALL_IN_ONE_PRICE_KEYS,
+      credentials: "include",
+      pageAuth: localStoragePageAuth("tenant_access_token", "Authorization", "未找到 all-in-one.icu 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401, 403]),
+      skipCapture: true
     })
   },
   {

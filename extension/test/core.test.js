@@ -5,7 +5,7 @@ import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
-import { HEPINGAN_CHANNELS_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
+import { ALL_IN_ONE_MODELS_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationScores, buildComparisonRows, currencyToRmb, getProxyPriceQuote, getProxyPrices, getTierShares, workloadCost } from "../src/core/pricing.js";
@@ -37,7 +37,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addNodeAiStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addAllInOneStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addNodeAiStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
 import { runWithConcurrency, withKeyedLock } from "../src/core/concurrency.js";
 import { runRefreshAll } from "../src/core/refresh-scheduler.js";
 
@@ -144,6 +144,36 @@ const tokenFluxFixture = {
   ]
 };
 
+const allInOneFixture = {
+  code: 0,
+  message: "ok",
+  data: {
+    list: [
+      {
+        model_id: "all-token-model",
+        model_name: "all-token-model",
+        display_name: "All Token Model",
+        billing_mode: "token",
+        input_price: 0.000002,
+        output_price: 0.000008,
+        cache_read_price: 0.0000002,
+        cache_creation_price: 0.000001
+      },
+      {
+        model_id: "all-tiered-model",
+        model_name: "all-tiered-model",
+        display_name: "All Tiered Model",
+        billing_mode: "tiered",
+        pricing_tiers: [
+          { tier_label: "0-100K", min_tokens: 0, max_tokens: 100000, input_price: 0.000001, output_price: 0.000004, cache_read_price: 0.0000001 },
+          { tier_label: "100K+", min_tokens: 100001, max_tokens: null, input_price: 0.000002, output_price: 0.000006, cache_creation_price: 0.0000008 }
+        ]
+      },
+      { model_id: "all-per-request", billing_mode: "per_request", input_price: 0.000001 },
+      { model_id: "all-missing", billing_mode: "token" }
+    ]
+  }
+};
 
 const response = body => ({
   ok: true,
@@ -353,6 +383,38 @@ const fuckEveryoneScreenshotFixture = {
     }]
   }
 };
+test("adds the all-in-one station preset idempotently without changing empty defaults", () => {
+  const stations = addAllInOneStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].baseUrl, "https://all-in-one.icu/#/tenant/models");
+  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].adapter.endpoint, ALL_IN_ONE_MODELS_ENDPOINT);
+  assert.equal(stations[1].adapter.responseFormat, "all-in-one-models");
+  assert.equal(addAllInOneStationPreset(stations), stations);
+  assert.equal(addAllInOneStationPreset([]).length, 0);
+});
+
+test("opens the all-in-one hash-route page when no site tab is available", async () => {
+  const opened = [];
+  const tabs = {
+    query: async () => [],
+    create: async options => {
+      opened.push(options);
+      return { id: 45, url: options.url, status: "complete" };
+    },
+    get: async tabId => ({ id: tabId, url: "https://all-in-one.icu/#/tenant/models", status: "complete" }),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, {
+    baseUrl: "https://all-in-one.icu",
+    mode: "page",
+    adapter: { kind: "all-in-one-models", pageUrl: "https://all-in-one.icu/#/tenant/models" }
+  });
+  assert.equal(result.temporary, true);
+  assert.deepEqual(opened, [{ url: "https://all-in-one.icu/#/tenant/models", active: false }]);
+});
+
 test("adds the missing AIAPI station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
   const stations = addAiApiStationPreset(current);
@@ -1637,7 +1699,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "fuck-everyone", "killai", "sevenai", "tokenflux"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -2643,6 +2705,86 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
     assert.ok(!offer.pricingUnavailableReasons.includes("recharge_unverified"));
   }
 });
+test("adapts all-in-one.icu page auth and token/tiered pricing", async () => {
+  const station = {
+    id: "station-all-in-one",
+    name: "all-in-one.icu",
+    baseUrl: "https://all-in-one.icu/#/tenant/models",
+    auth: { type: "bearer", token: "must-not-be-sent" },
+    adapter: { endpoint: "/wrong", method: "POST", responseFormat: "pqh" }
+  };
+  const provider = providerForStation(station);
+  assert.equal(provider.id, "all-in-one");
+  assert.equal(provider.responseFormat, "all-in-one-models");
+  const adapter = inferStationAdapter(station);
+  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.endpoint, ALL_IN_ONE_MODELS_ENDPOINT);
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.responseFormat, "all-in-one-models");
+  assert.equal(adapter.authType, "none");
+  const prepared = prepareStationInput({ ...station, adapter });
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.baseUrl, "https://all-in-one.icu/#/tenant/models");
+
+  let request;
+  const snapshot = await collectStationInput({ ...station, adapter }, {
+    pageFetch: async value => {
+      request = value;
+      return response(allInOneFixture);
+    }
+  });
+  assert.equal(request.url, "https://all-in-one.icu/api/tenant/models");
+  assert.equal(request.method, "GET");
+  assert.equal(request.credentials, "include");
+  assert.equal(request.headers.Authorization, undefined);
+  assert.equal(request.pageAuth.source, "localStorage");
+  assert.equal(request.pageAuth.storageKey, "tenant_access_token");
+  assert.equal(request.pageAuth.header, "Authorization");
+  assert.equal(request.pageAuth.scheme, "Bearer");
+  assert.deepEqual(request.pageAuth.sessionFailureStatuses, [401, 403]);
+  assert.equal(snapshot.status, "partial");
+  assert.equal(snapshot.normalized.sourceFormat, "all-in-one-models");
+  assert.equal(snapshot.normalized.data.every(row => row.price_currency === "CREDITS"), true);
+
+  const token = snapshot.normalized.data.find(row => row.model_name === "all-token-model");
+  assert.equal(token.model_display_name, "All Token Model");
+  assert.deepEqual([token.input_price, token.output_price, token.cache_read_price, token.cache_write_price].map(value => Number(value.toFixed(6))), [2, 8, 0.2, 1]);
+  const tiers = snapshot.normalized.data.filter(row => row.model_name === "all-tiered-model");
+  assert.equal(tiers.length, 2);
+  assert.deepEqual(tiers.map(row => [row.tier_name, row.min_tokens, row.max_tokens, row.input_price, row.output_price]), [
+    ["0-100K", 0, 100000, 1, 4], ["100K+", 100001, null, 2, 6]
+  ]);
+  assert.equal(Number(tiers[1].cache_write_price.toFixed(6)), 0.8);
+  assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["per_request"]);
+  assert.equal(snapshot.normalized.invalidPricingValues, undefined);
+  assert.deepEqual(snapshot.normalized.unpricedModels, ["all-missing:default"]);
+});
+
+test("keeps all-in-one invalid prices in partial diagnostics", () => {
+  const payload = structuredClone(allInOneFixture);
+  payload.data.list = [{ model_id: "all-invalid", billing_mode: "token", input_price: "not-a-price" }];
+  const normalized = normalizePricingPayload(payload, "all-in-one-models");
+  assert.equal(normalized.incomplete, true);
+  assert.deepEqual(normalized.invalidPricingValues, ["all-invalid:default"]);
+  assert.deepEqual(normalized.data, []);
+});
+
+test("does not fall back from malformed all-in-one tiers to model prices", () => {
+  const normalized = normalizePricingPayload({
+    code: 0,
+    data: { list: [{ model_id: "all-malformed-tier", billing_mode: "tiered", input_price: 0.000001, pricing_tiers: [null] }] }
+  }, "all-in-one-models");
+  assert.equal(normalized.incomplete, true);
+  assert.deepEqual(normalized.invalidPricingValues, ["all-malformed-tier:tier:0:tier"]);
+  assert.deepEqual(normalized.data, []);
+});
+
+test("does not misclassify all-in-one envelopes without its explicit format", () => {
+  const normalized = normalizePricingPayload(allInOneFixture);
+  assert.equal(normalized.sourceFormat, "unknown");
+  assert.deepEqual(normalized.data, []);
+});
+
 test("adapts the TokenFlux pricing API and station preset", async () => {
   const registered = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://relay.example" }]);
   const preset = registered.find(station => station.id === "tokenflux");
@@ -3781,6 +3923,29 @@ test("page discovery requires the initiating tab when origins are ambiguous", ()
   assert.equal(selectPageTab(tabs, "https://relay.example", 11), null);
   assert.equal(selectPageTab(tabs, "https://relay.example"), null);
   assert.equal(selectPageTab([tabs[0]], "https://relay.example"), tabs[0]);
+  const hashTabs = [
+    { id: 21, url: "https://all-in-one.icu/#/login" },
+    { id: 22, url: "https://all-in-one.icu/#/tenant/models" }
+  ];
+  assert.equal(selectPageTab(hashTabs, "https://all-in-one.icu", 20, "https://all-in-one.icu/#/tenant/models"), hashTabs[1]);
+});
+test("skips unauthenticated page capture for localStorage-authenticated stations", async () => {
+  const requests = [];
+  const pageFetch = async request => {
+    requests.push(request);
+    return response(allInOneFixture);
+  };
+  pageFetch.supportsCapture = true;
+  const snapshot = await collectStationInput({
+    id: "station-all-in-one-capture",
+    name: "all-in-one.icu",
+    baseUrl: "https://all-in-one.icu/#/tenant/models",
+    mode: "page"
+  }, { pageFetch });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].capture, undefined);
+  assert.equal(requests[0].pageAuth.storageKey, "tenant_access_token");
+  assert.equal(snapshot.normalized.sourceFormat, "all-in-one-models");
 });
 test("installs bridge scripts when an existing page has no bridge", async () => {
   const injections = [];

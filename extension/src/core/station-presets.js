@@ -62,6 +62,9 @@ export function addCheapRouterStationPreset(stations) {
 export function addAiApiStationPreset(stations) {
   return addRegisteredStationPreset(stations, "aiapi");
 }
+export function addAllInOneStationPreset(stations) {
+  return addRegisteredStationPreset(stations, "all-in-one");
+}
 export function addHepinganStationPreset(stations) {
   return addRegisteredStationPreset(stations, "hepingan");
 }
@@ -69,6 +72,7 @@ export function addHepinganStationPreset(stations) {
 export {
   HEPINGAN_CHANNELS_ENDPOINT,
   AIAPI_MODEL_CATALOG_ENDPOINT,
+  ALL_IN_ONE_MODELS_ENDPOINT,
   AIAPI_PRICE_KEYS,
   CHEAP_ROUTER_PRICING_ENDPOINT,
   NEXA_CHANNEL_CATALOG_ENDPOINT,
