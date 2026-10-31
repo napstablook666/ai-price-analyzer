@@ -1,5 +1,5 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
-import { callService, downloadJson, readJsonFile, escapeHtml, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
+import { callService, downloadJson, readJsonFile, escapeHtml, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
 import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pickWorkspace, readWorkspace, writeWorkspace } from "./shared/workspace.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
@@ -9,13 +9,6 @@ const state = { stations: [], settings: null, modelCatalog: { llm: [], jev: [] }
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 
-function toast(message) {
-  const node = $("#toast");
-  node.textContent = message;
-  node.hidden = false;
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
-}
 
 function setWorkspaceStatus(message, error = false) {
   const node = $("#workspace-status");

@@ -2,7 +2,7 @@ import { flattenComparisonRows } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { buildJevComparisonTask, getJevModelBatchTargets, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
 import { getJevModelCandidates } from "./core/matching.js";
-import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress } from "./shared/ui.js";
+import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
@@ -28,13 +28,6 @@ function renderProviderSwitchers(settings) {
     select.value = activeId;
     select.disabled = !profiles.length;
   }
-}
-function toast(message) {
-  const node = $("#toast");
-  node.textContent = message;
-  node.hidden = false;
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
 }
 
 function formatPrice(value, currency = "CNY", precision = 4) {

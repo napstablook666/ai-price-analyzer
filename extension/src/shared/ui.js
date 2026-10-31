@@ -87,6 +87,14 @@ export function formatRefreshSummary(summary = {}) {
   const duration = Number.isFinite(Number(summary.durationMs)) ? ` · ${(Number(summary.durationMs) / 1000).toFixed(1)} 秒` : "";
   return `查询完成：${Number(summary.successCount) || 0} 成功，${Number(summary.partialCount) || 0} 部分成功，${Number(summary.errorCount) || 0} 失败，共 ${Number(summary.totalModels) || 0} 个模型${duration}`;
 }
+
+export function toast(message) {
+  const node = document.querySelector("#toast");
+  node.textContent = message;
+  node.hidden = false;
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
+}
 export async function downloadJson(filename, value) {
   const text = JSON.stringify(value);
   let blob = new Blob([text], { type: "application/json" });
