@@ -59,6 +59,91 @@ const cunFixture = {
   usable_group: { default: "Default" },
   data: [{ model_name: "gpt-4o", model_ratio: 2, completion_ratio: 3, enable_groups: ["default"] }]
 };
+const tokenFluxFixture = {
+  success: true,
+  pricing_version: "abc123",
+  auto_groups: ["Codex号池"],
+  group_ratio: {
+    default: 1,
+    "Gork": 0.5,
+    "MIMO": 0.5,
+    "Codex号池": 0.2,
+    "Claude Code 特惠": 0.2,
+    "绘图模型": 1,
+    "[稳定]Codex号池": 0.2,
+    "[特价]Codex号池": 0.2
+  },
+  usable_group: {
+    default: "默认分组",
+    Gork: "",
+    Codex号池: ""
+  },
+  vendors: [
+    { id: 1, name: "OpenAI", icon: "OpenAI.Color" },
+    { id: 3, name: "DeepSeek", icon: "DeepSeek.Color" },
+    { id: 19, name: "xAI", icon: "XAI" }
+  ],
+  supported_endpoint: {
+    openai: { path: "/v1/chat/completions", method: "POST" },
+    "image-generation": { path: "/v1/images/generations", method: "POST" }
+  },
+  data: [
+    {
+      model_name: "deepseek-v4-flash",
+      description: "DeepSeek V4 Flash",
+      vendor_id: 3,
+      quota_type: 0,
+      model_ratio: 0.07,
+      model_price: 0,
+      owner_by: "",
+      completion_ratio: 2,
+      cache_ratio: 0.07142857142857142,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["openai"]
+    },
+    {
+      model_name: "gpt-5.6-latitude",
+      description: "GPT-5.6 Latitude with tiered pricing",
+      vendor_id: 1,
+      quota_type: 0,
+      model_ratio: 2.5,
+      model_price: 0,
+      completion_ratio: 6,
+      cache_ratio: 0.1,
+      enable_groups: ["default", "Codex号池"],
+      supported_endpoint_types: ["openai"],
+      billing_mode: "tiered_expr",
+      billing_expr: "len <= 272000 ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"long_context\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
+    },
+    {
+      model_name: "gpt-image-2.5",
+      vendor_id: 1,
+      quota_type: 1,
+      model_ratio: 0,
+      model_price: 0.1,
+      owner_by: "",
+      completion_ratio: 0,
+      enable_groups: ["default", "绘图模型"],
+      supported_endpoint_types: ["image-generation"]
+    },
+    {
+      model_name: "wan2.7-i2v",
+      vendor_id: 18,
+      quota_type: 1,
+      model_ratio: 0,
+      model_price: 1,
+      owner_by: "",
+      completion_ratio: 0,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["openai"],
+      billing_usage_schema: {
+        resolution: { enum: ["480P", "720P", "1080P"] },
+        seconds: { type: "number", unit: "second" }
+      }
+    }
+  ]
+};
+
 
 const response = body => ({
   ok: true,
@@ -1552,7 +1637,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "fuck-everyone", "killai", "sevenai"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "fuck-everyone", "killai", "sevenai", "tokenflux"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -2557,6 +2642,99 @@ test("adapts KillAI model plaza through the logged-in page", async () => {
     assert.ok(!offer.pricingUnavailableReasons.includes("currency_unverified"));
     assert.ok(!offer.pricingUnavailableReasons.includes("recharge_unverified"));
   }
+});
+test("adapts the TokenFlux pricing API and station preset", async () => {
+  const registered = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://relay.example" }]);
+  const preset = registered.find(station => station.id === "tokenflux");
+  assert.ok(preset);
+  assert.equal(preset.mode, "direct");
+  assert.equal(preset.priceCurrency, "CREDITS");
+  assert.equal(preset.priceCurrencyVerified, true);
+  assert.equal(preset.rechargeRateVerified, false);
+
+  const adapter = inferStationAdapter({ baseUrl: "https://tokenflux.cloud/pricing" });
+  assert.equal(adapter.mode, "direct");
+  assert.equal(adapter.endpoint, "/api/pricing");
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.responseFormat, "tokenflux");
+  assert.equal(adapter.authType, "none");
+
+  const prepared = prepareStationInput({
+    baseUrl: "https://tokenflux.cloud/pricing",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  });
+  assert.equal(prepared.baseUrl, "https://tokenflux.cloud/pricing");
+  assert.equal(prepared.mode, "direct");
+  assert.equal(prepared.auth.type, "none");
+  assert.equal(prepared.adapter.responseFormat, "tokenflux");
+
+  let request;
+  const snapshot = await collectStationInput({
+    id: "station-tokenflux",
+    name: "TokenFlux",
+    baseUrl: "https://tokenflux.cloud/pricing"
+  }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response(tokenFluxFixture);
+    }
+  });
+  assert.equal(request.url, "https://tokenflux.cloud/api/pricing");
+  assert.equal(request.init.method, "GET");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(snapshot.status, "partial");
+  assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
+  assert.deepEqual(snapshot.normalized.group_ratio, {
+    default: 1, Gork: 0.5, MIMO: 0.5, "Codex号池": 0.2,
+    "Claude Code 特惠": 0.2, "绘图模型": 1, "[稳定]Codex号池": 0.2, "[特价]Codex号池": 0.2
+  });
+  assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["tiered_expr"]);
+  assert.equal(snapshot.normalized.incomplete, true);
+
+  const flash = snapshot.normalized.data.find(row => row.model_name === "deepseek-v4-flash");
+  assert.ok(flash);
+  assert.equal(flash.input_price, 0.07);
+  assert.equal(flash.output_price, 0.14);
+  assert.equal(flash.cache_read_price, 0.005);
+  assert.equal(flash.cache_write_price, null);
+  assert.equal(flash.price_currency, "CREDITS");
+  assert.equal(flash.proxy_group_name, "default");
+  assert.equal(flash.group_ratio, 1);
+
+  const tiered = snapshot.normalized.data.find(row => row.model_name === "gpt-5.6-latitude");
+  assert.equal(tiered, undefined);
+
+  const image = snapshot.normalized.data.find(row => row.model_name === "gpt-image-2.5");
+  assert.ok(image);
+  assert.equal(image.image_price, 0.1);
+  assert.equal(image.request_price, null);
+  assert.equal(image.input_price, null);
+  assert.equal(image.output_price, null);
+
+  const video = snapshot.normalized.data.find(row => row.model_name === "wan2.7-i2v");
+  assert.ok(video);
+  assert.equal(video.request_price, 1);
+  assert.equal(video.image_price, null);
+});
+test("rejects a failed TokenFlux envelope in its explicit format", () => {
+  const failed = normalizeProxyData({ ...tokenFluxFixture, success: false }, { responseFormat: "tokenflux" });
+  assert.equal(failed.sourceFormat, "unknown");
+  assert.deepEqual(failed.data, []);
+});
+test("skips malformed TokenFlux rows and applies group ratios", () => {
+  const normalized = normalizePricingPayload({
+    ...tokenFluxFixture,
+    data: [
+      { model_name: "invalid", model_ratio: "not-a-price", completion_ratio: 1, enable_groups: ["default"] },
+      { model_name: "codex-pool-model", model_ratio: 1, completion_ratio: 3, enable_groups: ["Codex号池"] }
+    ]
+  }, "tokenflux");
+  assert.equal(normalized.data.length, 1);
+  assert.equal(normalized.data[0].model_name, "codex-pool-model");
+  assert.equal(normalized.data[0].input_price, 0.2);
+  assert.equal(Number(normalized.data[0].output_price.toFixed(6)), 0.6);
+  assert.equal(normalized.data[0].group_ratio, 0.2);
 });
 test("adapts the Sidrune model plaza URL and station preset", () => {
   const adapter = inferStationAdapter({ baseUrl: "https://sidrune.ai/model-plaza" });

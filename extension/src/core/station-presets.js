@@ -50,6 +50,9 @@ export function addNodeAiStationPreset(stations) {
 export function addFuckEveryoneStationPreset(stations) {
   return addRegisteredStationPreset(stations, "fuck-everyone");
 }
+export function addTokenFluxStationPreset(stations) {
+  return addRegisteredStationPreset(stations, "tokenflux");
+}
 export function addTrueSotaStationPreset(stations) {
   return addRegisteredStationPreset(stations, "true-sota");
 }
@@ -75,5 +78,6 @@ export {
   SIDRUNE_MODEL_PLAZA_ENDPOINT,
   NODEAI_MODEL_PLAZA_ENDPOINT,
   FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT,
-  TRUE_SOTA_MODEL_PRICING_ENDPOINT
+  TRUE_SOTA_MODEL_PRICING_ENDPOINT,
+  TOKENFLUX_PRICING_ENDPOINT
 } from "./provider-registry.js";

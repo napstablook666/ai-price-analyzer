@@ -208,6 +208,101 @@ export class PqhPricingStrategy extends ParsingStrategy {
   }
 }
 
+
+export class TokenFluxPricingStrategy extends ParsingStrategy {
+  canParse(raw, options = {}) {
+    return options.responseFormat === "tokenflux" && raw?.success === true &&
+      Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
+  }
+
+  parse(raw) {
+    const groupRatio = Object.fromEntries(Object.entries(raw.group_ratio)
+      .map(([group, value]) => [group, finitePrice(value)])
+      .filter(([, value]) => value !== null));
+    const usableGroups = Array.isArray(raw.usable_group)
+      ? raw.usable_group
+      : raw.usable_group && typeof raw.usable_group === "object" ? Object.keys(raw.usable_group) : [];
+    const activeGroups = usableGroups.filter(group => own(groupRatio, group));
+    const unsupportedBillingModes = new Set();
+    const data = [];
+    const groupsFor = item => {
+      const groups = Array.isArray(item.enable_groups) ? item.enable_groups : [item.enable_groups].filter(Boolean);
+      const selected = activeGroups.length ? groups.filter(group => activeGroups.includes(group)) : groups;
+      return selected.length ? selected : groups;
+    };
+
+    for (const item of raw.data) {
+      const modelName = String(item?.model_name || "").trim();
+      if (!modelName) continue;
+      const billingMode = String(item.billing_mode || "").trim().toLowerCase();
+      if (billingMode === "tiered_expr" || typeof item.billing_expr === "string") {
+        unsupportedBillingModes.add(billingMode || "tiered_expr");
+        continue;
+      }
+      const groups = groupsFor(item);
+      if (!groups.length) continue;
+      const modelRatio = finitePrice(item.model_ratio);
+      const completionRatio = finitePrice(item.completion_ratio);
+      const modelPrice = finitePrice(item.model_price);
+      const requestBilled = Number(item.quota_type) === 1;
+      const imageEndpoint = Array.isArray(item.supported_endpoint_types) && item.supported_endpoint_types.includes("image-generation");
+      const specialBilling = requestBilled || imageEndpoint;
+      if (specialBilling && !(modelPrice !== null && modelPrice > 0)) continue;
+      if (!specialBilling && (modelRatio === null || completionRatio === null)) continue;
+
+      for (const group of groups) {
+        const multiplier = groupRatio[group];
+        if (multiplier === undefined) continue;
+        if (specialBilling) {
+          const image = imageEndpoint;
+          data.push({
+            model_name: modelName,
+            model_display_name: modelName,
+            model_ratio: 0,
+            completion_ratio: 1,
+            input_price: null,
+            output_price: null,
+            cache_read_price: null,
+            cache_write_price: null,
+            request_price: image ? null : modelPrice * multiplier,
+            image_price: image ? modelPrice * multiplier : null,
+            price_currency: "CNY",
+            enable_groups: [group],
+            proxy_group_name: group,
+            group_ratio: multiplier,
+            evidence: "exact"
+          });
+          continue;
+        }
+        const inputPrice = modelRatio * multiplier;
+        data.push({
+          model_name: modelName,
+          model_display_name: modelName,
+          model_ratio: modelRatio,
+          completion_ratio: completionRatio,
+          input_price: inputPrice,
+          output_price: inputPrice * completionRatio,
+          cache_read_price: finitePrice(item.cache_ratio) === null ? null : inputPrice * Number(item.cache_ratio),
+          cache_write_price: finitePrice(item.create_cache_ratio) === null ? null : inputPrice * Number(item.create_cache_ratio),
+          request_price: null,
+          image_price: null,
+          price_currency: "CNY",
+          enable_groups: [group],
+          proxy_group_name: group,
+          group_ratio: multiplier,
+          tier_name: "标准",
+          evidence: "exact"
+        });
+      }
+    }
+    return {
+      data,
+      group_ratio: groupRatio,
+      sourceFormat: "tokenflux",
+      ...(unsupportedBillingModes.size ? { incomplete: true, unsupportedBillingModes: [...unsupportedBillingModes].sort() } : {})
+    };
+  }
+}
 function unwrapTrpcPayload(raw) {
   const item = Array.isArray(raw) && raw.length ? raw[0] : raw;
   return item?.result?.data?.json || item?.result?.data || raw;
@@ -1073,6 +1168,7 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
 
 registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
 registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
+registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
 assertResponseFormatHandlers();

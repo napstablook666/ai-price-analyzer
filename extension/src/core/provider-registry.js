@@ -11,6 +11,7 @@ export const CHEAP_ROUTER_PRICING_ENDPOINT = "/api/v1/pricing/public?timezone=As
 export const SIDRUNE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza/public";
 export const NODEAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const KILLAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
+export const TOKENFLUX_PRICING_ENDPOINT = "/api/pricing";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";
@@ -128,6 +129,20 @@ const sevenAiPreset = {
   mode: "direct",
   auth: { type: "none" },
   adapter: { kind: "sevenai-model-plaza", endpoint: SEVENAI_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "sevenai-model-plaza" }
+};
+const tokenFluxPreset = {
+  id: "tokenflux",
+  name: "TokenFlux",
+  baseUrl: "https://tokenflux.cloud/pricing",
+  rechargeRateVerified: false,
+  rechargeRateNote: "TokenFlux 未公开充值折算，当前不参与已验证比价推荐。",
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "",
+  enabled: true,
+  mode: "direct",
+  auth: { type: "none" },
+  adapter: { kind: "tokenflux", endpoint: TOKENFLUX_PRICING_ENDPOINT, method: "GET", responseFormat: "tokenflux" }
 };
 const fuckEveryonePreset = {
   id: "fuck-everyone",
@@ -334,6 +349,25 @@ export const PROVIDER_REGISTRY = [
     rationale: "SevenAI 通过公开模型广场 API 直连采集",
     preset: sevenAiPreset,
     request: requestPolicy(() => SEVENAI_MODEL_PLAZA_ENDPOINT, { credentials: "omit" })
+  },
+  {
+    id: "tokenflux",
+    host: "tokenflux.cloud",
+    matches: ({ hostname, path }) => hostname === "tokenflux.cloud" && ["/", "/pricing"].includes(path),
+    prepareMatches: ({ hostname }) => hostname === "tokenflux.cloud",
+    prepare: (stationInput, { url }) => ({
+      ...stationInput,
+      baseUrl: `${url.origin}/pricing`,
+      mode: "direct",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "tokenflux", endpoint: TOKENFLUX_PRICING_ENDPOINT, method: "GET", responseFormat: "tokenflux" }
+    }),
+    mode: "direct",
+    responseFormat: "tokenflux",
+    authType: "none",
+    rationale: "TokenFlux 通过公开定价 API 直连采集",
+    preset: tokenFluxPreset,
+    request: requestPolicy(() => TOKENFLUX_PRICING_ENDPOINT, { credentials: "omit" })
   },
   {
     id: "true-sota",
