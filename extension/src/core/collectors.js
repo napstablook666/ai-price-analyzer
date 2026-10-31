@@ -31,7 +31,6 @@ function requestError(station, strategy, response) {
 }
 
 async function readResponse(response) {
-  if (response && Object.prototype.hasOwnProperty.call(response, "body") && typeof response.json !== "function") return response.body;
   const contentType = response.headers?.get?.("content-type") || "";
   return contentType.includes("json") ? response.json() : response.text();
 }
