@@ -103,10 +103,10 @@ export const DEFAULT_JEV_CONFIG = {
   notes: ""
 };
 
-export const DEFAULT_PROVIDER_PROFILES = { llm: [], jev: [] };
-export const DEFAULT_ACTIVE_PROVIDERS = { llm: "", jev: "" };
+const DEFAULT_PROVIDER_PROFILES = { llm: [], jev: [] };
+const DEFAULT_ACTIVE_PROVIDERS = { llm: "", jev: "" };
 
-export const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS = {
   defaultCurrency: "CNY",
   exchangeRate: DEFAULT_EXCHANGE_RATE,
   recommendationProfile: "price",
@@ -151,7 +151,7 @@ export const DEFAULT_STATION = {
   tags: []
 };
 
-export function cloneDefaultSettings() {
+function cloneDefaultSettings() {
   return structuredClone(DEFAULT_SETTINGS);
 }
 

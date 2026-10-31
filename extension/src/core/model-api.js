@@ -1,6 +1,6 @@
 import { isSecureRemoteUrl } from "../shared/schema.js";
 
-export const MODEL_REQUEST_TIMEOUT_MS = 15000;
+const MODEL_REQUEST_TIMEOUT_MS = 15000;
 
 const JEV_PROBE_STATE = {
   judgment_language: "zh",

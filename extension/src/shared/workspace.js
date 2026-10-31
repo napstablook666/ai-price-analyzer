@@ -1,6 +1,6 @@
 import { getValue, setValue, validateImportedState } from "./db.js";
 
-export const WORKSPACE_FILE_NAME = "ai-price-analyzer.workspace.json";
+const WORKSPACE_FILE_NAME = "ai-price-analyzer.workspace.json";
 const WORKSPACE_HANDLE_KEY = "workspace:directory-handle";
 const WORKSPACE_FORMAT = "ai-price-analyzer-workspace";
 const WORKSPACE_VERSION = 1;

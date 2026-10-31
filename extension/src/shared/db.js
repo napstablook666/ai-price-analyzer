@@ -69,7 +69,7 @@ function pruneSnapshots(index, query, shouldDelete) {
   });
 }
 
-export function openDatabase() {
+function openDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
@@ -87,7 +87,7 @@ export function openDatabase() {
   });
 }
 
-export async function withStore(storeName, mode, callback) {
+async function withStore(storeName, mode, callback) {
   const db = await openDatabase();
   return new Promise((resolve, reject) => {
     let result;

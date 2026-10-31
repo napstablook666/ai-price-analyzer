@@ -72,7 +72,7 @@ export function workloadCost(prices = {}, usage = {}) {
     (Number(usage.images) || 0) * (Number.isFinite(prices.imagePrice) ? prices.imagePrice : 0);
 }
 
-export function referencePrices(model, exchangeRate = 1) {
+function referencePrices(model, exchangeRate = 1) {
   if (!model) return null;
   const factor = Number(exchangeRate) || 1;
   return {

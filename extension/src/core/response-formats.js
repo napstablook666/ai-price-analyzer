@@ -12,7 +12,7 @@ const definitions = {
 };
 
 export const RESPONSE_FORMAT_DEFINITIONS = Object.freeze(definitions);
-export const RESPONSE_FORMATS = new Set(Object.keys(definitions));
+const RESPONSE_FORMATS = new Set(Object.keys(definitions));
 
 const strategyHandlers = new Map();
 

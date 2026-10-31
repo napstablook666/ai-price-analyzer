@@ -3,7 +3,7 @@ import { DEFAULT_MATCHING_RULES } from "../shared/schema.js";
 export const JEV_MODEL_CANDIDATE_LIMIT = 40;
 const GENERIC_MODEL_TOKENS = new Set(["chat", "instruct", "latest", "model"]);
 
-export const MODEL_ALIASES = {
+const MODEL_ALIASES = {
   "deepseek-v4.1-flash": ["deepseek-v4-flash", "deepseek-flash"]
 };
 
@@ -13,7 +13,7 @@ export function normalizeProxyModelName(name) {
     .replace(/-expires-on-\d{4}(?:-\d{2}-\d{2})?$/, "");
 }
 
-export function cleanModelName(name) {
+function cleanModelName(name) {
   const value = String(name || "").toLowerCase();
   for (const prefix of ["openai/", "anthropic/", "google/", "meta/", "deepseek/", "qwen/", "azure/"]) {
     if (value.startsWith(prefix)) return value.slice(prefix.length);
@@ -21,7 +21,7 @@ export function cleanModelName(name) {
   return value;
 }
 
-export function removeVersion(name) {
+function removeVersion(name) {
   return String(name || "")
     .replace(/-expires-on-\d{4}(?:-\d{2}-\d{2})?$/, "")
     .replace(/-\d{8}$/, "")
@@ -29,7 +29,7 @@ export function removeVersion(name) {
     .replace(/\s+/g, "");
 }
 
-export function getOfficialNames(model) {
+function getOfficialNames(model) {
   return [...new Set([model?.name, ...(model?.aliases || [])].filter(Boolean).map(value => String(value).toLowerCase()))];
 }
 

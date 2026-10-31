@@ -61,7 +61,7 @@ function headersFor(station, strategy) {
   return headers;
 }
 
-export function getStationRequestConfig(station) {
+function getStationRequestConfig(station) {
   const strategy = requestStrategy(station);
   return { request: strategy, endpoints: endpointCandidates(station, strategy), priceKeys: strategy.priceKeys || RAW_PRICE_KEYS };
 }
