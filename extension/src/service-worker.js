@@ -434,7 +434,6 @@ async function scheduleCheckinAlarm() {
   chrome.alarms.create(CHECKIN_ALARM_NAME, { periodInMinutes: 240 });
 }
 
-// ---- 站点签到 ----
 async function getCheckinState() {
   return await getValue("checkinState", {});
 }
