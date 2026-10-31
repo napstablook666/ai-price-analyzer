@@ -87,11 +87,6 @@ export function formatRefreshSummary(summary = {}) {
   const duration = Number.isFinite(Number(summary.durationMs)) ? ` · ${(Number(summary.durationMs) / 1000).toFixed(1)} 秒` : "";
   return `查询完成：${Number(summary.successCount) || 0} 成功，${Number(summary.partialCount) || 0} 部分成功，${Number(summary.errorCount) || 0} 失败，共 ${Number(summary.totalModels) || 0} 个模型${duration}`;
 }
-
-export function formatDate(value) {
-  return value ? new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "medium" }).format(new Date(value)) : "—";
-}
-
 export async function downloadJson(filename, value) {
   const text = JSON.stringify(value);
   let blob = new Blob([text], { type: "application/json" });

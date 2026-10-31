@@ -205,11 +205,6 @@ export function putSnapshot(snapshot) {
   }));
 }
 
-export async function clearSnapshots() {
-  const result = await withStore("snapshots", "readwrite", store => requestToPromise(store.clear()));
-  comparisonRevision++;
-  return result;
-}
 
 export function redactStation(station = {}) {
   const { auth = {}, ...rest } = station;

@@ -1036,12 +1036,6 @@ export class ModelPlazaStrategy extends ParsingStrategy {
   }
 }
 
-export class NodeAiModelPlazaStrategy extends ModelPlazaStrategy {
-  constructor() {
-    super("nodeai");
-  }
-}
-
 function allInOneModels(raw) {
   if (raw?.code !== 0) return [];
   for (const candidate of [raw?.data?.list, raw?.data?.data?.list, raw?.data, raw?.list]) {
@@ -1066,10 +1060,7 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
     const invalidPricingValues = new Set();
     const unpricedModels = new Set();
     const modelCount = models.length;
-    const perMillion = value => {
-      const parsed = finitePrice(value);
-      return parsed === null ? null : parsed * 1_000_000;
-    };
+    const parsePrice = value => finitePrice(value);
     const invalid = (object, fields) => fields.some(field => own(object, field) && object[field] !== null && object[field] !== undefined && object[field] !== "" && finitePrice(object[field]) === null);
     const modelName = model => String(model?.model_id || model?.model_name || model?.id || "").trim();
     const displayName = model => String(model?.display_name || model?.model_name_display || model?.name || modelName(model)).trim();
@@ -1088,11 +1079,11 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
         invalidPricingValues.add(invalidBounds ? `${key}:bounds` : key);
         return;
       }
-      const input = perMillion(source.input_price);
-      const output = perMillion(source.output_price);
-      const cacheRead = perMillion(source.cache_read_price ?? source.cache_read);
-      const cacheWrite = perMillion(source.cache_creation_price ?? source.cache_write_price ?? source.cache_write);
-      const cacheWrite1h = perMillion(source.cache_creation_1h_price ?? source.cache_write_1h_price);
+      const input = parsePrice(source.input_price);
+      const output = parsePrice(source.output_price);
+      const cacheRead = parsePrice(source.cache_read_price ?? source.cache_read);
+      const cacheWrite = parsePrice(source.cache_creation_price ?? source.cache_write_price ?? source.cache_write);
+      const cacheWrite1h = parsePrice(source.cache_creation_1h_price ?? source.cache_write_1h_price);
       if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) {
         unpricedModels.add(key);
         return;

@@ -50,9 +50,6 @@ export function addNodeAiStationPreset(stations) {
 export function addFuckEveryoneStationPreset(stations) {
   return addRegisteredStationPreset(stations, "fuck-everyone");
 }
-export function addTokenFluxStationPreset(stations) {
-  return addRegisteredStationPreset(stations, "tokenflux");
-}
 export function addTrueSotaStationPreset(stations) {
   return addRegisteredStationPreset(stations, "true-sota");
 }

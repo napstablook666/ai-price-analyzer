@@ -1,12 +1,8 @@
 import { NORMALIZATION_VERSION, normalizePricingPayload } from "./normalizers.js";
-import { buildStationRequest } from "./request-strategy.js";
-
 import { PAGE_RUNTIME_CAPTURE_TYPE, PAGE_RUNTIME_FETCH_TYPE } from "./bridge-protocol.js";
 import { getResponseFormatDefinition } from "./response-formats.js";
 import { NORMALIZED_PRICE_FIELDS } from "./price-fields.js";
-export { normalizePricingPayload };
-
-
+import { buildStationRequest } from "./request-strategy.js";
 
 function hasInvalidPricingValue(value, priceKeys, depth = 0) {
   if (!value || depth > 6 || typeof value !== "object") return false;

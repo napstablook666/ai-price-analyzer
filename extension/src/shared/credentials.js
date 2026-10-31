@@ -59,19 +59,6 @@ export async function removeStationCredential(stationId, chromeApi = globalThis.
   return setStationCredential(stationId, {}, chromeApi);
 }
 
-export async function setStationToken(stationId, token, chromeApi = globalThis.chrome) {
-  const current = await getStationCredential(stationId, chromeApi);
-  return setStationCredential(stationId, { ...current, token }, chromeApi);
-}
-
-export async function getStationToken(stationId, chromeApi = globalThis.chrome) {
-  return (await getStationCredential(stationId, chromeApi)).token;
-}
-
-export async function removeStationToken(stationId, chromeApi = globalThis.chrome) {
-  const current = await getStationCredential(stationId, chromeApi);
-  return setStationCredential(stationId, { ...current, token: "" }, chromeApi);
-}
 
 async function setApiKey(storageKey, value, chromeApi = globalThis.chrome) {
   const area = writeArea(chromeApi);
