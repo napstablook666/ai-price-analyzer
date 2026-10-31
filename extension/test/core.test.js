@@ -13,7 +13,7 @@ import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
 import { buildModelMatchIndex, getJevModelCandidates, matchModel, matchModelWithOverrides, matchOne, suggestModelCandidates } from "../src/core/matching.js";
-import { normalizePricingPayload } from "../src/core/collectors.js";
+import { normalizePricingPayload } from "../src/core/normalizers.js";
 import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
 import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
@@ -154,10 +154,10 @@ const allInOneFixture = {
         model_name: "all-token-model",
         display_name: "All Token Model",
         billing_mode: "token",
-        input_price: 0.000002,
-        output_price: 0.000008,
-        cache_read_price: 0.0000002,
-        cache_creation_price: 0.000001
+        input_price: 2,
+        output_price: 8,
+        cache_read_price: 0.2,
+        cache_creation_price: 1
       },
       {
         model_id: "all-tiered-model",
@@ -165,8 +165,8 @@ const allInOneFixture = {
         display_name: "All Tiered Model",
         billing_mode: "tiered",
         pricing_tiers: [
-          { tier_label: "0-100K", min_tokens: 0, max_tokens: 100000, input_price: 0.000001, output_price: 0.000004, cache_read_price: 0.0000001 },
-          { tier_label: "100K+", min_tokens: 100001, max_tokens: null, input_price: 0.000002, output_price: 0.000006, cache_creation_price: 0.0000008 }
+          { tier_label: "0-100K", min_tokens: 0, max_tokens: 100000, input_price: 1, output_price: 4, cache_read_price: 0.1 },
+          { tier_label: "100K+", min_tokens: 100001, max_tokens: null, input_price: 2, output_price: 6, cache_creation_price: 0.8 }
         ]
       },
       { model_id: "all-per-request", billing_mode: "per_request", input_price: 0.000001 },
