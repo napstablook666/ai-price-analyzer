@@ -198,6 +198,7 @@ test("preflight signatures and displayed URLs omit URL credentials and secret qu
   assert.equal(signature.includes("secret"), false);
   const changedSignature = refreshStationSignature([{ id: "relay", enabled: true, baseUrl: "https://relay.example/pricing?api_key=secret", mode: "page", priceCurrency: "CREDITS", priceCurrencyVerified: true, rechargeRate: 1.2, rechargeRateVerified: true }]);
   assert.notEqual(changedSignature, signature);
+  assert.notEqual(refreshStationSignature([{ id: "relay", enabled: true, category: "paid", baseUrl: "https://relay.example/pricing" }], "paid"), refreshStationSignature([{ id: "relay", enabled: true, category: "paid", baseUrl: "https://relay.example/pricing" }], "public"));
 });
 
 test("dashboard shows preflight results and reserves REFRESH_ALL for explicit confirmation", () => {
@@ -214,7 +215,8 @@ test("dashboard shows preflight results and reserves REFRESH_ALL for explicit co
   assert.match(html, /id="refresh-preflight-results"/);
   assert.match(html, /id="confirm-refresh-all"/);
   assert.match(html, /id="cancel-refresh-preflight"/);
-  assert.match(popup, /预检完成：\$\{summary\.join\("；"\)\}/);
+  assert.match(popup, /summary\.join\("；"\)/);
+  assert.match(popup, /comparisonLabel/);
   assert.match(popup, /callService\("REFRESH_ALL", \{ preflightToken: activeRefreshPreflight\.token, confirmed: true \}\)/);
 });
 

@@ -55,7 +55,7 @@ export async function runRefreshAll({
   errorSnapshot,
   notifyProgress
 }) {
-  const allStations = (await getStations()).filter(station => station.enabled && (!stationId || station.id === stationId));
+  const allStations = (await getStations()).filter(station => station.enabled === true && (!stationId || station.id === stationId));
   const startedAt = Date.now();
   const total = allStations.length;
   const results = new Array(total);

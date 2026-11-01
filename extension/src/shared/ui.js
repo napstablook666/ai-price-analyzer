@@ -83,9 +83,10 @@ export function formatMoney(value, currency = "¥") {
 }
 
 export function formatRefreshSummary(summary = {}) {
-  if (!summary.total) return "没有启用的站点可查询";
+  const group = summary.comparisonLabel ? `${summary.comparisonLabel}刷新` : "查询";
+  if (!summary.total) return summary.comparisonLabel ? `${summary.comparisonLabel}没有启用的站点，未发起刷新` : "没有启用的站点可查询";
   const duration = Number.isFinite(Number(summary.durationMs)) ? ` · ${(Number(summary.durationMs) / 1000).toFixed(1)} 秒` : "";
-  return `查询完成：${Number(summary.successCount) || 0} 成功，${Number(summary.partialCount) || 0} 部分成功，${Number(summary.errorCount) || 0} 失败，共 ${Number(summary.totalModels) || 0} 个模型${duration}`;
+  return `${group}完成：${Number(summary.successCount) || 0} 成功，${Number(summary.partialCount) || 0} 部分成功，${Number(summary.errorCount) || 0} 失败，共 ${Number(summary.totalModels) || 0} 个模型${duration}`;
 }
 
 export function toast(message) {

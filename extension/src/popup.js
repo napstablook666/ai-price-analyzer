@@ -22,19 +22,20 @@ function setStatus(message, type = "") {
 
 onRefreshProgress(progress => {
   const total = Math.max(0, Number(progress.total) || 0);
+  const label = progress.comparisonLabel || "当前分组";
   refreshProgress.max = Math.max(total, 1);
   refreshProgress.value = Math.min(Number(progress.completed) || 0, refreshProgress.max);
   if (progress.phase === "start") {
     lastRefreshSummary = null;
     refreshProgress.hidden = false;
-    setStatus(total ? `准备查询 ${total} 个启用站点` : "没有启用的站点可查询");
+    setStatus(total ? `${label}：准备查询 ${total} 个启用站点` : `当前${label}没有启用的站点，未发起刷新`);
   } else if (progress.phase === "references") {
-    setStatus(progress.message);
+    setStatus(`${label}：${progress.message}`);
   } else if (progress.phase === "station") {
-    if (progress.status === "running") setStatus(`正在查询 ${progress.stationName}（并行槽位 ${progress.current}）`);
-    else if (progress.status === "error") setStatus(`${progress.stationName} 查询失败：${progress.error}`, "error");
-    else if (progress.status === "partial") setStatus(`${progress.stationName} 部分查询到 ${progress.modelCount} 个模型：${progress.error || "存在未解析计费模式"}`);
-    else setStatus(`${progress.stationName} 已查询 ${progress.modelCount} 个模型`);
+    if (progress.status === "running") setStatus(`${label}：正在查询 ${progress.stationName}（${progress.completed}/${total}，并行槽位 ${progress.current}）`);
+    else if (progress.status === "error") setStatus(`${label}：${progress.stationName} 查询失败（${progress.completed}/${total}）：${progress.error}`, "error");
+    else if (progress.status === "partial") setStatus(`${label}：${progress.stationName} 部分查询到 ${progress.modelCount} 个模型（${progress.completed}/${total}）：${progress.error || "存在未解析计费模式"}`);
+    else setStatus(`${label}：${progress.stationName} 已查询 ${progress.modelCount} 个模型（${progress.completed}/${total}）`);
   } else if (progress.phase === "complete") {
     lastRefreshSummary = progress.summary;
     const summary = progress.summary;
@@ -99,6 +100,11 @@ refreshButton.addEventListener("click", async () => {
   try {
     if (!activeRefreshPreflight) {
       const preflight = await callService("REFRESH_PREFLIGHT");
+      if (!preflight.stationCount) {
+        setStatus(`${preflight.comparisonLabel || "当前分组"}没有启用的站点，未发起刷新`);
+        setRefreshButtonStage(false);
+        return;
+      }
       activeRefreshPreflight = preflight;
       const counts = { ready: 0, needsLogin: 0, uncertain: 0, noLoginRequired: 0 };
       for (const result of preflight.results) counts[result.status] = (counts[result.status] || 0) + 1;
@@ -107,7 +113,7 @@ refreshButton.addEventListener("click", async () => {
       const summary = [`已登录 ${counts.ready}`, `需要登录 ${counts.needsLogin}`, `需人工确认 ${counts.uncertain}`, `无需登录 ${counts.noLoginRequired}`];
       if (needsLogin.length) summary.push(`登录站点：${needsLogin.join("、")}`);
       if (uncertain.length) summary.push(`待确认站点：${uncertain.join("、")}`);
-      setStatus(`预检完成：${summary.join("；")}。再次点击确认开始刷新全部`);
+      setStatus(`${preflight.comparisonLabel || "当前分组"}预检完成（${preflight.stationCount} 个启用站点）：${summary.join("；")}。再次点击确认开始刷新`);
       setRefreshButtonStage(true);
       return;
     }

@@ -408,3 +408,69 @@ The station contract establishes CREDITS before comparison, while protected prov
 - Good: a token row with `model_ratio: 0.4`, `completion_ratio: 2`, and group ratio `1` yields `0.4` input and `0.8` output CREDITS per million tokens; a group ratio `4.5` yields `4.5` input and `13.5` output when applied once.
 - Base: valid request/image rows remain special-priced rows with empty token prices, while valid token rows remain comparable.
 - Bad: forwarding a saved bearer token, using the page URL as the API endpoint, treating RMB display as a verified recharge rate, multiplying `group_ratio` twice, or flattening `tiered_expr` into ordinary token pricing.
+
+
+## Grouped refresh-all scope
+
+### 1. Scope / Trigger
+
+- Trigger: the dashboard's “刷新全部” action must refresh only the currently selected `comparisonMode` group while preserving the existing single-station refresh path.
+- This contract covers service-worker scope selection, preflight confirmation, progress metadata, snapshot/error visibility, and dashboard/popup feedback for `paid` and `public` groups.
+
+### 2. Signatures
+
+- `refreshScope(stations, comparisonMode)` normalizes the mode and returns `{ comparisonMode, comparisonLabel, stationCount, stations }`.
+- `refreshStationSignature(stations, comparisonMode = "paid")` signs the normalized mode and enabled station configuration; `assertRefreshConfirmation(preflight, confirmation, stations, comparisonMode, now)` rejects a stale or mismatched scope.
+- `REFRESH_PREFLIGHT` returns `comparisonMode`, `comparisonLabel`, `stationCount`, `results`, `token`, `expiresAt`, and `stationSignature`.
+- `REFRESH_ALL` accepts only the one-use preflight token and `confirmed: true`; it does not accept a frontend station-ID list.
+
+### 3. Contracts
+
+- The service worker is authoritative. The refresh-all set is exactly `station.enabled === true && station.category === comparisonMode`; the frontend cannot widen it with filters or submitted IDs.
+- The same set must be used for page-session preflight, confirmation signature, collection, progress totals, error snapshots, completion summaries, and refresh metadata. `REFRESH_STATION` remains `stationId`-scoped and independent of comparison mode.
+- `paid` uses the label `付费中转站`; `public` uses `公益站`. Empty groups return `stationCount: 0` and an empty result list; confirmation is disabled and the service worker returns `REFRESH_NO_STATIONS` without refreshing references, collecting, or writing snapshots.
+- Mode changes, station saves, settings changes, imports, and any signed station configuration change invalidate the stored preflight. Dashboard data exposes only the current mode's snapshots, errors, comparisons, and summary while retaining the other mode's records in storage.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Enabled station in current category | Included in preflight and refresh exactly once |
+| Enabled station in the other category | Excluded from preflight, collection, progress, errors, and new snapshots |
+| Disabled station, including non-boolean `enabled` values | Excluded from every refresh-all and scheduler collection set |
+| Mode or signed station configuration changes after preflight | `REFRESH_CONFIRMATION_REQUIRED`; require a new preflight |
+| Current group has no enabled stations | `REFRESH_NO_STATIONS`; no reference refresh, collection, progress, or snapshot write |
+| Single-station refresh | Continue using the selected enabled `stationId`, regardless of current comparison mode |
+
+### 5. Good/Base/Bad Cases
+
+- Good: public mode preflights one enabled public station, reports `公益站` and `stationCount: 1`, and passes only that prepared station to the scheduler.
+- Base: paid and public snapshots remain stored together, but each dashboard mode returns only its own snapshot/error projections.
+- Bad: passing all enabled stations to `REFRESH_PREFLIGHT` and filtering only table rows afterward, trusting frontend station IDs, or letting an empty group trigger official-reference refresh.
+
+### 6. Tests Required
+
+- Assert paid/public preflight and collection sets, disabled-station exclusion, group labels/counts, progress totals, completion metadata, and no cross-group snapshots or errors.
+- Assert mode/config changes invalidate one-use tokens, empty groups do not call reference refresh or collection, and concurrent confirmation cannot consume a token twice.
+- Assert dashboard mode switching preserves the other group's stored history and `REFRESH_STATION` still refreshes the selected enabled station outside the current group.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```js
+const stations = (await getPreparedStations()).filter(station => station.enabled);
+return runRefreshAll({ preparedStations: stations });
+```
+
+This refreshes the hidden comparison group and relies on the UI to hide the leak.
+
+#### Correct
+
+```js
+const scope = refreshScope(await getPreparedStations(), settings.comparisonMode);
+assertRefreshConfirmation(preflight, message, scope.stations, scope.comparisonMode);
+return refreshAll({ preparedStations: scope.stations, refreshMetadata: scope });
+```
+
+The service worker computes and revalidates one authoritative group before dispatching collection.

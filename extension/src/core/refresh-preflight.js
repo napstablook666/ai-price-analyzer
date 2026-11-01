@@ -56,27 +56,68 @@ export function classifyPageSessionError(error) {
   return loginSignal(error?.message || String(error)) ? "needsLogin" : "uncertain";
 }
 
-export function refreshStationSignature(stations) {
-  return JSON.stringify((stations || []).filter(station => station.enabled).map(station => [
+function stableSerialize(value) {
+  if (value === null || value === undefined) return String(value);
+  if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;
+  if (typeof value === "object") return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableSerialize(value[key])}`).join(",")}}`;
+  return JSON.stringify(value);
+}
+
+function fingerprint(value) {
+  let hash = 2166136261;
+  for (const character of stableSerialize(value)) {
+    hash ^= character.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function stationSignature(station) {
+  const adapter = station.adapter || {};
+  return [
     station.id,
+    station.name,
+    station.category,
     sanitizePreflightUrl(station.baseUrl),
     station.mode,
-    sanitizePreflightUrl(station.adapter?.endpoint || station.baseUrl, station.baseUrl),
-    station.adapter?.method || "GET",
+    station.auth?.type || "none",
+    adapter.kind,
+    sanitizePreflightUrl(adapter.endpoint || station.baseUrl, station.baseUrl),
+    adapter.method || "GET",
+    adapter.responseFormat || "auto",
+    adapter.pageUrl ? sanitizePreflightUrl(adapter.pageUrl) : "",
+    fingerprint(adapter.body || ""),
+    fingerprint(adapter.rawJson || ""),
     station.priceCurrency,
     station.priceCurrencyVerified,
     station.rechargeRate,
-    station.rechargeRateVerified
-  ]).sort((left, right) => String(left[0]).localeCompare(String(right[0]))));
+    station.rechargeRateVerified,
+    station.basePricePerMillion
+  ];
 }
 
-export function assertRefreshConfirmation(preflight, confirmation, stations, now = Date.now()) {
+export function refreshStationSignature(stations, comparisonMode = "paid") {
+  const mode = comparisonMode === "public" ? "public" : "paid";
+  return JSON.stringify({
+    comparisonMode: mode,
+    stations: (stations || []).filter(station => station.enabled === true).map(stationSignature)
+      .sort((left, right) => String(left[0]).localeCompare(String(right[0])))
+  });
+}
+
+export function assertRefreshConfirmation(preflight, confirmation, stations, comparisonMode = "paid", now = Date.now()) {
+  if (typeof comparisonMode === "number") {
+    now = comparisonMode;
+    comparisonMode = "paid";
+  }
+  if (comparisonMode !== "public" && comparisonMode !== "paid") comparisonMode = "paid";
   if (confirmation?.confirmed !== true || typeof confirmation.preflightToken !== "string" || !confirmation.preflightToken || !preflight
+    || preflight.comparisonMode !== comparisonMode
     || confirmation.preflightToken !== preflight.token
     || !Number.isFinite(preflight.expiresAt)
     || preflight.expiresAt <= now
     || typeof preflight.stationSignature !== "string"
-    || preflight.stationSignature !== refreshStationSignature(stations)) {
+    || preflight.stationSignature !== refreshStationSignature(stations, comparisonMode)) {
     const error = new Error(REFRESH_CONFIRMATION_REQUIRED_MESSAGE);
     error.code = REFRESH_CONFIRMATION_REQUIRED_CODE;
     throw error;

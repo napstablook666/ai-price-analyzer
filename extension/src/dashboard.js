@@ -459,27 +459,33 @@ function renderRefreshPreflight(preflight = state.refreshPreflight) {
   const list = $("#refresh-preflight-results");
   const confirm = $("#confirm-refresh-all");
   const cancel = $("#cancel-refresh-preflight");
+  const scope = preflight || state.data?.refreshScope || {};
+  const label = preflight?.comparisonLabel || (state.comparisonMode === "public" ? "公益站" : "付费中转站");
+  const count = preflight ? Number(preflight.stationCount) || 0 : scope.comparisonMode === state.comparisonMode ? Number(scope.stationCount) || 0 : 0;
   if (state.preflightLoading) {
-    status.textContent = "正在检查启用站点的页面会话";
+    status.textContent = `正在检查${label}（${count} 个启用站点）`;
     list.replaceChildren();
   } else if (preflight) {
     const needsLogin = preflight.results.filter(result => result.status === "needsLogin").length;
     const uncertain = preflight.results.filter(result => result.status === "uncertain").length;
-    status.textContent = needsLogin || uncertain
-      ? `${needsLogin} 个站点需要登录，${uncertain} 个站点无法确认。登录或检查页面后再确认开始。`
-      : "页面预检已完成。确认后开始刷新全部启用站点。";
+    status.textContent = !count
+      ? `当前${label}没有启用的站点，未发起刷新。`
+      : needsLogin || uncertain
+        ? `${label}：${count} 个启用站点，${needsLogin} 个需要登录，${uncertain} 个无法确认。登录或检查页面后再确认。`
+        : `${label}：${count} 个启用站点，页面预检已完成。确认后开始刷新。`;
     list.innerHTML = preflight.results.map(result => `<li class="preflight-result preflight-${escapeHtml(result.status)}"><span class="preflight-site">${escapeHtml(result.stationName)}</span><span class="preflight-label">${REFRESH_PREFLIGHT_LABELS[result.status] || "需人工确认"}</span><span class="preflight-reason">${escapeHtml(result.reason || "")}</span></li>`).join("");
   } else {
     status.textContent = "";
     list.replaceChildren();
   }
-  confirm.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
+  confirm.disabled = !preflight || !count || state.preflightLoading || state.refreshInProgress;
   cancel.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
 }
 
 function render(data) {
   state.data = data;
   state.refreshInProgress = Boolean(data.refreshInProgress);
+  state.comparisonMode = data.settings?.comparisonMode === "public" ? "public" : "paid";
   state.refreshPreflight = data.refreshPreflight || null;
   renderRefreshPreflight();
   state.page = 0;
@@ -492,7 +498,6 @@ function render(data) {
   state.stationById = index.stationById;
   renderProviderSwitchers(data.settings);
   state.reference = data.references;
-  state.comparisonMode = data.settings?.comparisonMode === "public" ? "public" : "paid";
   renderComparisonMode();
   state.filters.showUnmatched = Boolean(data.settings?.showUnmatched);
   state.filters.showStale = data.settings?.showStale !== false;
@@ -506,7 +511,7 @@ function render(data) {
   $("#sort-secondary").value = state.filters.sortSecondary;
   $("#sort-direction").value = state.filters.sortDirection;
   renderRows();
-  const hasStations = (data.stations || []).length > 0;
+  const hasStations = Number(data.refreshScope?.stationCount) > 0;
   const emptyState = $("#empty-state");
   const publicEmpty = state.comparisonMode === "public";
   emptyState.querySelector("h3").textContent = publicEmpty ? (hasStations ? "暂无公益站报价" : "还没有公益站") : (hasStations ? "站点已保存，尚未采集报价" : "还没有可比较的报价");
@@ -548,10 +553,16 @@ document.querySelectorAll("[data-comparison-mode]").forEach(button => {
   button.addEventListener("click", async () => {
     const mode = button.dataset.comparisonMode;
     if (mode === state.comparisonMode) return;
+    const previousMode = state.comparisonMode;
+    state.comparisonMode = mode === "public" ? "public" : "paid";
+    state.refreshPreflight = null;
+    renderRefreshPreflight();
     button.disabled = true;
     try {
       render(await callService("SAVE_COMPARISON_MODE", { mode }));
     } catch (error) {
+      state.comparisonMode = previousMode;
+      renderRefreshPreflight();
       toast(error.message);
     } finally {
       button.disabled = false;
@@ -755,18 +766,19 @@ function renderRefreshProgress(progress) {
   panel.hidden = false;
   const total = Math.max(0, Number(progress.total) || 0);
   const completed = Math.max(0, Number(progress.completed) || 0);
+  const label = progress.comparisonLabel || (state.comparisonMode === "public" ? "公益站" : "付费中转站");
   const bar = $("#refresh-progress-bar");
   bar.max = Math.max(total, 1);
   bar.value = Math.min(completed, bar.max);
-  $("#refresh-progress-count").textContent = `${completed} / ${total} 站点`;
+  $("#refresh-progress-count").textContent = `${label}：${completed} / ${total} 站点`;
   const message = $("#refresh-progress-message");
   if (progress.phase === "start") {
     lastRefreshSummary = null;
     refreshRows.clear();
     $("#refresh-progress-results").replaceChildren();
-    message.textContent = total ? `准备查询 ${total} 个启用站点` : "没有启用的站点可查询";
+    message.textContent = total ? `${label}：准备查询 ${total} 个启用站点` : `当前${label}没有启用的站点，未发起刷新`;
   } else if (progress.phase === "references") {
-    message.textContent = progress.message;
+    message.textContent = `${label}：${progress.message}`;
   } else if (progress.phase === "station") {
     let row = refreshRows.get(progress.stationId);
     if (!row) {
@@ -779,8 +791,8 @@ function renderRefreshProgress(progress) {
     const detail = progress.status === "running" ? "查询中" : progress.status === "error" ? `失败 · ${progress.error || "未知错误"}` : progress.status === "partial" ? `部分成功 · ${Number(progress.modelCount) || 0} 个模型 · ${progress.error || "存在未解析计费模式"}` : `${Number(progress.modelCount) || 0} 个模型${duration}`;
     row.textContent = `${progress.stationName || progress.stationId} · ${detail}`;
     message.textContent = progress.status === "running"
-      ? `正在查询 ${progress.stationName}（并行槽位 ${progress.current}）`
-      : `已查询 ${completed}/${total} 个站点`;
+      ? `${label}：正在查询 ${progress.stationName}（并行槽位 ${progress.current}）`
+      : `${label}：已查询 ${completed}/${total} 个站点`;
   } else if (progress.phase === "complete") {
     lastRefreshSummary = progress.summary;
     const summary = progress.summary;
@@ -848,7 +860,8 @@ $("#refresh-all").addEventListener("click", async event => {
     renderRefreshPreflight();
     const needsLogin = data.results.filter(result => result.status === "needsLogin").length;
     const uncertain = data.results.filter(result => result.status === "uncertain").length;
-    toast(needsLogin || uncertain ? `预检完成：${needsLogin} 个站点需要登录，${uncertain} 个站点需人工确认` : "预检完成，请确认开始刷新全部");
+    const label = data.comparisonLabel || "当前分组";
+    toast(!data.stationCount ? `${label}没有启用的站点，未发起刷新` : needsLogin || uncertain ? `${label}预检完成：${needsLogin} 个站点需要登录，${uncertain} 个站点需人工确认` : `${label}预检完成，请确认开始刷新 ${data.stationCount} 个站点`);
   } catch (error) { toast(error.message); }
   finally {
     state.preflightLoading = false;

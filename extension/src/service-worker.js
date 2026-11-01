@@ -25,6 +25,9 @@ const CHECKIN_ALARM_NAME = "checkin-stations";
 const REFRESH_CONCURRENCY = 3;
 const REFRESH_PREFLIGHT_SESSION_KEY = "ai-price-analyzer:refresh-preflight";
 const REFRESH_PREFLIGHT_TABS_SESSION_KEY = "ai-price-analyzer:refresh-preflight-tabs";
+const REFRESH_GROUP_LABELS = Object.freeze({ paid: "付费中转站", public: "公益站" });
+const REFRESH_NO_STATIONS_CODE = "REFRESH_NO_STATIONS";
+const REFRESH_NO_STATIONS_MESSAGE = "当前分组没有启用的站点，未发起刷新";
 
 function isMissingTabError(error) {
   return /No tab with id|tab not found/i.test(String(error?.message || error));
@@ -151,6 +154,17 @@ async function getPreparedStations() {
   return stations.map(prepareComparisonStation);
 }
 
+function refreshScope(stations, comparisonMode) {
+  const mode = comparisonMode === "public" ? "public" : "paid";
+  const scopedStations = (stations || []).filter(station => station.enabled === true && station.category === mode);
+  return {
+    comparisonMode: mode,
+    comparisonLabel: REFRESH_GROUP_LABELS[mode],
+    stationCount: scopedStations.length,
+    stations: scopedStations
+  };
+}
+
 let activeRefreshPreflight = null;
 let refreshConfirmationInProgress = false;
 const refreshPreflightCreatedTabIds = new Set();
@@ -269,7 +283,9 @@ async function createRefreshPreflight() {
   if (refreshAllTask || refreshReferencesTask) throw new Error("当前正在刷新，请稍后再执行登录预检");
   activeRefreshPreflight = null;
   await persistRefreshPreflightState();
-  const stations = (await getPreparedStations()).filter(station => station.enabled);
+  const settings = await getSettings();
+  const scope = refreshScope(await getPreparedStations(), settings.comparisonMode);
+  const { stations } = scope;
   const results = [];
   for (const station of stations) {
     const provider = providerForStation(station);
@@ -282,7 +298,10 @@ async function createRefreshPreflight() {
   activeRefreshPreflight = {
     token: newRefreshPreflightToken(),
     expiresAt: Date.now() + REFRESH_PREFLIGHT_TTL_MS,
-    stationSignature: refreshStationSignature(stations),
+    comparisonMode: scope.comparisonMode,
+    comparisonLabel: scope.comparisonLabel,
+    stationCount: scope.stationCount,
+    stationSignature: refreshStationSignature(stations, scope.comparisonMode),
     results
   };
   await persistRefreshPreflightState();
@@ -296,8 +315,8 @@ async function cancelRefreshPreflight() {
 }
 
 async function refreshAllInternal(options = {}) {
-  const { preparedStations, ...refreshOptions } = options;
-  return runRefreshAll({
+  const { preparedStations, refreshMetadata, ...refreshOptions } = options;
+  const result = await runRefreshAll({
     ...refreshOptions,
     concurrency: REFRESH_CONCURRENCY,
     getStations: preparedStations ? async () => preparedStations : getPreparedStations,
@@ -307,8 +326,14 @@ async function refreshAllInternal(options = {}) {
     putSnapshot,
     getSnapshots,
     errorSnapshot,
-    notifyProgress: notifyRefreshProgress
+    notifyProgress: progress => notifyRefreshProgress(refreshMetadata ? {
+      ...progress,
+      ...refreshMetadata,
+      ...(progress.summary ? { summary: { ...progress.summary, ...refreshMetadata } } : {})
+    } : progress)
   });
+  if (refreshMetadata) result.summary = { ...result.summary, ...refreshMetadata };
+  return result;
 }
 
 let refreshAllTask = null;
@@ -388,6 +413,7 @@ async function dashboard() {
     getValue("references", {})
   ]);
   const comparisonStations = stations.filter(station => station.enabled === true);
+  const refresh = refreshScope(stations, savedSettings.comparisonMode);
   const stationsById = new Map(comparisonStations.map(station => [station.id, station]));
   const snapshots = await getLatestSnapshots(comparisonStations.map(station => station.id), snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
   const staleAfter = 30 * 60 * 1000;
@@ -422,14 +448,16 @@ async function dashboard() {
     const linked = stations.find(station => station.enabled && matchCheckinPreset(station)?.id === preset.id);
     return { id: preset.id, name: preset.name, linkedStationId: linked ? linked.id : null, autoEnabled: Boolean(linked?.checkin?.autoEnabled) };
   });
-  const refreshPreflight = activeRefreshPreflight?.stationSignature === refreshStationSignature(stations)
-    ? { token: activeRefreshPreflight.token, expiresAt: activeRefreshPreflight.expiresAt, results: activeRefreshPreflight.results }
+  const refreshPreflight = activeRefreshPreflight?.stationSignature === refreshStationSignature(refresh.stations, refresh.comparisonMode)
+    && activeRefreshPreflight.comparisonMode === refresh.comparisonMode
+    ? { token: activeRefreshPreflight.token, expiresAt: activeRefreshPreflight.expiresAt, comparisonMode: activeRefreshPreflight.comparisonMode, comparisonLabel: activeRefreshPreflight.comparisonLabel, stationCount: activeRefreshPreflight.stationCount, results: activeRefreshPreflight.results }
     : null;
-  const stationErrors = normalizedSnapshots
+  const visibleSnapshots = normalizedSnapshots.filter(snapshot => stationsById.get(snapshot.stationId)?.category === savedSettings.comparisonMode);
+  const stationErrors = visibleSnapshots
     .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
-  return { stations, snapshots: normalizedSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshPreflight };
+  return { stations, snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
 }
 
 async function scheduleCheckinAlarm() {
@@ -551,12 +579,15 @@ async function saveStations(input) {
     stations.push({ ...station, auth: { type: submitted.type, token: "", username: "", password: "" } });
   }
   await putStations(stations);
+  await clearRefreshPreflightState();
   return stations;
 }
 
 async function saveComparisonMode(mode) {
   const current = await getSettings();
-  await setValue("settings", normalizeSettings({ ...current, comparisonMode: mode === "public" ? "public" : "paid" }));
+  const nextMode = mode === "public" ? "public" : "paid";
+  await setValue("settings", normalizeSettings({ ...current, comparisonMode: nextMode }));
+  if (current.comparisonMode !== nextMode) await clearRefreshPreflightState();
   return dashboard();
 }
 
@@ -586,6 +617,7 @@ async function saveSettings(input, { llmApiKey, clearLlmApiKey, jevApiKey, clear
     if (next.activeProviders.jev) await setProviderApiKey("jev", next.activeProviders.jev, jevApiKey);
   }
   await setValue("settings", next);
+  await clearRefreshPreflightState();
   return settingsForUi();
 }
 async function saveProviderProfile({ kind, profileId, name, config = {}, apiKey, clearApiKey } = {}) {
@@ -860,17 +892,31 @@ async function handle(message, sender) {
       refreshConfirmationInProgress = true;
       try {
         await restoreRefreshPreflightState();
-        const stations = await getPreparedStations();
-        assertRefreshConfirmation(activeRefreshPreflight, message, stations);
+        const settings = await getSettings();
+        const scope = refreshScope(await getPreparedStations(), settings.comparisonMode);
+        assertRefreshConfirmation(activeRefreshPreflight, message, scope.stations, scope.comparisonMode);
+        if (!scope.stationCount) {
+          await clearRefreshPreflightState();
+          const error = new Error(REFRESH_NO_STATIONS_MESSAGE);
+          error.code = REFRESH_NO_STATIONS_CODE;
+          throw error;
+        }
         await clearRefreshPreflightState();
-        const result = await refreshAll({ forceReferences: Boolean(message.forceReferences), preparedStations: stations });
+        const result = await refreshAll({
+          forceReferences: Boolean(message.forceReferences),
+          preparedStations: scope.stations,
+          refreshMetadata: { comparisonMode: scope.comparisonMode, comparisonLabel: scope.comparisonLabel, stationCount: scope.stationCount }
+        });
         return { ...(await dashboard()), refreshSummary: result.summary };
       } finally {
         refreshConfirmationInProgress = false;
       }
     }
     case "REFRESH_STATION": {
-      const result = await refreshAll({ stationId: message.stationId, sourceTabId: message.sourceTabId });
+      const stationId = String(message.stationId || "").trim();
+      const station = (await getPreparedStations()).find(item => item.id === stationId);
+      if (!station || station.enabled !== true) throw new Error("站点不存在或未启用");
+      const result = await refreshAll({ stationId, sourceTabId: message.sourceTabId });
       return { ...(await dashboard()), refreshSummary: result.summary };
     }
     case "FETCH_REFERENCES": {
@@ -887,6 +933,7 @@ async function handle(message, sender) {
         const next = importedById.get(previous.id);
         if (!next || String(next.baseUrl || "") !== previous.baseUrl || String(next.auth?.type || "none") !== previous.auth?.type) await removeStationCredential(previous.id);
       }
+      await clearRefreshPreflightState();
       return dashboard();
     }
     case "TEST_STATION": {
