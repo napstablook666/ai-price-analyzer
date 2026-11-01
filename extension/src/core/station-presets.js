@@ -62,6 +62,9 @@ export function addAllInOneStationPreset(stations) {
 export function addHepinganStationPreset(stations) {
   return addRegisteredStationPreset(stations, "hepingan");
 }
+export function addCentosStationPreset(stations) {
+  return addRegisteredStationPreset(stations, "centos");
+}
 
 export {
   HEPINGAN_CHANNELS_ENDPOINT,
@@ -77,5 +80,6 @@ export {
   NODEAI_MODEL_PLAZA_ENDPOINT,
   FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT,
   TRUE_SOTA_MODEL_PRICING_ENDPOINT,
-  TOKENFLUX_PRICING_ENDPOINT
+  TOKENFLUX_PRICING_ENDPOINT,
+  CENTOS_PRICING_ENDPOINT
 } from "./provider-registry.js";

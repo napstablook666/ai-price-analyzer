@@ -5,7 +5,7 @@ import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
-import { ALL_IN_ONE_MODELS_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
+import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationScores, buildComparisonRows, currencyToRmb, getProxyPriceQuote, getProxyPrices, getTierShares, workloadCost } from "../src/core/pricing.js";
@@ -37,7 +37,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addAllInOneStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addAllInOneStationPreset, addCentosStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
 import { runWithConcurrency, withKeyedLock } from "../src/core/concurrency.js";
 import { runRefreshAll } from "../src/core/refresh-scheduler.js";
 
@@ -140,6 +140,61 @@ const tokenFluxFixture = {
         resolution: { enum: ["480P", "720P", "1080P"] },
         seconds: { type: "number", unit: "second" }
       }
+    }
+  ]
+};
+
+const centosFixture = {
+  success: true,
+  pricing_version: "centos-fixture",
+  group_ratio: { default: 1, "ClaudeAWS企业分组": 4.5 },
+  usable_group: { default: "默认分组", "ClaudeAWS企业分组": "ClaudeAWS企业分组" },
+  supported_endpoint: {
+    openai: { path: "/v1/chat/completions", method: "POST" },
+    "image-generation": { path: "/v1/images/generations", method: "POST" }
+  },
+  data: [
+    {
+      model_name: "centos-token",
+      quota_type: 0,
+      model_ratio: 0.4,
+      completion_ratio: 2,
+      cache_ratio: 0.25,
+      create_cache_ratio: 0.1,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["openai"]
+    },
+    {
+      model_name: "centos-enterprise",
+      quota_type: 0,
+      model_ratio: 1,
+      completion_ratio: 3,
+      cache_ratio: 0.5,
+      enable_groups: ["ClaudeAWS企业分组"],
+      supported_endpoint_types: ["openai"]
+    },
+    {
+      model_name: "centos-request",
+      quota_type: 1,
+      model_price: 0.2,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["openai"]
+    },
+    {
+      model_name: "centos-image",
+      quota_type: 1,
+      model_price: 0.3,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["image-generation"]
+    },
+    {
+      model_name: "centos-tiered",
+      quota_type: 0,
+      model_ratio: 0.8,
+      completion_ratio: 2,
+      enable_groups: ["default"],
+      billing_mode: "tiered_expr",
+      billing_expr: "tier(\"standard\", p * 1 + c * 2)"
     }
   ]
 };
@@ -1699,7 +1754,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -2858,6 +2913,120 @@ test("adapts the TokenFlux pricing API and station preset", async () => {
   assert.ok(video);
   assert.equal(video.request_price, 1);
   assert.equal(video.image_price, null);
+});
+test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async () => {
+  const provider = providerForStation({ baseUrl: "https://ai.centos.hk/pricing" });
+  assert.equal(provider.id, "centos");
+  assert.equal(providerForStation({ baseUrl: "https://ai.centos.hk/other" }), null);
+
+  assert.equal(providerForStation({ baseUrl: "https://www.ai.centos.hk/pricing" }), null);
+  const adapter = inferStationAdapter({
+    baseUrl: "https://ai.centos.hk/pricing",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  });
+  assert.equal(adapter.mode, "direct");
+  assert.equal(adapter.endpoint, CENTOS_PRICING_ENDPOINT);
+  assert.equal(adapter.method, "GET");
+  assert.equal(adapter.responseFormat, "tokenflux");
+  assert.equal(adapter.authType, "none");
+
+  const prepared = prepareStationInput({
+    baseUrl: "https://ai.centos.hk/pricing",
+    auth: { type: "api-key", token: "must-not-be-sent" }
+  });
+  assert.equal(prepared.baseUrl, "https://ai.centos.hk/pricing");
+  assert.equal(prepared.mode, "direct");
+  assert.deepEqual(prepared.auth, { type: "none" });
+  assert.equal(prepared.adapter.endpoint, CENTOS_PRICING_ENDPOINT);
+  assert.equal(prepared.adapter.responseFormat, "tokenflux");
+  assert.equal(prepared.priceCurrency, "CREDITS");
+  assert.equal(prepared.priceCurrencyVerified, true);
+  assert.equal(prepared.rechargeRateVerified, false);
+
+  let request;
+  const snapshot = await collectStationInput({
+    id: "station-centos",
+    name: "ai.centos.hk",
+    baseUrl: "https://ai.centos.hk/pricing",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response(centosFixture);
+    }
+  });
+  assert.equal(request.url, "https://ai.centos.hk/api/pricing");
+  assert.equal(request.init.method, "GET");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(request.init.headers["X-API-Key"], undefined);
+  assert.equal(snapshot.status, "partial");
+  assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
+  assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["tiered_expr"]);
+  assert.equal(snapshot.normalized.incomplete, true);
+
+  const token = snapshot.normalized.data.find(row => row.model_name === "centos-token");
+  assert.ok(token);
+  assert.equal(token.input_price, 0.4);
+  assert.equal(token.output_price, 0.8);
+  assert.equal(token.cache_read_price, 0.1);
+  assert.equal(Number(token.cache_write_price.toFixed(6)), 0.04);
+  assert.equal(token.price_currency, "CREDITS");
+  assert.equal(token.group_ratio, 1);
+
+  const enterprise = snapshot.normalized.data.find(row => row.model_name === "centos-enterprise");
+  assert.ok(enterprise);
+  assert.equal(enterprise.input_price, 4.5);
+  assert.equal(enterprise.output_price, 13.5);
+  assert.equal(enterprise.cache_read_price, 2.25);
+  assert.equal(enterprise.group_ratio, 4.5);
+
+  const requestPrice = snapshot.normalized.data.find(row => row.model_name === "centos-request");
+  assert.ok(requestPrice);
+  assert.equal(requestPrice.request_price, 0.2);
+  assert.equal(requestPrice.input_price, null);
+  assert.equal(requestPrice.output_price, null);
+
+  const image = snapshot.normalized.data.find(row => row.model_name === "centos-image");
+  assert.ok(image);
+  assert.equal(image.image_price, 0.3);
+  assert.equal(image.request_price, null);
+  assert.equal(image.input_price, null);
+  assert.equal(image.output_price, null);
+  assert.equal(snapshot.normalized.data.some(row => row.model_name === "centos-tiered"), false);
+
+  assert.equal(snapshot.rechargeRateVerified, false);
+  const comparisonStation = normalizeStation({
+    id: "station-centos-comparison",
+    name: "ai.centos.hk",
+    baseUrl: "https://ai.centos.hk/pricing",
+    rechargeRate: 8,
+    rechargeRateVerified: false,
+    priceCurrency: "CREDITS",
+    priceCurrencyVerified: true
+  });
+  const comparison = buildComparisonRows({
+    stations: [comparisonStation],
+    snapshots: [{ ...snapshot, stationId: comparisonStation.id }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0, requests: 0 }
+  });
+  const centosOffer = comparison.flatMap(row => row.offers).find(offer => offer.modelName === "centos-token");
+  assert.ok(centosOffer);
+  assert.equal(centosOffer.costPrices.input, 0.4);
+  assert.equal(centosOffer.monthlyCost, 0.4);
+
+  const current = [{ id: "seed", baseUrl: "https://relay.example" }];
+  const stations = addCentosStationPreset(current);
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].id, "centos");
+  assert.equal(stations[1].name, "ai.centos.hk");
+  assert.equal(stations[1].baseUrl, "https://ai.centos.hk/pricing");
+  assert.equal(stations[1].rechargeRateVerified, false);
+  assert.equal(addCentosStationPreset(stations), stations);
+  assert.equal(addCentosStationPreset([]).length, 0);
+  const conflict = addCentosStationPreset([{ id: "centos", baseUrl: "https://relay.example" }]);
+  assert.equal(conflict[1].id, "centos-2");
 });
 test("rejects a failed TokenFlux envelope in its explicit format", () => {
   const failed = normalizeProxyData({ ...tokenFluxFixture, success: false }, { responseFormat: "tokenflux" });

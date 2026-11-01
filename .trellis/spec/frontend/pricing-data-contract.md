@@ -314,3 +314,32 @@ if (!["USD", "CREDITS", "POINTS"].includes(code)) return null;
 ```
 
 The station contract establishes CREDITS before comparison, while protected provider state remains an explicit blocking decision.
+
+## ai.centos.hk Public Paid-Site Pricing
+
+### 1. Scope / Trigger
+
+- Trigger: a selectable paid station reads the public pricing page `https://ai.centos.hk/pricing`.
+- The pricing page is anonymous and its verified API is `GET https://ai.centos.hk/api/pricing`; no login, station token, or extension credential is supported.
+
+### 2. Contracts
+
+- Match only hostname `ai.centos.hk` with path `/pricing`. Prepare the station as `direct`, `auth.type: "none"`, and explicit response format `tokenflux`; do not expand this match to other New-API sites.
+- Because `stationContext()` strips a leading `www.` for shared matching, this provider also checks the raw URL hostname; `https://www.ai.centos.hk/pricing` remains unsupported.
+- Request exactly `/api/pricing` with `GET` and `credentials: "omit"`. The request must not contain `Authorization`, `X-API-Key`, or any bearer/API-key token from station configuration.
+- Reuse `TokenFluxPricingStrategy` through the explicit `tokenflux` format. The verified response is the New-API success envelope with `success: true`, a flat `data` array, `group_ratio`, and group/model billing fields.
+- Token rows preserve input/output/cache relationships and apply the selected `group_ratio` exactly once. `quota_type: 1` request rows and `image-generation` rows reuse the existing request/image mapping and keep token fields empty.
+- `billing_mode: "tiered_expr"` and `billing_expr` remain unsupported. Skip those rows, add the existing `unsupportedBillingModes` diagnostic, and mark the normalized result incomplete without fabricating token prices.
+- Collection assigns normalized model-list rows to `CREDITS`; the page's RMB display and group multipliers do not verify recharge conversion. Preserve `rechargeRateVerified: false` so comparison uses the existing unconfirmed 1:1 fallback.
+
+### 3. Validation & Tests
+
+- Assert provider matching and preparation for `/pricing`, rejection of other paths, exact `/api/pricing` URL, `GET`, omitted credentials, no authorization headers, and explicit `tokenflux` response selection.
+- With a redacted New-API fixture, assert token input/output/cache values, request and image rows, one-time group multiplication, `CREDITS` rows, unsupported tiered diagnostics, and unconfirmed recharge state.
+- Assert the `ai.centos.hk` preset is backfilled through the registered-provider migration, repeated host registration is idempotent, an ID collision receives the existing unique suffix, and an empty station list remains empty.
+
+### 4. Good/Base/Bad Cases
+
+- Good: a token row with `model_ratio: 0.4`, `completion_ratio: 2`, and group ratio `1` yields `0.4` input and `0.8` output CREDITS per million tokens; a group ratio `4.5` yields `4.5` input and `13.5` output when applied once.
+- Base: valid request/image rows remain special-priced rows with empty token prices, while valid token rows remain comparable.
+- Bad: forwarding a saved bearer token, using the page URL as the API endpoint, treating RMB display as a verified recharge rate, multiplying `group_ratio` twice, or flattening `tiered_expr` into ordinary token pricing.

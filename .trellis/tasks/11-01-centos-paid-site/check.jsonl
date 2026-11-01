@@ -1,0 +1,6 @@
+{"kind":"check","path":"extension/test/core.test.js","command":"node --test extension/test/core.test.js","summary":"Run the core regression suite including Centos provider matching, omit-credentials request policy, tokenflux normalization, special billing, diagnostics, CREDITS, and preset idempotence assertions."}
+{"kind":"check","path":"extension/src/core/provider-registry.js","command":"node --check extension/src/core/provider-registry.js","summary":"Verify provider registry syntax and the host/path-specific direct request contract."}
+{"kind":"check","path":"extension/src/core/normalizers.js","command":"node --check extension/src/core/normalizers.js","summary":"Verify normalizer syntax and explicit tokenflux strategy compatibility."}
+{"kind":"check","path":"extension/src/core/response-formats.js","command":"node --check extension/src/core/response-formats.js","summary":"Verify response-format registration syntax and tokenflux selection."}
+{"kind":"check","path":"extension/src/core/station-presets.js","command":"node --check extension/src/core/station-presets.js","summary":"Verify Centos station preset registration syntax."}
+{"kind":"check","path":"git diff --check","command":"git diff --check","summary":"Reject whitespace errors across the implementation and pricing-contract changes."}
