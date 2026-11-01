@@ -115,6 +115,7 @@ const DEFAULT_SETTINGS = {
   modelMatchOverrides: [],
   showUnmatched: true,
   showStale: true,
+  comparisonMode: "paid",
   llm: DEFAULT_LLM_CONFIG,
   jev: DEFAULT_JEV_CONFIG,
   providerProfiles: DEFAULT_PROVIDER_PROFILES,
@@ -235,6 +236,7 @@ export function normalizeSettings(input = {}) {
   settings.exchangeRate = Number.isFinite(Number(settings.exchangeRate)) && Number(settings.exchangeRate) > 0 ? Number(settings.exchangeRate) : DEFAULT_EXCHANGE_RATE;
   settings.showUnmatched = Boolean(settings.showUnmatched);
   settings.showStale = Boolean(settings.showStale);
+  settings.comparisonMode = settings.comparisonMode === "public" ? "public" : "paid";
   const profileInput = input.providerProfiles && typeof input.providerProfiles === "object" ? input.providerProfiles : {};
   const providerProfiles = {
     llm: normalizeProviderProfiles("llm", profileInput.llm),

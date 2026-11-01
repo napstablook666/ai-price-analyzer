@@ -2,8 +2,8 @@ import { DEFAULT_EXCHANGE_RATE } from "../shared/schema.js";
 import { PROVIDER_REGISTRY, providerById, stationContext } from "./provider-registry.js";
 
 
-function addStationPreset(stations, preset, hostname) {
-  if (!stations.length || stations.some(station => {
+function addStationPreset(stations, preset, hostname, { allowEmpty = false } = {}) {
+  if ((!allowEmpty && !stations.length) || stations.some(station => {
     return stationContext(station).hostname === hostname;
   })) return stations;
   const ids = new Set(stations.map(station => station.id));
@@ -15,7 +15,7 @@ function addStationPreset(stations, preset, hostname) {
 function addRegisteredStationPreset(stations, providerId, options = {}) {
   const provider = providerById(providerId);
   const preset = typeof provider?.preset === "function" ? provider.preset(options) : provider?.preset;
-  return provider?.host && preset ? addStationPreset(stations, preset, provider.host) : stations;
+  return provider?.host && preset ? addStationPreset(stations, preset, provider.host, { allowEmpty: options.allowEmpty }) : stations;
 }
 
 export function addRegisteredStationPresets(stations, options = {}) {
@@ -65,6 +65,16 @@ export function addHepinganStationPreset(stations) {
 export function addCentosStationPreset(stations) {
   return addRegisteredStationPreset(stations, "centos");
 }
+export function addWindHubStationPreset(stations) {
+  return addRegisteredStationPreset(stations, "windhub");
+}
+export function addLinuxDoMarketplaceStationPreset(stations) {
+  return addRegisteredStationPreset(stations, "linux-do-marketplace");
+}
+
+export function addPublicStationPresets(stations, options = {}) {
+  return ["linux-do-marketplace", "windhub"].reduce((current, providerId) => addRegisteredStationPreset(current, providerId, { ...options, allowEmpty: true }), stations);
+}
 
 export {
   HEPINGAN_CHANNELS_ENDPOINT,
@@ -81,5 +91,7 @@ export {
   FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT,
   TRUE_SOTA_MODEL_PRICING_ENDPOINT,
   TOKENFLUX_PRICING_ENDPOINT,
-  CENTOS_PRICING_ENDPOINT
+  CENTOS_PRICING_ENDPOINT,
+  WINDHUB_PRICING_ENDPOINT,
+  LINUX_DO_MARKETPLACE_URL
 } from "./provider-registry.js";

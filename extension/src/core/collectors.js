@@ -41,9 +41,10 @@ function buildSnapshot(station, normalized, url, status = 200) {
     stationId: station.id,
     stationName: station.name,
     collectedAt: Date.now(),
-    status: normalized.incomplete ? "partial" : normalized.data.some(row => !row.catalogOnly) ? "success" : normalized.data.length ? "catalog" : "empty",
+    status: normalized.error ? "error" : normalized.incomplete ? "partial" : normalized.data.some(row => !row.catalogOnly) ? "success" : normalized.data.length ? "catalog" : "empty",
     source: normalized.sourceFormat,
     normalized,
+    ...(normalized.error ? { error: normalized.error } : {}),
     ...(typeof station.priceCurrencyVerified === "boolean" ? { priceCurrencyVerified: station.priceCurrencyVerified } : {}),
     ...(typeof station.rechargeRateVerified === "boolean" ? { rechargeRateVerified: station.rechargeRateVerified } : {}),
     rawMeta: {
@@ -57,6 +58,7 @@ function buildSnapshot(station, normalized, url, status = 200) {
 }
 
 export async function collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {}) {
+  if (station.adapter?.kind === "linux-do-marketplace") throw new Error("Linux.do Marketplace 匿名价格接口尚未确认，暂不可采集");
   if (!collection) throw new Error("collectStation requires a prepared collection");
   const { endpoints, priceKeys, request: requestStrategy } = collection;
   const rawJson = String(station.adapter?.rawJson || "").trim();

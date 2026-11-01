@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/11-01-public-site-toggle/prd.md", "reason": "Requirements, scope boundaries, acceptance criteria, and resolved public-station decisions."}
+{"file": ".trellis/tasks/11-01-public-site-toggle/design.md", "reason": "Technical boundaries, data contracts, Linux.do endpoint risk policy, and paid/public state design."}
+{"file": ".trellis/tasks/11-01-public-site-toggle/implement.md", "reason": "Ordered implementation, validation commands, rollback points, and start gate."}
+{"file": ".trellis/spec/frontend/project-facts.md", "reason": "Existing extension architecture, pricing workflow, provider adapter and operational constraints."}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "Frontend error handling, testing and forbidden-pattern requirements."}
+{"file": ".trellis/spec/frontend/pricing-data-contract.md", "reason": "Normalized pricing currency and comparison-boundary contract."}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Required cross-layer review for adapters, normalization, persistence and dashboard state."}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Required reuse and duplication review before adding helpers or providers."}

@@ -303,6 +303,40 @@ export class TokenFluxPricingStrategy extends ParsingStrategy {
     };
   }
 }
+
+export class WindHubPricingStrategy extends TokenFluxPricingStrategy {
+  canParse(raw, options = {}) {
+    return options.responseFormat === "windhub" && raw?.success === true && Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
+  }
+
+  parse(raw) {
+    const normalized = super.parse(raw);
+    const vendors = new Map((Array.isArray(raw.vendors) ? raw.vendors : []).map(vendor => [String(vendor?.id), String(vendor?.name || vendor?.id || "").trim()]));
+    const sourceByModel = new Map((raw.data || []).map(item => [String(item?.model_name || ""), item]));
+    return {
+      ...normalized,
+      sourceFormat: "windhub",
+      ...(normalized.data.length ? {} : { error: "WindHub 公开定价数据为空或格式无效" }),
+      auto_groups: Array.isArray(raw.auto_groups) ? [...raw.auto_groups] : [],
+      usable_group: raw.usable_group && typeof raw.usable_group === "object" ? { ...raw.usable_group } : {},
+      vendors: Array.isArray(raw.vendors) ? raw.vendors.map(vendor => ({ ...vendor })) : [],
+      supported_endpoint: raw.supported_endpoint && typeof raw.supported_endpoint === "object" ? { ...raw.supported_endpoint } : {},
+      pricing_version: raw.pricing_version || "",
+      data: normalized.data.map(row => {
+        const source = sourceByModel.get(row.model_name) || {};
+        return {
+          ...row,
+          vendor_id: source.vendor_id ?? null,
+          vendor: vendors.get(String(source.vendor_id)) || String(source.owner_by || "").trim(),
+          cache_ratio: source.cache_ratio ?? null,
+          price_currency: "CREDITS",
+          supported_endpoint_types: Array.isArray(source.supported_endpoint_types) ? [...source.supported_endpoint_types] : [],
+          pricing_version: source.pricing_version || raw.pricing_version || ""
+        };
+      })
+    };
+  }
+}
 function unwrapTrpcPayload(raw) {
   const item = Array.isArray(raw) && raw.length ? raw[0] : raw;
   return item?.result?.data?.json || item?.result?.data || raw;
@@ -1275,6 +1309,7 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
 registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
 registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
+registerResponseFormatHandler("windhub", () => new WindHubPricingStrategy());
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
 registerResponseFormatHandler("all-in-one-models", () => new AllInOneModelsStrategy());

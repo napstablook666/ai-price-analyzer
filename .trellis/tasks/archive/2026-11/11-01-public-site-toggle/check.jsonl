@@ -1,0 +1,2 @@
+{"file": ".trellis/tasks/11-01-public-site-toggle/prd.md", "reason": "Acceptance criteria and explicit out-of-scope behavior for verification."}
+{"file": ".trellis/tasks/11-01-public-site-toggle/design.md", "reason": "Expected adapter, comparison-boundary, accessibility, privacy and rollback contracts."}

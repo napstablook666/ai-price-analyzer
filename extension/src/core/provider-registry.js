@@ -13,6 +13,8 @@ export const NODEAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const KILLAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const TOKENFLUX_PRICING_ENDPOINT = "/api/pricing";
 export const CENTOS_PRICING_ENDPOINT = "/api/pricing";
+export const WINDHUB_PRICING_ENDPOINT = "/api/pricing";
+export const LINUX_DO_MARKETPLACE_URL = "https://hub.linux.do/marketplace";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";
@@ -146,6 +148,40 @@ const tokenFluxPreset = {
   mode: "direct",
   auth: { type: "none" },
   adapter: { kind: "tokenflux", endpoint: TOKENFLUX_PRICING_ENDPOINT, method: "GET", responseFormat: "tokenflux" }
+};
+const linuxDoMarketplacePreset = {
+  id: "linux-do-marketplace",
+  name: "Linux.do Marketplace",
+  category: "public",
+  baseUrl: LINUX_DO_MARKETPLACE_URL,
+  rechargeRmb: 1,
+  rechargeCredits: 1,
+  rechargeRateVerified: false,
+  rechargeRateNote: "仅站点积分/额度 1:1 展示基准，不代表人民币成本。匿名价格接口待确认。",
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "站点积分/额度；当前未接入匿名价格接口",
+  enabled: true,
+  mode: "direct",
+  auth: { type: "none" },
+  adapter: { kind: "linux-do-marketplace", endpoint: "", method: "GET", responseFormat: "auto" }
+};
+const windHubPreset = {
+  id: "windhub",
+  name: "WindHub",
+  category: "public",
+  baseUrl: "https://windhub.cc/pricing",
+  rechargeRmb: 1,
+  rechargeCredits: 1,
+  rechargeRateVerified: false,
+  rechargeRateNote: "仅站点积分/额度 1:1 展示基准，不代表人民币成本。",
+  priceCurrency: "CREDITS",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "站点积分/额度；默认展示比例 1:1",
+  enabled: true,
+  mode: "direct",
+  auth: { type: "none" },
+  adapter: { kind: "windhub", endpoint: WINDHUB_PRICING_ENDPOINT, method: "GET", responseFormat: "windhub" }
 };
 const centosPreset = {
   id: "centos",
@@ -403,6 +439,50 @@ export const PROVIDER_REGISTRY = [
     rationale: "TokenFlux 通过公开定价 API 直连采集",
     preset: tokenFluxPreset,
     request: requestPolicy(() => TOKENFLUX_PRICING_ENDPOINT, { credentials: "omit" })
+  },
+  {
+    id: "linux-do-marketplace",
+    host: "hub.linux.do",
+    preserveRechargeRateVerification: true,
+    matches: ({ hostname, path }) => hostname === "hub.linux.do" && path === "/marketplace",
+    prepareMatches: ({ hostname }) => hostname === "hub.linux.do",
+    prepare: (stationInput, { url }) => ({
+      ...stationInput,
+      baseUrl: `${url.origin}/marketplace`,
+      category: "public",
+      rechargeRateVerified: false,
+      mode: "direct",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "linux-do-marketplace", endpoint: "", method: "GET", responseFormat: "auto" }
+    }),
+    mode: "direct",
+    responseFormat: "auto",
+    authType: "none",
+    rationale: "Linux.do Marketplace 的匿名价格接口尚未确认，暂不采集",
+    preset: linuxDoMarketplacePreset,
+    request: requestPolicy(() => { throw new Error("Linux.do Marketplace 匿名价格接口尚未确认，暂不可采集"); }, { credentials: "omit" })
+  },
+  {
+    id: "windhub",
+    host: "windhub.cc",
+    preserveRechargeRateVerification: true,
+    matches: ({ hostname, path }) => hostname === "windhub.cc" && path === "/pricing",
+    prepareMatches: ({ hostname }) => hostname === "windhub.cc",
+    prepare: (stationInput, { url }) => ({
+      ...stationInput,
+      baseUrl: `${url.origin}/pricing`,
+      category: "public",
+      rechargeRateVerified: false,
+      mode: "direct",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "windhub", endpoint: WINDHUB_PRICING_ENDPOINT, method: "GET", responseFormat: "windhub" }
+    }),
+    mode: "direct",
+    responseFormat: "windhub",
+    authType: "none",
+    rationale: "WindHub 通过公开 /api/pricing 接口直连采集",
+    preset: windHubPreset,
+    request: requestPolicy(() => WINDHUB_PRICING_ENDPOINT, { credentials: "omit" })
   },
   {
     id: "centos",

@@ -3,13 +3,13 @@ import { prepareStationInput, providerForStation } from "./core/provider-registr
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
 import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
-import { addRegisteredStationPresets } from "./core/station-presets.js";
+import { addPublicStationPresets, addRegisteredStationPresets } from "./core/station-presets.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
 import { fetchReferences } from "./core/openrouter.js";
 import { fetchModelCatalog, requestJevChoices, testModelConnection } from "./core/model-api.js";
-import { buildComparisonRows, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
+import { buildComparisonRows, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
 import { getJevModelCandidates, matchModelWithOverrides, normalizeProxyModelName } from "./core/matching.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, JEV_NO_MATCH, resolveJevTaskConfig } from "./core/jev-tasks.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
@@ -367,7 +367,7 @@ async function refreshAll(options = {}) {
 
 async function ensureStationPresets(exchangeRate) {
   const current = await getStations();
-  const next = addRegisteredStationPresets(current, { exchangeRate });
+  const next = current.length ? addRegisteredStationPresets(current, { exchangeRate }) : addPublicStationPresets(current, { exchangeRate });
   for (const station of next.slice(current.length)) {
     await addStationIfNeeded(stations => {
       if (stations.some(item => item.id === station.id)) return null;
@@ -425,7 +425,11 @@ async function dashboard() {
   const refreshPreflight = activeRefreshPreflight?.stationSignature === refreshStationSignature(stations)
     ? { token: activeRefreshPreflight.token, expiresAt: activeRefreshPreflight.expiresAt, results: activeRefreshPreflight.results }
     : null;
-  return { stations, snapshots: normalizedSnapshots, references: effectiveReferences, settings: savedSettings, comparisons: comparisonResult.comparisons, summary: comparisonResult.summary, checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshPreflight };
+  const stationErrors = normalizedSnapshots
+    .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
+    .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
+  const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
+  return { stations, snapshots: normalizedSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshPreflight };
 }
 
 async function scheduleCheckinAlarm() {
@@ -548,6 +552,12 @@ async function saveStations(input) {
   }
   await putStations(stations);
   return stations;
+}
+
+async function saveComparisonMode(mode) {
+  const current = await getSettings();
+  await setValue("settings", normalizeSettings({ ...current, comparisonMode: mode === "public" ? "public" : "paid" }));
+  return dashboard();
 }
 
 async function saveSettings(input, { llmApiKey, clearLlmApiKey, jevApiKey, clearJevApiKey } = {}) {
@@ -814,6 +824,7 @@ function requireExtensionPage(sender) {
 async function handle(message, sender) {
   switch (message.type) {
     case "GET_DASHBOARD": return dashboard();
+    case "SAVE_COMPARISON_MODE": return saveComparisonMode(message.mode);
     case "GET_SETTINGS": return settingsForUi();
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
     case "SAVE_PROVIDER_PROFILE": return saveProviderProfile(message);

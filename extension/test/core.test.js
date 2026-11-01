@@ -5,10 +5,10 @@ import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
-import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
+import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, LINUX_DO_MARKETPLACE_URL, WINDHUB_PRICING_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
-import { addRecommendationScores, buildComparisonRows, currencyToRmb, getProxyPriceQuote, getProxyPrices, getTierShares, workloadCost } from "../src/core/pricing.js";
+import { addRecommendationScores, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, getTierShares, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
@@ -37,7 +37,7 @@ import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnaps
 import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
 import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
 import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addAllInOneStationPreset, addCentosStationPreset, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addNexaStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset } from "../src/core/station-presets.js";
+import { addAiApiStationPreset, addAllInOneStationPreset, addCentosStationPreset, addPublicStationPresets, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addLinuxDoMarketplaceStationPreset, addNexaStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset, addWindHubStationPreset } from "../src/core/station-presets.js";
 import { runWithConcurrency, withKeyedLock } from "../src/core/concurrency.js";
 import { runRefreshAll } from "../src/core/refresh-scheduler.js";
 
@@ -1094,10 +1094,23 @@ test("isolates public stations from paid and benchmark comparisons", () => {
   assert.equal(paid.offers[0].officialMonthlyCost, 8);
   assert.equal(publicComparison.offers.length, 2);
   assert.deepEqual(publicComparison.offers.map(offer => offer.stationId), ["public-a", "public-b"]);
-  assert.ok(publicComparison.offers.every(offer => offer.monthlyCost === 2));
+  assert.ok(publicComparison.offers.every(offer => offer.monthlyCost === null));
   assert.ok(publicComparison.offers.every(offer => offer.officialMonthlyCost === null && offer.diffPercent === null));
   assert.ok(publicComparison.offers.every(offer => offer.costCurrency === "CREDITS"));
-  assert.ok(publicComparison.offers.some(offer => offer.recommended));
+  assert.ok(publicComparison.offers.every(offer => !offer.recommended && !offer.recommendationLabel));
+});
+
+test("keeps unmatched public offers when paid unmatched rows are hidden", () => {
+  const [comparison] = buildComparisonRows({
+    stations: [{ id: "public", name: "Public", category: "public", priceCurrencyVerified: true, rechargeRateVerified: false }],
+    snapshots: [{ stationId: "public", collectedAt: 1, status: "success", normalized: { data: [{ model_name: "public-only-model", input_price: 1, output_price: 2, price_currency: "CREDITS" }] } }],
+    references: { models: [] },
+    showUnmatched: false,
+    usage: { input: TOKENS_PER_MILLION, output: 0 }
+  });
+  assert.ok(comparison);
+  assert.equal(comparison.comparisonGroup, "public");
+  assert.equal(comparison.offers[0].officialName, "");
 });
 
 
@@ -1754,7 +1767,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "linux-do-marketplace", "windhub"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -3028,6 +3041,104 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   const conflict = addCentosStationPreset([{ id: "centos", baseUrl: "https://relay.example" }]);
   assert.equal(conflict[1].id, "centos-2");
 });
+test("keeps Linux.do Marketplace deferred without inventing an endpoint", async () => {
+  const preset = addLinuxDoMarketplaceStationPreset([{ id: "seed", baseUrl: "https://relay.example" }]).find(station => station.id === "linux-do-marketplace");
+  assert.ok(preset);
+  assert.equal(preset.category, "public");
+  assert.equal(preset.enabled, true);
+  assert.deepEqual(preset.auth, { type: "none" });
+  assert.equal(preset.adapter.endpoint, "");
+  assert.equal(providerForStation({ baseUrl: "https://hub.linux.do/marketplace" }).id, "linux-do-marketplace");
+  assert.throws(() => collectStationInput(preset), /Linux.do Marketplace 匿名价格接口尚未确认/);
+});
+
+test("adapts WindHub's verified public pricing contract and keeps anonymous requests", async () => {
+  const windhub = structuredClone(centosFixture);
+  windhub.pricing_version = "windhub-fixture";
+  windhub.auto_groups = ["default", "Translate"];
+  windhub.usable_group = { default: "默认分组", Translate: "免费分组" };
+  windhub.vendors = [{ id: 3, name: "Example vendor" }];
+  windhub.supported_endpoint = { openai: { path: "/v1/chat/completions", method: "POST" } };
+  windhub.data[0].vendor_id = 3;
+  windhub.data[0].supported_endpoint_types = ["openai"];
+  const registered = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://relay.example" }]);
+  const preset = registered.find(station => station.id === "windhub");
+  const linuxDo = registered.find(station => station.id === "linux-do-marketplace");
+  assert.ok(preset);
+  assert.ok(linuxDo);
+  assert.equal(linuxDo.category, "public");
+  assert.equal(linuxDo.enabled, true);
+  assert.deepEqual(linuxDo.auth, { type: "none" });
+  assert.equal(preset.category, "public");
+  assert.equal(preset.enabled, true);
+  assert.deepEqual(preset.auth, { type: "none" });
+  assert.equal(preset.rechargeRmb, 1);
+  assert.equal(preset.rechargeCredits, 1);
+  assert.equal(preset.adapter.endpoint, WINDHUB_PRICING_ENDPOINT);
+  assert.equal(preset.adapter.responseFormat, "windhub");
+  assert.equal(addWindHubStationPreset(registered), registered);
+  assert.equal(addWindHubStationPreset([]).length, 0);
+  const provider = providerForStation({ baseUrl: "https://windhub.cc/pricing" });
+  assert.equal(provider.id, "windhub");
+  assert.equal(providerForStation({ baseUrl: "https://windhub.cc/other" }), null);
+  assert.equal(LINUX_DO_MARKETPLACE_URL, "https://hub.linux.do/marketplace");
+  let request;
+  const snapshot = await collectStationInput({ id: "station-windhub", name: "WindHub", baseUrl: "https://windhub.cc/pricing", auth: { type: "bearer", token: "must-not-be-sent" } }, { fetchImpl: async (url, init) => { request = { url, init }; return response(windhub); } });
+  assert.equal(request.url, "https://windhub.cc/api/pricing");
+  assert.equal(request.init.method, "GET");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(snapshot.normalized.sourceFormat, "windhub");
+  assert.deepEqual(snapshot.normalized.auto_groups, ["default", "Translate"]);
+  assert.deepEqual(snapshot.normalized.usable_group, windhub.usable_group);
+  assert.deepEqual(snapshot.normalized.supported_endpoint, windhub.supported_endpoint);
+  const row = snapshot.normalized.data.find(item => item.model_name === "centos-token");
+  assert.ok(row);
+  assert.equal(row.price_currency, "CREDITS");
+  assert.equal(row.vendor, "Example vendor");
+  assert.deepEqual(row.supported_endpoint_types, ["openai"]);
+  assert.equal(row.input_price, 0.4);
+  assert.equal(row.output_price, 0.8);
+  assert.equal(row.cache_read_price, 0.1);
+  assert.equal(Number(row.cache_write_price.toFixed(6)), 0.04);
+  assert.equal(row.group_ratio, 1);
+});
+
+test("surfaces a failed WindHub envelope as a station error snapshot", async () => {
+  const snapshot = await collectStationInput({ id: "station-windhub-error", name: "WindHub", baseUrl: "https://windhub.cc/pricing" }, {
+    fetchImpl: async () => response({ success: false, data: [] })
+  });
+  assert.equal(snapshot.status, "error");
+  assert.match(snapshot.error, /WindHub/);
+  assert.equal(snapshot.normalized.data.length, 0);
+});
+
+test("surfaces an empty successful WindHub envelope as a station error snapshot", async () => {
+  const snapshot = await collectStationInput({ id: "station-windhub-empty", name: "WindHub", baseUrl: "https://windhub.cc/pricing" }, {
+    fetchImpl: async () => response({ success: true, data: [{}], group_ratio: { default: 1 } })
+  });
+  assert.equal(snapshot.status, "error");
+  assert.match(snapshot.error, /WindHub/);
+});
+
+test("seeds public presets for an empty station list without changing general preset defaults", () => {
+  const publicStations = addPublicStationPresets([]);
+  assert.deepEqual(publicStations.map(station => station.id), ["linux-do-marketplace", "windhub"]);
+  assert.ok(publicStations.every(station => station.category === "public" && station.enabled === true));
+  assert.deepEqual(addPublicStationPresets(publicStations), publicStations);
+  assert.equal(addRegisteredStationPresets([]).length, 0);
+});
+
+test("filters paid and public comparison groups without mixing summaries", () => {
+  const comparisons = [
+    { comparisonGroup: "standard", canonicalModel: "paid-model", offers: [{ stationId: "paid" }] },
+    { comparisonGroup: "public", canonicalModel: "public-model", offers: [{ stationId: "public" }] }
+  ];
+  assert.deepEqual(filterComparisonsByMode(comparisons, "paid"), [comparisons[0]]);
+  assert.deepEqual(filterComparisonsByMode(comparisons, "public"), [comparisons[1]]);
+  assert.deepEqual(summarizeComparisons(filterComparisonsByMode(comparisons, "public")), { modelCount: 1, offerCount: 1, stationCount: 1, staleCount: 0, bestSaving: 0 });
+});
+
 test("rejects a failed TokenFlux envelope in its explicit format", () => {
   const failed = normalizeProxyData({ ...tokenFluxFixture, success: false }, { responseFormat: "tokenflux" });
   assert.equal(failed.sourceFormat, "unknown");
@@ -4688,6 +4799,32 @@ test("refreshes only the selected dashboard station", () => {
   assert.match(source, /\$\("#refresh-station"\)\.addEventListener/);
   assert.match(source, /callService\("REFRESH_STATION", \{ stationId: station\.id \}\)/);
   assert.match(source, /button\.disabled = !station\?\.enabled/);
+});
+
+test("provides an accessible persisted paid/public dashboard mode boundary", () => {
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  assert.match(html, /data-comparison-mode="paid"[^>]*aria-pressed="true"/);
+  assert.match(html, /data-comparison-mode="public"[^>]*aria-pressed="false"/);
+  assert.match(source, /SAVE_COMPARISON_MODE/);
+  assert.match(source, /comparisonMode === "public"/);
+  assert.match(source, /仅显示公益站报价/);
+  assert.match(source, /paid-only-column/);
+});
+
+test("shows Linux.do deferred collection state in station settings", () => {
+  const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  assert.match(source, /Linux\.do Marketplace：匿名价格接口尚未确认，暂不可采集/);
+  assert.match(source, /adapter\.kind === "linux-do-marketplace"/);
+  assert.match(source, /unavailableAction/);
+  assert.match(html, /id="stations-list"/);
+});
+
+test("normalizes dashboard comparison mode with paid as the default", () => {
+  assert.equal(normalizeSettings({}).comparisonMode, "paid");
+  assert.equal(normalizeSettings({ comparisonMode: "public" }).comparisonMode, "public");
+  assert.equal(normalizeSettings({ comparisonMode: "invalid" }).comparisonMode, "paid");
 });
 
 test("defaults provider filters to Anthropic, DeepSeek, OpenAI, and z-ai", () => {

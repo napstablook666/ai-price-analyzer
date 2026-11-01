@@ -39,6 +39,71 @@ This contract covers station pricing from collection through snapshots and dashb
 - `REFRESH_ALL` requires an unexpired one-use preflight confirmation. Preflight results never change currency or recharge verification flags; currency verification and other pricing availability checks remain authoritative.
 - `NORMALIZATION_VERSION` changes whenever old normalized snapshots could encode a different trust decision. Version `24` is required after ordinary stale verification repair; `snapshotNeedsRefresh()` rejects older versions.
 - Raw official OpenRouter API reference prices remain USD. Comparison maps the same numeric USD-credit value 1:1 to `CREDITS` and computes RMB benchmark cost separately with the configured `openRouterRechargeRate`. OpenRouter purchase fees are not model prices.
+## Public comparison mode
+
+### 1. Scope / Trigger
+
+- Trigger: the dashboard must compare paid proxy stations separately from public model-list stations while preserving the existing paid comparison pipeline.
+- This contract covers `comparisonMode` persistence, public-only derived rows, station-level collection errors, and anonymous public presets.
+
+### 2. Signatures
+
+- `normalizeSettings(settings = {})` returns `comparisonMode: "paid" | "public"`, defaulting invalid or missing values to `"paid"`.
+- `filterComparisonsByMode(comparisons, mode)` keeps `comparisonGroup === "public"` for public mode and excludes it for paid mode.
+- `saveComparisonMode(mode)` persists only the two supported modes and returns dashboard data rebuilt with the selected mode.
+
+### 3. Contracts
+
+- Public presets use `category: "public"`, `auth.type: "none"`, `credentials: "omit"`, no authorization header, and `rechargeRateVerified: false`; their model-list rows remain `CREDITS` and use the existing unconfirmed 1:1 comparison fallback.
+- WindHub uses `GET https://windhub.cc/api/pricing` with explicit response format `windhub`. Preserve `group_ratio`, `cache_ratio`, `completion_ratio`, vendor, usable-group, and supported-endpoint metadata; apply each multiplier once and keep missing optional prices `null`.
+- A WindHub `success: true` envelope with no valid normalized model rows is an error snapshot (`status: "error"`), not an empty successful catalog, so the dashboard can show a station-level failure.
+- Linux.do Marketplace may be registered as a public preset before its anonymous pricing endpoint is confirmed, but its request policy must fail explicitly with `Linux.do Marketplace 匿名价格接口尚未确认，暂不可采集`; never guess an endpoint or use extension credentials/page cookies as a fallback.
+- Public dashboard mode filters rows, station facets, summaries, sort choices, headers, reference status, empty state, and station errors from the same mode-specific source. It hides official-price, monthly-cost, diff, recommendation, and paid-only model-match controls.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Missing or invalid `comparisonMode` | Persist/use `paid` |
+| Public mode | No paid comparison row, paid facet, official-price result, or recommendation difference is rendered |
+| Public request failure | Show a station-level error and keep paid mode usable |
+| WindHub invalid model price or malformed envelope | Preserve existing partial diagnostics; never coerce the value to zero |
+| Linux.do endpoint still unconfirmed | Explicit collection failure; no anonymous fallback guessing or credential forwarding |
+
+### 5. Good/Base/Bad Cases
+
+- Good: switching to public mode rebuilds the station filter from public rows, persists across dashboard reload, and displays the site-unit/1:1 notice.
+- Base: a disabled public station remains editable in settings but cannot contribute snapshots, rows, or error counts to dashboard comparison.
+- Bad: only hiding paid columns while leaving paid rows in the result, treating a Linux.do page URL as its API, or applying WindHub group/cache/output multipliers twice.
+
+### 6. Tests Required
+
+- Assert mode defaulting, persistence, row isolation, public-only station facets, public empty state, hidden paid controls, accessible `aria-pressed` state, and reduced-motion CSS coverage.
+- Assert public preset registration is idempotent, requests omit credentials and authorization, WindHub metadata/multipliers/cache fields survive normalization, and Linux.do fails explicitly until an endpoint fixture is verified.
+- Assert station-level error snapshots are visible only in the matching mode and disabled stations cannot create comparison rows.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```js
+const visibleRows = allRows;
+paidColumns.hidden = mode === "public";
+```
+
+This leaks paid offers into public mode and makes summaries/facets inconsistent.
+
+#### Correct
+
+```js
+const modeRows = filterComparisonsByMode(allRows, state.comparisonMode);
+renderSummary(modeRows);
+renderFacetFilters(modeRows);
+renderRows(modeRows);
+```
+
+The mode boundary must be applied before every derived dashboard projection.
+
 
 ## TokenFlux Public Pricing
 

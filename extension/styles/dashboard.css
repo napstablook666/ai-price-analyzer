@@ -23,6 +23,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .page-shell { width: min(1560px, calc(100% - 48px)); margin: 0 auto; padding: 24px 0 48px; }
 .dashboard-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
 .dashboard-heading h1 { margin: 3px 0 0; color: var(--ink); font-size: 30px; font-weight: 780; line-height: 1.15; }
+.comparison-mode { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--white); }
+.comparison-mode-button { min-height: 36px; padding: 0 13px; border: 0; border-radius: 4px; color: var(--ink-soft); background: transparent; cursor: pointer; font: inherit; font-size: 12px; font-weight: 750; }
+.comparison-mode-button.is-active { color: var(--white); background: var(--blue); }
+.comparison-mode-button:disabled { cursor: wait; opacity: .65; }
+.comparison-mode-note { flex: 1 1 100%; margin: 0; color: var(--ink-soft); font-size: 11px; line-height: 1.45; }
+.station-errors { flex: 1 1 100%; margin: 0; padding: 8px 10px; border-left: 3px solid var(--danger); color: #8b1e1e; background: #fff1f1; font-size: 11px; line-height: 1.45; }
+.station-errors[hidden] { display: none; }
+.station-errors strong { display: block; margin-bottom: 3px; }
+.station-errors ul { display: grid; gap: 2px; margin: 0; padding-left: 18px; }
+.station-errors li { display: flex; flex-wrap: wrap; gap: 4px 10px; overflow-wrap: anywhere; }
+
 .refresh-preflight-panel { display: grid; gap: 10px; margin-bottom: 12px; padding: 14px 18px; border-left: 3px solid #176b45; background: #eaf3ed; }
 .refresh-preflight-panel[hidden] { display: none; }
 .refresh-preflight-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -218,6 +229,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 600px) {
+.comparison-mode { width: 100%; }
+.comparison-mode-button { flex: 1 1 0; min-width: 0; }
 .refresh-preflight-panel { padding: 12px; }
 .refresh-preflight-heading { align-items: flex-start; flex-direction: column; }
 .refresh-preflight-actions { justify-content: flex-start; width: 100%; }
