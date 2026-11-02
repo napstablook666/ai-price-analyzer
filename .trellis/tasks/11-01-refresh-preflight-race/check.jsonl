@@ -1,0 +1,10 @@
+{"kind":"check","path":"extension/test/refresh-preflight.test.js","command":"node --test extension/test/refresh-preflight.test.js","summary":"Verify deferred preflight cannot republish after mode/station changes; verify direct stale-token rejection and strict non-boolean enabled exclusion.","requiredFor":["race regression","grouped scope"]}
+{"kind":"check","path":"extension/test/core.test.js","command":"node --test extension/test/core.test.js","summary":"Verify unchanged refresh scheduler, progress, snapshot, and single-station contracts.","requiredFor":["regression"]}
+{"kind":"check","path":"extension/test/workspace.test.js","command":"node --test extension/test/workspace.test.js","summary":"Verify persisted dashboard mode and workspace state compatibility.","requiredFor":["regression"]}
+{"kind":"check","path":"extension","command":"npm --prefix extension test","summary":"Run all extension tests after implementation.","requiredFor":["full suite"]}
+{"kind":"check","path":"extension/src/service-worker.js","command":"node --check extension/src/service-worker.js","summary":"Verify service-worker syntax and async preflight guard wiring.","requiredFor":["syntax"]}
+{"kind":"check","path":"extension/src/core/refresh-preflight.js","command":"node --check extension/src/core/refresh-preflight.js","summary":"Verify confirmation signature module syntax remains valid.","requiredFor":["syntax"]}
+{"kind":"check","path":"extension/src/dashboard.js","command":"node --check extension/src/dashboard.js","summary":"Verify dashboard integration syntax remains valid.","requiredFor":["syntax"]}
+{"kind":"check","path":"extension/src/popup.js","command":"node --check extension/src/popup.js","summary":"Verify popup integration syntax remains valid.","requiredFor":["syntax"]}
+{"kind":"check","path":"extension/src/shared/ui.js","command":"node --check extension/src/shared/ui.js","summary":"Verify shared refresh-summary formatting syntax remains valid.","requiredFor":["syntax"]}
+{"kind":"check","path":".","command":"git diff --check","summary":"Reject whitespace errors before completion.","requiredFor":["diff hygiene"]}

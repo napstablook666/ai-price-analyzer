@@ -53,7 +53,7 @@ function waitForTab(tabs, tabId) {
   });
 }
 
-export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTemporaryWhenAmbiguous = false, keepOnLoadFailure = false } = {}) {
+export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTemporaryWhenAmbiguous = false, keepOnLoadFailure = false, onTemporaryTabCreated } = {}) {
   const url = new URL(station.adapter?.pageUrl || station.baseUrl);
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.toString());
@@ -63,6 +63,7 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTe
   if (provider?.openTemporaryPage !== true) return { tab: null, temporary: false };
   const created = await tabs.create({ url: url.toString(), active: false });
   try {
+    await onTemporaryTabCreated?.(created);
     return { tab: await waitForTab(tabs, created.id), temporary: true };
   } catch (error) {
     if (keepOnLoadFailure) {

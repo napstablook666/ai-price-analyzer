@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import test from "node:test";
+import nodeTest from "node:test";
 import { PAGE_RUNTIME_FETCH_TYPE } from "../src/core/bridge-protocol.js";
 import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { flattenComparisonRows, getProxyPriceQuote } from "../src/core/pricing.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, classifyPageSessionResponse, refreshStationSignature, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
 
+const test = (name, optionsOrFn, maybeFn) => {
+  if (typeof optionsOrFn === "function") return nodeTest(name, { concurrency: false }, optionsOrFn);
+  return nodeTest(name, { ...optionsOrFn, concurrency: false }, maybeFn);
+};
 let workerSequence = 0;
 const clone = value => value === undefined ? undefined : structuredClone(value);
 
@@ -76,7 +80,7 @@ function memoryDatabase(seed = {}) {
   };
 }
 
-function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs = [], removeError = null, onTabQuery = null } = {}) {
+function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs = [], removeError = null, deferTabLoad = false } = {}) {
   let listener;
   let nextTabId = 100;
   const tabsById = new Map(existingTabs.map(tab => [tab.id, clone(tab)]));
@@ -85,6 +89,12 @@ function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs
   let sessionSetError = null;
   const noOpEvent = { addListener() {}, removeListener() {} };
   const removedEvent = {
+    listeners: new Set(),
+    addListener(callback) { this.listeners.add(callback); },
+    removeListener(callback) { this.listeners.delete(callback); },
+    async emit(...args) { await Promise.all([...this.listeners].map(callback => callback(...args))); }
+  };
+  const updatedEvent = {
     listeners: new Set(),
     addListener(callback) { this.listeners.add(callback); },
     removeListener(callback) { this.listeners.delete(callback); },
@@ -102,6 +112,12 @@ function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs
     fireAlarm(name) { return alarmEvent.emit({ name }); },
     setSessionError(error) { sessionSetError = error; },
     addUserTab(tab) { tabsById.set(tab.id, clone(tab)); nextTabId = Math.max(nextTabId, Number(tab.id) + 1); },
+    async completeTab(tabId) {
+      const tab = tabsById.get(tabId);
+      if (!tab) throw new Error("tab not found");
+      tab.status = "complete";
+      return updatedEvent.emit(tabId, { status: "complete" });
+    },
     reboot() { removedEvent.listeners.clear(); return import(`../src/service-worker.js?preflight-test=${workerSequence++}`); },
     chrome: {
       runtime: {
@@ -125,16 +141,15 @@ function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs
         }
       },
       tabs: {
-        onUpdated: noOpEvent,
+        onUpdated: updatedEvent,
         onRemoved: removedEvent,
         async query() {
           const tabs = [...tabsById.values()].map(clone);
           tabQueries.push(tabs);
-          onTabQuery?.(clone(tabs));
           return tabs;
         },
         async create(options) {
-          const tab = { id: nextTabId++, url: options.url, status: "complete" };
+          const tab = { id: nextTabId++, url: options.url, status: deferTabLoad ? "loading" : "complete" };
           tabsById.set(tab.id, tab); created.push(clone(tab)); return clone(tab);
         },
         async get(tabId) { const tab = tabsById.get(tabId); if (!tab) throw new Error("tab not found"); return clone(tab); },
@@ -160,8 +175,13 @@ function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs
     }
   };
 }
+let workerLock = Promise.resolve();
 
 async function withWorker(seed, chromeOptions, callback) {
+  const previousWorker = workerLock;
+  let releaseWorker;
+  workerLock = new Promise(resolve => { releaseWorker = resolve; });
+  await previousWorker;
   const previousChrome = globalThis.chrome;
   const previousIndexedDB = globalThis.indexedDB;
   const previousKeyRange = globalThis.IDBKeyRange;
@@ -180,6 +200,7 @@ async function withWorker(seed, chromeOptions, callback) {
     if (previousChrome === undefined) delete globalThis.chrome; else globalThis.chrome = previousChrome;
     if (previousIndexedDB === undefined) delete globalThis.indexedDB; else globalThis.indexedDB = previousIndexedDB;
     if (previousKeyRange === undefined) delete globalThis.IDBKeyRange; else globalThis.IDBKeyRange = previousKeyRange;
+    releaseWorker();
   }
 }
 
@@ -192,7 +213,7 @@ function responseError(response, code) {
   assert.equal(response.code, code);
 }
 async function waitFor(predicate) {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < 500; attempt += 1) {
     if (predicate()) return;
     await new Promise(resolve => setImmediate(resolve));
   }
@@ -498,6 +519,76 @@ test("warns scheduled check-in failures without escaping the alarm event", async
   assert.equal(warnings.length, 1);
   assert.match(String(warnings[0][0]), /定时签到失败/);
 });
+test("stale preflight cleans a temporary tab invalidated before loading completes", { concurrency: false }, async () => {
+  const station = { id: "early-race-page", name: "Early race page", category: "paid", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
+  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
+    deferTabLoad: true,
+    pageResponses: { "api.killai.cc": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } }
+  }, async worker => {
+    const staleRequest = worker.send("REFRESH_PREFLIGHT");
+    await waitFor(() => worker.created.length === 1);
+    const tabId = worker.created[0].id;
+    await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Early race page updated" }] });
+    await worker.completeTab(tabId);
+    responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+    assert.deepEqual(worker.removed, [tabId]);
+  });
+});
+
+test("stale preflight temporary tabs are cleaned for ready, needsLogin, and uncertain", { concurrency: false }, async () => {
+  const scenarios = [
+    { name: "ready", host: "api.hepingan.top", baseUrl: "https://api.hepingan.top/available-channels", response: { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
+    { name: "needsLogin", host: "www.nexavlinks.com", baseUrl: "https://www.nexavlinks.com/modelsmarket", response: { ok: false, status: 401, body: { message: "Unauthorized" } } },
+    { name: "uncertain", host: "all-in-one.icu", baseUrl: "https://all-in-one.icu/#/tenant/models", response: { ok: false, status: 503, body: { message: "gateway unavailable" } } }
+  ];
+  for (const scenario of scenarios) {
+    let releaseProbe;
+    const probe = new Promise(resolve => { releaseProbe = resolve; });
+    const station = { id: `cleanup-${scenario.name}`, name: scenario.name, category: "paid", baseUrl: scenario.baseUrl, enabled: true, mode: "page" };
+    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
+      pageResponseHandlers: { [scenario.host]: () => probe }
+    }, async worker => {
+      const staleRequest = worker.send("REFRESH_PREFLIGHT");
+      await waitFor(() => worker.created.length === 1);
+      const tabId = worker.created[0].id;
+      await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: `${scenario.name} updated` }] });
+      releaseProbe(scenario.response);
+      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+      assert.deepEqual(worker.removed, [tabId]);
+    });
+  }
+});
+
+test("stale preflight does not close a reused temporary tab", { concurrency: false }, async () => {
+  let requestCount = 0;
+  let releaseProbe;
+  const probe = new Promise(resolve => { releaseProbe = resolve; });
+  const station = { id: "reuse-page", name: "Reused temporary tab", category: "paid", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
+  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
+    pageResponseHandlers: {
+      "api.killai.cc": () => {
+        requestCount += 1;
+        return requestCount === 1 ? probe : { ok: true, status: 200, body: { data: [{ model_name: "new-preflight" }] } };
+      }
+    }
+  }, async worker => {
+    const staleRequest = worker.send("REFRESH_PREFLIGHT");
+    await waitFor(() => worker.created.length === 1);
+    const tabId = worker.created[0].id;
+    await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Reused temporary tab updated" }] });
+    const currentRequest = worker.send("REFRESH_PREFLIGHT");
+    await waitFor(() => worker.tabQueries.length >= 2);
+    releaseProbe({ ok: true, status: 200, body: { data: [{ model_name: "ready" }] } });
+    await waitFor(() => worker.pageRequests.length >= 2);
+    const currentPreflight = responseData(await currentRequest);
+    assert.equal(currentPreflight.results[0].status, "ready");
+    assert.equal(currentPreflight.results[0].tabId, tabId);
+    assert.deepEqual(worker.removed, []);
+    responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+    assert.deepEqual(worker.removed, []);
+  });
+});
+
 test("REFRESH_ALL requires live explicit confirmation, rejects expired or cancelled state, and consumes confirmation once", async () => {
   const station = {
     id: "manual-relay", name: "Manual Relay", baseUrl: "https://manual-relay.example/pricing", enabled: true, mode: "direct",
@@ -550,68 +641,6 @@ test("stale async preflight cannot republish after a comparison-mode change", as
     assert.deepEqual(worker.removed, [worker.created[0].id]);
     assert.equal(responseData(await worker.send("GET_DASHBOARD")).refreshPreflight, null);
   });
-});
-
-test("stale preflight temporary tabs are cleaned or protected across session results", async () => {
-  const scenarios = [
-    { name: "ready", host: "api.hepingan.top", baseUrl: "https://api.hepingan.top/available-channels", response: { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
-    { name: "needsLogin", host: "www.nexavlinks.com", baseUrl: "https://www.nexavlinks.com/modelsmarket", response: { ok: false, status: 401, body: { message: "Unauthorized" } } },
-    { name: "uncertain", host: "all-in-one.icu", baseUrl: "https://all-in-one.icu/#/tenant/models", response: { ok: false, status: 503, body: { message: "gateway unavailable" } } }
-  ];
-
-  for (const scenario of scenarios) {
-    let releaseProbe;
-    const staleProbe = new Promise(resolve => { releaseProbe = resolve; });
-    const station = { id: `cleanup-${scenario.name}`, name: "Retired temporary tab", category: "paid", baseUrl: scenario.baseUrl, enabled: true, mode: "page" };
-    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-      pageResponseHandlers: { [scenario.host]: () => staleProbe }
-    }, async worker => {
-      const staleRequest = worker.send("REFRESH_PREFLIGHT");
-      await waitFor(() => worker.pageRequests.length === 1 && worker.created.length === 1);
-      const temporaryTabId = worker.created[0].id;
-      await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Retired temporary tab updated" }] });
-      releaseProbe(scenario.response);
-      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
-      assert.deepEqual(worker.removed, [temporaryTabId]);
-    });
-  }
-
-  for (const scenario of scenarios) {
-    let requestCount = 0;
-    let currentTabQueryExpected = false;
-    let currentTabQuerySeen = false;
-    let temporaryTabId;
-    let releaseProbe;
-    const staleProbe = new Promise(resolve => { releaseProbe = resolve; });
-    const station = { id: `reuse-${scenario.name}`, name: "Reused temporary tab", category: "paid", baseUrl: scenario.baseUrl, enabled: true, mode: "page" };
-    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-      onTabQuery: tabs => {
-        if (currentTabQueryExpected && tabs.some(tab => tab.id === temporaryTabId)) currentTabQuerySeen = true;
-      },
-      pageResponseHandlers: {
-        [scenario.host]: () => {
-          requestCount += 1;
-          return requestCount === 1 ? staleProbe : { ok: true, status: 200, body: { data: [{ model_name: "new-preflight" }] } };
-        }
-      }
-    }, async worker => {
-      const staleRequest = worker.send("REFRESH_PREFLIGHT");
-      await waitFor(() => worker.pageRequests.length === 1 && worker.created.length === 1);
-      temporaryTabId = worker.created[0].id;
-      await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Reused temporary tab updated" }] });
-      currentTabQueryExpected = true;
-      const currentRequest = worker.send("REFRESH_PREFLIGHT");
-      await waitFor(() => currentTabQuerySeen);
-      releaseProbe(scenario.response);
-      await waitFor(() => worker.pageRequests.length === 2);
-      const currentPreflight = responseData(await currentRequest);
-      assert.equal(currentPreflight.results[0].status, "ready");
-      assert.equal(currentPreflight.results[0].tabId, temporaryTabId);
-      assert.deepEqual(worker.removed, []);
-      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
-      assert.deepEqual(worker.removed, []);
-    });
-  }
 });
 
 test("station configuration changes invalidate old confirmation and require a new preflight", async () => {

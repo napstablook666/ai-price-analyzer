@@ -69,10 +69,12 @@ async function stationWithCredentials(station) {
   return { ...station, auth };
 }
 
-export async function withPageFetch(station, preferredTabId, task) {
+export async function withPageFetch(station, preferredTabId, task, { existingTab } = {}) {
   const origin = new URL(station.baseUrl).origin;
   return withKeyedLock(origin, async () => {
-    const { tab, temporary } = await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
+    const { tab, temporary } = existingTab?.id
+      ? { tab: existingTab, temporary: false }
+      : await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
     if (!tab?.id) throw new Error("请先在当前 Chrome 配置文件登录目标站点一次后重试");
     try {
       let pendingCapture = await ensurePageBridge(chrome.scripting, tab.id);
@@ -262,7 +264,19 @@ function pageSessionStatusReason(status) {
 async function preflightPageStation(station, requestRevision) {
   let opened;
   try {
-    opened = await findOrOpenPageTab(chrome.tabs, station, undefined, { allowTemporaryWhenAmbiguous: true, keepOnLoadFailure: true });
+    opened = await findOrOpenPageTab(chrome.tabs, station, undefined, {
+      allowTemporaryWhenAmbiguous: true,
+      keepOnLoadFailure: true,
+      onTemporaryTabCreated: async created => {
+        if (requestRevision === refreshPreflightRevision) {
+          refreshPreflightCreatedTabIds.add(created.id);
+          refreshPreflightTabRevisions.set(created.id, requestRevision);
+          await persistRefreshPreflightState(requestRevision);
+        } else {
+          refreshPreflightStaleTabRevisions.set(created.id, requestRevision);
+        }
+      }
+    });
   } catch (error) {
     if (error.temporary && Number.isInteger(error.tabId)) {
       if (requestRevision === refreshPreflightRevision) {
@@ -330,7 +344,7 @@ async function preflightPageStation(station, requestRevision) {
     const request = buildStationRequest(collection.station, probeEndpoint, collection.request);
     const pageAuth = request.pageRequest.pageAuth ? { ...request.pageRequest.pageAuth, refresh: undefined } : undefined;
     const pageRequest = { ...request.pageRequest, url: probeEndpoint, method: probe?.method || "GET", body: undefined, pageAuth };
-    const response = await withPageFetch(station, tab.id, pageFetch => pageFetch(pageRequest));
+    const response = await withPageFetch(station, tab.id, pageFetch => pageFetch(pageRequest), { existingTab: tab });
     status = classifyPageSessionResponse(response);
   } catch (error) {
     status = classifyPageSessionError(error);
