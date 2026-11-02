@@ -1,0 +1,6 @@
+{"file":"extension/test/core.test.js","reason":"Check Linux.do preset, explicit response format, GraphQL request shape, redacted token boundary, multi-channel normalization, multiplier, cache, invalid values, and idempotent registration."}
+{"file":"extension/test/refresh-preflight.test.js","reason":"Check safe GET preflight, no GraphQL pricing POST during preflight, needsLogin classification for missing token and 401/403, and no token exposure."}
+{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Check paid/public row isolation, CREDITS and 1:1 semantics, station facets/errors/empty state, and existing public station regressions."}
+{"file":"extension/src/core/collectors.js","reason":"Check GraphQL errors, empty directory, bounded partial model failures, all-invalid results, and station-level error snapshots."}
+{"file":"extension/src/core/normalizers.js","reason":"Check public/disabled channel filtering, known item mappings, unknown item diagnostics, finite non-negative validation, and no fabricated prices."}
+{"file":"extension/src/page-bridge.js","reason":"Check that only page-world localStorage auth can create the Authorization header and that raw tokens never enter fixtures, logs, rawMeta, or station config."}
