@@ -19,7 +19,7 @@ export function sanitizePreflightUrl(value, base) {
 
 function loginSignal(value) {
   if (typeof value !== "string") return false;
-  return /unauthori[sz]ed|not[ -]?authenticated|session.{0,16}(expired|invalid)|please.{0,16}log[ -]?in|login.{0,16}(required|expired)|未登录|请先登录|请登录|登录已过期|会话已失效|认证失败|重新登录/i.test(value);
+  return /unauthori[sz]ed|not[ -]?authenticated|session.{0,16}(expired|invalid)|please.{0,16}log[ -]?in|login.{0,16}(required|expired)|未登录|未找到.{0,20}(登录|凭据)|登录凭据|请先登录|请登录|登录已过期|会话已失效|认证失败|重新登录/i.test(value);
 }
 
 function loginPageSignal(value) {

@@ -76,11 +76,11 @@ function memoryDatabase(seed = {}) {
   };
 }
 
-function chromeApi({ pageResponses = {}, existingTabs = [], removeError = null } = {}) {
+function chromeApi({ pageResponses = {}, pageResponseHandlers = {}, existingTabs = [], removeError = null, onTabQuery = null } = {}) {
   let listener;
   let nextTabId = 100;
   const tabsById = new Map(existingTabs.map(tab => [tab.id, clone(tab)]));
-  const created = [], removed = [], pageRequests = [], runtimeMessages = [];
+  const created = [], removed = [], pageRequests = [], runtimeMessages = [], tabQueries = [];
   const sessionValues = {};
   let sessionSetError = null;
   const noOpEvent = { addListener() {}, removeListener() {} };
@@ -97,7 +97,7 @@ function chromeApi({ pageResponses = {}, existingTabs = [], removeError = null }
     async emit(...args) { await Promise.all([...this.listeners].map(callback => callback(...args))); }
   };
   const api = {
-    created, removed, pageRequests, runtimeMessages, pageResponses,
+    created, removed, pageRequests, runtimeMessages, tabQueries, pageResponses,
     removeUserTab(tabId) { tabsById.delete(tabId); return removedEvent.emit(tabId); },
     fireAlarm(name) { return alarmEvent.emit({ name }); },
     setSessionError(error) { sessionSetError = error; },
@@ -127,7 +127,12 @@ function chromeApi({ pageResponses = {}, existingTabs = [], removeError = null }
       tabs: {
         onUpdated: noOpEvent,
         onRemoved: removedEvent,
-        async query() { return [...tabsById.values()].map(clone); },
+        async query() {
+          const tabs = [...tabsById.values()].map(clone);
+          tabQueries.push(tabs);
+          onTabQuery?.(clone(tabs));
+          return tabs;
+        },
         async create(options) {
           const tab = { id: nextTabId++, url: options.url, status: "complete" };
           tabsById.set(tab.id, tab); created.push(clone(tab)); return clone(tab);
@@ -138,7 +143,10 @@ function chromeApi({ pageResponses = {}, existingTabs = [], removeError = null }
           const tab = tabsById.get(tabId);
           if (message.type === PAGE_RUNTIME_FETCH_TYPE) pageRequests.push(clone(message.request));
           const host = new URL(tab.url).hostname;
-          callback({ ok: true, response: clone(pageResponses[host] || { ok: true, status: 200, body: { data: [] } }) });
+          const response = pageResponseHandlers[host]
+            ? pageResponseHandlers[host](clone(message.request))
+            : pageResponses[host] || { ok: true, status: 200, body: { data: [] } };
+          Promise.resolve(response).then(value => callback({ ok: true, response: clone(value) }));
         }
       },
       scripting: { async executeScript({ world }) { return [{ result: world === "MAIN" ? { current: true } : { version: 999 } }]; } }
@@ -182,6 +190,13 @@ function responseData(response) {
 function responseError(response, code) {
   assert.equal(response.ok, false);
   assert.equal(response.code, code);
+}
+async function waitFor(predicate) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (predicate()) return;
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.fail("condition was not reached before timeout");
 }
 
 test("classifies redirected login pages and login-specific errors even when the endpoint returns HTTP 200", () => {
@@ -358,6 +373,23 @@ test("GET_DASHBOARD compares false and missing recharge verification at 1:1", as
   });
 });
 
+test("Linux.do preflight uses the safe GET probe and never sends GraphQL or extension credentials", async () => {
+  const stations = [{ id: "linux-do", name: "Linux.do Marketplace", baseUrl: "https://hub.linux.do/marketplace", enabled: true, mode: "page", category: "public", auth: { type: "bearer", token: "extension-secret-must-not-cross" }, adapter: { kind: "linux-do-marketplace", endpoint: "/admin/graphql", method: "POST", responseFormat: "linux-do-marketplace" } }];
+  await withWorker({ stations, values: { settings: { comparisonMode: "public" } } }, { pageResponses: { "hub.linux.do": { ok: true, status: 200, body: { ok: true } } } }, async worker => {
+    const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
+    assert.equal(preflight.results[0].status, "ready");
+    assert.equal(worker.pageRequests.length, 1);
+    const request = worker.pageRequests[0];
+    assert.equal(request.method, "GET");
+    assert.equal(request.url, "https://hub.linux.do/admin/system/price-version");
+    assert.equal(request.body, undefined);
+    assert.equal(request.pageAuth.storageKey, "axonhub_access_token");
+    assert.equal(request.pageAuth.header, "Authorization");
+    assert.equal(JSON.stringify(request).includes("extension-secret-must-not-cross"), false);
+    assert.equal(JSON.stringify(request).includes("/admin/graphql"), false);
+  });
+});
+
 test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, and does not collect or write snapshots", async () => {
   const stations = [
     { id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" },
@@ -502,6 +534,176 @@ test("REFRESH_ALL requires live explicit confirmation, rejects expired or cancel
   });
 });
 
+test("stale async preflight cannot republish after a comparison-mode change", async () => {
+  let releaseProbe;
+  const probe = new Promise(resolve => { releaseProbe = resolve; });
+  const station = { id: "race-page", name: "Race page", category: "paid", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
+  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
+    pageResponseHandlers: { "api.killai.cc": () => probe }
+  }, async worker => {
+    const staleRequest = worker.send("REFRESH_PREFLIGHT");
+    await waitFor(() => worker.pageRequests.length === 1);
+    await worker.send("SAVE_COMPARISON_MODE", { mode: "public" });
+    await worker.send("SAVE_COMPARISON_MODE", { mode: "paid" });
+    releaseProbe({ ok: true, status: 200, body: { data: [{ model_name: "ready-after-mode-change" }] } });
+    responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+    assert.deepEqual(worker.removed, [worker.created[0].id]);
+    assert.equal(responseData(await worker.send("GET_DASHBOARD")).refreshPreflight, null);
+  });
+});
+
+test("stale preflight temporary tabs are cleaned or protected across session results", async () => {
+  const scenarios = [
+    { name: "ready", host: "api.hepingan.top", baseUrl: "https://api.hepingan.top/available-channels", response: { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
+    { name: "needsLogin", host: "www.nexavlinks.com", baseUrl: "https://www.nexavlinks.com/modelsmarket", response: { ok: false, status: 401, body: { message: "Unauthorized" } } },
+    { name: "uncertain", host: "all-in-one.icu", baseUrl: "https://all-in-one.icu/#/tenant/models", response: { ok: false, status: 503, body: { message: "gateway unavailable" } } }
+  ];
+
+  for (const scenario of scenarios) {
+    let releaseProbe;
+    const staleProbe = new Promise(resolve => { releaseProbe = resolve; });
+    const station = { id: `cleanup-${scenario.name}`, name: "Retired temporary tab", category: "paid", baseUrl: scenario.baseUrl, enabled: true, mode: "page" };
+    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
+      pageResponseHandlers: { [scenario.host]: () => staleProbe }
+    }, async worker => {
+      const staleRequest = worker.send("REFRESH_PREFLIGHT");
+      await waitFor(() => worker.pageRequests.length === 1 && worker.created.length === 1);
+      const temporaryTabId = worker.created[0].id;
+      await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Retired temporary tab updated" }] });
+      releaseProbe(scenario.response);
+      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+      assert.deepEqual(worker.removed, [temporaryTabId]);
+    });
+  }
+
+  for (const scenario of scenarios) {
+    let requestCount = 0;
+    let currentTabQueryExpected = false;
+    let currentTabQuerySeen = false;
+    let temporaryTabId;
+    let releaseProbe;
+    const staleProbe = new Promise(resolve => { releaseProbe = resolve; });
+    const station = { id: `reuse-${scenario.name}`, name: "Reused temporary tab", category: "paid", baseUrl: scenario.baseUrl, enabled: true, mode: "page" };
+    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
+      onTabQuery: tabs => {
+        if (currentTabQueryExpected && tabs.some(tab => tab.id === temporaryTabId)) currentTabQuerySeen = true;
+      },
+      pageResponseHandlers: {
+        [scenario.host]: () => {
+          requestCount += 1;
+          return requestCount === 1 ? staleProbe : { ok: true, status: 200, body: { data: [{ model_name: "new-preflight" }] } };
+        }
+      }
+    }, async worker => {
+      const staleRequest = worker.send("REFRESH_PREFLIGHT");
+      await waitFor(() => worker.pageRequests.length === 1 && worker.created.length === 1);
+      temporaryTabId = worker.created[0].id;
+      await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Reused temporary tab updated" }] });
+      currentTabQueryExpected = true;
+      const currentRequest = worker.send("REFRESH_PREFLIGHT");
+      await waitFor(() => currentTabQuerySeen);
+      releaseProbe(scenario.response);
+      await waitFor(() => worker.pageRequests.length === 2);
+      const currentPreflight = responseData(await currentRequest);
+      assert.equal(currentPreflight.results[0].status, "ready");
+      assert.equal(currentPreflight.results[0].tabId, temporaryTabId);
+      assert.deepEqual(worker.removed, []);
+      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+      assert.deepEqual(worker.removed, []);
+    });
+  }
+});
+
+test("station configuration changes invalidate old confirmation and require a new preflight", async () => {
+  const station = {
+    id: "config-relay", name: "Config relay", category: "paid", baseUrl: "https://config-relay.example/pricing", enabled: true, mode: "direct",
+    adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "before", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
+  };
+  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+    const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
+    await worker.send("SAVE_STATIONS", { stations: [{ ...station, adapter: { ...station.adapter, rawJson: JSON.stringify({ data: [{ model_name: "after", input_price: 3, output_price: 4 }], group_ratio: { default: 1 } }) } }] });
+    responseError(await worker.send("REFRESH_ALL", { preflightToken: first.token, confirmed: true }), REFRESH_CONFIRMATION_REQUIRED_CODE);
+    const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
+    assert.notEqual(second.token, first.token);
+    const refreshed = responseData(await worker.send("REFRESH_ALL", { preflightToken: second.token, confirmed: true }));
+    assert.equal(refreshed.refreshSummary.successCount, 1);
+    assert.equal([...stores.snapshots.values()].find(snapshot => snapshot.stationId === station.id).normalized.data[0].model_name, "after");
+  });
+});
+
+test("REFRESH_ALL uses the persisted comparison group for preflight, collection, progress, and snapshots", async () => {
+  const station = (id, category, modelName) => ({
+    id, name: id, category, baseUrl: `https://${id}.example/pricing`, enabled: true, mode: "direct",
+    adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: modelName, input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
+  });
+  const paid = station("paid-relay", "paid", "paid-model");
+  const publicStation = station("public-relay", "public", "public-model");
+  const disabledPublic = { ...station("disabled-public", "public", "disabled-model"), enabled: false };
+  const stringDisabledPublic = { ...station("disabled-string-public", "public", "string-disabled-model"), enabled: "false" };
+  await withWorker({
+    stations: [paid, publicStation, disabledPublic, stringDisabledPublic],
+    values: { settings: { comparisonMode: "public" }, references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } }
+  }, {}, async (worker, stores) => {
+    const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
+    assert.equal(preflight.comparisonMode, "public");
+    assert.equal(preflight.comparisonLabel, "公益站");
+    assert.equal(preflight.stationCount, 1);
+    assert.deepEqual(preflight.results.map(result => result.stationId), ["public-relay"]);
+
+    const refreshed = responseData(await worker.send("REFRESH_ALL", { preflightToken: preflight.token, confirmed: true }));
+    assert.deepEqual(refreshed.refreshSummary, {
+      total: 1, successCount: 1, partialCount: 0, errorCount: 0, totalModels: 1,
+      comparisonMode: "public", comparisonLabel: "公益站", stationCount: 1,
+      durationMs: refreshed.refreshSummary.durationMs
+    });
+    assert.deepEqual([...stores.snapshots.values()].map(snapshot => snapshot.stationId), ["public-relay"]);
+    assert.equal([...stores.snapshots.values()].some(snapshot => snapshot.stationId === stringDisabledPublic.id), false);
+    assert.equal(refreshed.snapshots.some(snapshot => snapshot.stationId === stringDisabledPublic.id), false);
+    assert.equal(refreshed.stationErrors.some(error => error.stationId === stringDisabledPublic.id), false);
+    const progress = worker.runtimeMessages.filter(message => message.type === "REFRESH_PROGRESS").map(message => message.progress);
+    assert.ok(progress.length > 0);
+    assert.ok(progress.every(message => message.comparisonMode === "public" && message.comparisonLabel === "公益站" && message.total === 1));
+  });
+});
+
+test("comparison mode changes invalidate a preflight token and empty groups never refresh", async () => {
+  const station = {
+    id: "paid-only", name: "Paid only", category: "paid", baseUrl: "https://paid-only.example/pricing", enabled: true, mode: "direct",
+    adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "paid-model", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
+  };
+  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" }, references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+    const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
+    assert.equal(preflight.comparisonMode, "paid");
+    const switched = responseData(await worker.send("SAVE_COMPARISON_MODE", { mode: "public" }));
+    assert.equal(switched.settings.comparisonMode, "public");
+    responseError(await worker.send("REFRESH_ALL", { preflightToken: preflight.token, confirmed: true }), REFRESH_CONFIRMATION_REQUIRED_CODE);
+    assert.equal([...stores.snapshots.values()].some(snapshot => snapshot.stationId === station.id), false);
+    await worker.send("SAVE_STATIONS", { stations: switched.stations.map(value => ({ ...value, enabled: false })) });
+
+    const empty = responseData(await worker.send("REFRESH_PREFLIGHT"));
+    assert.equal(empty.comparisonMode, "public");
+    assert.equal(empty.stationCount, 0);
+    assert.deepEqual(empty.results, []);
+    const emptyRefresh = await worker.send("REFRESH_ALL", { preflightToken: empty.token, confirmed: true });
+    assert.equal(emptyRefresh.ok, false);
+    assert.equal(emptyRefresh.code, "REFRESH_NO_STATIONS");
+    assert.equal([...stores.snapshots.values()].some(snapshot => snapshot.stationId === station.id), false);
+    assert.equal(worker.runtimeMessages.some(message => message.type === "REFRESH_PROGRESS"), false);
+  });
+});
+
+test("single-station refresh remains independent from comparison mode", async () => {
+  const stations = [
+    { id: "paid-one", name: "Paid one", category: "paid", baseUrl: "https://paid-one.example/pricing", enabled: true, mode: "direct", adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "paid", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) } },
+    { id: "public-one", name: "Public one", category: "public", baseUrl: "https://public-one.example/pricing", enabled: true, mode: "direct", adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "public", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) } }
+  ];
+  await withWorker({ stations, values: { settings: { comparisonMode: "public" }, references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+    const result = responseData(await worker.send("REFRESH_STATION", { stationId: "paid-one" }));
+    assert.equal(result.refreshSummary.successCount, 1);
+    assert.deepEqual([...stores.snapshots.values()].map(snapshot => snapshot.stationId), ["paid-one"]);
+  });
+});
+
 test("concurrent REFRESH_ALL requests cannot consume one confirmation twice", async () => {
   const station = {
     id: "single-use", name: "Single Use", baseUrl: "https://single-use.example/pricing", enabled: true, mode: "direct",
@@ -564,7 +766,7 @@ test("REFRESH_ALL collects from the prepared station state validated at confirma
   await withWorker({
     stations: [station],
     onGetAll(name, map) {
-      if (name !== "stations" || ++stationReads !== 3) return;
+      if (name !== "stations" || ++stationReads !== 4) return;
       map.set(station.id, { ...station, adapter: { ...station.adapter, rawJson: JSON.stringify({ data: [{ model_name: "changed-after-confirmation", input_price: 9, output_price: 9 }], group_ratio: { default: 1 } }) } });
     },
     values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } }

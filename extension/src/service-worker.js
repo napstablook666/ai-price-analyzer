@@ -62,6 +62,7 @@ async function settingsForUi() {
 }
 
 async function stationWithCredentials(station) {
+  if (station.adapter?.kind === "linux-do-marketplace") return { ...station, auth: { type: "none" } };
   const credential = await getStationCredential(station.id);
   const auth = { ...(station.auth || {}) };
   for (const field of ["token", "username", "password"]) if (!auth[field]) auth[field] = credential[field] || "";
@@ -167,35 +168,85 @@ function refreshScope(stations, comparisonMode) {
 
 let activeRefreshPreflight = null;
 let refreshConfirmationInProgress = false;
+let refreshPreflightRevision = 0;
+let refreshPreflightPersistence = Promise.resolve();
 const refreshPreflightCreatedTabIds = new Set();
+const refreshPreflightTabRevisions = new Map();
+const refreshPreflightStaleTabRevisions = new Map();
+const refreshPreflightTabClaims = new Map();
 
 function newRefreshPreflightToken() {
   return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
-async function restoreRefreshPreflightState() {
-  const session = chrome.storage?.session;
-  if (!session) return;
-  const stored = await session.get([REFRESH_PREFLIGHT_SESSION_KEY, REFRESH_PREFLIGHT_TABS_SESSION_KEY]);
-  if (!activeRefreshPreflight && stored[REFRESH_PREFLIGHT_SESSION_KEY]) activeRefreshPreflight = stored[REFRESH_PREFLIGHT_SESSION_KEY];
-  if (Array.isArray(stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY])) {
-    refreshPreflightCreatedTabIds.clear();
-    for (const tabId of stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY]) if (Number.isInteger(tabId)) refreshPreflightCreatedTabIds.add(tabId);
+function refreshConfirmationRequiredError() {
+  const error = new Error(REFRESH_CONFIRMATION_REQUIRED_MESSAGE);
+  error.code = REFRESH_CONFIRMATION_REQUIRED_CODE;
+  return error;
+}
+
+function queueRefreshPreflightPersistence(operation) {
+  const task = refreshPreflightPersistence.then(operation, operation);
+  refreshPreflightPersistence = task.then(() => undefined, () => undefined);
+  return task;
+}
+
+async function closeRefreshPreflightTabs(tabIds) {
+  for (const tabId of tabIds) {
+    try {
+      await chrome.tabs.remove(tabId);
+    } catch (error) {
+      if (!isMissingTabError(error)) console.warn("[AI比价] 失效刷新预检临时标签页清理失败", error);
+    }
   }
 }
 
-async function persistRefreshPreflightState() {
+
+async function restoreRefreshPreflightState() {
   const session = chrome.storage?.session;
   if (!session) return;
-  await session.set({
-    [REFRESH_PREFLIGHT_SESSION_KEY]: activeRefreshPreflight,
-    [REFRESH_PREFLIGHT_TABS_SESSION_KEY]: [...refreshPreflightCreatedTabIds]
+  const restoreRevision = refreshPreflightRevision;
+  const stored = await queueRefreshPreflightPersistence(() => session.get([REFRESH_PREFLIGHT_SESSION_KEY, REFRESH_PREFLIGHT_TABS_SESSION_KEY]));
+  if (restoreRevision !== refreshPreflightRevision) return;
+  if (!activeRefreshPreflight && stored[REFRESH_PREFLIGHT_SESSION_KEY]) activeRefreshPreflight = stored[REFRESH_PREFLIGHT_SESSION_KEY];
+  if (Array.isArray(stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY])) {
+    refreshPreflightCreatedTabIds.clear();
+    refreshPreflightTabRevisions.clear();
+    for (const tabId of stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY]) if (Number.isInteger(tabId)) {
+      refreshPreflightCreatedTabIds.add(tabId);
+      refreshPreflightTabRevisions.set(tabId, refreshPreflightRevision);
+      refreshPreflightStaleTabRevisions.delete(tabId);
+    }
+  }
+}
+
+async function persistRefreshPreflightState(expectedRevision = refreshPreflightRevision) {
+  const session = chrome.storage?.session;
+  if (!session) return;
+  return queueRefreshPreflightPersistence(() => {
+    if (expectedRevision !== refreshPreflightRevision) return undefined;
+    return session.set({
+      [REFRESH_PREFLIGHT_SESSION_KEY]: activeRefreshPreflight,
+      [REFRESH_PREFLIGHT_TABS_SESSION_KEY]: [...refreshPreflightCreatedTabIds]
+    });
   });
 }
 
-async function clearRefreshPreflightState() {
+function invalidateRefreshPreflight() {
+  for (const tabId of refreshPreflightCreatedTabIds) {
+    const tabRevision = refreshPreflightTabRevisions.get(tabId);
+    if (Number.isInteger(tabRevision)) refreshPreflightStaleTabRevisions.set(tabId, tabRevision);
+  }
+  refreshPreflightRevision += 1;
   activeRefreshPreflight = null;
-  if (chrome.storage?.session) await chrome.storage.session.remove(REFRESH_PREFLIGHT_SESSION_KEY);
+  refreshPreflightCreatedTabIds.clear();
+  refreshPreflightTabRevisions.clear();
+  const session = chrome.storage?.session;
+  if (!session) return Promise.resolve();
+  return queueRefreshPreflightPersistence(() => session.set({
+    [REFRESH_PREFLIGHT_SESSION_KEY]: null,
+    [REFRESH_PREFLIGHT_TABS_SESSION_KEY]: []
+  }));
 }
 
 function safePreflightTabUrl(value) {
@@ -208,22 +259,29 @@ function pageSessionStatusReason(status) {
   return "无法确认登录状态，请检查页面后再手动确认";
 }
 
-async function preflightPageStation(station) {
+async function preflightPageStation(station, requestRevision) {
   let opened;
   try {
     opened = await findOrOpenPageTab(chrome.tabs, station, undefined, { allowTemporaryWhenAmbiguous: true, keepOnLoadFailure: true });
   } catch (error) {
     if (error.temporary && Number.isInteger(error.tabId)) {
-      refreshPreflightCreatedTabIds.add(error.tabId);
-      await persistRefreshPreflightState();
+      if (requestRevision === refreshPreflightRevision) {
+        refreshPreflightCreatedTabIds.add(error.tabId);
+        refreshPreflightTabRevisions.set(error.tabId, requestRevision);
+        await persistRefreshPreflightState(requestRevision);
+      } else if (refreshPreflightStaleTabRevisions.get(error.tabId) === requestRevision) {
+        refreshPreflightStaleTabRevisions.delete(error.tabId);
+        await closeRefreshPreflightTabs([error.tabId]);
+      }
     }
+    const stale = requestRevision !== refreshPreflightRevision;
     return {
       stationId: station.id,
       stationName: station.name,
       status: "uncertain",
       reason: pageSessionStatusReason("uncertain"),
-      tabId: Number.isInteger(error.tabId) ? error.tabId : null,
-      tabUrl: safePreflightTabUrl(station.baseUrl)
+      tabId: stale ? null : (Number.isInteger(error.tabId) ? error.tabId : null),
+      tabUrl: stale ? "" : safePreflightTabUrl(station.baseUrl)
     };
   }
 
@@ -236,37 +294,87 @@ async function preflightPageStation(station) {
     tabId: null,
     tabUrl: safePreflightTabUrl(station.baseUrl)
   };
+  const claimedReusedTab = !opened.temporary && requestRevision === refreshPreflightRevision
+    && refreshPreflightStaleTabRevisions.has(tab.id);
+  if (claimedReusedTab) refreshPreflightTabClaims.set(tab.id, requestRevision);
   if (opened.temporary) {
+    if (requestRevision !== refreshPreflightRevision) {
+      if (refreshPreflightStaleTabRevisions.get(tab.id) === requestRevision) {
+        refreshPreflightStaleTabRevisions.delete(tab.id);
+        await closeRefreshPreflightTabs([tab.id]);
+      }
+      return {
+        stationId: station.id,
+        stationName: station.name,
+        status: "uncertain",
+        reason: pageSessionStatusReason("uncertain"),
+        tabId: null,
+        tabUrl: ""
+      };
+    }
     refreshPreflightCreatedTabIds.add(tab.id);
-    await persistRefreshPreflightState();
+    refreshPreflightTabRevisions.set(tab.id, requestRevision);
+    await persistRefreshPreflightState(requestRevision);
   }
 
   let status = "uncertain";
   try {
     const collection = resolveStationCollection(station);
-    if (String(collection.station.adapter?.method || "GET").toUpperCase() !== "GET") {
-      throw new Error("No safe GET session probe is available");
+    const probe = collection.request.preflight || null;
+    if (!probe) {
+      if (String(collection.station.adapter?.method || "GET").toUpperCase() !== "GET") {
+        throw new Error("No safe GET session probe is available");
+      }
     }
-    const request = buildStationRequest(collection.station, collection.endpoints[0], collection.request);
+    const probeEndpoint = probe?.endpoint ? new URL(probe.endpoint, collection.station.baseUrl).toString() : collection.endpoints[0];
+    const request = buildStationRequest(collection.station, probeEndpoint, collection.request);
     const pageAuth = request.pageRequest.pageAuth ? { ...request.pageRequest.pageAuth, refresh: undefined } : undefined;
-    const pageRequest = { ...request.pageRequest, method: "GET", body: undefined, pageAuth };
+    const pageRequest = { ...request.pageRequest, url: probeEndpoint, method: probe?.method || "GET", body: undefined, pageAuth };
     const response = await withPageFetch(station, tab.id, pageFetch => pageFetch(pageRequest));
     status = classifyPageSessionResponse(response);
   } catch (error) {
     status = classifyPageSessionError(error);
   }
 
-  const ownedTemporary = refreshPreflightCreatedTabIds.has(tab.id);
+  if (requestRevision !== refreshPreflightRevision) {
+    const claimedByThisRequest = refreshPreflightTabClaims.get(tab.id) === requestRevision;
+    if (opened.temporary && refreshPreflightStaleTabRevisions.get(tab.id) === requestRevision
+      && !claimedByThisRequest && !refreshPreflightTabClaims.has(tab.id)) {
+      refreshPreflightStaleTabRevisions.delete(tab.id);
+      await closeRefreshPreflightTabs([tab.id]);
+    }
+    if (claimedByThisRequest) {
+      refreshPreflightTabClaims.delete(tab.id);
+      refreshPreflightStaleTabRevisions.delete(tab.id);
+    }
+    return {
+      stationId: station.id,
+      stationName: station.name,
+      status: "uncertain",
+      reason: pageSessionStatusReason("uncertain"),
+      tabId: null,
+      tabUrl: ""
+    };
+  }
+
+  const ownedTemporary = refreshPreflightCreatedTabIds.has(tab.id)
+    && refreshPreflightTabRevisions.get(tab.id) === requestRevision;
   let closedTemporary = false;
   if (status === "ready" && ownedTemporary) {
     try {
       await chrome.tabs.remove(tab.id);
       refreshPreflightCreatedTabIds.delete(tab.id);
+      refreshPreflightTabRevisions.delete(tab.id);
+      refreshPreflightStaleTabRevisions.delete(tab.id);
       closedTemporary = true;
     } catch (error) {
       if (!isMissingTabError(error)) console.warn("[AI比价] 刷新预检临时标签页清理失败", error);
     }
-    await persistRefreshPreflightState();
+    await persistRefreshPreflightState(requestRevision);
+  }
+  if (claimedReusedTab && refreshPreflightTabClaims.get(tab.id) === requestRevision) {
+    refreshPreflightTabClaims.delete(tab.id);
+    refreshPreflightStaleTabRevisions.delete(tab.id);
   }
   return {
     stationId: station.id,
@@ -281,11 +389,20 @@ async function preflightPageStation(station) {
 async function createRefreshPreflight() {
   await restoreRefreshPreflightState();
   if (refreshAllTask || refreshReferencesTask) throw new Error("当前正在刷新，请稍后再执行登录预检");
-  activeRefreshPreflight = null;
-  await persistRefreshPreflightState();
+  const carriedTemporaryTabIds = [...refreshPreflightCreatedTabIds];
+  const invalidation = invalidateRefreshPreflight();
+  const requestRevision = refreshPreflightRevision;
+  await invalidation;
+  for (const tabId of carriedTemporaryTabIds) {
+    refreshPreflightStaleTabRevisions.delete(tabId);
+    refreshPreflightCreatedTabIds.add(tabId);
+    refreshPreflightTabRevisions.set(tabId, requestRevision);
+  }
   const settings = await getSettings();
   const scope = refreshScope(await getPreparedStations(), settings.comparisonMode);
   const { stations } = scope;
+  const requestMode = scope.comparisonMode;
+  const requestSignature = refreshStationSignature(stations, requestMode);
   const results = [];
   for (const station of stations) {
     const provider = providerForStation(station);
@@ -293,24 +410,35 @@ async function createRefreshPreflight() {
       results.push({ stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "无需页面登录预检" });
       continue;
     }
-    results.push(await preflightPageStation(station));
+    results.push(await preflightPageStation(station, requestRevision));
   }
-  activeRefreshPreflight = {
+  const currentSettings = await getSettings();
+  const currentScope = refreshScope(await getPreparedStations(), currentSettings.comparisonMode);
+  const currentSignature = refreshStationSignature(currentScope.stations, currentScope.comparisonMode);
+  if (requestRevision !== refreshPreflightRevision || requestMode !== currentScope.comparisonMode || requestSignature !== currentSignature) {
+    throw refreshConfirmationRequiredError();
+  }
+  const publishedPreflight = {
     token: newRefreshPreflightToken(),
     expiresAt: Date.now() + REFRESH_PREFLIGHT_TTL_MS,
-    comparisonMode: scope.comparisonMode,
+    comparisonMode: requestMode,
     comparisonLabel: scope.comparisonLabel,
-    stationCount: scope.stationCount,
-    stationSignature: refreshStationSignature(stations, scope.comparisonMode),
+    stationCount: stations.length,
+    stationSignature: requestSignature,
     results
   };
+  activeRefreshPreflight = publishedPreflight;
   await persistRefreshPreflightState();
-  return { ...activeRefreshPreflight, results: activeRefreshPreflight.results };
+  if (requestRevision !== refreshPreflightRevision || activeRefreshPreflight !== publishedPreflight) {
+    throw refreshConfirmationRequiredError();
+  }
+  return { ...publishedPreflight, results: publishedPreflight.results };
 }
 
 async function cancelRefreshPreflight() {
+  const invalidation = invalidateRefreshPreflight();
   await restoreRefreshPreflightState();
-  await clearRefreshPreflightState();
+  await invalidation;
   return { cancelled: true };
 }
 
@@ -406,7 +534,7 @@ async function dashboard() {
   await restoreRefreshPreflightState();
   const savedSettings = await settingsForUi();
   await ensureStationPresets(savedSettings.exchangeRate);
-  if (activeRefreshPreflight?.expiresAt <= Date.now()) await clearRefreshPreflightState();
+  if (activeRefreshPreflight?.expiresAt <= Date.now()) await invalidateRefreshPreflight();
   const revisionAtStart = getComparisonRevision();
   const [stations, references] = await Promise.all([
     getPreparedStations(),
@@ -557,6 +685,7 @@ async function saveCheckinConfig({ stationId, autoEnabled } = {}) {
   return checkinAll({ stationId: station.id, claim: false, autoOnly: false });
 }
 async function saveStations(input) {
+  const invalidation = invalidateRefreshPreflight();
   const current = await getStations();
   const currentById = new Map(current.map(station => [station.id, station]));
   const wanted = new Set(input.map(station => station.id));
@@ -579,15 +708,16 @@ async function saveStations(input) {
     stations.push({ ...station, auth: { type: submitted.type, token: "", username: "", password: "" } });
   }
   await putStations(stations);
-  await clearRefreshPreflightState();
+  await invalidation;
   return stations;
 }
 
 async function saveComparisonMode(mode) {
   const current = await getSettings();
   const nextMode = mode === "public" ? "public" : "paid";
+  const invalidation = current.comparisonMode === nextMode ? Promise.resolve() : invalidateRefreshPreflight();
   await setValue("settings", normalizeSettings({ ...current, comparisonMode: nextMode }));
-  if (current.comparisonMode !== nextMode) await clearRefreshPreflightState();
+  await invalidation;
   return dashboard();
 }
 
@@ -597,6 +727,7 @@ async function saveSettings(input, { llmApiKey, clearLlmApiKey, jevApiKey, clear
   if (llmBaseUrl && !isSecureRemoteUrl(llmBaseUrl)) throw new Error("LLM 地址必须使用 HTTPS；仅允许 localhost 使用 HTTP");
   if (jevBaseUrl && !isSecureRemoteUrl(jevBaseUrl)) throw new Error("JEV 地址必须使用 HTTPS；仅允许 localhost 使用 HTTP");
   const next = normalizeSettings(input);
+  const invalidation = invalidateRefreshPreflight();
   for (const kind of ["llm", "jev"]) {
     const activeId = next.activeProviders[kind];
     if (!activeId) continue;
@@ -617,7 +748,7 @@ async function saveSettings(input, { llmApiKey, clearLlmApiKey, jevApiKey, clear
     if (next.activeProviders.jev) await setProviderApiKey("jev", next.activeProviders.jev, jevApiKey);
   }
   await setValue("settings", next);
-  await clearRefreshPreflightState();
+  await invalidation;
   return settingsForUi();
 }
 async function saveProviderProfile({ kind, profileId, name, config = {}, apiKey, clearApiKey } = {}) {
@@ -895,13 +1026,14 @@ async function handle(message, sender) {
         const settings = await getSettings();
         const scope = refreshScope(await getPreparedStations(), settings.comparisonMode);
         assertRefreshConfirmation(activeRefreshPreflight, message, scope.stations, scope.comparisonMode);
+        const invalidation = invalidateRefreshPreflight();
         if (!scope.stationCount) {
-          await clearRefreshPreflightState();
+          await invalidation;
           const error = new Error(REFRESH_NO_STATIONS_MESSAGE);
           error.code = REFRESH_NO_STATIONS_CODE;
           throw error;
         }
-        await clearRefreshPreflightState();
+        await invalidation;
         const result = await refreshAll({
           forceReferences: Boolean(message.forceReferences),
           preparedStations: scope.stations,
@@ -925,6 +1057,7 @@ async function handle(message, sender) {
     }
     case "EXPORT_STATE": return exportState();
     case "IMPORT_STATE": {
+      const invalidation = invalidateRefreshPreflight();
       const current = await getStations();
       const imported = await importState(message.state);
       const importedById = new Map(imported.stations.map(station => [station.id, station]));
@@ -933,7 +1066,7 @@ async function handle(message, sender) {
         const next = importedById.get(previous.id);
         if (!next || String(next.baseUrl || "") !== previous.baseUrl || String(next.auth?.type || "none") !== previous.auth?.type) await removeStationCredential(previous.id);
       }
-      await clearRefreshPreflightState();
+      await invalidation;
       return dashboard();
     }
     case "TEST_STATION": {
@@ -950,9 +1083,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true;
 });
 
-chrome.tabs?.onRemoved?.addListener(tabId => restoreRefreshPreflightState().then(() => {
-  if (refreshPreflightCreatedTabIds.delete(tabId)) return persistRefreshPreflightState();
-}).catch(error => console.warn("[AI比价] 刷新预检状态恢复失败", error)));
+chrome.tabs?.onRemoved?.addListener(tabId => {
+  const wasOwned = refreshPreflightCreatedTabIds.delete(tabId);
+  refreshPreflightTabRevisions.delete(tabId);
+  refreshPreflightStaleTabRevisions.delete(tabId);
+  refreshPreflightTabClaims.delete(tabId);
+  const reconcile = wasOwned
+    ? persistRefreshPreflightState()
+    : restoreRefreshPreflightState().then(() => {
+      if (refreshPreflightCreatedTabIds.delete(tabId)) return persistRefreshPreflightState();
+      return undefined;
+    });
+  return reconcile.catch(error => console.warn("[AI比价] 刷新预检状态恢复失败", error));
+});
 
 chrome.runtime.onInstalled.addListener(() => scheduleCheckinAlarm());
 chrome.runtime.onStartup.addListener(() => scheduleCheckinAlarm());

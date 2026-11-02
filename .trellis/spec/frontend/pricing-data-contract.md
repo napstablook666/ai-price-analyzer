@@ -57,7 +57,10 @@ This contract covers station pricing from collection through snapshots and dashb
 - Public presets use `category: "public"`, `auth.type: "none"`, `credentials: "omit"`, no authorization header, and `rechargeRateVerified: false`; their model-list rows remain `CREDITS` and use the existing unconfirmed 1:1 comparison fallback.
 - WindHub uses `GET https://windhub.cc/api/pricing` with explicit response format `windhub`. Preserve `group_ratio`, `cache_ratio`, `completion_ratio`, vendor, usable-group, and supported-endpoint metadata; apply each multiplier once and keep missing optional prices `null`.
 - A WindHub `success: true` envelope with no valid normalized model rows is an error snapshot (`status: "error"`), not an empty successful catalog, so the dashboard can show a station-level failure.
-- Linux.do Marketplace may be registered as a public preset before its anonymous pricing endpoint is confirmed, but its request policy must fail explicitly with `Linux.do Marketplace 匿名价格接口尚未确认，暂不可采集`; never guess an endpoint or use extension credentials/page cookies as a fallback.
+- Linux.do Marketplace is a public page-mode preset. It reads `POST /admin/graphql` only through the page bridge, injecting `localStorage["axonhub_access_token"]` as a Bearer header in page world; never guess anonymous endpoints or use extension credentials. Refresh preflight uses safe `GET /admin/system/price-version` with the same page auth and never runs GraphQL pricing queries. Detail queries explicitly request the verified `channel.enabled` and `channel.public` fields; false values are filtered, while missing state is retained only with an `unknownChannelStates` diagnostic.
+- Linux.do collection first queries `marketplaceModels`, then sends `marketplaceModel(modelID: $modelID, window: $window)` with `{ modelID, window: "LAST_7D" }`; detail work is bounded to four concurrent requests. A detail is eligible only when its non-empty `modelID` exists in the catalog; missing and unlisted IDs are skipped and recorded as `detail:modelID:missing` or `detail:modelID:unlisted`.
+- Known price items map `prompt_tokens` to input, `completion_tokens` to output, `prompt_cached_tokens` to cache-read, and `prompt_write_cached_tokens` to cache-write. Each value is `pricing.usagePerUnit * item.multiplier` exactly once; non-finite, negative, or overflowing values are rejected. `channel_multiplier` is metadata only and is populated only when all known item multipliers agree.
+- Partial detail failures retain valid rows and expose sanitized `failedModels`, `failedModelCount`, and `failedModelReasons` diagnostics. Reasons contain only a model ID and a bounded redacted summary; access tokens, authorization headers, request bodies, and complete responses never enter snapshots or diagnostics.
 - Public dashboard mode filters rows, station facets, summaries, sort choices, headers, reference status, empty state, and station errors from the same mode-specific source. It hides official-price, monthly-cost, diff, recommendation, and paid-only model-match controls.
 
 ### 4. Validation & Error Matrix
@@ -69,6 +72,11 @@ This contract covers station pricing from collection through snapshots and dashb
 | Public request failure | Show a station-level error and keep paid mode usable |
 | WindHub invalid model price or malformed envelope | Preserve existing partial diagnostics; never coerce the value to zero |
 | Linux.do endpoint still unconfirmed | Explicit collection failure; no anonymous fallback guessing or credential forwarding |
+| Linux.do channel `enabled`/`public` is false | Filter the channel before normalization; never emit its prices |
+| Linux.do channel state is missing | Keep a valid-price row only with `unknownChannelStates` diagnostic; do not silently claim public/enabled |
+| Linux.do detail `modelID` missing or absent from catalog | Skip the detail and record a stable `invalidPricingValues` diagnostic; never emit an unlisted model |
+| Linux.do known item price or `usagePerUnit * multiplier` is non-finite, negative, or overflowing | Reject that item/channel and expose a partial diagnostic; never coerce to `0` or `1` |
+| Linux.do detail request fails while other models are valid | Keep valid rows and expose sanitized `failedModels` / `failedModelReasons`; if all details fail, return a station-level error |
 
 ### 5. Good/Base/Bad Cases
 
@@ -79,7 +87,8 @@ This contract covers station pricing from collection through snapshots and dashb
 ### 6. Tests Required
 
 - Assert mode defaulting, persistence, row isolation, public-only station facets, public empty state, hidden paid controls, accessible `aria-pressed` state, and reduced-motion CSS coverage.
-- Assert public preset registration is idempotent, requests omit credentials and authorization, WindHub metadata/multipliers/cache fields survive normalization, and Linux.do fails explicitly until an endpoint fixture is verified.
+- Assert public preset registration is idempotent, requests omit extension credentials and authorization, WindHub metadata/multipliers/cache fields survive normalization, and Linux.do uses explicit GraphQL fixtures with bounded detail concurrency, page-session diagnostics, and `enabled`/`public` channel filtering.
+- Assert catalog membership for detail IDs, missing/unlisted-ID diagnostics, overflow rejection, known-item multiplier agreement, and redacted `failedModelReasons` in both normalized output and snapshot `rawMeta`.
 - Assert station-level error snapshots are visible only in the matching mode and disabled stations cannot create comparison rows.
 
 ### 7. Wrong vs Correct
@@ -144,7 +153,7 @@ The mode boundary must be applied before every derived dashboard projection.
 - Request `GET /api/tenant/models` from the same-origin page with `credentials: "include"`; page auth reads only `localStorage.tenant_access_token` and injects `Authorization: Bearer <token>`. Extension station auth and user passwords must not cross the bridge.
 - The provider must skip the unauthenticated DOM/captured-response shortcut and make the authenticated page request. Missing token or HTTP 401/403 is a page-session failure; there is no anonymous fallback.
 - The explicit response envelope is `{ code: 0, data: { list: Model[] } }`; compatibility list wrappers are accepted only by `all-in-one-models`, never by generic auto detection.
-- `billing_mode: "token"` converts token prices to per-million units once. `billing_mode: "tiered"` emits one row per `pricing_tiers` item and preserves `min_tokens`, `max_tokens`, and tier labels. Cache read/write aliases map to the existing normalized cache fields.
+- `billing_mode: "token"` and tier values are already per-million prices; preserve them as provided. `billing_mode: "tiered"` emits one row per `pricing_tiers` item and preserves `min_tokens`, `max_tokens`, and tier labels. Cache read/write aliases map to the existing normalized cache fields.
 - Invalid or missing prices, malformed tier objects/bounds, and unsupported modes such as `per_request`, `per_second`, or `special` produce existing partial diagnostics and never fabricate zero or model-level fallback prices. Rows are `CREDITS`; recharge verification remains unconfirmed and comparison keeps the existing 1:1 fallback.
 
 ### 4. Validation & Error Matrix
@@ -160,7 +169,7 @@ The mode boundary must be applied before every derived dashboard projection.
 
 ### 5. Good/Base/Bad Cases
 
-- Good: `input_price: 0.000002` becomes `2` per 1M; two valid tiers remain two rows with their own boundaries.
+- Good: `input_price: 2` stays `2` per 1M; two valid tiers remain two rows with their own boundaries.
 - Base: a missing optional cache price remains `null` while valid input/output prices are retained.
 - Bad: using a stale captured response after the local-storage token disappears, flattening tiered prices to model-level values, or sending a configured station bearer token.
 
@@ -168,7 +177,7 @@ The mode boundary must be applied before every derived dashboard projection.
 
 - Assert preset idempotence and unchanged empty-list registration, hash-route tab selection, exact endpoint, GET/include request, explicit response format, and absent extension authorization.
 - Assert page auth configuration uses `tenant_access_token` and Bearer scheme; assert the provider skips pre-auth capture and delegates missing-token failure to the page bridge policy.
-- Assert token per-million conversion, cache aliases, multiple tier boundaries, malformed tiers, invalid prices, unsupported modes, explicit-format gating, CREDITS rows, and 1:1 recharge comparison.
+- Assert already-per-million token prices, cache aliases, multiple tier boundaries, malformed tiers, invalid prices, unsupported modes, explicit-format gating, CREDITS rows, and 1:1 recharge comparison.
 
 ### 7. Wrong vs Correct
 
@@ -430,6 +439,7 @@ The station contract establishes CREDITS before comparison, while protected prov
 - The same set must be used for page-session preflight, confirmation signature, collection, progress totals, error snapshots, completion summaries, and refresh metadata. `REFRESH_STATION` remains `stationId`-scoped and independent of comparison mode.
 - `paid` uses the label `付费中转站`; `public` uses `公益站`. Empty groups return `stationCount: 0` and an empty result list; confirmation is disabled and the service worker returns `REFRESH_NO_STATIONS` without refreshing references, collecting, or writing snapshots.
 - Mode changes, station saves, settings changes, imports, and any signed station configuration change invalidate the stored preflight. Dashboard data exposes only the current mode's snapshots, errors, comparisons, and summary while retaining the other mode's records in storage.
+- An asynchronous `REFRESH_PREFLIGHT` must capture the service-worker preflight revision, comparison mode, and scoped station signature before page probes, then revalidate all three immediately before publishing or persisting a token. A stale request returns `REFRESH_CONFIRMATION_REQUIRED` and cannot republish the old token.
 
 ### 4. Validation & Error Matrix
 

@@ -14,6 +14,12 @@ const finitePrice = value => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
+const linuxDoFinitePrice = value => {
+  if (value === null || value === undefined || typeof value === "boolean" || (typeof value === "string" && value.trim() === "")) return null;
+  if (typeof value === "object") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
 
 const normalizeCurrency = value => {
   const normalized = String(value ?? "").trim().toUpperCase();
@@ -1306,6 +1312,177 @@ export class AdvancedNestedStrategy extends ParsingStrategy {
   }
 }
 
+export class LinuxDoMarketplaceStrategy extends ParsingStrategy {
+  canParse(raw, options = {}) {
+    return options.responseFormat === "linux-do-marketplace"
+      && Array.isArray(raw?.data?.marketplaceModels)
+      && Array.isArray(raw?.data?.marketplaceDetails);
+  }
+
+  parse(raw) {
+    const models = new Map(raw.data.marketplaceModels.map(model => {
+      const id = String(model?.modelID || "").trim();
+      return [id, model];
+    }).filter(([id]) => id));
+    const data = [];
+    const invalidPricingValues = new Set();
+    const unsupportedPriceItems = new Set();
+    const unpricedChannels = new Set();
+    const filteredChannels = new Set();
+    const unknownChannelStates = new Set();
+    const knownItems = new Map([
+      ["prompt_tokens", "input_price"],
+      ["completion_tokens", "output_price"],
+      ["prompt_cached_tokens", "cache_read_price"],
+      ["prompt_write_cached_tokens", "cache_write_price"]
+    ]);
+    const blockedChannelValues = new Set(["private", "hidden", "deleted", "disabled", "inactive", "archived"]);
+
+    for (const detail of raw.data.marketplaceDetails) {
+      const modelID = String(detail?.modelID || "").trim();
+      if (!modelID) {
+        invalidPricingValues.add("detail:modelID:missing");
+        continue;
+      }
+      const catalogModel = models.get(modelID);
+      if (!catalogModel) {
+        invalidPricingValues.add("detail:modelID:unlisted");
+        continue;
+      }
+      const catalogDisplay = catalogModel?.displayModel && typeof catalogModel.displayModel === "object"
+        ? catalogModel.displayModel
+        : catalogModel;
+      const detailDisplay = detail?.displayModel && typeof detail.displayModel === "object"
+        ? detail.displayModel
+        : {};
+      const display = {
+        ...catalogDisplay,
+        ...Object.fromEntries(Object.entries(detailDisplay).filter(([, value]) => (
+          value !== null
+          && value !== undefined
+          && (typeof value !== "string" || value.trim() !== "")
+        )))
+      };
+      const displayName = String(display?.name || display?.displayName || modelID).trim() || modelID;
+      const channels = (Array.isArray(detail?.providers) ? detail.providers : [])
+        .map(provider => provider?.channel || provider)
+        .filter(channel => channel && typeof channel === "object");
+      const channelNameCounts = new Map();
+      for (const channel of channels) {
+        const rawName = String(channel.name || channel.id || "").trim() || "Linux.do channel";
+        channelNameCounts.set(rawName, (channelNameCounts.get(rawName) || 0) + 1);
+      }
+      for (const channel of channels) {
+        const rawChannelName = String(channel.name || channel.id || "").trim() || "Linux.do channel";
+        const channelID = String(channel.id || "").trim();
+        const channelName = channelNameCounts.get(rawChannelName) > 1 && channelID ? `${rawChannelName} (${channelID})` : rawChannelName;
+        const status = String(channel.status || "").trim();
+        const visibility = String(channel.visibility || "").trim();
+        const statusValue = status.toLowerCase();
+        const visibilityValue = visibility.toLowerCase();
+        const enabled = channel.enabled;
+        const isPublic = channel.public;
+        const statusBlocked = blockedChannelValues.has(statusValue) || blockedChannelValues.has(visibilityValue)
+          || enabled === false
+          || isPublic === false;
+        if (statusBlocked) {
+          filteredChannels.add(`${modelID}:${channelName}`);
+          continue;
+        }
+        const enabledKnown = typeof enabled === "boolean" || statusValue === "active";
+        const publicKnown = typeof isPublic === "boolean" || visibilityValue === "public";
+        if (!enabledKnown) unknownChannelStates.add(`${modelID}:${channelName}:enabled`);
+        if (!publicKnown) unknownChannelStates.add(`${modelID}:${channelName}:public`);
+        const prices = Array.isArray(channel.channelModelPrices) ? channel.channelModelPrices : [];
+        const matchingPrices = [];
+        for (const entry of prices) {
+          const entryModelID = String(entry?.modelID ?? "").trim();
+          if (!entryModelID) {
+            invalidPricingValues.add(`${modelID}:${channelName}:modelID`);
+            continue;
+          }
+          if (entryModelID === modelID) matchingPrices.push(entry);
+        }
+        const fields = { input_price: null, output_price: null, cache_read_price: null, cache_write_price: null };
+        const knownMultipliers = new Set();
+        for (const price of matchingPrices) {
+          for (const item of Array.isArray(price?.price?.items) ? price.price.items : []) {
+            const itemCode = String(item?.itemCode || "").trim();
+            const field = knownItems.get(itemCode);
+            if (!field) {
+              if (itemCode) unsupportedPriceItems.add(itemCode);
+              continue;
+            }
+            const usage = linuxDoFinitePrice(item?.pricing?.usagePerUnit);
+            const multiplier = linuxDoFinitePrice(item?.multiplier);
+            if (multiplier !== null) knownMultipliers.add(multiplier);
+            const effectivePrice = usage === null || multiplier === null ? null : usage * multiplier;
+            if (effectivePrice === null || !Number.isFinite(effectivePrice) || effectivePrice < 0) {
+              invalidPricingValues.add(`${modelID}:${channelName}:${itemCode}`);
+              continue;
+            }
+            fields[field] = effectivePrice;
+          }
+        }
+        if (!Object.values(fields).some(value => value !== null)) {
+          unpricedChannels.add(`${modelID}:${channelName}`);
+          continue;
+        }
+        const input = fields.input_price;
+        const output = fields.output_price;
+        const modelRatioValue = input !== null
+          && Number.isFinite(input)
+          && Number.isFinite(SYSTEM_BASE_PRICE_PER_1M)
+          && SYSTEM_BASE_PRICE_PER_1M > 0
+          ? input / SYSTEM_BASE_PRICE_PER_1M
+          : null;
+        const completionRatioValue = input !== null
+          && output !== null
+          && Number.isFinite(input)
+          && Number.isFinite(output)
+          && input > 0
+          ? output / input
+          : null;
+        data.push({
+          model_name: modelID,
+          model_display_name: displayName,
+          model_developer: String(display?.developer || "").trim(),
+          model_type: String(display?.type || "").trim(),
+          input_price: input,
+          output_price: output,
+          cache_read_price: fields.cache_read_price,
+          cache_write_price: fields.cache_write_price,
+          model_ratio: Number.isFinite(modelRatioValue) ? modelRatioValue : null,
+          completion_ratio: Number.isFinite(completionRatioValue) ? completionRatioValue : null,
+          price_currency: "CREDITS",
+          enable_groups: [channelName],
+          proxy_group_name: channelName,
+          evidence: "exact",
+          channel_id: channelID,
+          channel_type: String(channel.type || "").trim(),
+          channel_status: status,
+          channel_visibility: visibility,
+          channel_enabled: typeof enabled === "boolean" ? enabled : null,
+          channel_public: typeof isPublic === "boolean" ? isPublic : null,
+          channel_multiplier: knownMultipliers.size === 1 ? [...knownMultipliers][0] : null
+        });
+      }
+    }
+    return {
+      data,
+      group_ratio: {},
+      sourceFormat: "linux-do-marketplace",
+      ...(!data.length ? { error: "Linux.do Marketplace 没有有效价格" } : {}),
+      ...(invalidPricingValues.size ? { incomplete: true, invalidPricingValues: [...invalidPricingValues].sort() } : {}),
+      ...(unsupportedPriceItems.size ? { incomplete: true, unsupportedPriceItems: [...unsupportedPriceItems].sort() } : {}),
+      ...(unpricedChannels.size ? { incomplete: true, unpricedChannels: [...unpricedChannels].sort() } : {}),
+      ...(filteredChannels.size ? { filteredChannels: [...filteredChannels].sort() } : {}),
+      ...(unknownChannelStates.size ? { incomplete: true, unknownChannelStates: [...unknownChannelStates].sort() } : {})
+    };
+  }
+}
+
+registerResponseFormatHandler("linux-do-marketplace", () => new LinuxDoMarketplaceStrategy());
 registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
 registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());

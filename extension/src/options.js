@@ -255,9 +255,9 @@ function stationCard(station, index) {
   const origin = currentSiteOrigin(station.baseUrl);
   const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
   const isLinuxDoMarketplace = adapter.kind === "linux-do-marketplace";
-  const unavailableAction = isLinuxDoMarketplace ? ' disabled aria-disabled="true"' : "";
+  const unavailableAction = "";
   const stationHint = isLinuxDoMarketplace
-    ? "Linux.do Marketplace：匿名价格接口尚未确认，暂不可采集；不会读取登录态或发送认证信息。"
+    ? "页面模式：请先在当前 Chrome 配置文件登录 Linux.do，扩展只通过页面会话读取价格。"
     : station.mode === "page"
       ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
       : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
@@ -268,7 +268,7 @@ function stationCard(station, index) {
         <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${category === "public" ? "公益站：不计算汇率" : `${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币`}</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
       </summary>
       <div class="station-content">
-        <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-refresh-station type="button"${unavailableAction} title="${isLinuxDoMarketplace ? "匿名价格接口尚未确认，暂不可采集" : "查询模型"}">${icon("refresh-cw", { className: "icon" })}<span>查询模型</span></button><button class="button button-quiet button-small" data-autofill-station type="button"${unavailableAction} title="${isLinuxDoMarketplace ? "匿名价格接口尚未确认，暂不可采集" : "智能填充"}">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button"${unavailableAction} title="${isLinuxDoMarketplace ? "匿名价格接口尚未确认，暂不可采集" : "测试连接"}">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
+        <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-refresh-station type="button"${unavailableAction} title="查询模型">${icon("refresh-cw", { className: "icon" })}<span>查询模型</span></button><button class="button button-quiet button-small" data-autofill-station type="button"${unavailableAction} title="智能填充">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button"${unavailableAction} title="测试连接">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
         <div class="station-query-status" data-query-status role="status" aria-live="polite" aria-atomic="true" hidden>
           <progress max="1" value="0" aria-label="站点模型查询进度"></progress>
           <span data-query-message></span>
@@ -298,7 +298,7 @@ function stationCard(station, index) {
           <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与比价与批量查询</span></label>
         </div>
         <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${stationHint}</p>
-        ${isLinuxDoMarketplace ? `<p class="station-price-warning" role="alert">匿名价格接口尚未确认，暂不可采集。当前不会读取登录态，也不会发送认证信息。</p>` : priceCurrencyVerified ? "" : `<p class="station-price-warning" role="alert">模型价格映射未核实：${escapeHtml(priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。")}</p>`}
+        ${isLinuxDoMarketplace ? `<p class="station-price-warning" role="alert">仅使用当前页面登录会话读取 Linux.do Marketplace；令牌不会写入站点配置或扩展存储。站点积分仅按 1:1 作为展示基准，不代表人民币成本。</p>` : priceCurrencyVerified ? "" : `<p class="station-price-warning" role="alert">模型价格映射未核实：${escapeHtml(priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。")}</p>`}
       </div>
     </details>
   </article>`;

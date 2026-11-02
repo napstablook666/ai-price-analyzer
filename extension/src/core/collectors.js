@@ -3,6 +3,7 @@ import { PAGE_RUNTIME_CAPTURE_TYPE, PAGE_RUNTIME_FETCH_TYPE } from "./bridge-pro
 import { getResponseFormatDefinition } from "./response-formats.js";
 import { NORMALIZED_PRICE_FIELDS } from "./price-fields.js";
 import { buildStationRequest } from "./request-strategy.js";
+import { collectLinuxDoMarketplace } from "./linux-do-marketplace.js";
 
 function hasInvalidPricingValue(value, priceKeys, depth = 0) {
   if (!value || depth > 6 || typeof value !== "object") return false;
@@ -52,14 +53,24 @@ function buildSnapshot(station, normalized, url, status = 200) {
       status,
       ...(normalized.unsupportedBillingModes ? { unsupportedBillingModes: normalized.unsupportedBillingModes } : {}),
       ...(normalized.invalidPricingValues ? { invalidPricingValues: normalized.invalidPricingValues } : {}),
-      ...(normalized.unpricedModels ? { unpricedModels: normalized.unpricedModels } : {})
+      ...(normalized.unpricedModels ? { unpricedModels: normalized.unpricedModels } : {}),
+      ...(normalized.unsupportedPriceItems ? { unsupportedPriceItems: normalized.unsupportedPriceItems } : {}),
+      ...(normalized.unpricedChannels ? { unpricedChannels: normalized.unpricedChannels } : {}),
+      ...(normalized.filteredChannels ? { filteredChannels: normalized.filteredChannels } : {}),
+      ...(normalized.unknownChannelStates ? { unknownChannelStates: normalized.unknownChannelStates } : {}),
+      ...(normalized.failedModels ? { failedModels: normalized.failedModels } : {}),
+      ...(normalized.failedModelCount ? { failedModelCount: normalized.failedModelCount } : {}),
+      ...(normalized.failedModelReasons ? { failedModelReasons: normalized.failedModelReasons } : {})
     }
   };
 }
 
 export async function collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {}) {
-  if (station.adapter?.kind === "linux-do-marketplace") throw new Error("Linux.do Marketplace 匿名价格接口尚未确认，暂不可采集");
   if (!collection) throw new Error("collectStation requires a prepared collection");
+  if (station.adapter?.kind === "linux-do-marketplace") {
+    const result = await collectLinuxDoMarketplace(station, { pageFetch, requestStrategy: collection.request });
+    return buildSnapshot(station, result.normalized, result.url, result.status);
+  }
   const { endpoints, priceKeys, request: requestStrategy } = collection;
   const rawJson = String(station.adapter?.rawJson || "").trim();
   if (rawJson) {

@@ -1000,6 +1000,41 @@ test("applies recharge ratio only to foreign-currency prices", () => {
   assert.equal(getProxyPrices({ input_price: 2, price_currency: "USD" }, 1, 1.2, undefined, false, true).input, null);
 });
 
+test("keeps missing Linux.do output prices missing in comparison", () => {
+  const station = {
+    id: "linux-do-output-gap",
+    name: "Linux.do Marketplace",
+    category: "public",
+    priceCurrencyVerified: true,
+    rechargeRateVerified: false
+  };
+  const normalized = {
+    sourceFormat: "linux-do-marketplace",
+    data: [{
+      model_name: "model-gap",
+      model_display_name: "Model Gap",
+      input_price: 2,
+      output_price: null,
+      completion_ratio: null,
+      price_currency: "CREDITS",
+      enable_groups: ["Channel Gap"],
+      proxy_group_name: "Channel Gap"
+    }]
+  };
+  const [comparison] = buildComparisonRows({
+    stations: [station],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized }],
+    references: { models: [] },
+    usage: { input: 1_000_000, output: 1_000_000 }
+  });
+  const offer = comparison.offers[0];
+  assert.equal(offer.quotedPrices.input, 2);
+  assert.equal(offer.quotedPrices.output, null);
+  assert.notEqual(offer.quotedPrices.output, offer.quotedPrices.input);
+  assert.equal(getProxyPrices({ input_price: 2, completion_ratio: 3, price_currency: "CREDITS" }).output, 6);
+  assert.equal(getProxyPrices({ input_price: 2, output_price: 0, completion_ratio: null, price_currency: "CREDITS" }).output, 0);
+});
+
 test("uses a 1:1 comparison rate unless recharge verification is explicitly true", () => {
   const offerFor = (station, snapshotRateVerified) => {
     const snapshot = {
@@ -2156,14 +2191,16 @@ test("shares partial diagnostic formatting across refresh consumers", () => {
   const diagnostics = getPartialDiagnostics({
     unsupportedBillingModes: ["per_second"],
     invalidPricingValues: ["Tiered:tiered-model:interval:1"],
-    unpricedModels: ["Missing:shared-model:default"]
+    unpricedModels: ["Missing:shared-model:default"],
+    filteredChannels: ["model-a:Private channel"]
   });
   assert.deepEqual(diagnostics.reasons, [
     { key: "unsupportedBillingModes", values: ["per_second"], message: "部分计费模式未解析：per_second" },
     { key: "invalidPricingValues", values: ["Tiered:tiered-model:interval:1"], message: "价格字段异常：Tiered:tiered-model:interval:1" },
-    { key: "unpricedModels", values: ["Missing:shared-model:default"], message: "未定价模型：Missing:shared-model:default" }
+    { key: "unpricedModels", values: ["Missing:shared-model:default"], message: "未定价模型：Missing:shared-model:default" },
+    { key: "filteredChannels", values: ["model-a:Private channel"], message: "已过滤渠道：model-a:Private channel" }
   ]);
-  assert.equal(diagnostics.message, "部分计费模式未解析：per_second；价格字段异常：Tiered:tiered-model:interval:1；未定价模型：Missing:shared-model:default");
+  assert.equal(diagnostics.message, "部分计费模式未解析：per_second；价格字段异常：Tiered:tiered-model:interval:1；未定价模型：Missing:shared-model:default；已过滤渠道：model-a:Private channel");
   assert.equal(getPartialDiagnostics().message, "部分解析");
 });
 
@@ -3041,15 +3078,398 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   const conflict = addCentosStationPreset([{ id: "centos", baseUrl: "https://relay.example" }]);
   assert.equal(conflict[1].id, "centos-2");
 });
-test("keeps Linux.do Marketplace deferred without inventing an endpoint", async () => {
+test("adapts Linux.do Marketplace to the authenticated GraphQL page contract", async () => {
   const preset = addLinuxDoMarketplaceStationPreset([{ id: "seed", baseUrl: "https://relay.example" }]).find(station => station.id === "linux-do-marketplace");
   assert.ok(preset);
   assert.equal(preset.category, "public");
   assert.equal(preset.enabled, true);
+  assert.equal(preset.mode, "page");
   assert.deepEqual(preset.auth, { type: "none" });
-  assert.equal(preset.adapter.endpoint, "");
+  assert.equal(preset.adapter.endpoint, "/admin/graphql");
+  assert.equal(preset.adapter.method, "POST");
+  assert.equal(preset.adapter.responseFormat, "linux-do-marketplace");
   assert.equal(providerForStation({ baseUrl: "https://hub.linux.do/marketplace" }).id, "linux-do-marketplace");
-  assert.throws(() => collectStationInput(preset), /Linux.do Marketplace 匿名价格接口尚未确认/);
+  const provider = providerById("linux-do-marketplace");
+  assert.equal(provider.request.credentials, "same-origin");
+  assert.equal(provider.request.pageAuth.storageKey, "axonhub_access_token");
+  assert.equal(provider.request.pageAuth.header, "Authorization");
+  assert.deepEqual(provider.request.pageAuth.sessionFailureStatuses, [401, 403]);
+  assert.equal(provider.request.preflight.endpoint, "/admin/system/price-version");
+  assert.equal(provider.request.skipCapture, true);
+});
+
+test("normalizes Linux.do Marketplace channels, caches, and one-time multipliers", () => {
+  const payload = {
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-a", displayModel: { modelID: "model-a", name: "Model A", developer: "Example", type: "chat", visibility: "public" } }],
+      marketplaceDetails: [{ modelID: "model-a", displayModel: { modelID: "model-a", name: "Model A", developer: "Example", type: "chat" }, providers: [{ channel: {
+        id: "channel-1", name: "Channel One", type: "proxy", status: "active", visibility: "public", enabled: true, public: true,
+        channelModelPrices: [{ modelID: "model-a", price: { items: [
+          { itemCode: "prompt_tokens", multiplier: 2, pricing: { usagePerUnit: 3 } },
+          { itemCode: "completion_tokens", multiplier: 2, pricing: { usagePerUnit: 5 } },
+          { itemCode: "prompt_cached_tokens", multiplier: 2, pricing: { usagePerUnit: 0.5 } },
+          { itemCode: "unknown_item", multiplier: 99, pricing: { usagePerUnit: 9 } }
+        ] } }]
+      } }] }]
+    }
+  };
+  const normalized = normalizePricingPayload(payload, "linux-do-marketplace");
+  assert.equal(normalized.sourceFormat, "linux-do-marketplace");
+  assert.equal(normalized.data.length, 1);
+  const row = normalized.data[0];
+  assert.equal(row.model_name, "model-a");
+  assert.equal(row.model_display_name, "Model A");
+  assert.equal(row.proxy_group_name, "Channel One");
+  assert.equal(row.channel_id, "channel-1");
+  assert.equal(row.input_price, 6);
+  assert.equal(row.output_price, 10);
+  assert.equal(row.cache_read_price, 1);
+  assert.equal(row.price_currency, "CREDITS");
+  assert.deepEqual(normalized.unsupportedPriceItems, ["unknown_item"]);
+});
+
+test("ignores Linux.do channel prices without a matching modelID", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-match", displayModel: { name: "Model Match" } }],
+      marketplaceDetails: [{
+        modelID: "model-match",
+        displayModel: { name: "Model Match" },
+        providers: [{ channel: {
+          id: "channel-model-id",
+          name: "Model ID Channel",
+          status: "active",
+          visibility: "public",
+          channelModelPrices: [
+            { price: { items: [{ itemCode: "prompt_tokens", multiplier: 99, pricing: { usagePerUnit: 99 } }] } },
+            { modelID: "   ", price: { items: [{ itemCode: "prompt_tokens", multiplier: 88, pricing: { usagePerUnit: 88 } }] } },
+            { modelID: "other-model", price: { items: [{ itemCode: "prompt_tokens", multiplier: 77, pricing: { usagePerUnit: 77 } }] } },
+            { modelID: "model-match", price: { items: [{ itemCode: "prompt_tokens", multiplier: 2, pricing: { usagePerUnit: 3 } }] } }
+          ]
+        } }]
+      }]
+    }
+  }, "linux-do-marketplace");
+
+  assert.equal(normalized.data.length, 1);
+  assert.equal(normalized.data[0].input_price, 6);
+  assert.deepEqual(normalized.invalidPricingValues, ["model-match:Model ID Channel:modelID"]);
+  assert.equal(normalized.incomplete, true);
+});
+
+test("rejects Linux.do detail models that are absent from the catalog", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "catalog-model", displayModel: { name: "Catalog Model" } }],
+      marketplaceDetails: [{
+        modelID: "unlisted-model",
+        displayModel: { name: "Unlisted Model" },
+        providers: [{ channel: {
+          id: "unlisted-channel",
+          name: "Unlisted Channel",
+          status: "active",
+          visibility: "public",
+          channelModelPrices: [{ modelID: "unlisted-model", price: { items: [
+            { itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 1 } }
+          ] } }]
+        } }]
+      }, {
+        modelID: "   ",
+        providers: []
+      }]
+    }
+  }, "linux-do-marketplace");
+
+  assert.deepEqual(normalized.data, []);
+  assert.deepEqual(normalized.invalidPricingValues, ["detail:modelID:missing", "detail:modelID:unlisted"]);
+  assert.equal(normalized.incomplete, true);
+});
+
+test("normalizes an explicit Linux.do payload without the collector source wrapper", () => {
+  const normalized = normalizePricingPayload({
+    data: {
+      marketplaceModels: [{
+        modelID: "model-unwrapped",
+        displayModel: { name: "Catalog Name", developer: "Catalog Developer", group: "Catalog Group", type: "chat" }
+      }],
+      marketplaceDetails: [{
+        modelID: "model-unwrapped",
+        displayModel: { name: "", developer: "Detail Developer", type: "completion" },
+        providers: [{ channel: {
+          id: "unwrapped-channel",
+          name: "Unwrapped Channel",
+          status: "active",
+          visibility: "public",
+          channelModelPrices: [{ modelID: "model-unwrapped", price: { items: [
+            { itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 2 } }
+          ] } }]
+        } }]
+      }]
+    }
+  }, "linux-do-marketplace");
+
+  assert.equal(normalized.data.length, 1);
+  assert.equal(normalized.data[0].model_display_name, "Catalog Name");
+  assert.equal(normalized.data[0].model_developer, "Detail Developer");
+  assert.equal(normalized.data[0].model_type, "completion");
+});
+
+test("preserves legal zero Linux.do usage and multiplier values", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-zero", displayModel: { name: "Zero" } }],
+      marketplaceDetails: [{ modelID: "model-zero", displayModel: { name: "Zero" }, providers: [{ channel: {
+        id: "zero-channel", name: "Zero", status: "active", visibility: "public",
+        channelModelPrices: [{ modelID: "model-zero", price: { items: [{ itemCode: "prompt_tokens", multiplier: 0, pricing: { usagePerUnit: 0 } }] } }]
+      } }] }]
+    }
+  }, "linux-do-marketplace");
+  assert.equal(normalized.data.length, 1);
+  assert.equal(normalized.data[0].input_price, 0);
+  assert.equal(normalized.incomplete, undefined);
+});
+
+test("keeps Linux.do derived ratios null when prices are missing or have a zero denominator", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [
+        { modelID: "completion-only", displayModel: { name: "Completion Only" } },
+        { modelID: "zero-input", displayModel: { name: "Zero Input" } }
+      ],
+      marketplaceDetails: [
+        { modelID: "completion-only", displayModel: { name: "Completion Only" }, providers: [{ channel: {
+          id: "completion-channel", name: "Completion Channel", status: "active", visibility: "public",
+          channelModelPrices: [{ modelID: "completion-only", price: { items: [
+            { itemCode: "completion_tokens", multiplier: 1, pricing: { usagePerUnit: 3 } }
+          ] } }]
+        } }] },
+        { modelID: "zero-input", displayModel: { name: "Zero Input" }, providers: [{ channel: {
+          id: "zero-input-channel", name: "Zero Input Channel", status: "active", visibility: "public",
+          channelModelPrices: [{ modelID: "zero-input", price: { items: [
+            { itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 0 } },
+            { itemCode: "completion_tokens", multiplier: 1, pricing: { usagePerUnit: 3 } }
+          ] } }]
+        } }] }
+      ]
+    }
+  }, "linux-do-marketplace");
+
+  assert.equal(normalized.data.length, 2);
+  const completionOnly = normalized.data.find(row => row.model_name === "completion-only");
+  const zeroInput = normalized.data.find(row => row.model_name === "zero-input");
+  assert.equal(completionOnly.model_ratio, null);
+  assert.equal(completionOnly.completion_ratio, null);
+  assert.equal(zeroInput.input_price, 0);
+  assert.equal(zeroInput.output_price, 3);
+  assert.equal(zeroInput.model_ratio, 0);
+  assert.equal(zeroInput.completion_ratio, null);
+});
+
+test("rejects invalid and unavailable Linux.do channel prices without fabricating values", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-invalid", displayModel: { name: "Invalid" } }],
+      marketplaceDetails: [{
+        modelID: "model-invalid",
+        displayModel: { name: "Invalid" },
+        providers: [
+          { channel: {
+            id: "disabled",
+            name: "Disabled",
+            status: "disabled",
+            channelModelPrices: [{ modelID: "model-invalid", price: { items: [{ itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 1 } }] } }]
+          } },
+          { channel: {
+            id: "private",
+            name: "Private",
+            status: "active",
+            visibility: "private",
+            channelModelPrices: [{ modelID: "model-invalid", price: { items: [{ itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 1 } }] } }]
+          } },
+          { channel: {
+            id: "bad",
+            name: "Bad",
+            status: "active",
+            visibility: "public",
+            channelModelPrices: [{ modelID: "model-invalid", price: { items: [
+              { itemCode: "prompt_tokens", multiplier: " ", pricing: { usagePerUnit: 1 } },
+              { itemCode: "completion_tokens", multiplier: -1, pricing: { usagePerUnit: 1 } },
+              { itemCode: "prompt_cached_tokens", multiplier: 1, pricing: { usagePerUnit: " " } }
+            ] } }]
+          } }
+        ]
+      }]
+    }
+  }, "linux-do-marketplace");
+  assert.deepEqual(normalized.data, []);
+  assert.ok(normalized.incomplete);
+  assert.deepEqual(normalized.invalidPricingValues, ["model-invalid:Bad:completion_tokens", "model-invalid:Bad:prompt_cached_tokens", "model-invalid:Bad:prompt_tokens"]);
+  assert.deepEqual(normalized.unpricedChannels, ["model-invalid:Bad"]);
+  assert.deepEqual(normalized.filteredChannels, ["model-invalid:Disabled", "model-invalid:Private"]);
+});
+
+test("filters explicit Linux.do enabled/public flags and diagnoses missing state", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-state", displayModel: { name: "State" } }],
+      marketplaceDetails: [{ modelID: "model-state", displayModel: { name: "State" }, providers: [{ channel: {
+        id: "disabled-flag", name: "Disabled Flag", status: "active", visibility: "public", enabled: false, public: true,
+        channelModelPrices: [{ modelID: "model-state", price: { items: [{ itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 1 } }] } }]
+      } }, { channel: {
+        id: "private-flag", name: "Private Flag", status: "active", visibility: "public", enabled: true, public: false,
+        channelModelPrices: [{ modelID: "model-state", price: { items: [{ itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 2 } }] } }]
+      } }, { channel: {
+        id: "unknown-state", name: "Unknown State",
+        channelModelPrices: [{ modelID: "model-state", price: { items: [{ itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 3 } }] } }]
+      } }] }]
+    }
+  }, "linux-do-marketplace");
+  assert.deepEqual(normalized.data.map(row => row.proxy_group_name), ["Unknown State"]);
+  assert.deepEqual(normalized.filteredChannels, ["model-state:Disabled Flag", "model-state:Private Flag"]);
+  assert.deepEqual(normalized.unknownChannelStates, ["model-state:Unknown State:enabled", "model-state:Unknown State:public"]);
+  assert.equal(normalized.incomplete, true);
+});
+test("rejects overflowing Linux.do effective prices", () => {
+  const normalized = normalizePricingPayload({
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-overflow", displayModel: { name: "Overflow" } }],
+      marketplaceDetails: [{
+        modelID: "model-overflow",
+        displayModel: { name: "Overflow" },
+        providers: [{ channel: {
+          id: "overflow",
+          name: "Overflow",
+          status: "active",
+          visibility: "public",
+          channelModelPrices: [{ modelID: "model-overflow", price: { items: [
+            { itemCode: "prompt_tokens", multiplier: 2, pricing: { usagePerUnit: Number.MAX_VALUE } },
+            { itemCode: "completion_tokens", multiplier: 2, pricing: { usagePerUnit: Number.MAX_VALUE } }
+          ] } }]
+        } }]
+      }]
+    }
+  }, "linux-do-marketplace");
+  assert.deepEqual(normalized.data, []);
+  assert.deepEqual(normalized.invalidPricingValues, ["model-overflow:Overflow:completion_tokens", "model-overflow:Overflow:prompt_tokens"]);
+});
+
+
+test("only exposes a stable Linux.do channel multiplier when known price items agree", () => {
+  const payload = {
+    sourceFormat: "linux-do-marketplace",
+    data: {
+      marketplaceModels: [{ modelID: "model-multiplier", displayModel: { name: "Multiplier" } }],
+      marketplaceDetails: [{ modelID: "model-multiplier", displayModel: { name: "Multiplier" }, providers: [{ channel: {
+        id: "channel-multiplier", name: "Channel", status: "active", visibility: "public",
+        channelModelPrices: [{ modelID: "model-multiplier", price: { items: [
+          { itemCode: "prompt_tokens", multiplier: 2, pricing: { usagePerUnit: 1 } },
+          { itemCode: "completion_tokens", multiplier: 3, pricing: { usagePerUnit: 2 } },
+          { itemCode: "unknown_item", multiplier: 99, pricing: { usagePerUnit: 4 } }
+        ] } }]
+      } }] }]
+    }
+  };
+  const normalized = normalizePricingPayload(payload, "linux-do-marketplace");
+  assert.equal(normalized.data[0].input_price, 2);
+  assert.equal(normalized.data[0].output_price, 6);
+  assert.equal(normalized.data[0].channel_multiplier, null);
+
+  payload.data.marketplaceDetails[0].providers[0].channel.channelModelPrices[0].price.items[1].multiplier = 2;
+  const consistent = normalizePricingPayload(payload, "linux-do-marketplace");
+  assert.equal(consistent.data[0].channel_multiplier, 2);
+});
+
+test("collects Linux.do GraphQL through page auth without capture or extension credentials", async () => {
+  const station = { id: "linux-do-test", name: "Linux.do Marketplace", baseUrl: LINUX_DO_MARKETPLACE_URL };
+  const requests = [];
+  const catalog = { data: { marketplaceModels: [{ modelID: "model-a", displayModel: { modelID: "model-a", name: "Model A" } }, { modelID: "model-b", displayModel: { modelID: "model-b", name: "Model B" } }] } };
+  const detail = modelID => ({ data: { marketplaceModel: { modelID, displayModel: { modelID, name: modelID === "model-a" ? "Model A" : "Model B" }, providers: [{ channel: { id: `channel-${modelID}`, name: `Channel ${modelID}`, status: "active", visibility: "public", enabled: true, public: true, channelModelPrices: [{ modelID, price: { items: [{ itemCode: "prompt_tokens", multiplier: 2, pricing: { usagePerUnit: 1 } }, { itemCode: "completion_tokens", multiplier: 2, pricing: { usagePerUnit: 2 } }, { itemCode: "prompt_cached_tokens", multiplier: 2, pricing: { usagePerUnit: 0.25 } }] } }] } }] } } });
+  const pageFetch = async request => {
+    requests.push(request);
+    const body = JSON.parse(request.body);
+    assert.equal(request.url, "https://hub.linux.do/admin/graphql");
+    assert.equal(request.method, "POST");
+    assert.equal(request.credentials, "same-origin");
+    assert.deepEqual(request.headers, { Accept: "application/json", "Content-Type": "application/json" });
+    assert.equal(request.pageAuth.storageKey, "axonhub_access_token");
+    assert.ok(["MarketplaceModels", "MarketplaceModel"].includes(body.operationName));
+    if (body.operationName === "MarketplaceModel") {
+      assert.deepEqual(body.variables, { modelID: body.variables.modelID, window: "LAST_7D" });
+      assert.match(body.query, /window:\s*\$window/);
+      assert.match(body.query, /enabled/);
+      assert.match(body.query, /public/);
+    }
+    return { ok: true, status: 200, body: body.operationName === "MarketplaceModels" ? catalog : detail(body.variables.modelID) };
+  };
+  const snapshot = await collectStationInput(station, { pageFetch });
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.sourceFormat, "linux-do-marketplace");
+  assert.equal(snapshot.normalized.data.length, 2);
+  assert.equal(requests.length, 3);
+  assert.ok(requests.every(request => !JSON.stringify(request).includes("test-token")));
+});
+
+test("keeps valid Linux.do models when another detail query fails", async () => {
+  const station = { id: "linux-do-partial-detail", name: "Linux.do Marketplace", baseUrl: LINUX_DO_MARKETPLACE_URL };
+  const pageFetch = async request => {
+    const body = JSON.parse(request.body);
+    if (body.operationName === "MarketplaceModels") {
+      return { ok: true, status: 200, body: { data: { marketplaceModels: [
+        { modelID: "model-good", displayModel: { modelID: "model-good", name: "Good Model" } },
+        { modelID: "model-null", displayModel: { modelID: "model-null", name: "Null Model" } }
+      ] } } };
+    }
+    if (body.variables.modelID === "model-null") return { ok: true, status: 200, body: { data: { marketplaceModel: null } } };
+    return { ok: true, status: 200, body: { data: { marketplaceModel: { modelID: "model-good", displayModel: { modelID: "model-good", name: "Good Model" }, providers: [{ channel: {
+      id: "channel-good", name: "Good Channel", status: "active", visibility: "public",
+      channelModelPrices: [{ modelID: "model-good", price: { items: [{ itemCode: "prompt_tokens", multiplier: 1, pricing: { usagePerUnit: 1 } }] } }]
+    } }] } } } };
+  };
+  const snapshot = await collectStationInput(station, { pageFetch });
+  assert.equal(snapshot.status, "partial");
+  assert.deepEqual(snapshot.normalized.data.map(row => row.model_name), ["model-good"]);
+  assert.deepEqual(snapshot.normalized.failedModels, ["model-null"]);
+  assert.equal(snapshot.normalized.failedModelCount, 1);
+});
+
+test("records a null Linux.do marketplace detail as a failed model", async () => {
+  const station = { id: "linux-do-null-detail", name: "Linux.do Marketplace", baseUrl: LINUX_DO_MARKETPLACE_URL };
+  const pageFetch = async request => {
+    const body = JSON.parse(request.body);
+    if (body.operationName === "MarketplaceModels") {
+      return { ok: true, status: 200, body: { data: { marketplaceModels: [{ modelID: "model-null", displayModel: { modelID: "model-null", name: "Null Model" } }] } } };
+    }
+    return { ok: true, status: 200, body: { data: { marketplaceModel: null } } };
+  };
+  const snapshot = await collectStationInput(station, { pageFetch });
+  assert.equal(snapshot.status, "error");
+  assert.match(snapshot.error, /全部模型详情查询失败/);
+  assert.deepEqual(snapshot.normalized.failedModels, ["model-null"]);
+  assert.equal(snapshot.normalized.failedModelCount, 1);
+  assert.deepEqual(snapshot.normalized.failedModelReasons, ["model-null: 详情响应缺少 marketplaceModel"]);
+  assert.deepEqual(snapshot.rawMeta.failedModels, ["model-null"]);
+  assert.deepEqual(snapshot.rawMeta.failedModelReasons, snapshot.normalized.failedModelReasons);
+  assert.equal(JSON.stringify(snapshot.rawMeta).includes("Authorization"), false);
+  assert.equal(JSON.stringify(snapshot.rawMeta).includes("token"), false);
+  assert.deepEqual(getPartialDiagnostics(snapshot.normalized).reasons.at(-1), {
+    key: "failedModelReasons",
+    values: ["model-null: 详情响应缺少 marketplaceModel"],
+    message: "部分模型失败原因：model-null: 详情响应缺少 marketplaceModel"
+  });
+});
+
+test("surfaces Linux.do GraphQL errors as a station error", async () => {
+  const station = { id: "linux-do-graphql-error", name: "Linux.do Marketplace", baseUrl: LINUX_DO_MARKETPLACE_URL };
+  const pageFetch = async () => ({ ok: true, status: 200, body: { errors: [{ message: "marketplace unavailable" }] } });
+  await assert.rejects(() => collectStationInput(station, { pageFetch }), /Linux\.do Marketplace GraphQL 查询失败/);
 });
 
 test("adapts WindHub's verified public pricing contract and keeps anonymous requests", async () => {
@@ -4815,9 +5235,9 @@ test("provides an accessible persisted paid/public dashboard mode boundary", () 
 test("shows Linux.do deferred collection state in station settings", () => {
   const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
   const source = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
-  assert.match(source, /Linux\.do Marketplace：匿名价格接口尚未确认，暂不可采集/);
+  assert.match(source, /Linux\.do Marketplace/);
   assert.match(source, /adapter\.kind === "linux-do-marketplace"/);
-  assert.match(source, /unavailableAction/);
+  assert.match(source, /当前 Chrome 配置文件登录 Linux\.do/);
   assert.match(html, /id="stations-list"/);
 });
 

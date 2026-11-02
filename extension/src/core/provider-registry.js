@@ -157,14 +157,14 @@ const linuxDoMarketplacePreset = {
   rechargeRmb: 1,
   rechargeCredits: 1,
   rechargeRateVerified: false,
-  rechargeRateNote: "仅站点积分/额度 1:1 展示基准，不代表人民币成本。匿名价格接口待确认。",
+  rechargeRateNote: "仅站点积分/额度 1:1 展示基准，不代表人民币成本。",
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
-  priceCurrencyNote: "站点积分/额度；当前未接入匿名价格接口",
+  priceCurrencyNote: "站点积分/额度；仅为 1:1 展示基准，不代表人民币成本",
   enabled: true,
-  mode: "direct",
+  mode: "page",
   auth: { type: "none" },
-  adapter: { kind: "linux-do-marketplace", endpoint: "", method: "GET", responseFormat: "auto" }
+  adapter: { kind: "linux-do-marketplace", endpoint: "/admin/graphql", method: "POST", responseFormat: "linux-do-marketplace" }
 };
 const windHubPreset = {
   id: "windhub",
@@ -344,6 +344,7 @@ function requestPolicy(endpoint, options = {}) {
     priceKeys: options.priceKeys || RAW_PRICE_KEYS,
     query: options.query || null,
     pageAuth: options.pageAuth || null,
+    preflight: options.preflight || null,
     skipCapture: options.skipCapture === true
   };
 }
@@ -451,16 +452,23 @@ export const PROVIDER_REGISTRY = [
       baseUrl: `${url.origin}/marketplace`,
       category: "public",
       rechargeRateVerified: false,
-      mode: "direct",
+      mode: "page",
       auth: { type: "none" },
-      adapter: { ...(stationInput.adapter || {}), kind: "linux-do-marketplace", endpoint: "", method: "GET", responseFormat: "auto" }
+      adapter: { ...(stationInput.adapter || {}), kind: "linux-do-marketplace", endpoint: "/admin/graphql", method: "POST", responseFormat: "linux-do-marketplace" }
     }),
-    mode: "direct",
-    responseFormat: "auto",
+    mode: "page",
+    responseFormat: "linux-do-marketplace",
     authType: "none",
-    rationale: "Linux.do Marketplace 的匿名价格接口尚未确认，暂不采集",
+    openTemporaryPage: true,
+    rationale: "Linux.do Marketplace 通过已登录页面会话读取只读 GraphQL 价格",
     preset: linuxDoMarketplacePreset,
-    request: requestPolicy(() => { throw new Error("Linux.do Marketplace 匿名价格接口尚未确认，暂不可采集"); }, { credentials: "omit" })
+    request: requestPolicy(() => "/admin/graphql", {
+      credentials: "same-origin",
+      pageHeaders: ["Content-Type"],
+      pageAuth: localStoragePageAuth("axonhub_access_token", "Authorization", "未找到 Linux.do 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401, 403]),
+      preflight: { endpoint: "/admin/system/price-version", method: "GET" },
+      skipCapture: true
+    })
   },
   {
     id: "windhub",
