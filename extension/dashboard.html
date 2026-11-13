@@ -12,7 +12,7 @@
   <header class="topbar">
     <a class="brand-lockup" href="dashboard.html" aria-label="Model Atlas 首页">
       <span class="brand-mark"><img class="brand-image" src="icons/icon.svg" alt=""></span>
-      <span class="brand-copy"><span class="eyebrow">MODEL ATLAS / 01</span><strong>价格对比</strong></span>
+      <span class="brand-copy"><strong>价格对比</strong></span>
     </a>
     <nav class="top-actions" aria-label="页面操作">
       <span class="system-readout"><span class="status-dot" id="connection-dot"></span><span id="last-updated">尚未刷新</span></span>
@@ -30,7 +30,7 @@
 
   <main class="page-shell">
     <section class="dashboard-heading" aria-labelledby="page-title">
-      <div><p class="eyebrow accent">价格对比</p><h1 id="page-title">模型报价</h1></div>
+      <div><h1 id="page-title">模型报价</h1></div>
       <div class="comparison-mode" role="group" aria-label="比较来源">
         <span class="sr-only">比较来源</span>
         <button class="comparison-mode-button is-active" type="button" data-comparison-mode="paid" aria-pressed="true">付费中转站</button>
@@ -40,7 +40,7 @@
 
     <section class="panel refresh-preflight-panel" id="refresh-preflight-panel" aria-labelledby="refresh-preflight-title" hidden>
       <div class="refresh-preflight-heading">
-        <div><p class="eyebrow">刷新前检查</p><h2 id="refresh-preflight-title">页面登录状态</h2></div>
+        <div><h2 id="refresh-preflight-title">页面登录状态</h2></div>
         <div class="refresh-preflight-actions">
           <button class="button button-quiet" id="cancel-refresh-preflight" type="button" disabled><span data-icon="x" class="icon"></span><span>取消</span></button>
           <button class="button button-primary" id="confirm-refresh-all" type="button" disabled><span data-icon="check" class="icon"></span><span>确认开始刷新全部</span></button>
@@ -51,7 +51,7 @@
     </section>
 
     <section class="panel refresh-progress-panel" id="refresh-progress-panel" aria-label="站点模型查询进度" hidden>
-      <div class="refresh-progress-heading"><div><p class="eyebrow">站点模型查询</p><h2>采集进度</h2></div><span id="refresh-progress-count">0 / 0 站点</span></div>
+      <div class="refresh-progress-heading"><div><h2>采集进度</h2></div><span id="refresh-progress-count">0 / 0 站点</span></div>
       <progress id="refresh-progress-bar" max="1" value="0" aria-label="已完成的站点查询数"></progress>
       <p id="refresh-progress-message" role="status" aria-live="polite" aria-atomic="true"></p>
       <ul id="refresh-progress-results" aria-live="off"></ul>
@@ -62,14 +62,14 @@
 
     <section class="panel checkin-panel" aria-label="站点签到" id="checkin-panel" data-collapsible hidden>
       <div class="panel-heading">
-        <div><p class="eyebrow">站点签到</p><h2>每日签到</h2></div>
+        <div><h2>每日签到</h2></div>
         <button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button>
       </div>
       <div class="checkin-list" id="checkin-list"></div>
     </section>
     <section class="panel toolbar-panel" id="toolbar-panel" data-collapsible aria-label="筛选和排序">
       <div class="panel-heading">
-        <div><p class="eyebrow">工作台</p><h2>筛选和排序</h2></div>
+        <div><h2>筛选和排序</h2></div>
       </div>
       <div class="toolbar-main">
         <label class="search-field"><span data-icon="search" class="icon"></span><span class="sr-only">搜索模型或站点</span><input id="search" type="search" placeholder="搜索模型、站点或供应商" autocomplete="off"></label>
@@ -94,7 +94,7 @@
 
     <section class="panel comparison-panel" id="comparison-panel" data-collapsible aria-labelledby="comparison-title">
       <div class="panel-heading">
-        <div><p class="eyebrow">当前报价</p><h2 id="comparison-title">价格明细</h2></div>
+        <div><h2 id="comparison-title">价格明细</h2></div>
         <div class="comparison-meta"><span class="result-count" id="result-count">0 条报价</span><div class="reference-readout"><strong id="reference-status">官方参考价未加载</strong><span id="reference-note">参考价与汇率每日缓存</span></div></div>
       </div>
       <div class="table-wrap">

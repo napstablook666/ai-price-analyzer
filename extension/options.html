@@ -12,7 +12,7 @@
   <header class="topbar">
     <a class="brand-lockup" href="dashboard.html" aria-label="Model Atlas 首页">
       <span class="brand-mark"><img class="brand-image" src="icons/icon.svg" alt=""></span>
-      <span class="brand-copy"><span class="eyebrow">MODEL ATLAS / 02</span><strong>站点与设置</strong></span>
+      <span class="brand-copy"><strong>站点与设置</strong></span>
     </a>
     <nav class="top-actions" aria-label="页面操作">
       <a class="button button-quiet" href="dashboard.html"><span data-icon="chevron-right" class="icon icon-flip"></span><span>返回对比</span></a>
@@ -25,13 +25,12 @@
 
   <main class="settings-shell">
     <section class="settings-intro">
-      <div><p class="eyebrow accent">CONTROL ROOM / ADAPTERS</p><h1>把采集<br><em>变成配置。</em></h1></div>
-      <div class="intro-aside"><span class="intro-index">02</span><p>密钥只保存在扩展会话存储，不进入导出文件。</p></div>
+      <div><h1>站点与设置</h1><p>管理中转站、采集配置与成本口径。密钥只保存在扩展会话存储，不进入导出文件。</p></div>
     </section>
 
     <section class="config-grid" aria-label="自动适配配置">
       <article class="panel config-card config-card-llm" data-collapsible data-collapse-key="llm">
-        <div class="config-heading"><div class="config-icon"><span data-icon="bot" class="icon"></span></div><div><p class="eyebrow">OPTIONAL INTELLIGENCE</p><h2>LLM 自动适配</h2></div><label class="switch"><input id="llm-enabled" type="checkbox"><span></span><b class="sr-only">启用 LLM 自动适配</b></label></div>
+        <div class="config-heading"><div class="config-icon"><span data-icon="bot" class="icon"></span></div><div><h2>LLM 自动适配</h2></div><label class="switch"><input id="llm-enabled" type="checkbox"><span></span><b class="sr-only">启用 LLM 自动适配</b></label></div>
         <div class="provider-profile-row">
           <label><span>供应商档案</span><select id="llm-profile"><option value="">当前配置（未保存）</option></select></label>
           <label><span>档案名称</span><input id="llm-profile-name" placeholder="例如：OpenRouter"></label>
@@ -55,7 +54,7 @@
       </article>
 
       <article class="panel config-card config-card-jev" data-collapsible data-collapse-key="jev">
-        <div class="config-heading"><div class="config-icon"><span data-icon="file-code-2" class="icon"></span></div><div><p class="eyebrow">MODEL PROFILE / JEV</p><h2>JEV 模型资料</h2></div><label class="switch"><input id="jev-enabled" type="checkbox"><span></span><b class="sr-only">启用 JEV 模型资料</b></label></div>
+        <div class="config-heading"><div class="config-icon"><span data-icon="file-code-2" class="icon"></span></div><div><h2>JEV 模型资料</h2></div><label class="switch"><input id="jev-enabled" type="checkbox"><span></span><b class="sr-only">启用 JEV 模型资料</b></label></div>
         <div class="provider-profile-row">
           <label><span>供应商档案</span><select id="jev-profile"><option value="">当前配置（未保存）</option></select></label>
           <label><span>档案名称</span><input id="jev-profile-name" placeholder="例如：Nekopeer Jev"></label>
@@ -82,7 +81,7 @@
     </section>
 
     <section class="panel settings-panel" id="settings-panel" data-collapsible>
-      <div class="panel-heading"><div><p class="eyebrow">PRICING WORKLOAD</p><h2>成本估算设置</h2></div><span class="section-mark">03</span></div>
+      <div class="panel-heading"><div><h2>成本估算设置</h2></div></div>
       <form id="settings-form" class="settings-form">
         <div class="preset-grid wide">
           <label><span>成本口径预设</span><select id="usage-preset"><option value="measured">实测月用量</option><option value="baseline">基础估算（3000 万输入 / 600 万输出）</option><option value="custom">自定义</option></select></label>
@@ -96,11 +95,11 @@
       </form>
     </section>
 
-    <section class="section-heading"><div><p class="eyebrow">STATION REGISTRY</p><h2>中转站</h2></div><button class="button button-primary" id="add-station" type="button"><span data-icon="bot" class="icon"></span><span>Agent 添加</span></button></section>
+    <section class="section-heading"><div><h2>中转站</h2></div><button class="button button-primary" id="add-station" type="button"><span data-icon="bot" class="icon"></span><span>Agent 添加</span></button></section>
     <section id="stations-list" class="stations-list" aria-live="polite"></section>
 
     <section class="panel data-panel" id="data-panel" data-collapsible>
-      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><p class="eyebrow">PORTABILITY</p><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
+      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
       <div class="data-actions workspace-actions"><button class="button button-primary" id="workspace-connect" type="button"><span data-icon="folder-open" class="icon"></span><span>选择工作区</span></button><button class="button button-quiet" id="workspace-load" type="button" disabled><span data-icon="upload" class="icon"></span><span>从工作区加载</span></button><button class="button button-quiet" id="workspace-save" type="button" disabled><span data-icon="download" class="icon"></span><span>保存到工作区</span></button></div>
       <div class="data-panel-backup"><span class="data-backup-label">JSON 备份</span><div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json,.json.gz,application/gzip"></label></div></div>
     </section>
@@ -109,7 +108,7 @@
   <dialog id="add-station-dialog" class="station-dialog" aria-labelledby="add-station-title">
     <form id="add-station-form" novalidate>
       <section id="station-url-step">
-        <div><p class="eyebrow accent">STATION AGENT</p><h2 id="add-station-title">添加中转站</h2></div>
+        <div><h2 id="add-station-title">添加中转站</h2></div>
         <label for="new-station-url">站点网址</label>
         <input id="new-station-url" type="url" autocomplete="url" placeholder="https://example.com/pricing" required autofocus>
         <div class="station-dialog-actions">
@@ -118,7 +117,7 @@
         </div>
       </section>
       <section id="station-preview" hidden aria-labelledby="station-preview-title">
-        <div><p class="eyebrow accent">AI PREVIEW</p><h2 id="station-preview-title">确认站点配置</h2></div>
+        <div><h2 id="station-preview-title">确认站点配置</h2></div>
         <p class="station-preview-status" id="station-preview-status" role="status" aria-live="polite"></p>
         <dl class="station-preview-list">
           <div><dt>站点名称</dt><dd data-preview-field="name"></dd></div>

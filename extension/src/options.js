@@ -264,7 +264,7 @@ function stationCard(station, index) {
   return `<article class="station-card" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-index="${index}" data-recharge-rate-verified="${rechargeRateVerified}">
     <details class="station-disclosure"${state.collapsedStationIds.has(station.id) ? "" : " open"}>
       <summary class="station-summary">
-        <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><p class="station-kicker">STATION ${String(index + 1).padStart(2, "0")}</p><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
+        <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
         <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${category === "public" ? "公益站：不计算汇率" : `${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币`}</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
       </summary>
       <div class="station-content">
