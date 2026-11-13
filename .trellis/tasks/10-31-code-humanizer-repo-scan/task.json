@@ -1,0 +1,28 @@
+{
+  "id": "code-humanizer-repo-scan",
+  "name": "code-humanizer-repo-scan",
+  "title": "code-humanizer 全仓库扫描",
+  "description": "使用 code-humanizer 技能对整个仓库进行 Mode A 扫描(只报告不修改):识别 AI 代码痕迹(重复造轮子、投机抽象、防御性垃圾、噪音、测试垃圾),输出按模式分组的报告与修复顺序建议。",
+  "status": "completed",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "Toriel",
+  "assignee": "Toriel",
+  "createdAt": "2026-10-31",
+  "completedAt": "2026-10-31",
+  "branch": "feat/sevenai-model-plaza",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": "477e103",
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [
+    "report.md"
+  ],
+  "notes": "Mode A 扫描 + Mode B 修复完成:7 个 deslop commit(P5 死代码 x6、P1 重复 x3、P7 export 收缩 x15、P14 噪音 x1),净 -54 行,每步 198/198 测试通过。详见 report.md。",
+  "meta": {}
+}

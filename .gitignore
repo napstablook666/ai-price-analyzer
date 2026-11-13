@@ -28,3 +28,11 @@ Thumbs.db
 
 # HAR captures contain login credentials - never commit
 *.har
+
+# Local verification artifacts and agent/tooling state
+/out/
+/.codegraph/
+/.pi/
+
+# Local workspace runtime data (stations and settings) - never commit
+/extension/ai-price-analyzer.workspace.json

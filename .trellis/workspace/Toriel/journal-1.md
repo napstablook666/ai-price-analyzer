@@ -202,3 +202,24 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 - 二轮（killaislop 反 slop）：去 config-icon 图标底座、标签去染色降级纯文字、面板盒拆解，commit a3af57d。
 - 三轮（参考站点整合 v2）：Stripe 数字列右对齐+轻表头、Vercel 分类圆点+去阴影、Cal.com 行式设置页（.settings-row）、popup 去 accent 底。分类色 token 化 --cat-*。commit 00ab271。
 - 收尾验证：233/233 测试过、JS 86 类全覆盖、旧 palette grep 零命中。任务已归档 archive/2026-11/。剩浏览器三页面目检。
+
+## 2026-11-13 三页单屏与站点插件化
+
+- 按 Magpie 浅灰画布、白色面板、紧凑导航重构 popup/dashboard/options；options 提供四个 hash 分区，完整页使用 100dvh 与局部滚动，popup 不超过 360×600。
+- 22 个站点适配器拆到 `extension/src/site-plugins/providers/`，目录只保留元数据，运行时按已保存站点或显式选择加载。插件目录支持搜索、分类、多选和 `ADD_SITE_PLUGINS` 一次批量添加。
+- 修复缓存模块剪枝后未重新注册的问题；恢复 UI 重写时丢失的原 DOM 控件，新增选择器与本地资源契约测试。
+- 验证：239/239 测试、全部 src JS `node --check`、`git diff --check` 通过。浏览器实测 1440×900、1280×720、360px 均无 body 溢出；重复多选添加成功，未保存编辑保留，键盘分区与 dialog 焦点正常。
+- 证据：`.trellis/tasks/11-13-extension-ui-single-screen/verification.md`（归档后随任务移动）与 `out/ui-browser/`。未提交 git commit。
+
+## 2026-11-13 Service Worker 插件兼容修复
+
+- 用户指出 MV3 `ServiceWorkerGlobalScope` 禁止动态 `import()`。已将 22 个 provider 改为 `catalog.js` 静态导入，加载器移除 Promise 模块缓存，保留异步公开接口与运行时按需注册。
+- 新增源码树动态 import 禁用测试和静态白名单完整性检查。`rg 'import\s*\(' extension/src` 零命中。
+- 验证：240/240 测试、全部 src JS `node --check`、`git diff --check` 通过；空启动注册表为空，批量添加、预检与删除后重注册均通过。未提交 git commit。
+
+## 2026-11-13 价格展示区与模型色带
+
+- 根据用户截图，将签到和筛选移到 280px 右侧栏，价格表显式占据 `comparison` 主列和剩余高度；1100px 以下恢复堆叠卡片。
+- 新增 `createModelBands()`，按当前页 `canonicalModel` 首次出现顺序分配 `model-band-even/odd`，同一模型多站点报价保持同色，不同模型交替白色/浅灰。
+- 浏览器实测：1440×900 表格 1108×601，1280×720 表格 938×411，360px 无页面横向溢出。搜索、签到、分页保持可用，hover 与移动卡片色带正常。
+- 验证：241/241 测试、全部 src JS `node --check`、`git diff --check` 通过。证据在 `out/ui-browser/workspace-report.json` 和 `workspace-*.png`。未提交 git commit。

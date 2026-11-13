@@ -41,9 +41,9 @@ Evidence: `extension/src/core/checkin.js`, `extension/src/service-worker.js`, an
 
 - CheapRouter (`cheaprouter.cc/models`) uses the Service Worker to call the public `/api/v1/pricing/public?timezone=Asia%2FShanghai` endpoint with `credentials: "omit"`. Do not depend on the model-page document; it may return `API_KEY_REQUIRED`.
 - Sidrune (`sidrune.ai/model-plaza`) uses the public `/api/v1/model-plaza/public` API. The new-station default is `1 USD : 1` platform currency; normalize prices using the group multiplier.
-- NexaVlinks (`nexavlinks.com/modelsmarket`) reads `/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai` in an authenticated page context. Its preset is backfilled into existing station lists; do not store station credentials in the extension.
-- AIAPI (`cn.aiapi.bot/dashboard/model-prices`) reads `GET /api/me/model-catalog` in the logged-in page context. Use `data.data.source` for groups and treat `effective` prices as CNY per million tokens; do not apply a recharge multiplier again. Its preset is backfilled into existing lists and extension-side credentials are not saved.
-- TrueSOTA (`true-sota.com/model-pricing`) uses the public `/api/v1/model-pricing` API. Normalize prices by group `rate_multiplier` to USD per million tokens and map `cache_price` to cache-read price. Its preset is backfilled and the request omits credentials.
+- NexaVlinks (`nexavlinks.com/modelsmarket`) reads `/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai` in an authenticated page context. Existing saved stations restore the local plugin by host; new installations require explicit selection. Do not store station credentials in the extension.
+- AIAPI (`cn.aiapi.bot/dashboard/model-prices`) reads `GET /api/me/model-catalog` in the logged-in page context. Use `data.data.source` for groups and treat `effective` prices as CNY per million tokens; do not apply a recharge multiplier again. Existing saved stations restore the local plugin by host; new installations require explicit selection and extension-side credentials are not saved.
+- TrueSOTA (`true-sota.com/model-pricing`) uses the public `/api/v1/model-pricing` API. Normalize prices by group `rate_multiplier` to USD per million tokens and map `cache_price` to cache-read price. Existing saved stations restore the local plugin by host; new installations require explicit selection and the request omits credentials.
 - NodeAI (`nodeai.cc/model-plaza`) uses public `GET /api/v1/model-plaza`, distinct from the page route, with the explicit `nodeai-model-plaza` normalizer. Multiply token price by the first context interval and 1,000,000 and by the user's group multiplier. Currency is CNY with default recharge ratio 1. Image pricing uses its separate image multiplier and maps to `image_price`; do not expand context intervals into peak/off-peak quote rows.
 
 Evidence: provider adapters, collectors, normalizers, and station presets under `extension/src/core/`.
@@ -51,7 +51,9 @@ Evidence: provider adapters, collectors, normalizers, and station presets under 
 ## Dashboard behavior
 
 - The dashboard shows 20 quotes per page by default; users may choose 50, 100, 200, or 500. Filtering, sorting, and pagination operate on the complete comparison result.
-- Collapsible dashboard sections use `.panel-heading` and `.collapse-toggle`. The existing sections are `refresh-progress-panel`, `checkin-panel`, `toolbar-panel`, and `comparison-panel`; the global handler manages individual sections and `#collapse-all`. New collapsible sections should use the same classes.
+- Collapsible dashboard sections use `.panel-heading` and `.collapse-toggle`. The current sections are `checkin-panel`, `toolbar-panel`, and `comparison-panel`; the global handler manages individual sections and `#collapse-all`. New collapsible sections should keep the heading as the first child and use the same classes.
+- Desktop price review uses `.dashboard-workspace` with explicit grid areas `comparison sidebar`; the comparison is the wide primary column and check-in/filters occupy the 280px sidebar. Do not rely on DOM auto-placement. At 1100px and below the sidebar uses `display: contents` and the page returns to stacked cards.
+- `createModelBands(visibleRows)` assigns 0/1 by each `canonicalModel`'s first appearance on the current page. Rows render `model-band-even` or `model-band-odd`; all offers for one canonical model keep the same band, while adjacent different models alternate `surface` and `surface-2`.
 - Model comparison has four fixed `input[data-model-filter]` inputs inside `#model-filter-menu` (`MODEL_FILTER_BOXES = 4`). `renderModelFilter()` rebuilds these inputs, so toggle/input handlers must not call it in a way that drops focus or entered values. Keep `#model-filter-label` updates in `updateModelFilterLabel()`.
 
 Evidence: `extension/src/dashboard.js`, `extension/dashboard.html`, and `extension/styles/dashboard.css`.
@@ -67,5 +69,5 @@ Evidence: `extension/src/core/jev-tasks.js`, `extension/src/dashboard.js`, and `
 
 The following are retained as observed lessons with explicit scope, not universal behavior:
 
-- Pricing station registration: an adapter or pricing-host allowlist alone does not add a selectable station. Register a pricing preset through persisted station registration and upgrade migration, and test idempotent backfill of existing lists. Do not alter empty-list defaults. Applies to selectable pricing stations, not standalone check-in presets. See [Pricing Data Contract](./pricing-data-contract.md).
+- Pricing station registration: define a local provider module and catalog entry, then add stations only through explicit plugin selection or the Agent/custom flow. Existing stations restore their provider through `pluginId` or host matching. Do not auto-add the full catalog on installation or alter empty-list defaults. See [Site Plugin and UI Contract](./site-plugins.md).
 - Authenticated check-in: use the logged-in page bridge and authoritative post-submit state as described above. Applies to page-session-dependent operations with side effects, not public read-only APIs. Evidence: `extension/test/checkin.test.js`.

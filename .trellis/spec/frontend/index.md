@@ -21,6 +21,7 @@ This directory contains guidelines for frontend development. Fill in each file w
 | [State Management](./state-management.md) | Local state, global state, server state | To fill |
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | Complete |
 | [Pricing Data Contract](./pricing-data-contract.md) | Generic pricing currency and comparison boundary | Complete |
+| [Site Plugins and UI Contract](./site-plugins.md) | Local on-demand provider modules, batch add messages, and runtime DOM contracts | Complete |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 
 ---
