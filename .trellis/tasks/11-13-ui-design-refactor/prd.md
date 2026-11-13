@@ -67,3 +67,34 @@
 
 - 设计方向确认（现代中性浅色 vs 保持暖纸色修干净）——已按前者出方案，等用户确认
 - JS 模板里的装饰性英文文案（如 eyebrow 文本）是否随 UI 一起清理
+
+## v2 方案：参考站点借鉴整合（2026-11-13 第二轮）
+
+在 v1 token 体系（zinc 中性 + indigo）上做第二轮深度重构，不推倒重来。约束不变：JS 渲染类名兼容、零依赖、CSP 无外链。
+
+### 提炼规则（来源 → 规则）
+
+| 来源 | 规则 |
+|------|------|
+| Stripe | 数字是主角：数字列右对齐、表头轻量化（白底+粗底边框，不上灰底） |
+| Vercel | 状态用「点+文字」不用底色块；近单色界面 |
+| Linear | 层级靠灰度与字重，不靠色块与阴影 |
+| Cal.com | 设置页行式布局：label+描述在左，控件在右 |
+| OpenRouter | 价格分行排版、provider 纯文字、单位弱化 |
+| Primer | 整行 border 分隔、克制 hover |
+
+### 改动清单
+
+1. **base.css**：分类色 token 化（--cat-excellent/good/fair/bad）；新增 --font-mono token
+2. **dashboard.css**：表头去 surface-2 底改白底粗下边框；月成本/中转单价/官方单价三列右对齐；行分类色标 border-left 2px → 模型名前 6px 圆点；summary-card 去 shadow
+3. **options.css + options.html**：settings-form 两列网格 → Cal.com 行式（label 左 40% + 控件右 60%）；station-grid 4 列 → 2 列
+4. **popup.css**：popup-action-primary 去 accent-soft 底改白底 accent 边
+
+### v2 实施结果（2026-11-13）
+
+- base.css：分类色 token 化（--cat-excellent/good/fair/bad）+ --font-mono token 下沉
+- dashboard.css：表头白底 + line-strong 下边框（Stripe）；数字列 3-6 右对齐（th+td 同步）；price-lines 右贴 + price-line 行内右对齐；cost-cell 右对齐；分类色标 border-left → 模型名前 6px 圆点（--row-accent）；summary-card 去 shadow；卡片化断点内恢复左对齐
+- options.css + options.html：settings-form 重排为 Cal.com 行式（.settings-row：label+描述左 230px / 控件右），新增小字描述；fieldset（usage-grid/matching-rules）原样保留；station-grid 4 列 → 2 列；station-id 用 --font-mono
+- popup.css：popup-action-primary 去 accent-soft 底改白底 accent 边，hover surface-2
+- 验证：check-classes.mjs JS 86 类全覆盖（3 个状态钩子豁免）；node --check 三 JS OK；四 CSS 括号配对 OK
+- commit: 00ab271
