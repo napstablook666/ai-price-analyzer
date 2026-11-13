@@ -317,21 +317,73 @@ function hasHeader(headers, name) {
   return Object.keys(headers).some(current => current.toLowerCase() === name.toLowerCase());
 }
 
-function applyPageAuth(headers, pageAuth) {
+function readStoredPageToken(pageAuth) {
+  const storageKey = String(pageAuth?.storageKey || "");
+  if (!storageKey) throw new Error("页面认证策略缺少存储键");
+  const raw = String(window.localStorage.getItem(storageKey) || "").trim();
+  if (!raw) return "";
+  const paths = Array.isArray(pageAuth?.storagePaths) ? pageAuth.storagePaths : [];
+  if (!paths.length) return raw;
+  let payload;
+  try { payload = JSON.parse(raw); } catch { return raw.startsWith("{") ? "" : raw; }
+  for (const path of paths) {
+    const value = pathValue(payload, String(path));
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function readStoredPath(storageKey, path) {
+  if (!storageKey || !path) return "";
+  let payload;
+  try { payload = JSON.parse(String(window.localStorage.getItem(storageKey) || "")); } catch { return ""; }
+  const value = pathValue(payload, String(path));
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function writeStoredPath(storageKey, path, value) {
+  const keys = String(path || "").split(".").filter(Boolean);
+  if (!storageKey || !keys.length) return false;
+  let payload;
+  try { payload = JSON.parse(String(window.localStorage.getItem(storageKey) || "")); } catch { return false; }
+  if (!payload || typeof payload !== "object") return false;
+  let cursor = payload;
+  for (const key of keys.slice(0, -1)) {
+    if (!cursor[key] || typeof cursor[key] !== "object") return false;
+    cursor = cursor[key];
+  }
+  cursor[keys[keys.length - 1]] = value;
+  window.localStorage.setItem(storageKey, JSON.stringify(payload));
+  return true;
+}
+
+function writeStoredPageToken(pageAuth, token) {
+  const storageKey = String(pageAuth?.storageKey || "");
+  if (!storageKey) return false;
+  const paths = Array.isArray(pageAuth?.storagePaths) ? pageAuth.storagePaths : [];
+  if (!paths.length) {
+    window.localStorage.setItem(storageKey, token);
+    return true;
+  }
+  return writeStoredPath(storageKey, paths[0], token);
+}
+
+async function applyPageAuth(headers, pageAuth) {
   if (!pageAuth) return;
   if (typeof pageAuth !== "object" || !["cookie", "localStorage"].includes(pageAuth.source)) throw new Error("页面认证策略不受支持");
   if (pageAuth.source === "cookie") return;
   const header = String(pageAuth.header || "");
   if (!ALLOWED_HEADERS.has(header.toLowerCase())) throw new Error("页面认证请求头不受支持");
   if (hasHeader(headers, header)) return;
-  const storageKey = String(pageAuth.storageKey || "");
-  if (!storageKey) throw new Error("页面认证策略缺少存储键");
-  const token = String(window.localStorage.getItem(storageKey) || "").trim();
+  let token = readStoredPageToken(pageAuth);
+  if (!token && pageAuth.refresh) {
+    if (await refreshPageAuth(pageAuth)) token = readStoredPageToken(pageAuth);
+  }
   if (!token) throw new Error(pageAuth.missingMessage || "未找到页面登录凭据，请先在当前 Chrome 配置文件登录后重试");
   headers[header] = pageAuth.scheme ? `${pageAuth.scheme} ${token}` : token;
 }
 
-function validateRequest(request) {
+async function validateRequest(request) {
   if (!request || typeof request.url !== "string") throw new Error("页面请求缺少地址");
   const url = new URL(request.url, window.location.href);
   if (url.origin !== window.location.origin) throw new Error("页面请求必须同源");
@@ -341,7 +393,7 @@ function validateRequest(request) {
   if (!ALLOWED_CREDENTIALS.has(credentials)) throw new Error("页面请求 credentials 不受支持");
   const headers = {};
   for (const [name, value] of Object.entries(request.headers || {})) if (ALLOWED_HEADERS.has(name.toLowerCase()) && typeof value === "string") headers[name] = value;
-  applyPageAuth(headers, request.pageAuth);
+  await applyPageAuth(headers, request.pageAuth);
   return { url: url.toString(), method, headers, credentials, body: method === "POST" && typeof request.body === "string" ? request.body : undefined };
 }
 
@@ -355,11 +407,13 @@ async function refreshPageAuth(pageAuth) {
   let refreshUrl;
   try { refreshUrl = new URL(String(refresh.endpoint || ""), window.location.href); } catch { return false; }
   if (refreshUrl.origin !== window.location.origin) return false;
+  const cookieOnly = refresh.cookieOnly === true;
   const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
-  const refreshToken = String(window.localStorage.getItem(refreshTokenKey) || "").trim();
-  if (!refreshToken) return false;
+  const refreshTokenPath = String(refresh.refreshTokenPath || "");
+  const refreshToken = cookieOnly ? "" : (refreshTokenPath ? readStoredPath(pageAuth.storageKey, refreshTokenPath) : String(window.localStorage.getItem(refreshTokenKey) || "").trim());
+  if (!cookieOnly && !refreshToken) return false;
   const headers = { Accept: "application/json", "Content-Type": "application/json" };
-  const accessToken = String(window.localStorage.getItem(String(pageAuth.storageKey || "")) || "").trim();
+  const accessToken = readStoredPageToken(pageAuth);
   const authHeader = String(pageAuth.header || "");
   if (refresh.includeAccessToken === true && accessToken && ALLOWED_HEADERS.has(authHeader.toLowerCase())) headers[authHeader] = pageAuth.scheme ? `${pageAuth.scheme} ${accessToken}` : accessToken;
   const credentials = ALLOWED_CREDENTIALS.has(String(refresh.credentials || "omit")) ? String(refresh.credentials || "omit") : "omit";
@@ -369,7 +423,7 @@ async function refreshPageAuth(pageAuth) {
       method: "POST",
       headers,
       credentials,
-      body: JSON.stringify({ [String(refresh.requestTokenKey || "refresh_token")]: refreshToken })
+      body: cookieOnly ? undefined : JSON.stringify({ [String(refresh.requestTokenKey || "refresh_token")]: refreshToken })
     });
     if (!response.ok) return false;
     const payload = await response.json();
@@ -378,9 +432,12 @@ async function refreshPageAuth(pageAuth) {
     const accessKey = String(refresh.accessTokenKey || "access_token");
     const nextAccessToken = String(data[accessKey] || "").trim();
     if (!nextAccessToken) return false;
-    window.localStorage.setItem(String(pageAuth.storageKey || ""), nextAccessToken);
+    if (!writeStoredPageToken(pageAuth, nextAccessToken)) return false;
     const nextRefreshToken = String(data[String(refresh.refreshTokenKey || "refresh_token")] || "").trim();
-    if (nextRefreshToken) window.localStorage.setItem(refreshTokenKey, nextRefreshToken);
+    if (nextRefreshToken) {
+      if (refreshTokenPath) writeStoredPath(pageAuth.storageKey, refreshTokenPath, nextRefreshToken);
+      else if (refreshTokenKey) window.localStorage.setItem(refreshTokenKey, nextRefreshToken);
+    }
     const expiresIn = Number(data[String(refresh.expiresInKey || "")]);
     const expiresAtKey = String(refresh.expiresAtStorageKey || "");
     if (expiresAtKey && Number.isFinite(expiresIn) && expiresIn > 0) window.localStorage.setItem(expiresAtKey, String(Date.now() + Math.ceil(expiresIn * 1000)));
@@ -397,7 +454,7 @@ function shouldRefreshPageAuth(pageAuth, response) {
 }
 
 async function executeRequest(request) {
-  const safeRequest = validateRequest(request);
+  const safeRequest = await validateRequest(request);
   const { url, ...init } = safeRequest;
   return fetch(url, init);
 }

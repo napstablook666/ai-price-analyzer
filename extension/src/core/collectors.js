@@ -81,7 +81,7 @@ export async function collectStation(station, { fetchImpl = fetch, pageFetch, co
       throw new Error(`${station.name} 手动价格 JSON 无效`);
     }
     if (hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
-    const normalized = normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: "CREDITS" });
+    const normalized = normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency });
     return buildSnapshot(station, normalized, "manual://station-config", 200);
   }
   let firstEmptySnapshot = null;
@@ -94,7 +94,7 @@ export async function collectStation(station, { fetchImpl = fetch, pageFetch, co
       const payload = typeof response?.json === "function" ? await readResponse(response) : response?.body;
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("页面响应未通过价格数据校验");
       const normalized = payload && typeof payload !== "string"
-        ? normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: "CREDITS" })
+        ? normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency })
         : { sourceFormat: "page-capture", data: [] };
       const priceFields = NORMALIZED_PRICE_FIELDS;
       if (normalized.data.some(row => priceFields.some(field => row[field] !== null && row[field] !== undefined && (!Number.isFinite(Number(row[field])) || Number(row[field]) < 0)))) throw new Error("页面响应未通过价格数据校验");
@@ -113,7 +113,7 @@ export async function collectStation(station, { fetchImpl = fetch, pageFetch, co
       if (!response || response.ok === false || (response.status && response.status >= 400)) {
         throw new Error(requestError(station, requestStrategy, response));
       }
-      const options = { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: "CREDITS" };
+      const options = { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency };
       const payload = typeof response.json === "function" ? await readResponse(response) : response.body;
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
       const normalized = typeof payload === "string"

@@ -676,13 +676,19 @@ export class CheapRouterPricingStrategy extends ParsingStrategy {
   }
 }
 
+function jijiMarketRoot(raw) {
+  const root = raw?.data && Array.isArray(raw.data.providers) ? raw.data : raw;
+  return Array.isArray(root?.providers) ? root : null;
+}
+
 export class JijiModelMarketStrategy extends ParsingStrategy {
-  canParse(raw) { return Array.isArray(raw?.providers) && raw.providers.some(provider => Array.isArray(provider?.models)); }
+  canParse(raw) { return Boolean(jijiMarketRoot(raw)?.providers.some(provider => Array.isArray(provider?.models))); }
 
   parse(raw) {
+    const root = jijiMarketRoot(raw) || { providers: [] };
     const data = [];
     const groupRatio = {};
-    for (const provider of raw.providers) {
+    for (const provider of root.providers) {
       const providerName = String(provider?.name || provider?.code || provider?.id || "Jiji").trim();
       for (const model of Array.isArray(provider?.models) ? provider.models : []) {
         const modelName = String(model?.model_id || model?.id || model?.display_name || "").trim();
@@ -1190,7 +1196,7 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
 
 export class JijiModelPlazaStrategy extends ParsingStrategy {
   canParse(raw) {
-    return raw?.code === 0 && Array.isArray(raw?.data?.groups) && !raw.data.groups.some(group =>
+    return raw?.code === 0 && Array.isArray(raw?.data?.groups) && !Array.isArray(raw?.data?.providers) && !raw.data.groups.some(group =>
       ["user_rate_multiplier", "image_rate_independent", "image_rate_multiplier"].some(key => Object.hasOwn(group || {}, key)) ||
       group?.models?.some(model => ["billing_mode", "intervals", "official_pricing", "image_output_price"].some(key => Object.hasOwn(model?.pricing || {}, key)))
     );
@@ -1552,10 +1558,11 @@ export function parseGenericPricing(payload, options = {}) {
 }
 
 function applyModelListCurrency(normalized, options = {}) {
-  if (options.modelListCurrency !== "CREDITS" || !Array.isArray(normalized?.data)) return normalized;
+  const currency = options.modelListCurrency;
+  if (!currency || !Array.isArray(normalized?.data)) return normalized;
   return {
     ...normalized,
-    data: normalized.data.map(item => ({ ...item, price_currency: "CREDITS" }))
+    data: normalized.data.map(item => ({ ...item, price_currency: currency }))
   };
 }
 
