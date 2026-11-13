@@ -199,3 +199,6 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 ## 2026-11-13 UI 重构
 
 - 完成三页面设计系统重构，commit e27faea。base.css 唯一 token 源，四套 CSS 重写，删 eyebrow 装饰。类覆盖/语法/对比度静态验收全过，待浏览器目检。
+- 二轮（killaislop 反 slop）：去 config-icon 图标底座、标签去染色降级纯文字、面板盒拆解，commit a3af57d。
+- 三轮（参考站点整合 v2）：Stripe 数字列右对齐+轻表头、Vercel 分类圆点+去阴影、Cal.com 行式设置页（.settings-row）、popup 去 accent 底。分类色 token 化 --cat-*。commit 00ab271。
+- 收尾验证：233/233 测试过、JS 86 类全覆盖、旧 palette grep 零命中。任务已归档 archive/2026-11/。剩浏览器三页面目检。
