@@ -17,10 +17,12 @@ function buildProxyPrices(item = {}, groupRatio = 1, factor = 1, basePrice = SYS
   const billing = item.billing || {};
   const cacheWrite1h = explicit(item.cache_write_1h_price) ?? explicit(billing.cacheWrite1h);
   const fallbackInput = Number.isFinite(Number(item.model_ratio)) && Number(item.model_ratio) > 0 ? Number(item.model_ratio) * (Number(groupRatio) || 1) * basePrice * factor : null;
-  const fallbackOutput = fallbackInput === null ? null : fallbackInput * (Number(item.completion_ratio) || 1);
+  const input = explicit(item.input_price) ?? fallbackInput;
+  const completionRatio = Number(item.completion_ratio);
+  const fallbackOutput = input === null || !Number.isFinite(completionRatio) || completionRatio <= 0 ? null : input * completionRatio;
   const imageInput = explicit(item.image_input_price) ?? explicit(billing.imageInput);
   return {
-    input: explicit(item.input_price) ?? fallbackInput,
+    input,
     output: explicit(item.output_price) ?? fallbackOutput,
     cacheRead: explicit(item.cache_read_price) ?? explicit(billing.cacheRead),
     cacheWrite: explicit(item.cache_write_price) ?? explicit(billing.cacheWrite),
@@ -118,6 +120,10 @@ function offerGroups(item, normalized) {
 function addWeighted(target, source, share) {
   for (const field of STANDARD_PRICE_FIELDS) {
     const value = source[field];
+    if (value === null && !Object.hasOwn(target, field)) {
+      target[field] = null;
+      continue;
+    }
     if (!Number.isFinite(value)) continue;
     target[field] = (target[field] ?? 0) + value * share;
   }
