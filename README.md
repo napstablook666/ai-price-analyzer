@@ -1,6 +1,6 @@
-# AI Price Analyzer
+<h1 align="center">AI Price Analyzer</h1>
 
-<p align="center"><strong>Compare AI gateway model prices against OpenRouter reference data directly in your browser.</strong></p>
+<p align="center"><strong>A Chromium MV3 extension for comparing AI gateway model prices with OpenRouter reference data.</strong></p>
 
 <p align="center">
   <a href="./README.md">English</a> |
@@ -13,115 +13,117 @@
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat-square" alt="GPL-3.0 license"></a>
 </p>
 
-AI Price Analyzer is a browser userscript for comparing model pricing exposed by supported AI gateway pages. It captures pricing data from the current page or the page's same-origin pricing endpoint, matches equivalent models, and estimates costs for a configurable workload.
+AI Price Analyzer is currently maintained as a no-build Chromium MV3 extension. It collects model prices from configured AI gateway stations, compares them with public reference data, and presents the results in a local dashboard.
+
+## Maintenance status
+
+The maintained product is the browser extension in [`extension/`](./extension/). New usage, bug reports, tests, and pull requests should target the extension.
+
+The root userscript [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js) is archived. It remains in the repository and in some release archives for historical compatibility, but it is not the active product and does not receive new feature or compatibility work. New installations should use the extension described below.
 
 ## Highlights
 
 | Capability | Why it matters |
 |---|---|
-| Page and endpoint capture | Analyze data already available in the current pricing page without maintaining a separate provider database. |
-| OpenRouter reference data | Compare gateway prices with the OpenRouter model catalog when its public endpoint is reachable. |
-| Matching rules | Start with exact model names and optionally enable suffix, version, or fuzzy matching. |
-| Workload estimation | Enter requests and token volumes to compare estimated 24-hour or monthly cost. |
-| Local persistence | Keep matching rules, layout position, and cached reference data in the browser's userscript storage. |
+| Multi-station collection | Configure several gateway stations and refresh their model catalogs from one dashboard. |
+| Comparison dashboard | Store IndexedDB snapshots, filter and sort results, and compare estimated monthly costs and recommendations. |
+| Direct and page collection modes | Use a CORS-enabled JSON endpoint directly, or use a page bridge when a station requires the current browser login. |
+| Public reference data | Cache OpenRouter model data and a Bank of China exchange-rate reference for comparison. |
+| Optional account workflows | Use supported station check-ins and separately configured JEV or LLM providers when those features are enabled. |
 
 ## Architecture
 
 ```text
-+----------------------+     +----------------------+     +----------------------+
-| Supported pricing    | --> | Userscript capture   | --> | Normalize model      |
-| page or JSON endpoint|     | and page integration |     | names and price data |
-+----------------------+     +----------------------+     +----------+-----------+
-                                                                      |
-                                                                      v
-+----------------------+     +----------------------+     +----------------------+
-| User workload and    | --> | Cost calculation and  | --> | Comparison table,    |
-| exchange-rate inputs |     | matching rules       |     | recommendations      |
-+----------------------+     +----------------------+     +----------------------+
-                                                                      ^
-                                                                      |
-                                                        +-------------+-------------+
-                                                        | OpenRouter model reference |
-                                                        | and Bank of China FX data |
-                                                        +---------------------------+
++---------------------------+       +------------------------+
+| popup / options /         | ----> | MV3 service worker     |
+| dashboard extension pages |       | refresh and alarms     |
++-------------+-------------+       +-----------+------------+
+              | chrome.runtime                  |
+              v                                 |
++-------------+-------------+                    |
+| page bridge in the       | <------------------+
+| current browser tab      |
++-------------+-------------+
+              |
+              v
++-------------+-------------+       +------------------------+
+| station pricing and      | ----> | IndexedDB snapshots,   |
+| check-in APIs            |       | settings, comparisons  |
++--------------------------+       +------------------------+
+              ^
+              |
+     +--------+---------+
+     | OpenRouter and   |
+     | Bank of China   |
+     | public references|
+     +------------------+
 ```
-
-## Screenshots
-
-The screenshots below are real outputs from this project.
-
-<p align="center">
-  <img src="./assets/tokenflux-pricing-analysis.png" width="720" alt="AI Price Analyzer comparing TokenFlux model pricing">
-</p>
-
 
 ## Quick Install
 
-1. Install a userscript manager such as [Tampermonkey](https://www.tampermonkey.net/) in a Chromium- or Firefox-based browser.
-2. Download [`ai-price-analyzer.user.js`](https://github.com/napstablook666/ai-price-analyzer/releases/latest/download/ai-price-analyzer.user.js) from the latest GitHub release.
-3. Open the downloaded file and confirm the userscript installation.
+1. Download `ai-relay-price-extension-v<version>.zip` from the [GitHub Releases](https://github.com/napstablook666/ai-price-analyzer/releases) page, or use the `extension/` directory from a source checkout.
+2. If you downloaded the ZIP, extract it. The directory you load must contain `manifest.json`.
+3. Open `chrome://extensions` in a Chromium-based browser, enable **Developer mode**, choose **Load unpacked**, and select the extracted extension directory or the repository's [`extension/`](./extension/) directory.
 
-The repository source file is [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js). The release asset uses the ASCII filename `ai-price-analyzer.user.js` so the direct download URL works reliably across clients.
+No bundler, Docker installation, Playwright setup, or third-party runtime dependency is required for local use.
 
 ## Quick Start
 
-1. Open a supported model, pricing, or rate page.
-2. Click the floating `AI 价格分析` button.
-3. If data is not captured automatically, paste a JSON payload into the proxy-data field and choose the matching data source.
-4. Set the exchange rate and workload values if the defaults do not match your use case.
-5. Click `开始计算` to view matched models, estimated cost, and recommendations.
+1. Open the extension popup and choose **站点与设置** or open the extension dashboard.
+2. In settings, add a station URL, let the extension analyze it, review the suggested configuration, and confirm the station.
+3. Choose **direct** collection for a CORS-enabled JSON API. Choose **page** collection when the station requires an existing browser login, and keep that station open and signed in in the current tab.
+4. Save the station and settings, return to the dashboard, and choose **Refresh all**.
+5. Review the collected models, OpenRouter reference prices, matching status, estimated monthly cost, and recommendation fields in the comparison table.
 
-The script is designed to work with pricing pages that expose recognizable model cards or a same-origin `/api/pricing` endpoint. The exact fields available depend on the page being analyzed.
+The settings page also provides optional reference refresh, JEV or LLM provider configuration, check-in settings for supported stations, and JSON state import/export. Exported state does not include station secrets or API keys.
 
-## Supported page patterns
+## Station collection
 
-The userscript is intentionally limited to pricing-oriented paths rather than running on every website:
+The extension supports two collection paths:
 
-- `https://*/model*`
-- `https://*/pricing*`
-- `https://*/rate*`
-- `https://compute.sinanlab.com/`
-- `https://soleapi.com/zh/models*`
-- `https://www.soleapi.com/zh/models*`
+- **Direct mode** sends a request to the configured station endpoint. Use it when the endpoint permits the extension's request.
+- **Page mode** uses the page bridge in the current browser tab. Use it for stations that require browser cookies or a logged-in page.
 
-The script also recognizes the Jiji model-list page and the Sinan model plaza in its runtime logic. Site-specific page structures can change without notice; open an issue with a sanitized sample when a page stops working.
+The settings page can inspect a station URL and show a proposed endpoint, request format, authentication mode, and collection mode before saving it. Site-specific adapters and presets live under [`extension/src/core/`](./extension/src/core/). Station page structures and API responses can change, so include a sanitized response shape when reporting a collection problem.
 
-## Data sources and privacy
+## Data and privacy
 
-- The script reads pricing/model data from the active page and its same-origin pricing APIs.
-- It may request the public OpenRouter model catalog at `https://openrouter.ai/api/v1/models`.
-- It may request the Bank of China foreign-exchange page at `https://www.boc.cn/sourcedb/whpj/` for a reference rate.
-- It stores settings and cached public reference data through the userscript manager's local storage APIs.
-- It does not require an API key, and this repository does not include credentials.
-- Do not paste private API responses, cookies, authorization headers, or account information into an issue or pull request.
+- The extension reads model and pricing data from configured station pages or endpoints.
+- It may request the public OpenRouter model catalog at `https://openrouter.ai/api/v1/models` and the Bank of China exchange-rate page at `https://www.boc.cn/sourcedb/whpj/`.
+- Settings and collected snapshots stay in the extension's local storage and IndexedDB. State exports exclude station secrets and API keys.
+- Optional JEV or LLM actions send only the user-selected data to the separately configured provider. Review [`PRIVACY.md`](./PRIVACY.md) before enabling them.
+- Do not paste private API responses, cookies, authorization headers, account identifiers, or credentials into an issue or pull request.
 
-See [`PRIVACY.md`](./PRIVACY.md) for the public-release privacy statement.
+## Archived userscript
 
-## Chromium extension
-
-The repository also includes a no-build Chromium MV3 extension in [`extension/`](./extension/). It keeps the userscript workflow intact and adds multi-station scheduled collection, OpenRouter and Bank of China reference caching, IndexedDB snapshots, model matching, and a comparison dashboard. With a separate JEV provider configured, users can request model-match suggestions or structured comparison reviews; mappings are saved only after user confirmation.
-Supported stations (see `extension/src/core/checkin.js`) also get a daily check-in entry: one click claims the station's daily reward directly through its API with the existing browser login, and an optional per-station alarm can claim it automatically.
-
-For local use, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the `extension/` directory. Configure station endpoints and credentials in the extension settings. Use direct mode for CORS-enabled JSON APIs; use page mode when the station requires an existing browser login.
-
-The extension has no Docker, Playwright, bundler, or third-party runtime dependency. Run its unit tests with `node --test extension/test/*.test.js`.
+The original userscript source is [`AI中转站价格分析工具.js`](./AI中转站价格分析工具.js). The release workflow publishes it as `ai-price-analyzer.user.js`, and source archives may still contain the file. These are historical assets for existing users and release compatibility; they are not current extension releases and should not be used as the starting point for new work.
 
 ## Development
 
-No build toolchain is required for the userscript source. Use Node.js for syntax checks and the included pricing self-check:
-The root `package.json` stores separate project and userscript version tracks. Run `npm run version:patch` (or `version:minor` / `version:major`) for an update; it increments both tracks and syncs every release file. Use `npm run version:check` to verify them.
+The active development checks are the extension checks. The root `package.json` stores separate project and archived userscript version tracks. Run `npm run version:patch` (or `version:minor` / `version:major`) for an update; it increments both tracks and syncs every release file. Use `npm run version:check` to verify them.
 
 ```bash
-node --check "AI中转站价格分析工具.js"
-node test-kbq-pricing.js
 node --test extension/test/*.test.js
+node --check extension/src/service-worker.js
+node --check extension/src/dashboard.js
+node --check extension/src/options.js
+node --check extension/src/content-bridge.js
+node --check extension/src/page-bridge.js
+node --check extension/src/popup.js
 ```
 
-The GitHub Actions workflow runs the same checks and verifies that the release source contains no obvious private-key or credential markers.
+GitHub Actions also validates the extension manifest and required HTML entry points. It still runs `node --check "AI中转站价格分析工具.js"` and `node test-kbq-pricing.js` only to keep the archived userscript and historical release source valid; those commands are not the extension development entry point.
 
-## Release process
+## Releases
 
-Releases are tag-driven. Run `npm run version:patch` (or `version:minor` / `version:major`) before tagging; the command increments both version tracks and updates every release file. The release workflow then verifies the project version matches the tag.
+Releases are tag-driven. Run `npm run version:patch` (or `version:minor` / `version:major`) before tagging; the command increments both version tracks and updates every release file. The release workflow verifies the project version matches the tag and publishes these assets:
+
+- `ai-relay-price-extension-v<version>.zip`: the current Chromium extension distribution.
+- `ai-price-analyzer-v<version>-source.zip`: the source archive, including the extension and archived userscript.
+- `ai-price-analyzer.user.js`: the archived userscript asset retained for historical compatibility.
+- `SHA256SUMS.txt`: checksums for the published files.
+
+For current use, choose the extension ZIP. The userscript asset may remain in a release for historical users, but it is not an active maintenance target.
 
 ```bash
 npm run version:patch
@@ -131,16 +133,19 @@ git tag "v$version"
 git push origin "v$version"
 ```
 
-The workflow is defined in [`.github/workflows/release.yml`](./.github/workflows/release.yml). The `GITHUB_TOKEN` is used only by GitHub Actions to publish the release; no repository secret is needed for the default flow.
-
 ## Contributing
 
-Issues and pull requests are welcome. Before submitting one:
+Issues and pull requests should target [`extension/`](./extension/). Before submitting one:
 
-- remove credentials and private URLs from examples and logs;
-- run the Node.js checks above;
-- describe the target page pattern and include only sanitized response structure;
-- keep changes focused on the userscript or release automation.
+- run `node --test extension/test/*.test.js` and the relevant extension syntax checks;
+- include the extension version, Chromium version, station, collection mode, and reproduction steps;
+- remove credentials, cookies, authorization headers, private URLs, and account identifiers from examples, logs, and screenshots;
+- provide only a sanitized response structure when reporting a station adapter problem;
+- update [`PRIVACY.md`](./PRIVACY.md) when a change adds host permissions, cross-origin requests, or new data handling.
+
+Changes to the archived root userscript are limited to archive, release, or documentation maintenance.
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the pull request checklist.
 
 ## License
 
