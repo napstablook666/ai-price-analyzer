@@ -141,3 +141,61 @@ Added KillAI per_request-to-request billing mapping using the shared model-plaza
 ### Status
 
 [OK] **Completed**
+
+
+## Session 7: TokenFlux 定价站点适配
+<!-- trellis-session: v=2 fp=tokenflux-pricing -->
+
+**Date**: 2026-10-31
+**Task**: TokenFlux 定价站点适配
+**Branch**: `feat/sevenai-model-plaza`
+
+### Summary
+
+接入 TokenFlux 公开 `GET /api/pricing`，新增 direct provider/preset、`tokenflux` 显式响应格式和独立归一化策略。普通模型按 `model_ratio * group_ratio` 生成输入/输出/缓存价格并标记 CNY，图片模型输出 `image_price`，视频等 `quota_type: 1` 模型输出 `request_price`；`tiered_expr` 记录为 `unsupportedBillingModes` 并标记 partial，失败包络和脏模型项不会污染其他模型。补充站点请求、币种、分组倍率、缓存、特殊计费和异常数据回归测试。
+
+真实接口确认页面为 JS 渲染但公开 API 无认证可访问；保留现有工作区中的 all-in-one 等并行改动，不做回退。验证：扩展测试 196/196、Node 语法检查和 `git diff --check` 通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8e1374a` | feat(extension): add TokenFlux pricing station |
+
+### Status
+
+[OK] **Completed**
+
+
+## Session 8: code-humanizer 全仓库清理(Mode A + Mode B)
+<!-- trellis-session: v=2 fp=code-humanizer-repo-scan -->
+
+**Date**: 2026-10-31
+**Task**: code-humanizer 全仓库扫描
+**Branch**: `feat/sevenai-model-plaza`
+
+### Summary
+
+Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高于典型 AI 产出,无 TODO/console.log/try-import 回退/_v2 克隆;策略模式与注册表为真实多实现。发现:6 处死导出(严重度 3)、3 处重复 helper(严重度 2)、15 个仅内部使用的导出、1 条分隔线注释。空 catch/类型探测/契约注释均判定为信任边界豁免。报告见任务目录 report.md。
+
+用户批准后执行 Mode B:7 个 deslop commit,每步全量测试(198/198)与 `node --check` 把关。净 -54 行。亮点:`readResponse` 的伪 Response 分支经证实为不可达代码(调用方已在外层判别)直接删除,checkin.js 的同名判别语义不同(错误吞咽)予以保留,避免强行合并改变行为。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `918ca15` | deslop: remove dead exports (#5) - 6 instances |
+| `1a82ba0` | test: import normalizePricingPayload from normalizers |
+| `62c3137` | deslop: merge duplicate toast helper into shared/ui (#1) |
+| `5f2fdd7` | deslop: merge duplicate activeJevProfile into shared/schema (#1) |
+| `0dab068` | deslop: drop unreachable bridge branch in readResponse (#1) |
+| `a98a73a` | deslop: narrow module-internal exports (#7) - 15 symbols |
+| `477e103` | deslop: remove decorative section banner (#14) |
+
+### Status
+
+[OK] **Completed**
+
+## 2026-11-13 UI 重构
+
+- 完成三页面设计系统重构，commit e27faea。base.css 唯一 token 源，四套 CSS 重写，删 eyebrow 装饰。类覆盖/语法/对比度静态验收全过，待浏览器目检。
