@@ -3,7 +3,7 @@ import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { buildJevComparisonTask, getJevModelBatchTargets, JEV_COMPARISON_LABELS, JEV_NO_MATCH } from "./core/jev-tasks.js";
 import { getJevModelCandidates } from "./core/matching.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { createDashboardIndex, matchesModelQueries, paginateRows } from "./dashboard-index.js";
+import { createDashboardIndex, createModelBands, matchesModelQueries, paginateRows } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
 import { activeJevProfile, DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
 
@@ -280,7 +280,7 @@ function jevResultFor(task, row) {
 
 function jevActionButton(task, row, label) {
   const config = activeJevProfile(state.data?.settings);
-  if (!config.baseUrl || !config.modelId || !config.hasApiKey) return `<a class="jev-config-link" href="options.html">配置 JEV</a>`;
+  if (!config.baseUrl || !config.modelId || !config.hasApiKey) return `<a class="jev-config-link" href="options.html#providers">配置 JEV</a>`;
   const key = jevResultKey(task, row);
   const pending = state.jevPending.has(key);
   const locked = pending || state.jevBatchRunning;
@@ -358,6 +358,7 @@ function renderRows() {
   const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
   state.page = page.page;
   const visible = page.rows;
+  const modelBands = createModelBands(visible);
   const pagination = $("#comparison-pagination");
   pagination.hidden = filtered.length === 0;
   $("#comparison-page").textContent = page.pageCount ? `第 ${page.page + 1} / ${page.pageCount} 页` : "";
@@ -388,7 +389,8 @@ function renderRows() {
     const needsModelAssist = row.matchRuleId === "manual" || row.matchCandidateCount !== 1 || row.matchConfidence < 1;
     const showModelAssist = needsModelAssist && !seenModelAssists.has(modelAssistKey);
     if (showModelAssist) seenModelAssists.add(modelAssistKey);
-    return `<tr${categoryClass ? ` class="category-${categoryClass}"` : ""}>
+    const rowClasses = [`model-band-${modelBands.get(row.canonicalModel) === 1 ? "odd" : "even"}`, categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
+    return `<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(isPublic ? "公益站模型 · 仅在公益站模式比较" : matchNote)}</span>${!isPublic ? modelJevMarkup(row, showModelAssist) : ""}</div></td>
       <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(STATION_CATEGORY_LABELS[row.stationCategory] || "付费中转站")}</span><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
       <td data-label="中转单价">${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</td>
@@ -426,7 +428,7 @@ function renderCheckin(data) {
   const state = data.checkinState || {};
   if (!stations.length) {
     panel.hidden = false;
-    list.innerHTML = `<div class="checkin-empty"><span class="checkin-empty-text">暂无可签到的站点 —— 添加 <strong>vyceai.com</strong> 中转站后，这里会自动出现每日签到入口。</span><a class="button button-quiet" href="options.html"><span data-icon="plus" class="icon"></span><span>去添加站点</span></a></div>`;
+    list.innerHTML = `<div class="checkin-empty"><span class="checkin-empty-text">暂无可签到的站点 —— 添加 <strong>vyceai.com</strong> 中转站后，这里会自动出现每日签到入口。</span><a class="button button-quiet" href="options.html#stations"><span data-icon="plus" class="icon"></span><span>去添加站点</span></a></div>`;
     hydrateIcons(list);
     return;
   }
@@ -806,8 +808,17 @@ $("#comparison-previous").addEventListener("click", () => { state.page--; render
 $("#comparison-next").addEventListener("click", () => { state.page++; renderRows(); });
 $("#page-size").addEventListener("change", () => { state.page = 0; renderRows(); });
 const backToTop = $("#back-to-top");
-window.addEventListener("scroll", () => { backToTop.hidden = window.scrollY < 400; }, { passive: true });
-backToTop.addEventListener("click", () => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
+const pageShell = $(".page-shell");
+const tableWrap = $(".table-wrap");
+const updateBackToTop = () => { backToTop.hidden = window.scrollY < 400 && pageShell.scrollTop < 400 && tableWrap.scrollTop < 400; };
+window.addEventListener("scroll", updateBackToTop, { passive: true });
+pageShell.addEventListener("scroll", updateBackToTop, { passive: true });
+tableWrap.addEventListener("scroll", updateBackToTop, { passive: true });
+backToTop.addEventListener("click", () => {
+  const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  pageShell.scrollTo({ top: 0, behavior });
+  tableWrap.scrollTo({ top: 0, behavior });
+});
 $("#comparison-body").addEventListener("click", async event => {
   const action = event.target.closest("[data-jev-action]");
   if (action) {

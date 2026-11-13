@@ -5,7 +5,7 @@ import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pi
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
-const state = { stations: [], settings: null, modelCatalog: { llm: [], jev: [] }, collapsedStationIds: new Set(), pendingStation: null, previewRequestId: 0 };
+const state = { stations: [], sitePlugins: [], settings: null, modelCatalog: { llm: [], jev: [] }, collapsedStationIds: new Set(), selectedPluginIds: new Set(), pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 
@@ -106,6 +106,105 @@ async function saveWorkspace({ notify = true } = {}) {
 function selected(value, expected) { return value === expected ? " selected" : ""; }
 function checked(value) { return value ? " checked" : ""; }
 
+
+const SETTINGS_VIEWS = ["stations", "providers", "costs", "workspace"];
+const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益" };
+
+function activateSettingsView(requested, { focus = false, updateHash = true } = {}) {
+  const view = SETTINGS_VIEWS.includes(requested) ? requested : "stations";
+  for (const name of SETTINGS_VIEWS) {
+    const active = name === view;
+    const tab = $(`[data-settings-target="${name}"]`);
+    const panel = $(`#settings-view-${name}`);
+    tab.setAttribute("aria-selected", String(active));
+    tab.tabIndex = active ? 0 : -1;
+    panel.hidden = !active;
+    if (active && focus) tab.focus();
+  }
+  if (updateHash && location.hash !== `#${view}`) history.replaceState(null, "", `${location.pathname}${location.search}#${view}`);
+}
+
+function filteredSitePlugins() {
+  const query = $("#plugin-search").value.trim().toLowerCase();
+  return state.sitePlugins.filter(plugin => {
+    if (state.pluginCategory !== "all" && plugin.category !== state.pluginCategory) return false;
+    return !query || [plugin.name, plugin.host, plugin.description].some(value => String(value || "").toLowerCase().includes(query));
+  });
+}
+
+function updatePluginSelection() {
+  const count = state.selectedPluginIds.size;
+  $("#plugin-selected-count").textContent = `已选 ${count} 项`;
+  const button = $("#add-selected-plugins");
+  button.disabled = count === 0;
+  button.querySelector("span:last-child").textContent = count ? `一键添加 ${count} 个站点` : "添加所选站点";
+}
+
+function renderSitePlugins() {
+  const list = $("#site-plugin-list");
+  const byId = new Map(state.sitePlugins.map(plugin => [plugin.id, plugin]));
+  for (const id of state.selectedPluginIds) {
+    const plugin = byId.get(id);
+    if (!plugin?.addable || plugin.added) state.selectedPluginIds.delete(id);
+  }
+  const plugins = filteredSitePlugins();
+  list.innerHTML = plugins.length ? plugins.map(plugin => {
+    const added = Boolean(plugin.added);
+    const selectable = plugin.addable && !added;
+    const badges = [
+      `<span class="site-plugin-badge">${escapeHtml(PLUGIN_CATEGORY_LABELS[plugin.category] || plugin.category)}</span>`,
+      `<span class="site-plugin-badge">${plugin.mode === "page" ? "页面模式" : "直接接口"}</span>`,
+      `<span class="site-plugin-badge">${escapeHtml(plugin.authLabel || "无需登录")}</span>`,
+      added ? `<span class="site-plugin-badge is-added">已添加 ${plugin.stationCount || 1} 个</span>` : "",
+      !plugin.addable ? `<span class="site-plugin-badge">Agent 添加</span>` : ""
+    ].join("");
+    return `<label class="site-plugin-card${added ? " is-added" : ""}${!plugin.addable ? " is-agent-only" : ""}">
+      <input type="checkbox" data-plugin-id="${escapeHtml(plugin.id)}" aria-label="选择 ${escapeHtml(plugin.name)}"${state.selectedPluginIds.has(plugin.id) ? " checked" : ""}${selectable ? "" : " disabled"}>
+      <span class="site-plugin-content">
+        <span class="site-plugin-title"><strong>${escapeHtml(plugin.name)}</strong></span>
+        <span class="site-plugin-host">${escapeHtml(plugin.host)}</span>
+        <span class="site-plugin-description">${escapeHtml(plugin.description || "本地站点采集插件")}</span>
+        <span class="site-plugin-badges">${badges}</span>
+      </span>
+    </label>`;
+  }).join("") : `<p class="site-plugin-empty">没有匹配的站点插件。</p>`;
+  updatePluginSelection();
+}
+
+async function addSelectedPlugins() {
+  const ids = [...state.selectedPluginIds];
+  if (!ids.length) return;
+  const button = $("#add-selected-plugins");
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>正在添加</span>`;
+  try {
+    const result = await callService("ADD_SITE_PLUGINS", { ids });
+    const list = $("#stations-list");
+    const existingIds = new Set([...list.querySelectorAll(".station-card")].map(card => card.dataset.stationId));
+    const newStations = (result.stations || []).filter(station => !existingIds.has(station.id));
+    if (newStations.length && !existingIds.size) list.innerHTML = "";
+    state.stations = readStations();
+    for (const station of newStations) {
+      state.stations.push(station);
+      list.insertAdjacentHTML("beforeend", stationCard(station, state.stations.length - 1));
+    }
+    state.sitePlugins = result.sitePlugins || state.sitePlugins;
+    state.selectedPluginIds.clear();
+    renderSitePlugins();
+    $("#station-count").textContent = String(state.stations.length);
+    hydrateIcons(list);
+    await saveWorkspace({ notify: false });
+    const skipped = result.alreadyAdded?.length || 0;
+    toast(`已添加 ${result.added?.length || 0} 个站点${skipped ? `，${skipped} 个已在列表中` : ""}`);
+  } catch (error) {
+    toast(error.message || String(error));
+  } finally {
+    button.innerHTML = original;
+    hydrateIcons(button);
+    updatePluginSelection();
+  }
+}
 function responseFormatOptions(value) {
   return Object.entries(RESPONSE_FORMAT_DEFINITIONS)
     .map(([format, definition]) => `<option value="${escapeHtml(format)}"${selected(value, format)}>${escapeHtml(definition.label)}</option>`)
@@ -261,7 +360,7 @@ function stationCard(station, index) {
     : station.mode === "page"
       ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
       : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
-  return `<article class="station-card" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-index="${index}" data-recharge-rate-verified="${rechargeRateVerified}">
+  return `<article class="station-card" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-plugin-id="${escapeHtml(station.pluginId || "")}" data-index="${index}" data-recharge-rate-verified="${rechargeRateVerified}">
     <details class="station-disclosure"${state.collapsedStationIds.has(station.id) ? "" : " open"}>
       <summary class="station-summary">
         <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
@@ -309,6 +408,7 @@ function renderStations() {
   list.innerHTML = state.stations.length
     ? state.stations.map(stationCard).join("")
     : `<div class="station-empty"><span data-icon="database" class="icon empty-icon"></span><strong>还没有站点</strong><span>添加后开始跨站点比较。</span></div>`;
+  $("#station-count").textContent = String(state.stations.length);
   hydrateIcons(list);
 }
 
@@ -423,6 +523,7 @@ function readStations() {
     const rechargeRmb = convertRechargeAmount(value("rechargeAmount"), rechargeCurrency, "CNY", currentExchangeRate()) ?? 0;
     return {
       id: card.dataset.stationId || crypto.randomUUID(),
+      pluginId: card.dataset.pluginId || undefined,
       name: value("name"),
       baseUrl: value("baseUrl"),
       mode: value("mode"),
@@ -637,10 +738,13 @@ async function load() {
   try {
     const data = await callService("GET_DASHBOARD");
     state.stations = data.stations || [];
+    state.sitePlugins = data.sitePlugins || [];
+    state.selectedPluginIds.clear();
     state.collapsedStationIds = new Set(state.stations.map(station => station.id));
     state.settings = data.settings;
     state.modelCatalog = { llm: [], jev: [] };
     renderSettings();
+    renderSitePlugins();
     renderStations();
     hydrateIcons();
     const params = new URLSearchParams(location.search);
@@ -648,7 +752,7 @@ async function load() {
     if (siteOrigin) {
       const sourceTabId = params.get("sourceTabId");
       const preferredTabId = /^\d+$/.test(sourceTabId || "") ? Number(sourceTabId) : undefined;
-      history.replaceState(null, "", location.pathname);
+      history.replaceState(null, "", `${location.pathname}#stations`);
       openStationDialog(siteOrigin, preferredTabId);
     }
   } catch (error) { toast(error.message); }
@@ -775,6 +879,7 @@ function resetStationDialog() {
 }
 
 function openStationDialog(siteUrl = "", sourceTabId) {
+  activateSettingsView("stations");
   resetStationDialog();
   $("#new-station-url").value = siteUrl;
   $("#add-station-dialog").showModal();
@@ -822,6 +927,38 @@ function commitStationPreview() {
 function closeStationDialog() {
   $("#add-station-dialog").close();
 }
+
+for (const view of SETTINGS_VIEWS) {
+  $(`[data-settings-target="${view}"]`).addEventListener("click", () => activateSettingsView(view));
+}
+$(".settings-nav").addEventListener("keydown", event => {
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  const current = SETTINGS_VIEWS.findIndex(view => $(`[data-settings-target="${view}"]`).getAttribute("aria-selected") === "true");
+  const offset = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
+  const next = event.key === "Home" ? 0 : event.key === "End" ? SETTINGS_VIEWS.length - 1 : (current + offset + SETTINGS_VIEWS.length) % SETTINGS_VIEWS.length;
+  activateSettingsView(SETTINGS_VIEWS[next], { focus: true });
+});
+window.addEventListener("hashchange", () => activateSettingsView(location.hash.slice(1), { updateHash: false }));
+$("#plugin-search").addEventListener("input", renderSitePlugins);
+for (const button of document.querySelectorAll("[data-plugin-category]")) {
+  button.addEventListener("click", () => {
+    state.pluginCategory = button.dataset.pluginCategory;
+    for (const item of document.querySelectorAll("[data-plugin-category]")) item.setAttribute("aria-pressed", String(item === button));
+    renderSitePlugins();
+  });
+}
+$("#site-plugin-list").addEventListener("change", event => {
+  const id = event.target.dataset.pluginId;
+  if (!id) return;
+  event.target.checked ? state.selectedPluginIds.add(id) : state.selectedPluginIds.delete(id);
+  updatePluginSelection();
+});
+$("#select-visible-plugins").addEventListener("click", () => {
+  for (const plugin of filteredSitePlugins()) if (plugin.addable && !plugin.added) state.selectedPluginIds.add(plugin.id);
+  renderSitePlugins();
+});
+$("#add-selected-plugins").addEventListener("click", addSelectedPlugins);
 
 $("#add-station").addEventListener("click", () => openStationDialog());
 $("#add-station-top").addEventListener("click", () => openStationDialog());
@@ -1012,6 +1149,7 @@ $("#import-file").addEventListener("change", async event => {
   finally { event.target.value = ""; }
 });
 
+activateSettingsView(location.hash.slice(1));
 hydrateIcons();
 const cards = initCollapsibleCards("options");
 const setAllSections = collapsed => {

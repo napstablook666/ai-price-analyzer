@@ -23,3 +23,11 @@ export function paginateRows(rows, page, pageSize) {
   const currentPage = pageCount ? Math.min(Math.max(0, Math.trunc(Number(page) || 0)), pageCount - 1) : 0;
   return { page: currentPage, pageCount, rows: rows.slice(currentPage * size, (currentPage + 1) * size) };
 }
+
+export function createModelBands(rows) {
+  const bands = new Map();
+  for (const row of rows) {
+    if (!bands.has(row.canonicalModel)) bands.set(row.canonicalModel, bands.size % 2);
+  }
+  return bands;
+}

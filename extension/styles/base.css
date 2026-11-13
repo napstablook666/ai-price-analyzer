@@ -1,18 +1,18 @@
 :root {
   /* 色板：唯一来源，页面级 CSS 只许引用这些 token */
-  --bg: #f7f7f8;
+  --bg: #f5f6f8;
   --surface: #ffffff;
   --surface-2: #f4f4f5;
   --line: #e4e4e7;
   --line-strong: #d4d4d8;
   --text: #18181b;
   --text-2: #52525b;
-  --text-3: #71717a;
-  --accent: #4f46e5;
-  --accent-strong: #4338ca;
-  --accent-soft: #eef2ff;
-  --accent-line: #c7d2fe;
-  --ring: rgba(79, 70, 229, .16);
+  --text-3: #686871;
+  --accent: #18181b;
+  --accent-strong: #000000;
+  --accent-soft: #f0f0f1;
+  --accent-line: #d4d4d8;
+  --ring: rgba(24, 24, 27, .14);
   --ok: #15803d;
   --ok-soft: #f0fdf4;
   --warn: #92400e;
@@ -29,6 +29,7 @@
   --radius-card: 10px;
   --radius-control: 8px;
   --radius-pill: 999px;
+  --shadow: 0 1px 2px rgba(24, 24, 27, .05);
   --shadow-card: 0 1px 2px rgba(24, 24, 27, .05);
   --shadow-pop: 0 12px 32px rgba(24, 24, 27, .14);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -120,3 +121,11 @@ select { appearance: none; padding-right: 32px; background-image: linear-gradien
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+:where(button, a, summary, input, select, textarea):focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+:where(input, select, textarea):focus-visible { outline: 0; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+[hidden] { display: none !important; }
+.brand-overline { display: block; margin-bottom: 2px; color: var(--text-3); font-size: 9px; font-weight: 650; letter-spacing: .12em; }
+.eyebrow { margin: 0 0 5px; color: var(--text-3); font-size: 10px; font-weight: 650; letter-spacing: .12em; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

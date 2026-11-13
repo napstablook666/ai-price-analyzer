@@ -86,7 +86,7 @@ async function loadActivePage() {
 document.querySelector("#open-dashboard").addEventListener("click", () => {
   openPage("dashboard.html", siteParams("siteOrigin"));
 });
-document.querySelector("#open-settings").addEventListener("click", () => openPage("options.html"));
+document.querySelector("#open-settings").addEventListener("click", () => openPage("options.html#stations"));
 addCurrentSiteButton.addEventListener("click", () => openPage("options.html", siteParams("addSite")));
 function setRefreshButtonStage(preflight) {
   const title = refreshButton.querySelector("strong");
