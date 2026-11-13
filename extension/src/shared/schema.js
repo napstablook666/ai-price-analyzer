@@ -267,6 +267,7 @@ export function normalizeStation(input = {}) {
   const station = { ...cloneDefaultStation(), ...input };
   station.id = station.id || crypto.randomUUID();
   station.name = String(station.name || new URL(station.baseUrl).hostname);
+  station.pluginId = String(station.pluginId || "").trim();
   station.baseUrl = normalizeUrl(station.baseUrl);
   station.mode = station.mode === "page" ? "page" : "direct";
   station.category = STATION_CATEGORIES.includes(input.category) ? input.category : "paid";

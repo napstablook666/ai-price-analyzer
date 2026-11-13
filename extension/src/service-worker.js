@@ -3,7 +3,9 @@ import { prepareStationInput, providerForStation } from "./core/provider-registr
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
 import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
-import { addPublicStationPresets, addRegisteredStationPresets } from "./core/station-presets.js";
+import { addProviderStationPresets } from "./core/station-presets.js";
+import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins } from "./site-plugins/loader.js";
+import { sitePluginById, sitePluginCatalogForStations, sitePluginForStation } from "./site-plugins/catalog.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
@@ -15,7 +17,7 @@ import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, 
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { activeJevProfile, DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
-import { addStationIfNeeded, exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
+import { exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getJevApiKey, getLlmApiKey, getProviderApiKey, getStationCredential, hasJevApiKey, hasLlmApiKey, hasProviderApiKey, removeProviderApiKey, removeStationCredential, selectProviderApiKey, setJevApiKey, setLlmApiKey, setProviderApiKey, setStationCredential } from "./shared/credentials.js";
 import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
 
@@ -112,6 +114,7 @@ export async function withPageFetch(station, preferredTabId, task, { existingTab
 }
 
 async function collect(stationInput, preferredTabId) {
+  await loadSitePluginForStation(stationInput);
   const collection = resolveStationCollection(await stationWithCredentials(stationInput));
   const { station } = collection;
   if (station.mode !== "page") return collectStation(station, { collection });
@@ -149,11 +152,13 @@ function notifyReferencesRefresh(active) {
 }
 
 function prepareComparisonStation(station) {
-  return normalizeStation(prepareStationInput(station));
+  const prepared = normalizeStation(prepareStationInput(station));
+  return { ...prepared, pluginId: sitePluginForStation(prepared)?.id || prepared.pluginId || "" };
 }
 
 async function getPreparedStations() {
   const stations = await getStations();
+  await syncSitePlugins(stations);
   return stations.map(prepareComparisonStation);
 }
 
@@ -532,22 +537,11 @@ async function refreshAll(options = {}) {
 }
 
 
-async function ensureStationPresets(exchangeRate) {
-  const current = await getStations();
-  const next = current.length ? addRegisteredStationPresets(current, { exchangeRate }) : addPublicStationPresets(current, { exchangeRate });
-  for (const station of next.slice(current.length)) {
-    await addStationIfNeeded(stations => {
-      if (stations.some(item => item.id === station.id)) return null;
-      return normalizeStation(prepareStationInput(station));
-    });
-  }
-}
 
 
 async function dashboard() {
   await restoreRefreshPreflightState();
   const savedSettings = await settingsForUi();
-  await ensureStationPresets(savedSettings.exchangeRate);
   if (activeRefreshPreflight?.expiresAt <= Date.now()) await invalidateRefreshPreflight();
   const revisionAtStart = getComparisonRevision();
   const [stations, references] = await Promise.all([
@@ -599,7 +593,7 @@ async function dashboard() {
     .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
-  return { stations, snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
+  return { stations, sitePlugins: sitePluginCatalogForStations(stations), snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
 }
 
 async function scheduleCheckinAlarm() {
@@ -698,8 +692,31 @@ async function saveCheckinConfig({ stationId, autoEnabled } = {}) {
   await putStations(next);
   return checkinAll({ stationId: station.id, claim: false, autoOnly: false });
 }
+async function addSitePlugins(ids) {
+  const requested = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id || "").trim()))]
+    .filter(id => sitePluginById(id)?.addable);
+  if (!requested.length) throw new Error("请至少选择一个可添加的站点插件");
+  return withKeyedLock("site-plugins:add", async () => {
+    const providers = await loadSitePlugins(requested);
+    const current = await getStations();
+    const settings = await getSettings();
+    const next = addProviderStationPresets(current, providers, { exchangeRate: settings.exchangeRate });
+    const addedStations = next.slice(current.length).map(prepareComparisonStation);
+    const added = addedStations.map(station => sitePluginForStation(station)?.id).filter(Boolean);
+    if (addedStations.length) await putStations([...current, ...addedStations]);
+    pruneSitePlugins([...current, ...addedStations]);
+    return {
+      stations: [...current, ...addedStations],
+      added,
+      alreadyAdded: requested.filter(id => !added.includes(id)),
+      sitePlugins: sitePluginCatalogForStations([...current, ...addedStations])
+    };
+  });
+}
+
 async function saveStations(input) {
   const invalidation = invalidateRefreshPreflight();
+  await syncSitePlugins(input);
   const current = await getStations();
   const currentById = new Map(current.map(station => [station.id, station]));
   const wanted = new Set(input.map(station => station.id));
@@ -722,6 +739,7 @@ async function saveStations(input) {
     stations.push({ ...station, auth: { type: submitted.type, token: "", username: "", password: "" } });
   }
   await putStations(stations);
+  pruneSitePlugins(stations);
   await invalidation;
   return stations;
 }
@@ -1008,6 +1026,7 @@ async function handle(message, sender) {
     case "SWITCH_PROVIDER": return switchProvider(message);
     case "DELETE_PROVIDER_PROFILE": return deleteProviderProfile(message);
     case "SAVE_STATIONS": return saveStations(message.stations);
+    case "ADD_SITE_PLUGINS": return addSitePlugins(message.ids);
     case "ADAPT_STATION": return adaptStation(message);
     case "FETCH_MODELS": return fetchModels(message);
     case "TEST_MODEL": return testModel(message);

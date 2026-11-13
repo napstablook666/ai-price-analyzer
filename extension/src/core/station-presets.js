@@ -15,15 +15,22 @@ function addStationPreset(stations, preset, hostname, { allowEmpty = false } = {
 function addRegisteredStationPreset(stations, providerId, options = {}) {
   const provider = providerById(providerId);
   const preset = typeof provider?.preset === "function" ? provider.preset(options) : provider?.preset;
-  return provider?.host && preset ? addStationPreset(stations, preset, provider.host, { allowEmpty: options.allowEmpty }) : stations;
+  return provider?.host && preset ? addStationPreset(stations, { ...preset, pluginId: providerId }, provider.host, { allowEmpty: options.allowEmpty }) : stations;
 }
 
 export function addRegisteredStationPresets(stations, options = {}) {
   return PROVIDER_REGISTRY.reduce((current, provider) => {
     const preset = typeof provider.preset === "function" ? provider.preset(options) : provider.preset;
-    return provider.host && preset ? addStationPreset(current, preset, provider.host) : current;
+    return provider.host && preset ? addStationPreset(current, { ...preset, pluginId: provider.id }, provider.host) : current;
   }, stations);
 }
+export function addProviderStationPresets(stations, providers, options = {}) {
+  return providers.reduce((current, provider) => {
+    const preset = typeof provider?.preset === "function" ? provider.preset(options) : provider?.preset;
+    return provider?.host && preset ? addStationPreset(current, { ...preset, pluginId: provider.id }, provider.host, { allowEmpty: true }) : current;
+  }, stations);
+}
+
 
 export function addFastAiStationPreset(stations) {
   return addRegisteredStationPreset(stations, "fastaitoken");

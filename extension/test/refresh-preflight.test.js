@@ -6,6 +6,7 @@ import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { flattenComparisonRows, getProxyPriceQuote } from "../src/core/pricing.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, classifyPageSessionResponse, refreshStationSignature, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
 
+import { loadedSitePluginIds, resetSitePluginLoader } from "../src/site-plugins/loader.js";
 const test = (name, optionsOrFn, maybeFn) => {
   if (typeof optionsOrFn === "function") return nodeTest(name, { concurrency: false }, optionsOrFn);
   return nodeTest(name, { ...optionsOrFn, concurrency: false }, maybeFn);
@@ -220,6 +221,31 @@ async function waitFor(predicate) {
   assert.fail("condition was not reached before timeout");
 }
 
+test("adds selected local plugins in one idempotent batch without eager loading", async () => {
+  resetSitePluginLoader();
+  await withWorker({ stations: [], values: { settings: { comparisonMode: "paid", exchangeRate: 7.2 } } }, {}, async (worker, stores) => {
+    responseData(await worker.send("GET_DASHBOARD"));
+    assert.deepEqual(loadedSitePluginIds(), []);
+
+    const ids = ["centos", "linux-do-marketplace", "centos"];
+    const first = responseData(await worker.send("ADD_SITE_PLUGINS", { ids }));
+    assert.deepEqual(first.added.slice().sort(), ["centos", "linux-do-marketplace"]);
+    assert.equal(first.stations.length, 2);
+    assert.equal(stores.stations.size, 2);
+    assert.deepEqual(loadedSitePluginIds().slice().sort(), ["centos", "linux-do-marketplace"]);
+
+    const second = responseData(await worker.send("ADD_SITE_PLUGINS", { ids }));
+    assert.deepEqual(second.added, []);
+    assert.deepEqual(second.alreadyAdded.slice().sort(), ["centos", "linux-do-marketplace"]);
+    assert.equal(second.stations.length, 2);
+    assert.equal(stores.stations.size, 2);
+
+    const rejected = await worker.send("ADD_SITE_PLUGINS", { ids: ["not-a-plugin"] });
+    assert.equal(rejected.ok, false);
+    assert.match(rejected.error, /至少选择一个可添加的站点插件/);
+  });
+});
+
 test("classifies redirected login pages and login-specific errors even when the endpoint returns HTTP 200", () => {
   assert.equal(classifyPageSessionResponse({ ok: true, status: 200, body: '<html><form action="/auth/login"><input type="password"></form></html>' }), "needsLogin");
   assert.equal(classifyPageSessionResponse({ ok: true, status: 200, body: '<html><input name="password" type="password"></html>' }), "needsLogin");
@@ -325,7 +351,7 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
       const protectedStation = dashboard.stations.find(value => value.id === id);
       const protectedOffers = offers.filter(offer => offer.stationId === id);
       const protectedSnapshot = dashboard.snapshots.find(value => value.stationId === id);
-      assert.equal(protectedStation.priceCurrency, "CREDITS");
+      assert.equal(protectedStation.priceCurrency, { killai: "USD", "fuck-everyone": "CREDITS" }[id]);
       assert.equal(protectedStation.priceCurrencyVerified, true);
       assert.equal(protectedStation.rechargeRateVerified, true);
       assert.equal(protectedSnapshot.rechargeRateVerified, false);
