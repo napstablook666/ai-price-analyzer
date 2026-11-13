@@ -9,7 +9,7 @@
 .comparison-mode-button.is-active { color: var(--text); background: var(--surface); box-shadow: var(--shadow-card); }
 .comparison-mode-button:disabled { cursor: wait; opacity: .6; }
 .comparison-mode-note { flex: 1 1 100%; margin: 0; color: var(--text-3); font-size: 11px; line-height: 1.45; }
-.station-errors { flex: 1 1 100%; margin: 0; padding: 10px 12px; border-radius: var(--radius-control); color: var(--danger-strong); background: var(--danger-soft); font-size: 11px; line-height: 1.45; }
+.station-errors { flex: 1 1 100%; margin: 0; padding: 10px 12px; border-radius: var(--radius-control); color: var(--danger-strong); background: var(--surface-2); font-size: 11px; line-height: 1.45; }
 .station-errors strong { display: block; margin-bottom: 3px; }
 .station-errors ul { display: grid; gap: 2px; margin: 0; padding-left: 18px; }
 .station-errors li { display: flex; flex-wrap: wrap; gap: 4px 10px; overflow-wrap: anywhere; }
@@ -42,7 +42,7 @@
 
 /* 统计摘要 */
 .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
-.summary-card { display: grid; align-content: center; gap: 4px; min-height: 76px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-card); }
+.summary-card { display: grid; align-content: center; gap: 4px; min-height: 76px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
 .summary-label { color: var(--text-2); font-size: 11px; font-weight: 500; }
 .summary-value { font-size: 24px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
 .summary-note { color: var(--text-3); font-size: 11px; }
@@ -88,40 +88,41 @@
 .reference-readout span { max-width: 560px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-wrap { overflow-x: auto; }
 .comparison-table { width: 100%; min-width: 1160px; border-collapse: collapse; table-layout: fixed; text-align: left; }
-.comparison-table th { padding: 9px 12px; color: var(--text-2); border-bottom: 1px solid var(--line); background: var(--surface-2); font-size: 11px; font-weight: 600; line-height: 1.35; white-space: nowrap; }
+.comparison-table th { padding: 10px 12px; color: var(--text-2); border-bottom: 1px solid var(--line-strong); background: var(--surface); font-size: 11px; font-weight: 600; line-height: 1.35; white-space: nowrap; }
 .comparison-table th:nth-child(1) { width: 20%; }
 .comparison-table th:nth-child(2) { width: 14%; }
 .comparison-table th:nth-child(3), .comparison-table th:nth-child(4) { width: 17%; }
 .comparison-table th:nth-child(5) { width: 12%; }
 .comparison-table th:nth-child(6) { width: 9%; }
+.comparison-table th:nth-child(n+3):nth-child(-n+6), .comparison-table td:nth-child(n+3):nth-child(-n+6) { text-align: right; }
 .comparison-table th:nth-child(7) { width: 11%; }
 .comparison-table th span { display: block; margin-top: 2px; color: var(--text-3); font-size: 10px; font-weight: 500; }
 .comparison-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 1.4; vertical-align: top; }
 .comparison-table tbody tr { --row-accent: transparent; background: var(--surface); transition: background .12s ease; }
 .comparison-table tbody tr:hover td { background: var(--bg); }
 .comparison-table tbody tr:last-child td { border-bottom: 0; }
-.comparison-table tbody tr.category-excellent { --row-accent: #16a34a; }
-.comparison-table tbody tr.category-good { --row-accent: #2563eb; }
-.comparison-table tbody tr.category-fair { --row-accent: #d97706; }
-.comparison-table tbody tr.category-bad { --row-accent: #dc2626; }
-.comparison-table tbody tr[class*="category-"] td:first-child { border-left: 2px solid var(--row-accent); }
+.comparison-table tbody tr.category-excellent { --row-accent: var(--cat-excellent); }
+.comparison-table tbody tr.category-good { --row-accent: var(--cat-good); }
+.comparison-table tbody tr.category-fair { --row-accent: var(--cat-fair); }
+.comparison-table tbody tr.category-bad { --row-accent: var(--cat-bad); }
+.comparison-table tbody tr[class*="category-"] .model-head::before { content: ""; flex: 0 0 6px; width: 6px; height: 6px; margin-top: 6px; border-radius: 50%; background: var(--row-accent); }
 
 /* 单元格内容 */
 .model-cell, .station-cell { display: grid; align-content: start; gap: 5px; min-width: 0; }
 .model-head { display: flex; align-items: start; justify-content: space-between; gap: 6px; }
 .model-name { min-width: 0; color: var(--text); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
 .model-meta, .station-meta { color: var(--text-3); font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
-.provider-tag { flex: 0 0 auto; padding: 2px 8px; color: var(--accent-strong); background: var(--accent-soft); border-radius: var(--radius-pill); font-size: 10px; font-weight: 600; }
+.provider-tag { flex: 0 0 auto; color: var(--text-3); font-size: 10px; font-weight: 600; }
 .station-filter-link { display: inline-flex; align-items: center; gap: 7px; width: fit-content; min-height: 26px; padding: 0; color: var(--text); background: transparent; cursor: pointer; font: inherit; font-weight: 600; text-align: left; }
 .station-filter-link:hover { color: var(--accent); }
-.group-tag { width: fit-content; padding: 2px 8px; color: var(--text-2); background: var(--surface-2); border-radius: var(--radius-pill); font-size: 10px; font-weight: 600; }
+.group-tag { width: fit-content; color: var(--text-2); font-size: 10px; font-weight: 600; }
 .price-lines { display: grid; gap: 3px; font-variant-numeric: tabular-nums; }
-.price-line { display: grid; grid-template-columns: minmax(54px, auto) minmax(0, 1fr); gap: 5px; align-items: baseline; color: var(--text-3); font-size: 10px; white-space: nowrap; }
+.price-line { display: grid; grid-template-columns: minmax(54px, auto) minmax(0, 1fr); gap: 5px; align-items: baseline; color: var(--text-3); font-size: 10px; white-space: nowrap; text-align: right; }
 .price-line-primary { color: var(--text); font-size: 11px; font-weight: 600; }
 .price-line-primary .price-key { color: var(--text-2); font-weight: 500; }
 .price-value { overflow: hidden; text-overflow: ellipsis; }
 .price-empty { color: var(--text-3); font-size: 11px; }
-.cost-cell { display: grid; gap: 4px; font-variant-numeric: tabular-nums; }
+.cost-cell { display: grid; gap: 4px; justify-items: end; text-align: right; font-variant-numeric: tabular-nums; }
 .cost-cell strong { color: var(--text); font-size: 16px; font-weight: 600; white-space: nowrap; }
 .cost-cell strong small { color: var(--text-3); font-size: 10px; font-weight: 500; }
 .cost-meta, .cost-gap { color: var(--text-3); font-size: 10px; }
@@ -130,16 +131,16 @@
 
 /* 标签 */
 .delta-tag, .status-tag, .recommendation-tag, .rating-tag { display: inline-flex; align-items: center; gap: 4px; width: fit-content; min-height: 20px; padding: 2px 8px; border-radius: var(--radius-pill); font-size: 10px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
-.delta-tag.cheaper, .rating-tag.rating-excellent, .rating-tag.rating-good { color: var(--ok); background: var(--ok-soft); }
-.delta-tag.expensive, .rating-tag.rating-bad { color: var(--danger); background: var(--danger-soft); }
+.delta-tag.cheaper, .rating-tag.rating-excellent, .rating-tag.rating-good { color: var(--ok); background: var(--surface-2); }
+.delta-tag.expensive, .rating-tag.rating-bad { color: var(--danger); background: var(--surface-2); }
 .delta-tag.neutral, .rating-tag.rating-fair { color: var(--text-2); background: var(--surface-2); }
 .recommendation-tag { color: var(--text-2); background: var(--surface-2); }
-.recommendation-tag.is-best { color: var(--accent-strong); background: var(--accent-soft); }
+.recommendation-tag.is-best { color: var(--accent-strong); background: var(--surface-2); }
 .recommendation-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .recommendation-cell .model-meta { font-variant-numeric: tabular-nums; }
 .status-cluster { display: flex; flex-wrap: wrap; gap: 4px; }
-.status-tag { color: var(--ok); background: var(--ok-soft); }
-.status-tag.warning { color: var(--warn); background: var(--warn-soft); }
+.status-tag { color: var(--ok); background: var(--surface-2); }
+.status-tag.warning { color: var(--warn); background: var(--surface-2); }
 .status-tag.muted { color: var(--text-2); background: var(--surface-2); }
 .status-tag .icon { width: 12px; height: 12px; }
 
@@ -204,7 +205,10 @@
 .comparison-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); }
 .comparison-table tbody tr:hover td { background: var(--surface); }
 .comparison-table td { display: grid; grid-template-columns: minmax(78px, 98px) minmax(0, 1fr); align-items: start; gap: 8px; min-width: 0; padding: 10px; border-bottom: 1px solid var(--line); }
-.comparison-table tbody tr[class*="category-"] td:first-child { border-left: 2px solid var(--row-accent); }
+.comparison-table td { text-align: left; }
+.comparison-table td .price-lines { width: auto; margin-left: 0; }
+.price-line { text-align: left; }
+.cost-cell { justify-items: start; }
 .comparison-table td::before { content: attr(data-label); color: var(--text-2); font-size: 10px; font-weight: 600; }
 .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站 / 分组"], .comparison-table td[data-label="月成本"] { grid-column: 1 / -1; }
 .comparison-meta { max-width: 50%; }

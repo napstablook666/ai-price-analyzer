@@ -11,8 +11,8 @@
 .popup-action:active { background: var(--surface-2); }
 .popup-action:disabled { cursor: not-allowed; opacity: .55; }
 .popup-action > .icon { width: 18px; height: 18px; color: var(--text-2); }
-.popup-action-primary { border-color: var(--accent-line); background: var(--accent-soft); }
-.popup-action-primary:not(:disabled):hover { border-color: var(--accent); background: var(--accent-soft); }
+.popup-action-primary { border-color: var(--accent-line); background: var(--surface); }
+.popup-action-primary:not(:disabled):hover { border-color: var(--accent); background: var(--surface-2); }
 .popup-action-primary > .icon { color: var(--accent); }
 .popup-action-copy { display: grid; gap: 2px; min-width: 0; }
 .popup-action-copy strong { font-size: 13px; font-weight: 600; line-height: 1.3; }

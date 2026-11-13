@@ -30,7 +30,7 @@
 
     <section class="config-grid" aria-label="自动适配配置">
       <article class="panel config-card config-card-llm" data-collapsible data-collapse-key="llm">
-        <div class="config-heading"><div class="config-icon"><span data-icon="bot" class="icon"></span></div><div><h2>LLM 自动适配</h2></div><label class="switch"><input id="llm-enabled" type="checkbox"><span></span><b class="sr-only">启用 LLM 自动适配</b></label></div>
+        <div class="config-heading"><div><h2>LLM 自动适配</h2></div><label class="switch"><input id="llm-enabled" type="checkbox"><span></span><b class="sr-only">启用 LLM 自动适配</b></label></div>
         <div class="provider-profile-row">
           <label><span>供应商档案</span><select id="llm-profile"><option value="">当前配置（未保存）</option></select></label>
           <label><span>档案名称</span><input id="llm-profile-name" placeholder="例如：OpenRouter"></label>
@@ -54,7 +54,7 @@
       </article>
 
       <article class="panel config-card config-card-jev" data-collapsible data-collapse-key="jev">
-        <div class="config-heading"><div class="config-icon"><span data-icon="file-code-2" class="icon"></span></div><div><h2>JEV 模型资料</h2></div><label class="switch"><input id="jev-enabled" type="checkbox"><span></span><b class="sr-only">启用 JEV 模型资料</b></label></div>
+        <div class="config-heading"><div><h2>JEV 模型资料</h2></div><label class="switch"><input id="jev-enabled" type="checkbox"><span></span><b class="sr-only">启用 JEV 模型资料</b></label></div>
         <div class="provider-profile-row">
           <label><span>供应商档案</span><select id="jev-profile"><option value="">当前配置（未保存）</option></select></label>
           <label><span>档案名称</span><input id="jev-profile-name" placeholder="例如：Nekopeer Jev"></label>
@@ -83,14 +83,28 @@
     <section class="panel settings-panel" id="settings-panel" data-collapsible>
       <div class="panel-heading"><div><h2>成本估算设置</h2></div></div>
       <form id="settings-form" class="settings-form">
-        <div class="preset-grid wide">
-          <label><span>成本口径预设</span><select id="usage-preset"><option value="measured">实测月用量</option><option value="baseline">基础估算（3000 万输入 / 600 万输出）</option><option value="custom">自定义</option></select></label>
+      <form id="settings-form" class="settings-form">
+        <div class="settings-row">
+          <div class="settings-row-label"><label for="usage-preset">成本口径预设</label><small>决定月用量的取值来源，选自定义时使用下方字段</small></div>
+          <select id="usage-preset"><option value="measured">实测月用量</option><option value="baseline">基础估算（3000 万输入 / 600 万输出）</option><option value="custom">自定义</option></select>
         </div>
-        <label><span>货币</span><select id="currency"><option value="CNY">人民币（CNY）</option><option value="USD">美元（USD）</option></select></label>
-        <label class="wide"><span>官方美元兑人民币汇率</span><input id="exchange-rate" type="number" min="0.0001" step="0.0001" required><button class="button button-quiet button-small" id="refresh-exchange-rate" type="button"><span data-icon="refresh-cw" class="icon"></span><span>从中国银行刷新</span></button></label>
-        <label><span>推荐口径</span><select id="recommendation-profile"><option value="balanced">均衡推荐（成本 80% / 证据 20%）</option><option value="price">价格优先（成本 90% / 证据 10%）</option><option value="reliability">稳定优先（成本 70% / 证据 30%）</option></select></label>
+        <div class="settings-row">
+          <div class="settings-row-label"><label for="currency">货币</label></div>
+          <select id="currency"><option value="CNY">人民币（CNY）</option><option value="USD">美元（USD）</option></select>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label"><label for="exchange-rate">官方美元兑人民币汇率</label></div>
+          <div class="settings-row-controls"><input id="exchange-rate" type="number" min="0.0001" step="0.0001" required><button class="button button-quiet button-small" id="refresh-exchange-rate" type="button"><span data-icon="refresh-cw" class="icon"></span><span>从中国银行刷新</span></button></div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-label"><label for="recommendation-profile">推荐口径</label><small>成本与证据在推荐排序中的权重</small></div>
+          <select id="recommendation-profile"><option value="balanced">均衡推荐（成本 80% / 证据 20%）</option><option value="price">价格优先（成本 90% / 证据 10%）</option><option value="reliability">稳定优先（成本 70% / 证据 30%）</option></select>
+        </div>
         <fieldset><legend>估算月用量</legend><div class="usage-grid"><label><span>输入（M tokens）</span><input id="usage-input" type="number" min="0" step="0.01"></label><label><span>缓存读取（M tokens）</span><input id="usage-cache-read" type="number" min="0" step="0.01"></label><label><span>缓存写入（M tokens）</span><input id="usage-cache-write" type="number" min="0" step="0.01"></label><label><span>缓存写入（1h，M tokens）</span><input id="usage-cache-write-1h" type="number" min="0" step="0.01"></label><label><span>输出（M tokens）</span><input id="usage-output" type="number" min="0" step="0.01"></label><label><span>请求次数</span><input id="usage-requests" type="number" min="0" step="1"></label><label><span>高峰占比（%）</span><input id="usage-peak-share" type="number" min="0" max="100" step="1"></label><label><span>图像输入（M tokens）</span><input id="usage-image-input-tokens" type="number" min="0" step="0.01"></label><label><span>图像输出（M tokens）</span><input id="usage-image-output-tokens" type="number" min="0" step="0.01"></label><label><span>图像请求数</span><input id="usage-images" type="number" min="0" step="1"></label></div></fieldset>
-        <label class="check-label"><input id="show-unmatched" type="checkbox"><span>默认显示未匹配模型</span></label>
+        <div class="settings-row">
+          <div class="settings-row-label"><label for="show-unmatched">默认显示未匹配模型</label><small>未匹配官方价的模型也进入报价表</small></div>
+          <label class="check-label"><input id="show-unmatched" type="checkbox"><span>启用</span></label>
+        </div>
         <fieldset><legend>模型匹配规则</legend><div class="matching-rules"><label class="check-label"><input data-matching-rule="exact" type="checkbox"><span>精确名称</span></label><label class="check-label"><input data-matching-rule="suffix" type="checkbox"><span>后缀 / 供应商</span></label><label class="check-label"><input data-matching-rule="ignore_version" type="checkbox"><span>忽略版本号</span></label><label class="check-label"><input data-matching-rule="fuzzy" type="checkbox"><span>模糊匹配</span></label></div></fieldset>
       </form>
     </section>
@@ -99,7 +113,7 @@
     <section id="stations-list" class="stations-list" aria-live="polite"></section>
 
     <section class="panel data-panel" id="data-panel" data-collapsible>
-      <div class="data-panel-copy"><div class="config-icon"><span data-icon="database" class="icon"></span></div><div><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
+      <div class="data-panel-copy"><div><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
       <div class="data-actions workspace-actions"><button class="button button-primary" id="workspace-connect" type="button"><span data-icon="folder-open" class="icon"></span><span>选择工作区</span></button><button class="button button-quiet" id="workspace-load" type="button" disabled><span data-icon="upload" class="icon"></span><span>从工作区加载</span></button><button class="button button-quiet" id="workspace-save" type="button" disabled><span data-icon="download" class="icon"></span><span>保存到工作区</span></button></div>
       <div class="data-panel-backup"><span class="data-backup-label">JSON 备份</span><div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json,.json.gz,application/gzip"></label></div></div>
     </section>

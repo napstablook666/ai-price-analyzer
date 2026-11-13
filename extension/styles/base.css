@@ -21,12 +21,17 @@
   --danger-strong: #b91c1c;
   --danger-soft: #fef2f2;
   /* 形状与阴影 */
+  --cat-excellent: #16a34a;
+  --cat-good: #2563eb;
+  --cat-fair: #d97706;
+  --cat-bad: #dc2626;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
   --radius-card: 10px;
   --radius-control: 8px;
   --radius-pill: 999px;
   --shadow-card: 0 1px 2px rgba(24, 24, 27, .05);
   --shadow-pop: 0 12px 32px rgba(24, 24, 27, .14);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
