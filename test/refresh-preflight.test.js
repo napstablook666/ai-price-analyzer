@@ -213,10 +213,15 @@ function responseError(response, code) {
   assert.equal(response.ok, false);
   assert.equal(response.code, code);
 }
+// CI 上 CPU 排队时，500 次 setImmediate 可能在跨多个 await 的链路跑完前就耗尽。
+// 改成墙钟截止（5 秒）：先按 setImmediate 让路，每 200 轮换一次 1ms 定时器继续等。
 async function waitFor(predicate) {
-  for (let attempt = 0; attempt < 500; attempt += 1) {
+  const deadline = Date.now() + 5000;
+  let attempt = 0;
+  while (Date.now() < deadline) {
     if (predicate()) return;
-    await new Promise(resolve => setImmediate(resolve));
+    attempt += 1;
+    await new Promise(resolve => (attempt % 200 === 0 ? setTimeout(resolve, 1) : setImmediate(resolve)));
   }
   assert.fail("condition was not reached before timeout");
 }

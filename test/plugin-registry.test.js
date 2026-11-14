@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, providerFromSpec } from "../src/core/declarative-plugin.js";
 import { sitePluginCatalogForStations } from "../src/site-plugins/catalog.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "../src/site-plugins/registry-snapshot.js";
@@ -101,7 +103,9 @@ test("内置插件带来源与版本，未拉取仓库时也能列出", () => {
 });
 
 test("插件仓库发布的 plugins.json 与内置快照一致", () => {
-  const registryFile = new URL("../../plugins/plugins.json", import.meta.url);
+  // 与 scripts/plugin-build.mjs 用同一套源目录解析：默认 ../plugins，CI 用 PLUGIN_DIR 指到仓库内的 plugins/。
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const registryFile = path.resolve(process.env.PLUGIN_DIR || path.join(here, "..", "..", "plugins"), "plugins.json");
   if (!existsSync(registryFile)) return;
   const published = JSON.parse(readFileSync(registryFile, "utf8"));
   assert.equal(published.schemaVersion, PLUGIN_REGISTRY_SNAPSHOT.schemaVersion);
