@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+env:
+  # Plugin sources are checked out as a sibling repository copy inside this workspace.
+  PLUGIN_DIR: plugins
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -35,21 +39,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --check extension/src/service-worker.js
-          node --check extension/src/dashboard.js
-          node --check extension/src/options.js
-          node --check extension/src/content-bridge.js
-          node --check extension/src/page-bridge.js
-          node --check extension/src/popup.js
-          node -e "JSON.parse(require('fs').readFileSync('extension/manifest.json', 'utf8'))"
-          test -f extension/dashboard.html
-          test -f extension/options.html
-          test -f extension/popup.html
-          test -s extension/icons/icon.svg
-          test -s extension/icons/icon-16.png
-          test -s extension/icons/icon-32.png
-          test -s extension/icons/icon-48.png
-          test -s extension/icons/icon-128.png
+          node --check src/service-worker.js
+          node --check src/dashboard.js
+          node --check src/options.js
+          node --check src/content-bridge.js
+          node --check src/page-bridge.js
+          node --check src/popup.js
+          node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
+          test -f dashboard.html
+          test -f options.html
+          test -f popup.html
+          test -s icons/icon.svg
+          test -s icons/icon-16.png
+          test -s icons/icon-32.png
+          test -s icons/icon-48.png
+          test -s icons/icon-128.png
 
       - name: Run extension unit tests
         run: npm test
@@ -71,9 +75,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RInE --exclude-dir=.git --exclude='*.png' --exclude='*.jpg' \
+          if grep -RInE --exclude-dir=.git --exclude-dir=plugins --exclude='*.png' --exclude='*.jpg' \
             "(BEGIN (RSA|OPENSSH|EC|DSA) PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,}|password[[:space:]]*[:=][[:space:]]*[\"'][^\"']{12,}[\"']|password[[:space:]]*[:=][[:space:]]*[[:alnum:]_+=/-]{16,})" \
-            extension scripts canonical docs README.md README.zh-CN.md CONTRIBUTING.md PRIVACY.md SECURITY.md; then
+            src scripts canonical docs README.md README.zh-CN.md CONTRIBUTING.md PRIVACY.md SECURITY.md; then
             echo "Potential credential marker found. Review the match before publishing."
             exit 1
           fi

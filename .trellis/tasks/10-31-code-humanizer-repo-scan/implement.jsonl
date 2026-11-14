@@ -1,2 +1,0 @@
-{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "扩展代码质量规范,扫描时对照"}
-{"file": ".trellis/spec/frontend/pricing-data-contract.md", "reason": "定价数据契约,normalizers 相关扫描需对照"}

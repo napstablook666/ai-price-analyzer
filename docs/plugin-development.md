@@ -9,15 +9,15 @@ plugins/<id>/                  ← 唯一手写源，加站点只改这里
   manifest.json                站点元数据（出现在首页站点列表里）
   plugin.js                    站点适配实现，export const sitePlugin
   models.json                  站内模型写法 → 规范模型 id 的别名表
-extension/src/site-plugins/
+src/site-plugins/
   providers/<id>.js            ← 生成物，勿手改
   catalog.js                   ← 生成物，勿手改
-extension/src/shared/plugin-order.js  ← 生成物，勿手改
+src/shared/plugin-order.js  ← 生成物，勿手改
 ```
 
 生成物是签进仓库的，所以加载扩展不需要先跑构建；但改完 `plugins/` 必须重新生成，否则运行的是旧代码。`npm test` 里有一条 `插件产物与 plugins/ 源保持同步`，漏跑会直接报红。
 
-`plugins/` 是 [独立插件仓库](https://github.com/napstablook666/ai-price-analyzer-plugins) 的嵌套签出目录，扩展仓库不跟踪它；构建器默认读嵌套签出的 `./plugins`，插件仓签出到别处时用 `PLUGIN_DIR` 指过去（`PLUGIN_DIR=/path/to/plugins node scripts/plugin-build.mjs --check`）。
+`plugins/` 是 [独立插件仓库](https://github.com/napstablook666/ai-price-analyzer-plugins) 在扩展仓库旁边的并排签出目录，扩展仓库不跟踪它；构建器默认读上一级的 `../plugins`，插件仓签出到别处时用 `PLUGIN_DIR` 指过去（`PLUGIN_DIR=/path/to/plugins node scripts/plugin-build.mjs --check`）。
 
 ## 命令
 
@@ -26,7 +26,7 @@ node scripts/plugin-build.mjs            # 生成 providers/*.js、catalog.js、
 node scripts/plugin-build.mjs --check     # 只校验有没有漂移，CI/提交前用
 node scripts/model-lookup.mjs glm-5.3     # 查规范模型 id（写 models.json 时用）
 node canonical/build.mjs --offline        # 重算规范模型表（一般不用动）
-cd extension && npm test                  # 全部测试
+npm test                  # 全部测试
 ```
 
 ## manifest.json
@@ -107,7 +107,7 @@ export const sitePlugin = {
 }
 ```
 
-匹配优先级（`extension/src/core/matching.js`）：
+匹配优先级（`src/core/matching.js`）：
 
 1. 人工确认的覆盖（`modelMatchOverrides`）
 2. 插件别名（本文件）
@@ -126,7 +126,7 @@ node scripts/model-lookup.mjs claude sonnet
 
 1. `mkdir plugins/<id>`，写 `manifest.json`、`plugin.js`、`models.json`（可以是 `{"aliases":{}}`）。
 2. `node scripts/plugin-build.mjs`。
-3. `cd extension && npm test`，确认 `site-plugins.test.js` 与 `plugin-build.test.js` 都过。
+3. `npm test`，确认 `site-plugins.test.js` 与 `plugin-build.test.js` 都过。
 4. 手动验收：加载扩展 → 首页能看到插件 → 添加站点 → 采集一次 → 比价表里模型能对上。
 5. 采集不到时先看请求：`page` 模式要先在浏览器里打开该站登录，`direct` 模式要确认接口不需要 token 或 cookie。
 

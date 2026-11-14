@@ -21,11 +21,11 @@ AI Price Analyzer 是一个无需构建的 Chromium MV3 扩展。它从已配置
 
 ### 从源码安装
 
-源码仓库中的 [`extension/`](../extension/) 目录就是可加载的扩展目录。项目当前不需要 bundler、Docker、Playwright 或第三方运行时依赖。
+源码仓库根目录就是可加载的扩展目录。项目当前不需要 bundler、Docker、Playwright 或第三方运行时依赖。
 
 1. 克隆扩展仓库。
 2. 打开 `chrome://extensions`。
-3. 选择 `extension/` 目录执行“加载已解压的扩展”。
+3. 选择源码仓库根目录执行“加载已解压的扩展”。
 4. 修改源码后，在扩展管理页点击扩展的刷新按钮。
 
 
@@ -168,7 +168,7 @@ AI Price Analyzer 是一个无需构建的 Chromium MV3 扩展。它从已配置
 node scripts/plugin-build.mjs
 ```
 
-然后重新加载扩展。生成文件位于 `extension/src/site-plugins/`，不要手改这些生成物。
+然后重新加载扩展。生成文件位于 `src/site-plugins/`，不要手改这些生成物。
 
 ### 导入后密钥失效
 

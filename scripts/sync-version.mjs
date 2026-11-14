@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const packagePath = resolve(rootDir, "package.json");
-const manifestPath = resolve(rootDir, "extension/manifest.json");
+const manifestPath = resolve(rootDir, "manifest.json");
 const mode = process.argv[2] || "--check";
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 const BUMP_PARTS = ["major", "minor", "patch"];
@@ -34,20 +34,20 @@ const manifest = JSON.parse(manifestSource);
 const currentVersion = packageJson.version;
 if (!VERSION_PATTERN.test(currentVersion)) fail(`Invalid project version: ${currentVersion}`);
 if (manifest.version !== currentVersion) {
-  fail(`extension/manifest.json: ${manifest.version} (expected ${currentVersion})`);
+  fail(`manifest.json: ${manifest.version} (expected ${currentVersion})`);
 }
 
 if (mode === "--check") {
-  console.log(`Version check passed: extension ${currentVersion}`);
+  console.log(`Version check passed: ${currentVersion}`);
 } else {
   const nextVersion = bumpVersion(currentVersion, mode);
   const updatedManifest = manifestSource.replace(
     /^(\s*"version"\s*:\s*)"[^"]+"(.*)$/m,
     `$1"${nextVersion}"$2`
   );
-  if (updatedManifest === manifestSource) fail("Could not update extension/manifest.json version");
+  if (updatedManifest === manifestSource) fail("Could not update manifest.json version");
   packageJson.version = nextVersion;
   await writeFile(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
   await writeFile(manifestPath, updatedManifest);
-  console.log(`Version updated: extension ${currentVersion} -> ${nextVersion}`);
+  console.log(`Version updated: ${currentVersion} -> ${nextVersion}`);
 }

@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+env:
+  # Plugin sources are checked out as a sibling repository copy inside this workspace.
+  PLUGIN_DIR: plugins
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -35,13 +39,13 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/plugin-build.mjs --check
-          node --input-type=module -e 'import { readFileSync } from "node:fs"; const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version; const manifestVersion = JSON.parse(readFileSync("extension/manifest.json", "utf8")).version; if (packageVersion !== manifestVersion || "v" + manifestVersion !== process.env.GITHUB_REF_NAME) process.exit(1);'
-          node --check extension/src/service-worker.js
-          node --check extension/src/dashboard.js
-          node --check extension/src/options.js
-          node --check extension/src/content-bridge.js
-          node --check extension/src/page-bridge.js
-          node --check extension/src/popup.js
+          node --input-type=module -e 'import { readFileSync } from "node:fs"; const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version; const manifestVersion = JSON.parse(readFileSync("manifest.json", "utf8")).version; if (packageVersion !== manifestVersion || "v" + manifestVersion !== process.env.GITHUB_REF_NAME) process.exit(1);'
+          node --check src/service-worker.js
+          node --check src/dashboard.js
+          node --check src/options.js
+          node --check src/content-bridge.js
+          node --check src/page-bridge.js
+          node --check src/popup.js
           npm test
 
       - name: Prepare release assets
@@ -50,15 +54,12 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
           mkdir -p dist/source/plugins
-          cp README.md README.zh-CN.md LICENSE PRIVACY.md RELEASE_NOTES.md CONTRIBUTING.md SECURITY.md package.json dist/source/
-          cp -R assets canonical docs extension scripts dist/source/
-          cp -R plugins/. dist/source/plugins/
-          (
-            cd extension
-            zip -qr "../dist/ai-relay-price-extension-${version}.zip" .
-          )
+          tar -c --exclude=./.git --exclude=./dist . | tar -x -C dist/source
+          tar -c --exclude=.git -C plugins . | tar -x -C dist/source/plugins
           (
             cd dist/source
+            zip -qr "../../dist/ai-relay-price-extension-${version}.zip" \
+              manifest.json dashboard.html options.html popup.html styles.css styles icons src
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
           sha256sum "dist/ai-relay-price-extension-${version}.zip" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt

@@ -22,7 +22,7 @@ This project is intentionally split into two public repositories:
 - **Extension repository:** this repository. It contains the MV3 pages, service worker, collection and matching core, generated plugin runtime files, tests, and documentation.
 - **Plugin repository:** [ai-price-analyzer-plugins](https://github.com/napstablook666/ai-price-analyzer-plugins). It contains the hand-written station adapters, one station per directory.
 
-For plugin development, check the plugin repository out as `plugins/` below this repository. The extension build then generates `extension/src/site-plugins/` from those sources. The generated files are committed here so a release checkout can load the extension directly.
+For plugin development, check the plugin repository out as a sibling `plugins/` directory next to this repository. The extension build then generates `src/site-plugins/` from those sources. The generated files are committed here so a release checkout can load the extension directly.
 
 ## Highlights
 
@@ -40,7 +40,7 @@ For plugin development, check the plugin repository out as `plugins/` below this
 1. Download `ai-relay-price-extension-v<version>.zip` from [GitHub Releases](https://github.com/napstablook666/ai-price-analyzer/releases), or clone this repository.
 2. If you downloaded the ZIP, extract it. The directory you load must contain `manifest.json`.
 3. Open `chrome://extensions` in a Chromium-based browser.
-4. Enable **Developer mode**, choose **Load unpacked**, and select the extracted directory or this repository's [`extension/`](./extension/) directory.
+4. Enable **Developer mode**, choose **Load unpacked**, and select the extracted directory or this repository itself.
 
 ## Quick start
 
@@ -90,13 +90,13 @@ node scripts/model-lookup.mjs claude 4.6
 node canonical/build.mjs --offline
 ```
 
-After changing a plugin source, run `node scripts/plugin-build.mjs`, then run the tests and reload `extension/` in Chromium. For an external plugin checkout, set `PLUGIN_DIR` to its path. Do not edit generated files under `extension/src/site-plugins/` or `extension/src/shared/plugin-order.js` by hand.
+After changing a plugin source, run `node scripts/plugin-build.mjs`, then run the tests and reload this repository in Chromium. For an external plugin checkout, set `PLUGIN_DIR` to its path. Do not edit generated files under `src/site-plugins/` or `src/shared/plugin-order.js` by hand.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for the pull request checklist.
 
 ## Releases
 
-Releases are tag-driven. Keep the version in `package.json` and `extension/manifest.json` synchronized, then push a tag such as `v0.2.1`. GitHub Actions publishes:
+Releases are tag-driven. Keep the version in `package.json` and `manifest.json` synchronized, then push a tag such as `v0.2.1`. GitHub Actions publishes:
 
 - `ai-relay-price-extension-v<version>.zip`: the loadable Chromium extension.
 - `ai-price-analyzer-v<version>-source.zip`: source files plus the plugin snapshot used for the build.

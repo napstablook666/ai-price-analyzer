@@ -18,14 +18,13 @@
 
 当前仓库维护：
 
-- `extension/`：Chromium MV3 扩展页面、service worker、页面桥接、存储和 UI。
+- 仓库根：Chromium MV3 扩展本体（`manifest.json`、页面 HTML、`src/`、`styles/`、`icons/`），同时也是加载用的扩展目录。
 - `canonical/`：规范模型表生成脚本。
 - `scripts/`：插件生成、模型查询和版本同步脚本。
-- `extension/src/core/`：采集策略、响应适配、模型匹配、比价、检查和刷新流程。
-- `extension/src/site-plugins/`：插件生成物，供扩展运行时加载。
-- `extension/test/`：扩展测试。
+- `src/core/`：采集策略、响应适配、模型匹配、比价、检查和刷新流程。
+- `src/site-plugins/`：插件生成物，供扩展运行时加载。
+- `test/`：扩展测试。
 - `docs/`：架构、使用、开发和插件协议文档。
-
 
 ### 插件仓库
 
@@ -47,33 +46,30 @@
 - `<id>/manifest.json`
 - `<id>/plugin.js`
 - `<id>/models.json`
-- `extension/src/core/`、`extension/src/shared/` 和扩展页面代码
+- `src/core/`、`src/shared/` 和扩展页面代码
 
 生成物：
 
-- `extension/src/site-plugins/providers/<id>.js`
-- `extension/src/site-plugins/catalog.js`
-- `extension/src/shared/plugin-order.js`
-- `extension/src/core/canonical-table.js`
+- `src/site-plugins/providers/<id>.js`
+- `src/site-plugins/catalog.js`
+- `src/shared/plugin-order.js`
+- `src/core/canonical-table.js`
 
 插件生成物和规范模型表会签入扩展仓库，因此源码 checkout 可以直接加载扩展；但每次改变插件或规范模型源之后，都必须重新生成并提交同步后的产物。不要直接编辑生成文件。
 
 ## 2. 两种插件仓库布局
 
-### 嵌套签出
+### 并排签出
 
-默认布局是把插件独立仓库签出到扩展仓库的 `plugins/`：
+默认布局是把插件独立仓库签出到扩展仓库旁边的 `plugins/`，工作区因此有两个平级仓库：
 
 ```text
-extension-repository/
-  extension/
-  canonical/
-  scripts/
-  docs/
-  plugins/              # 另一个独立 Git 仓库
+workspace/
+  extension/            # 扩展仓库（本仓库）：manifest.json、src/、test/、scripts/、docs/
+  plugins/              # 插件仓库：另一个独立 Git 仓库
 ```
 
-外层扩展仓库不跟踪 `plugins/` 的文件。进入插件目录后提交插件改动，回到扩展仓库后运行构建并提交生成物。
+扩展仓库不跟踪 `plugins/` 的任何文件。进入插件目录后提交插件改动，回到扩展仓库后运行构建并提交生成物。
 
 ### 外部目录
 
@@ -92,7 +88,7 @@ node scripts/plugin-build.mjs --check
 node scripts/plugin-build.mjs
 ```
 
-未设置 `PLUGIN_DIR` 时，构建器默认读取扩展仓库根目录下的 `plugins/`。
+未设置 `PLUGIN_DIR` 时，构建器默认读取扩展仓库上一级的 `plugins/`。
 
 ## 3. 开发环境
 
@@ -101,14 +97,14 @@ node scripts/plugin-build.mjs
 - Git：扩展仓库和插件仓库分别提交。
 - 网络：只有重算规范模型表或访问真实站点时才需要；多数单元测试使用本地 fixture。
 
-扩展没有 bundler。浏览器加载的是 `extension/` 目录中的 HTML、CSS 和 JavaScript 文件。
+扩展没有 bundler。浏览器加载的就是本仓库根目录中的 HTML、CSS 和 JavaScript 文件。
 
 ## 4. 常用命令
 
 在扩展仓库根目录运行：
 
 ```bash
-npm test                              # 等价于 npm --prefix extension test
+npm test                              # 全部扩展测试
 npm run plugins:build                 # 从插件源生成扩展插件产物
 npm run plugins:check                 # 检查插件源与生成物是否漂移
 npm run models:build                  # 重算规范模型表
@@ -147,12 +143,12 @@ node scripts/model-lookup.mjs claude 4.6
 | 需求 | 首选位置 | 注意 |
 | --- | --- | --- |
 | 新增站点或修改站点接口 | 插件仓库的 `<id>/` | 修改后重新生成扩展产物 |
-| 统一模型写法 | `extension/src/core/canonical.js`、`canonical/build.mjs` | 规则和构建脚本必须保持一致 |
+| 统一模型写法 | `src/core/canonical.js`、`canonical/build.mjs` | 规则和构建脚本必须保持一致 |
 | 某站独有的模型别名 | `<id>/models.json` | 先用 `models:lookup` 查询规范 id |
-| 请求、认证、页面标签 | `extension/src/core/`、`extension/src/page-bridge.js` | 不要把站点特例散落到 UI |
-| 比价和价格单位 | `extension/src/core/pricing.js`、相关 normalizer | 同时补充边界测试 |
-| 设置和快照持久化 | `extension/src/shared/` | 保持旧状态迁移兼容 |
-| 面板展示 | `extension/dashboard*.js`、`extension/options.js` | 保持无 DOM 的插件约束 |
+| 请求、认证、页面标签 | `src/core/`、`src/page-bridge.js` | 不要把站点特例散落到 UI |
+| 比价和价格单位 | `src/core/pricing.js`、相关 normalizer | 同时补充边界测试 |
+| 设置和快照持久化 | `src/shared/` | 保持旧状态迁移兼容 |
+| 面板展示 | `dashboard*.js`、`options.js` | 保持无 DOM 的插件约束 |
 | 插件目录排序和注册 | `scripts/plugin-build.mjs` | 不手改 `catalog.js` 和 `plugin-order.js` |
 
 ## 6. 新增或修改插件
@@ -169,7 +165,7 @@ node scripts/model-lookup.mjs claude 4.6
    node scripts/plugin-build.mjs --check
    ```
 
-6. 在 Chromium 中重新加载 `extension/`，完成“添加站点 → 采集 → 比价表”的手动验收。
+6. 在 Chromium 中重新加载本仓库根目录，完成“添加站点 → 采集 → 比价表”的手动验收。
 7. 插件仓库提交源码；扩展仓库提交对应的生成物和必要测试。
 
 同域多插件必须分别声明 `paths`，否则构建器会拒绝生成。站点登录态、Cookie、Token 和私有接口信息不能写入插件源码或测试 fixture。
@@ -179,7 +175,7 @@ node scripts/model-lookup.mjs claude 4.6
 规范模型的入口集合以公开参考目录为准。修改归一规则时：
 
 1. 先确认这是通用规则，而不是单个站点的写法差异。
-2. 同步检查 `canonical/build.mjs` 和 `extension/src/core/canonical.js`。
+2. 同步检查 `canonical/build.mjs` 和 `src/core/canonical.js`。
 3. 运行模型表生成脚本。
 4. 补充精确匹配、后缀、厂商前缀、版本和未知模型的测试。
 5. 运行完整测试和生成物检查。
@@ -211,7 +207,7 @@ node scripts/plugin-build.mjs --check
 ## 9. 版本与发布
 ## 9. 版本与发布
 
-版本号位于 `package.json` 和 `extension/manifest.json`，两处必须保持一致。发布前从扩展仓库根目录运行：
+版本号位于 `package.json` 和 `manifest.json`，两处必须保持一致。发布前从扩展仓库根目录运行：
 
 ```bash
 npm test
@@ -245,7 +241,7 @@ npm run plugins:check
 
 ## 11. 不要做的事
 
-- 不要直接编辑 `extension/src/site-plugins/providers/`、`catalog.js` 或 `plugin-order.js`。
+- 不要直接编辑 `src/site-plugins/providers/`、`catalog.js` 或 `plugin-order.js`。
 - 不要把插件源码复制回扩展仓库维护两份。
 - 不要用近似模型名掩盖未知模型。
 - 不要为了证明某个站点可用而提交真实凭据或完整接口响应。

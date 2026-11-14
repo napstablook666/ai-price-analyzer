@@ -1,6 +1,9 @@
 {
   "name": "ai-price-analyzer",
   "version": "0.2.1",
+  "type": "module",
+  "description": "AI 中转站模型价格比价浏览器扩展",
+  "private": true,
   "scripts": {
     "version:patch": "node scripts/sync-version.mjs patch",
     "version:minor": "node scripts/sync-version.mjs minor",
@@ -10,6 +13,6 @@
     "plugins:check": "node scripts/plugin-build.mjs --check",
     "models:build": "node canonical/build.mjs",
     "models:lookup": "node scripts/model-lookup.mjs",
-    "test": "npm --prefix extension test"
+    "test": "node --test test/core.test.js test/checkin.test.js test/refresh-preflight.test.js test/site-plugins.test.js test/workspace.test.js test/plugin-build.test.js test/model-identity.test.js"
   }
 }

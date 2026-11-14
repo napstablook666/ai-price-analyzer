@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(here, "..", "..");
+const root = path.resolve(here, "..");
 const { build, checkOutputs, rewriteImports } = await import(pathToFileURL(path.join(root, "scripts", "plugin-build.mjs")).href);
 const { SITE_PLUGIN_CATALOG } = await import(pathToFileURL(path.join(here, "..", "src", "site-plugins", "catalog.js")).href);
 const { SITE_PLUGIN_ORDER } = await import(pathToFileURL(path.join(here, "..", "src", "shared", "plugin-order.js")).href);
@@ -57,7 +57,7 @@ test("插件源码只能用 @app/ 前缀引用扩展核心", () => {
 });
 
 test("每个插件目录都有可直接阅读的 manifest", () => {
-  const dir = path.join(root, "plugins");
+  const dir = path.join(root, "..", "plugins");
   for (const id of fs.readdirSync(dir).filter(name => !name.startsWith(".") && fs.statSync(path.join(dir, name)).isDirectory())) {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, id, "manifest.json"), "utf8"));
     assert.equal(manifest.id, id);

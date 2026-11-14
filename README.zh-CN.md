@@ -22,7 +22,7 @@ AI Price Analyzer 从配置的 AI 中转站采集模型价格，把不同站点�
 - **扩展仓库：** 当前仓库，包含 MV3 页面、service worker、采集与匹配核心、生成的插件运行时代码、测试和文档。
 - **插件仓库：** [ai-price-analyzer-plugins](https://github.com/napstablook666/ai-price-analyzer-plugins)，包含手写的站点适配器，一个站点一个目录。
 
-开发站点插件时，把插件仓库签出到当前仓库下的 `plugins/`。扩展构建器会从这些源文件生成 `extension/src/site-plugins/`。生成物签入扩展仓库，所以只下载发布包时可以直接加载扩展。
+开发站点插件时，把插件仓库签出到本仓库旁边的并排 `plugins/` 目录。扩展构建器会从这些源文件生成 `src/site-plugins/`。生成物签入扩展仓库，所以只下载发布包时可以直接加载扩展。
 
 ## 主要能力
 
@@ -40,7 +40,7 @@ AI Price Analyzer 从配置的 AI 中转站采集模型价格，把不同站点�
 1. 从 [GitHub Releases](https://github.com/napstablook666/ai-price-analyzer/releases) 下载 `ai-relay-price-extension-v<version>.zip`，或者克隆本仓库。
 2. 如果下载的是 ZIP，先解压。要加载的目录必须直接包含 `manifest.json`。
 3. 在基于 Chromium 的浏览器中打开 `chrome://extensions`。
-4. 启用“开发者模式”，点击“加载已解压的扩展”，选择解压后的目录或本仓库的 [`extension/`](./extension/) 目录。
+4. 启用“开发者模式”，点击“加载已解压的扩展”，选择解压后的目录或本仓库根目录。
 
 ## 快速开始
 
@@ -90,13 +90,13 @@ node scripts/model-lookup.mjs claude 4.6
 node canonical/build.mjs --offline
 ```
 
-修改插件源后运行 `node scripts/plugin-build.mjs`，再运行测试并在 Chromium 中重新加载 `extension/`。插件仓库签出到其他路径时，用 `PLUGIN_DIR` 指向它。不要手改 `extension/src/site-plugins/` 或 `extension/src/shared/plugin-order.js` 下的生成物。
+修改插件源后运行 `node scripts/plugin-build.mjs`，再运行测试并在 Chromium 中重新加载本仓库根目录。插件仓库签出到其他路径时，用 `PLUGIN_DIR` 指向它。不要手改 `src/site-plugins/` 或 `src/shared/plugin-order.js` 下的生成物。
 
 贡献流程见 [CONTRIBUTING.md](./CONTRIBUTING.md)。
 
 ## 发布
 
-发布由 Git tag 触发。保持 `package.json` 与 `extension/manifest.json` 的版本一致，然后推送类似 `v0.2.1` 的 tag。GitHub Actions 会发布：
+发布由 Git tag 触发。保持 `package.json` 与 `manifest.json` 的版本一致，然后推送类似 `v0.2.1` 的 tag。GitHub Actions 会发布：
 
 - `ai-relay-price-extension-v<version>.zip`：可直接加载的 Chromium 扩展。
 - `ai-price-analyzer-v<version>-source.zip`：构建所用的源码和插件快照。

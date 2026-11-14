@@ -1,6 +1,0 @@
-{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "Review recharge currency, station configuration, snapshot, comparison, and dashboard data flow end to end."}
-{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "Check that existing normalizers, schema helpers, and pricing contracts are reused."}
-{"file": "extension/src/shared/schema.js", "reason": "Check independent recharge/model currency persistence and CREDITS validation."}
-{"file": "extension/src/core/normalizers.js", "reason": "Check normalization output, fallback safety, and version bump."}
-{"file": "extension/src/core/pricing.js", "reason": "Check CREDITS conversion and currency_unverified gating are unchanged and safe."}
-{"file": "extension/test/core.test.js", "reason": "Run and review focused regression coverage for all acceptance criteria."}

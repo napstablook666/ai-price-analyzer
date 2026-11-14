@@ -1,4 +1,0 @@
-{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Review the changed model-list currency contract and ensure CREDITS conversion does not weaken protection branches."}
-{"file":".trellis/spec/frontend/index.md","reason":"Check frontend quality and scope rules for the options, collector, normalizer, and test changes."}
-{"file":".trellis/workflow.md","reason":"Verify task completion, spec synchronization, and mixed-worktree commit boundaries."}
-{"file":".trellis/tasks/10-16-fix-model-list-credits/research/openrouter-credits-recharge.md","reason":"Verify official USD credit semantics, fee-dependent recharge ratio, and no hard-coded misleading rate."}

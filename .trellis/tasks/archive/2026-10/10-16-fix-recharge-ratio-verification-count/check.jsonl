@@ -1,4 +1,0 @@
-{"file":".trellis/tasks/10-16-fix-recharge-ratio-verification-count/research/dashboard-recharge-verification-count.md","reason":"Review the evidence behind the 125-row count and the unknown protected-provider versus disabled-station distinction."}
-{"file":".trellis/tasks/10-16-fix-recharge-ratio-verification-count/design.md","reason":"Check that production filtering occurs only at the dashboard comparison boundary and preserves returned station metadata."}
-{"file":".trellis/tasks/10-16-fix-recharge-ratio-verification-count/implement.md","reason":"Check ordered implementation, focused/full validation commands, rollback points, and pre-start gate."}
-{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"Check that recharge and currency verification protections remain unchanged."}

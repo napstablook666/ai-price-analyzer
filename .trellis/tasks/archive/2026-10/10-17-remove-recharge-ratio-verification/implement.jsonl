@@ -1,4 +1,0 @@
-{"file":".trellis/spec/frontend/pricing-data-contract.md","reason":"记录价格采集、充值比例换算、不可用原因和 dashboard 比较边界，需更新为未确认充值比例按 1:1 且不阻断。"}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端回归测试和跨层数据流验证要求，指导核心 quote、dashboard 和 options 修改后的检查。"}
-{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"本任务同时修改核心计算、服务数据流和 UI 展示，需要按跨层契约检查而不是只验证单个 helper。"}
-{"file":".trellis/tasks/10-17-remove-recharge-ratio-verification/research/recharge-ratio-removal.md","reason":"记录当前阻断机制、受保护 provider 的旧字段兼容要求和用户确认的 1:1 fallback 决策。"}

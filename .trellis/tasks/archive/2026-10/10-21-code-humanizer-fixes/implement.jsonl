@@ -1,8 +1,0 @@
-{"file":"extension/src/service-worker.js","reason":"Implement warning-only handling for temporary-tab cleanup, refresh-preflight cleanup, tab-removal reconciliation, and scheduled check-in failures while preserving existing result/state contracts."}
-{"file":"extension/test/refresh-preflight.test.js","reason":"Verify cleanup failure observability and preserved refresh-preflight fallback behavior."}
-{"file":"extension/src/core/station-presets.js","reason":"Replace duplicated hostname normalization with the canonical stationContext helper."}
-{"file":"extension/src/core/checkin.js","reason":"Reuse stationContext for hostname matching and remove stale duplicate comments."}
-{"file":".trellis/scripts/common/trellis_config.py","reason":"Preserve fail-open config parsing while warning on unexpected parser exceptions."}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Frontend quality and error-handling rules for extension changes."}
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Backend/script quality rules for the standalone Trellis config reader."}
-{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Canonical helper reuse and duplication constraints."}

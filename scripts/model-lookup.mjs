@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { canonicalKey, getCanonicalIndex, resolveCanonicalModel, stripVendorPrefix, stripBracketPrefix } = await import(
-  pathToFileURL(path.join(root, "extension", "src", "core", "canonical.js")).href
+  pathToFileURL(path.join(root, "src", "core", "canonical.js")).href
 );
 
 const terms = process.argv.slice(2).map(term => term.toLowerCase()).filter(Boolean);

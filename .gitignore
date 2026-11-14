@@ -20,15 +20,9 @@ Thumbs.db
 
 # Local verification and tooling state
 /out/
-/.codegraph/
-/.pi/
-/extension/ai-price-analyzer.workspace.json
 /canonical/.cache/
 
+# Local workspace runtime data (stations and settings) - never commit
+/ai-price-analyzer.workspace.json
 
-# Maintainer-local workflow and project instructions
-/.trellis/
-/.agents/
-/AGENTS.md
-# Site plugins are maintained in a standalone repository
-/plugins/
+# Plugin sources live in the sibling repository, checked out at ../plugins

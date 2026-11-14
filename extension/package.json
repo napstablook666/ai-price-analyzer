@@ -1,6 +1,0 @@
-{
-  "type": "module",
-  "scripts": {
-    "test": "node --test test/core.test.js test/checkin.test.js test/refresh-preflight.test.js test/site-plugins.test.js test/workspace.test.js test/plugin-build.test.js test/model-identity.test.js"
-  }
-}

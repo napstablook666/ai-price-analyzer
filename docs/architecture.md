@@ -5,7 +5,7 @@
 ## 一条数据从哪来、到哪去
 
 ```
-站点插件采集          extension/src/site-plugins/providers/<id>.js
+站点插件采集          src/site-plugins/providers/<id>.js
   ↓  请求策略          core/provider-registry.js  requestPolicy / localStoragePageAuth / cookiePageAuth
   ↓  响应解析          core/adapters.js  normalizeEndpoint + responseFormat 分支
 快照（每站一份）      { stationId, models: [{ model_name, price… }], capturedAt }
@@ -19,7 +19,7 @@
 界面                  dashboard.js / dashboard-pricing.js
 ```
 
-消息入口在 `extension/src/service-worker.js`：`REFRESH_ALL` / `REFRESH_STATION` 采集，`FETCH_REFERENCES` 拉官方价，`GET_DASHBOARD` 出比价数据，`ADAPT_STATION` 识别站点地址。
+消息入口在 `src/service-worker.js`：`REFRESH_ALL` / `REFRESH_STATION` 采集，`FETCH_REFERENCES` 拉官方价，`GET_DASHBOARD` 出比价数据，`ADAPT_STATION` 识别站点地址。
 
 ## 统一模型是怎么做到的
 
@@ -39,23 +39,23 @@
 
 | 路径 | 职责 | 能不能手改 |
 | --- | --- | --- |
-| `plugins/<id>/` | 站点插件唯一手写源 | 是 |
-| `extension/src/site-plugins/providers/` | 由 `plugins/` 生成 | 否 |
-| `extension/src/site-plugins/catalog.js` | 首页站点目录，生成物 | 否 |
-| `extension/src/shared/plugin-order.js` | 站点排序，生成物 | 否 |
-| `extension/src/core/canonical.js` | 规范模型归一逻辑 | 是 |
-| `extension/src/core/canonical-table.js` | 规范模型表，生成物 | 否 |
+| `../plugins/<id>/` | 站点插件唯一手写源（插件仓库） | 是 |
+| `src/site-plugins/providers/` | 由 `../plugins/` 生成 | 否 |
+| `src/site-plugins/catalog.js` | 首页站点目录，生成物 | 否 |
+| `src/shared/plugin-order.js` | 站点排序，生成物 | 否 |
+| `src/core/canonical.js` | 规范模型归一逻辑 | 是 |
+| `src/core/canonical-table.js` | 规范模型表，生成物 | 否 |
 | `canonical/build.mjs` | 规范表生成器（靠齐 OpenRouter 列表，models.dev 补别名） | 是 |
 | `scripts/plugin-build.mjs` | 插件构建器 | 是 |
 | `scripts/model-lookup.mjs` | 查规范模型 id 的小工具 | 是 |
-| `extension/src/core/` | 采集、匹配、比价、存储、凭据 | 是 |
-| `extension/test/` | 全部测试 | 是 |
+| `src/core/` | 采集、匹配、比价、存储、凭据 | 是 |
+| `test/` | 全部测试 | 是 |
 
 ## 两个仓库（已落地）
 
 形态：**扩展仓库**（本仓库：核心、UI、构建脚本、文档）＋ **插件仓库**（[`napstablook666/ai-price-analyzer-plugins`](https://github.com/napstablook666/ai-price-analyzer-plugins)，一个站点一个目录）。插件源码不引用扩展内部相对路径，只写 `@app/core/…`、`@app/shared/…`，构建时改写成真实路径，目录搬走后零改动。
 
-- 插件仓库可以嵌套签出到 `plugins/`（外层仓库已 gitignore 它），也可以签出到任意路径，用 `PLUGIN_DIR` 指过去。
+- 工作区里两个仓库并排：`extension/`（本仓库）与 `plugins/`。扩展仓库不跟踪插件文件，构建器默认读上一级的 `plugins/`，签出到别处时用 `PLUGIN_DIR` 指过去。
 - `PLUGIN_DIR=/path/to/plugins node scripts/plugin-build.mjs --check` 可校验任意外部插件源与扩展内生成物是否同步。
 - 扩展侧 `site-plugins.test.js` 继续盯生成物漂移；插件的目录契约（manifest / plugin.js / models.json、字段白名单）由 `plugin-build.mjs` 兜住。
 
@@ -74,7 +74,7 @@ npm run version:patch                      # 扩展版本号同步
 
 改任何一层之后至少要满足：
 
-- `cd extension && npm test` 全绿。
+- `npm test` 全绿。
 - `node scripts/plugin-build.mjs --check` 无漂移。
 - 采集链路：首页能加站点、能采集、比价表里模型有数；模型名改了写法之后仍然归到同一行。
 - 设置里带旧字段（如 `llm` / `jev` / `modelMatchOverrides`）的历史数据能正常加载，不报错、不丢覆盖。

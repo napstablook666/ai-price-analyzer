@@ -5,9 +5,9 @@
 //   node canonical/build.mjs            在线拉取后生成
 //   node canonical/build.mjs --offline  只用 canonical/.cache/ 里的原始响应
 //
-// 产物：extension/src/core/canonical-table.js
+// 产物：src/core/canonical-table.js
 //
-// 归一规则（与 extension/src/core/canonical.js 必须保持一致）：
+// 归一规则（与 src/core/canonical.js 必须保持一致）：
 //   1. 取 id 的最后一段，丢掉 openrouter / fireworks/models / @cf/qwen 这类路径前缀
 //   2. 去掉装饰后缀 :free :thinking :official @eu @default -v1 -YYYYMMDD
 //   3. 小写，`.` `_` 一律当作 `-`
@@ -19,7 +19,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const OUT_FILE = path.join(HERE, "..", "extension", "src", "core", "canonical-table.js");
+const OUT_FILE = path.join(HERE, "..", "src", "core", "canonical-table.js");
 const CACHE_DIR = path.join(HERE, ".cache");
 const MODELS_DEV_URL = "https://models.dev/api.json";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
@@ -205,7 +205,7 @@ async function main() {
   };
   fs.writeFileSync(OUT_FILE, `// 由 canonical/build.mjs 生成，不要手改。重新生成：node canonical/build.mjs\nconst CANONICAL_TABLE = ${JSON.stringify(table)};\n\nexport default CANONICAL_TABLE;\n`);
   const multi = models.filter(model => model.providers > 1).length;
-  console.log(`extension/src/core/canonical-table.js  ${models.length} 个模型（OpenRouter 收录），${multi} 个有 models.dev 佐证，丢弃 ${droppedCount} 个 models.dev 独有身份，源数据 ${sourceRows} 行，${(fs.statSync(OUT_FILE).size / 1024).toFixed(0)} KB`);
+  console.log(`src/core/canonical-table.js  ${models.length} 个模型（OpenRouter 收录），${multi} 个有 models.dev 佐证，丢弃 ${droppedCount} 个 models.dev 独有身份，源数据 ${sourceRows} 行，${(fs.statSync(OUT_FILE).size / 1024).toFixed(0)} KB`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

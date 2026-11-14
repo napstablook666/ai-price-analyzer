@@ -1,2 +1,0 @@
-{"file": "extension/src/core/provider-registry.js", "reason": "Implementation target: provider preparation currently overwrites protected currency verification."}
-{"file": ".trellis/spec/frontend/pricing-data-contract.md", "reason": "Defines prepareStationInput verification and protected-provider comparison contracts."}

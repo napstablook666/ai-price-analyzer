@@ -1,7 +1,7 @@
 // 插件仓库 → 扩展插件的构建器。
 //
 // 源：plugins/<id>/manifest.json + plugins/<id>/plugin.js + plugins/<id>/models.json
-// 产物：extension/src/site-plugins/providers/<id>.js 与 extension/src/site-plugins/catalog.js
+// 产物：src/site-plugins/providers/<id>.js 与 src/site-plugins/catalog.js
 //
 // 插件源码只写 `@app/...` 这类扩展核心导入，构建时改写成扩展内的相对路径，
 // 所以插件目录本身不依赖目录层级，单独抽成仓库后也能直接打包。
@@ -15,11 +15,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-// 插件源目录：独立仓库默认嵌套签出在 ./plugins，签出到别处时用 PLUGIN_DIR 环境变量指向。
-const PLUGIN_DIR = path.resolve(process.env.PLUGIN_DIR || path.join(ROOT, "plugins"));
-const PROVIDER_DIR = path.join(ROOT, "extension", "src", "site-plugins", "providers");
-const CATALOG_FILE = path.join(ROOT, "extension", "src", "site-plugins", "catalog.js");
-const ORDER_FILE = path.join(ROOT, "extension", "src", "shared", "plugin-order.js");
+// 插件源目录：独立仓库默认并排签出在 ../plugins，签出到别处时用 PLUGIN_DIR 环境变量指向。
+const PLUGIN_DIR = path.resolve(process.env.PLUGIN_DIR || path.join(ROOT, "..", "plugins"));
+const PROVIDER_DIR = path.join(ROOT, "src", "site-plugins", "providers");
+const CATALOG_FILE = path.join(ROOT, "src", "site-plugins", "catalog.js");
+const ORDER_FILE = path.join(ROOT, "src", "shared", "plugin-order.js");
 const GENERATED = "由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs";
 
 const MANIFEST_KEYS = ["id", "name", "host", "hosts", "paths", "mode", "category", "addable", "description", "order"];
