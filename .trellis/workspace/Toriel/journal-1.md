@@ -248,3 +248,12 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 - 测试改造两条：原用的 `claude-opus-4.8`/`claude-sonnet-4-5` 在 OpenRouter 现役列表无独立身份（现役 opus-5.5，老代次词序是 `claude-4-5-sonnet`），改用表里真实存在的身份，测试意图不变。总数 242→241：逐文件数静态 test() 注册（8+186+4+6+25+6+6=241）确认 PRD 旧数是误记。
 - 踩坑：`build.mjs` 的 `models.push` 新对象没复制 `openrouter` 组标记，出口过滤把全表清成 0 模型；组标记必须显式带进生成对象，出口处再 delete。
 - 验证：241/241 测试、`plugin-build.mjs --check` 22 个插件同步、`model-lookup` 对 glm-5.3 与 "claude sonnet" 命中 OpenRouter 名称。
+
+## 2026-11-14 plugins 拆独立 git 仓库
+
+- 落实 11-13-canonical-models-plugin-split R4 遗留项：`plugins/` 原地 `git init -b main` 成独立仓（初始提交 1d24976，67 文件 = 22 个插件三件套 + README），外层仓库 `git rm -r --cached plugins` + `.gitignore` 加 `/plugins/`（3e392c6），插件拆分前历史保留在外层仓库。
+- `scripts/plugin-build.mjs` 的 `PLUGIN_DIR` 支持 `process.env.PLUGIN_DIR` 覆盖，默认 `./plugins` 不变；外部路径冒烟（PLUGIN_DIR=/tmp/plugins-copy --check）通过。
+- 踩坑：`plugins/.git` 出现后，`plugin-build.test.js` 遍历插件目录没跳过点目录，把 `.git/manifest.json` 当插件报 ENOENT；修复为 `!name.startsWith(".")`（与构建器 listPlugins 同规则），9f6f0d3。
+- 插件仓 README 改为独立仓视角（文档链接指扩展仓库、补 PLUGIN_DIR 用法）；architecture.md 拆仓路线章节改为「已落地」；plugin-development.md 补一句 PLUGIN_DIR。
+- 另一会话对 `plugins/all-in-one/plugin.js` 的未提交改动随快照进了插件仓初始提交；其扩展侧生成物仍在他们的 WIP 里未提交。
+- 验证：242/242 测试、默认与外部 PLUGIN_DIR 双 --check 通过、插件仓 status 干净。
