@@ -257,3 +257,13 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 - 插件仓 README 改为独立仓视角（文档链接指扩展仓库、补 PLUGIN_DIR 用法）；architecture.md 拆仓路线章节改为「已落地」；plugin-development.md 补一句 PLUGIN_DIR。
 - 另一会话对 `plugins/all-in-one/plugin.js` 的未提交改动随快照进了插件仓初始提交；其扩展侧生成物仍在他们的 WIP 里未提交。
 - 验证：242/242 测试、默认与外部 PLUGIN_DIR 双 --check 通过、插件仓 status 干净。
+
+## 2026-11-14 all-in-one.icu 租户改版重适配
+
+- 站点换成租户控制台 `#/tenant/models`，旧的匿名 `/api/pricing` 直接 401。真实接口 `GET /api/tenant/models`，需要 `Authorization: Bearer <tenant_access_token>`（localStorage 平铺 JWT，关闭「记住我」时落 sessionStorage），过期用 `/api/tenant/auth/refresh` 续。
+- 实测 42 个模型分四类：`token` 22、`tiered` 6（`pricing_tiers` 只给 `min_tokens`/`max_tokens`/单价，没有档位标签）、`per_request` 13（`per_request_price`，图像类，¥0.18 到 ¥0.5）、`special` 1（MiniMax-H3 只有 `per_second_prices`）。报价是站点结算币种 CNY，全程 `/1M tokens`。
+- 归一化真实 payload 端到端跑通：47 行（22 + 6×2 档 + 13 行按次），币种全 CNY，13 行带 `request_price`，档名回落到 `0-100K` / `100K 以上`，`special` 进 `unsupportedBillingModes` 让快照态变 partial，没有编价。
+- 三轮故障同源：①「请先登录」其实同源标签页多于一个时 `selectPageTab` 返回 null；②站点把未登录页改写成 `#/tenant/login?redirect=...`，按 `hashPath === "/tenant/models"` 精确匹配的插件永远不命中；③不命中就退回默认策略，请求既不带页面令牌也不是页面态，于是报「请求失败（401）」。彻底修法是 `matches`/`prepareMatches` 只按 host 认站，`prepare` 再把 baseUrl、mode、adapter 一起刷新。
+- 踩坑：`matches` 里的路径条件会让旧配置死锁，插件层永远不触发 prepare，用户在 UI 里点多少次查询都不会自愈。
+- 验证：真实浏览器 payload → `normalizePricingPayload` 47 行无 unpriced/invalid；243/243 测试；`plugin-build.mjs --check` 22 个插件同步。
+- commit：`0ffd5dd`（采集适配）、`801afa8`（站点弹层复选框与只读输入样式）、插件仓 `f1af91f`（按 host 认站）。
