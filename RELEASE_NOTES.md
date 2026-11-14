@@ -1,23 +1,22 @@
-# AI Price Analyzer v0.2.0
+# AI Price Analyzer v0.2.1
 
-This release expands the Chromium MV3 extension from its initial release into a multi-station pricing and account workflow.
+This release packages the current Chromium MV3 extension and the two-repository plugin workflow.
 
-## Added
+## Included
 
 - Multi-station scheduled collection with IndexedDB snapshots, manual refresh, pagination, sorting, filtering, and collapsible dashboard sections.
-- Daily check-in support for stations that expose claim and status APIs, including optional alarms.
-- JEV-assisted model matching with user-confirmed mappings and refresh-safe batch processing.
-- Pricing adapters for AIAPI, CheapRouter, CUN.AI, DDDai, Liuguang, NexaVlinks, Sidrune, and TrueSOTA.
-- Token, image, request, group-ratio, recharge-ratio, and monthly workload normalization across supported station formats.
-- Page bridges that preserve required browser login state while keeping credentials out of extension messages and portable state.
+- Direct endpoint and page-bridge collection modes for public and login-dependent stations.
+- Station check-in support where a provider exposes claim and status APIs.
+- Pricing normalization for token, image, request, group-ratio, recharge-ratio, and monthly-workload formats.
+- Canonical model matching with plugin aliases and user-confirmed overrides.
+- Standalone station plugin sources in [ai-price-analyzer-plugins](https://github.com/napstablook666/ai-price-analyzer-plugins).
 
 ## Validation
 
-- `node --check` passed for the userscript and extension entry points.
-- `node test-kbq-pricing.js` passed.
-- `node --test extension/test/*.test.js` passed with 109 tests.
-- CI and tag-driven release packaging remain unchanged.
+- `npm test` passed for the extension test suite.
+- `node scripts/plugin-build.mjs --check` passed for the generated plugin runtime files.
+- Extension entry points and the MV3 manifest were syntax-checked.
 
 ## Privacy review
 
-The release source was checked for common credential and private-key markers. No credentials are intentionally included. Review the repository and release assets before distributing site-specific pricing samples.
+The public source was checked for common credential and private-key markers. Do not add credentials, cookies, private responses, or account-specific URLs to source files, fixtures, issues, or release assets.

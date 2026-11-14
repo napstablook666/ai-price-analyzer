@@ -267,3 +267,39 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 - 踩坑：`matches` 里的路径条件会让旧配置死锁，插件层永远不触发 prepare，用户在 UI 里点多少次查询都不会自愈。
 - 验证：真实浏览器 payload → `normalizePricingPayload` 47 行无 unpriced/invalid；243/243 测试；`plugin-build.mjs --check` 22 个插件同步。
 - commit：`0ffd5dd`（采集适配）、`801afa8`（站点弹层复选框与只读输入样式）、插件仓 `f1af91f`（按 host 认站）。
+
+
+## Session 9: 开源双仓库与文档
+<!-- trellis-session: v=2 fp=fae2a9d709b1bfdd -->
+
+**Date**: 2026-11-14
+**Task**: 开源双仓库与文档
+**Branch**: `feat/sevenai-model-plaza`
+
+### Summary
+
+完成扩展仓库与独立插件仓库的开源文档整理，补齐使用、开发、仓库边界和协作说明。
+
+### Main Changes
+
+- 更新 README.md 与 README.zh-CN.md，增加双仓库入口、安装、贡献、发布和隐私说明。
+- 新增 docs/user-guide.md 与 docs/development.md，覆盖安装、站点配置、direct/page 采集、刷新比价、模型匹配、导入导出、故障排查、插件接入、测试和发布。
+- 更新 plugins/README.md，新增 plugins/DEVELOPMENT.md，明确插件目录契约、PLUGIN_DIR、生成物同步和提交检查。
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] node scripts/plugin-build.mjs --check：22 个插件源与生成物同步。
+- [OK] npm test：243/243 通过。
+- [OK] git diff --check 与 git -C plugins diff --check 通过。
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 待确定插件仓库公开远端名称和 URL 后，替换文档中的占位链接并分别推送两个仓库。

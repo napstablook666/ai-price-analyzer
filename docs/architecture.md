@@ -52,21 +52,22 @@
 | `extension/test/` | 全部测试 | 是 |
 
 ## 两个仓库（已落地）
-形态：**扩展仓库**（本仓库：核心、UI、构建脚本、文档）＋ **插件仓库**（`plugins/` 独立建仓，一个站点一个目录）。插件源码不引用扩展内部相对路径，只写 `@app/core/…`、`@app/shared/…`，构建时改写成真实路径，目录搬走后零改动。
 
-- 插件仓当前以嵌套独立仓形式签出在 `plugins/`（外层仓库已 gitignore 它）；也可以签出到任意路径，用 `PLUGIN_DIR` 指过去。
+形态：**扩展仓库**（本仓库：核心、UI、构建脚本、文档）＋ **插件仓库**（[`napstablook666/ai-price-analyzer-plugins`](https://github.com/napstablook666/ai-price-analyzer-plugins)，一个站点一个目录）。插件源码不引用扩展内部相对路径，只写 `@app/core/…`、`@app/shared/…`，构建时改写成真实路径，目录搬走后零改动。
+
+- 插件仓库可以嵌套签出到 `plugins/`（外层仓库已 gitignore 它），也可以签出到任意路径，用 `PLUGIN_DIR` 指过去。
 - `PLUGIN_DIR=/path/to/plugins node scripts/plugin-build.mjs --check` 可校验任意外部插件源与扩展内生成物是否同步。
 - 扩展侧 `site-plugins.test.js` 继续盯生成物漂移；插件的目录契约（manifest / plugin.js / models.json、字段白名单）由 `plugin-build.mjs` 兜住。
 
 ## 常用命令
 
 ```bash
-cd extension && npm test                   # 全部测试（242 条）
+npm test                                  # 全部扩展测试
 node scripts/plugin-build.mjs              # 改完 plugins/ 后重新生成
 node scripts/plugin-build.mjs --check      # 只校验漂移
 node scripts/model-lookup.mjs claude 4.6   # 查规范模型 id
 node canonical/build.mjs --offline         # 用缓存重算规范表（联网可去掉 --offline）
-npm run version:patch                      # 三处版本号同步
+npm run version:patch                      # 扩展版本号同步
 ```
 
 ## 验证标准

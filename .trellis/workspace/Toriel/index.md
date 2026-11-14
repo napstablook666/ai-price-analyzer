@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
-- **Last Active**: 2026-10-29
+- **Total Sessions**: 9
+- **Last Active**: 2026-11-14
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~143 | Active |
+| `journal-1.md` | ~305 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 9 | 2026-11-14 | 开源双仓库与文档 | - | `feat/sevenai-model-plaza` |
 | 6 | 2026-10-29 | KillAI per-request pricing adaptation | `c9ffc9d` | `feat/sevenai-model-plaza` |
 | 4 | 2026-10-17 | 移除充值比例核验阻断 | `2c0a5ad` | `main` |
 | 3 | 2026-10-16 | 修复币种核验状态 | `d379b8e` | `main` |

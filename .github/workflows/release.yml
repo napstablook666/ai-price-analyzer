@@ -12,39 +12,47 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out extension repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Check out plugin sources
+        uses: actions/checkout@v4
+        with:
+          repository: napstablook666/ai-price-analyzer-plugins
+          ref: main
+          path: plugins
+          persist-credentials: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Check synchronized versions and release tag
+      - name: Validate source and release tag
         shell: bash
         run: |
           set -euo pipefail
-          node scripts/sync-version.mjs --check
-          node --input-type=module -e 'import { readFileSync } from "node:fs"; const version = JSON.parse(readFileSync("package.json", "utf8")).version; if ("v" + version !== process.env.GITHUB_REF_NAME) process.exit(1);'
+          node scripts/plugin-build.mjs --check
+          node --input-type=module -e 'import { readFileSync } from "node:fs"; const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version; const manifestVersion = JSON.parse(readFileSync("extension/manifest.json", "utf8")).version; if (packageVersion !== manifestVersion || "v" + manifestVersion !== process.env.GITHUB_REF_NAME) process.exit(1);'
+          node --check extension/src/service-worker.js
+          node --check extension/src/dashboard.js
+          node --check extension/src/options.js
+          node --check extension/src/content-bridge.js
+          node --check extension/src/page-bridge.js
+          node --check extension/src/popup.js
+          npm test
 
-      - name: Validate source
-        run: |
-          node --check "AI中转站价格分析工具.js"
-          node test-kbq-pricing.js
-          node --test extension/test/*.test.js
       - name: Prepare release assets
         shell: bash
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
-          mkdir -p dist/source
-          cp "AI中转站价格分析工具.js" "dist/ai-price-analyzer.user.js"
-          cp README.md README.zh-CN.md LICENSE PRIVACY.md RELEASE_NOTES.md dist/source/
-          cp "AI中转站价格分析工具.js" dist/source/
-          cp -R assets dist/source/
-          cp -R extension dist/source/
+          mkdir -p dist/source/plugins
+          cp README.md README.zh-CN.md LICENSE PRIVACY.md RELEASE_NOTES.md CONTRIBUTING.md SECURITY.md package.json dist/source/
+          cp -R assets canonical docs extension scripts dist/source/
+          cp -R plugins/. dist/source/plugins/
           (
             cd extension
             zip -qr "../dist/ai-relay-price-extension-${version}.zip" .
@@ -53,7 +61,7 @@ jobs:
             cd dist/source
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
-          sha256sum "dist/ai-price-analyzer.user.js" "dist/ai-relay-price-extension-${version}.zip" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
+          sha256sum "dist/ai-relay-price-extension-${version}.zip" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -61,7 +69,6 @@ jobs:
           generate_release_notes: true
           body_path: RELEASE_NOTES.md
           files: |
-            dist/ai-price-analyzer.user.js
             dist/ai-relay-price-extension-${{ github.ref_name }}.zip
             ai-price-analyzer-${{ github.ref_name }}-source.zip
             dist/SHA256SUMS.txt

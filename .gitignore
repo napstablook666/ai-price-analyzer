@@ -1,15 +1,9 @@
-# Node and local tooling
+# Public repository ignore rules
 node_modules/
-
-# Generated release output
 dist/
 *.zip
-
-# Local test artifacts
 *.log
 coverage/
-
-# Editors and operating systems
 .vscode/
 .idea/
 .DS_Store
@@ -22,23 +16,19 @@ Thumbs.db
 *.pem
 *.key
 *.p12
-
-# Windows reserved-name artifact created accidentally during local testing
-/NUL
-
-# HAR captures contain login credentials - never commit
 *.har
 
-# Local verification artifacts and agent/tooling state
+# Local verification and tooling state
 /out/
 /.codegraph/
 /.pi/
-
-# Local workspace runtime data (stations and settings) - never commit
 /extension/ai-price-analyzer.workspace.json
-
-# Downloaded model catalogs (rebuild with: node canonical/build.mjs)
 /canonical/.cache/
 
-# Site plugins are a standalone git repository (nested checkout, see docs/architecture.md)
+
+# Maintainer-local workflow and project instructions
+/.trellis/
+/.agents/
+/AGENTS.md
+# Site plugins are maintained in a standalone repository
 /plugins/
