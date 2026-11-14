@@ -58,6 +58,7 @@ The settings page also provides reference refresh, supported check-in settings, 
 - [Development guide](./docs/development.md)
 - [Architecture and data flow](./docs/architecture.md)
 - [Extension-side plugin contract](./docs/plugin-development.md)
+- Full docs site (VitePress): run `npm run docs:dev` in this repository, or read [`docs/`](./docs/) on GitHub
 - [Plugin repository README](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/README.md)
 - [Plugin repository development guide](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/DEVELOPMENT.md)
 

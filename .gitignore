@@ -26,3 +26,7 @@ Thumbs.db
 /ai-price-analyzer.workspace.json
 
 # Plugin sources live in the sibling repository, checked out at ../plugins
+
+# VitePress build output and cache
+/docs/.vitepress/dist/
+/docs/.vitepress/cache/

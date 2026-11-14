@@ -58,6 +58,7 @@ AI Price Analyzer 从配置的 AI 中转站采集模型价格，把不同站点�
 - [开发手册](./docs/development.md)
 - [架构与数据流](./docs/architecture.md)
 - [扩展侧插件协议](./docs/plugin-development.md)
+- 完整文档站（VitePress）：在本仓库跑 `npm run docs:dev` 本地预览，或直接在 GitHub 上看 [`docs/`](./docs/)
 - [插件仓库 README](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/README.md)
 - [插件仓库开发手册](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/DEVELOPMENT.md)
 

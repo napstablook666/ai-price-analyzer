@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">AI Price Analyzer</title>
+  <desc id="desc">A rising price chart for comparing AI gateway prices.</desc>
+  <rect width="128" height="128" rx="28" fill="#101820"/>
+  <path d="M30 94V31M30 94H98" fill="none" stroke="#C7F36B" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M43 77 58 60 72 72 96 42" fill="none" stroke="#FFFDF7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="96" cy="42" r="6" fill="#E37B3D"/>
+</svg>
