@@ -1,4 +1,12 @@
 import { defineConfig } from "vitepress";
+// GitHub Pages 项目站点部署在 /<repo>/ 下，构建时用 DOCS_BASE 传入；本地开发不设该变量，回落成根路径。
+function resolveBase(raw) {
+  if (!raw) return "/";
+  const withSlash = raw.startsWith("/") ? raw : `/${raw}`;
+  return withSlash.endsWith("/") ? withSlash : `${withSlash}/`;
+}
+
+const base = resolveBase(process.env.DOCS_BASE);
 
 const repo = "https://github.com/napstablook666/ai-price-analyzer";
 
@@ -8,16 +16,16 @@ export default defineConfig({
   description:
     "AI 中转站价格对比扩展的文档：安装、采集、比价、成本估算、插件开发与故障排查。",
 // 部署到 GitHub Pages 的项目路径时：DOCS_BASE=/ai-price-analyzer/ npm run docs:build
-  base: process.env.DOCS_BASE || "/",
+  base,
   cleanUrls: true,
   lastUpdated: true,
   head: [
-    ["link", { rel: "icon", href: "/logo.svg" }],
+    ["link", { rel: "icon", href: `${base}logo.svg` }],
     ["meta", { name: "theme-color", content: "#0f766e" }],
   ],
 
   themeConfig: {
-    logo: "/logo.svg",
+    logo: `${base}logo.svg`,
     siteTitle: "AI 比价文档",
 
     nav: [
