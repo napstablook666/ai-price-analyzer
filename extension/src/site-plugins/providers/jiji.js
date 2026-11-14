@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { localStoragePageAuth, normalizeHostname, normalizePath, requestPolicy, stationContext } from "../../core/provider-registry.js";
 
 const HOST = "jiji.cc";
@@ -29,7 +31,7 @@ function prepare(stationInput, { url }) {
   };
 }
 
-export const sitePlugin = {
+const pluginSource = {
   id: "jiji",
   host: HOST,
   matches: ({ hostname, path }) => hostname === HOST && isModelPath(path),
@@ -45,3 +47,7 @@ export const sitePlugin = {
     pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 Jiji 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401])
   })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

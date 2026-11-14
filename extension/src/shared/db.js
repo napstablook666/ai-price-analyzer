@@ -134,21 +134,6 @@ export async function putStations(stations) {
   }
 }
 
-export function addStationIfNeeded(createStation) {
-  return withStore("stations", "readwrite", store => new Promise((resolve, reject) => {
-    const lookup = store.getAll();
-    lookup.onerror = () => reject(lookup.error || new Error("Unable to read stations"));
-    lookup.onsuccess = () => {
-      let station;
-      try { station = createStation(lookup.result); } catch (error) { reject(error); return; }
-      if (!station) return resolve(false);
-      const request = store.add(redactStation(station));
-      request.onsuccess = () => { comparisonRevision++; resolve(true); };
-      request.onerror = () => reject(request.error || new Error("Unable to add station"));
-    };
-  }));
-}
-
 export async function getSnapshots({ stationId, limit = 50 } = {}) {
   const rows = await withStore("snapshots", "readonly", store => requestToPromise(stationId ? store.index("stationId").getAll(stationId) : store.getAll()));
   return sortSnapshots(rows.filter(row => isValidSnapshot(row) && (!stationId || row.stationId === stationId))).slice(0, limit);

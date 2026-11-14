@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { HEPINGAN_CHANNELS_ENDPOINT, localStoragePageAuth, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -10,7 +12,7 @@ const preset = {
   adapter: { endpoint: HEPINGAN_CHANNELS_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "hepingan",
   host: "api.hepingan.top",
   matches: ({ hostname, path }) => hostname === "api.hepingan.top" && path === "/available-channels",
@@ -31,3 +33,7 @@ export const sitePlugin = {
     pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 Hepingan 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401])
   })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

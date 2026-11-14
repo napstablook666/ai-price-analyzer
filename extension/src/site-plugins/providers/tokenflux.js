@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { requestPolicy, TOKENFLUX_PRICING_ENDPOINT } from "../../core/provider-registry.js";
 
 const preset = {
@@ -15,7 +17,7 @@ const preset = {
   adapter: { kind: "tokenflux", endpoint: TOKENFLUX_PRICING_ENDPOINT, method: "GET", responseFormat: "tokenflux" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "tokenflux",
   host: "tokenflux.cloud",
   matches: ({ hostname, path }) => hostname === "tokenflux.cloud" && ["/", "/pricing"].includes(path),
@@ -34,3 +36,7 @@ export const sitePlugin = {
   preset,
   request: requestPolicy(() => TOKENFLUX_PRICING_ENDPOINT, { credentials: "omit" })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

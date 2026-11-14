@@ -1,5 +1,6 @@
 import { PRICE_FIELD_DEFINITIONS } from "./price-fields.js";
 import { AIAPI_PRICE_KEYS } from "./aiapi-contract.js";
+import { SITE_PLUGIN_ORDER } from "../shared/plugin-order.js";
 
 const MODEL_PLAZA_RAW_PRICE_KEYS = [
   "per_request_price", "rate_multiplier", "user_rate_multiplier", "image_rate_multiplier", "video_rate_multiplier"
@@ -128,13 +129,7 @@ export function publicPricingProvider(id, hostname, preset = null, rationale = "
   };
 }
 
-const PROVIDER_ORDER = [
-  "sevenai", "tokenflux", "linux-do-marketplace", "windhub", "centos", "true-sota",
-  "sidrune", "nodeai", "killai", "fuck-everyone", "cun", "soleapi", "dddai",
-  "liuguang", "public-pricing", "hepingan", "all-in-one", "aiapi", "fastaitoken",
-  "nexavlinks", "cheaprouter", "jiji"
-];
-
+const PROVIDER_ORDER = SITE_PLUGIN_ORDER;
 // Keep the exported binding stable: collectors and request strategies read it lazily.
 export const PROVIDER_REGISTRY = [];
 
@@ -164,6 +159,22 @@ export function providerForStation(station = {}, { forPrepare = false } = {}) {
   const context = stationContext(station);
   if (!context.url) return null;
   return PROVIDER_REGISTRY.find(provider => (forPrepare ? provider.prepareMatches || provider.matches : provider.matches)(context, station)) || null;
+}
+
+// 插件自带的模型拼写适配：站点把 glm-5.3 写成别的样子时，由插件自己声明映射。
+export function modelAliasesForStation(station = {}) {
+  const provider = providerForStation(station);
+  const aliases = provider?.modelAliases;
+  return Array.isArray(aliases) ? aliases : [];
+}
+
+export function modelAliasesForStations(stations = []) {
+  const result = {};
+  for (const station of stations) {
+    const aliases = modelAliasesForStation(station);
+    if (aliases.length) result[station.id] = aliases;
+  }
+  return result;
 }
 
 export function providerById(id) {

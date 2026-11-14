@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { requestPolicy, SEVENAI_MODEL_PLAZA_ENDPOINT } from "../../core/provider-registry.js";
 
 const preset = {
@@ -13,7 +15,7 @@ const preset = {
   adapter: { kind: "sevenai-model-plaza", endpoint: SEVENAI_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "sevenai-model-plaza" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "sevenai",
   preserveRechargeRateVerification: true,
   host: "sevenai.moe",
@@ -33,3 +35,7 @@ export const sitePlugin = {
   preset,
   request: requestPolicy(() => SEVENAI_MODEL_PLAZA_ENDPOINT, { credentials: "omit" })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

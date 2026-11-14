@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { CHEAP_ROUTER_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -10,7 +12,7 @@ const preset = {
   adapter: { kind: "cheaprouter", endpoint: CHEAP_ROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "cheaprouter",
   host: "cheaprouter.cc",
   matches: ({ hostname, path }) => hostname === "cheaprouter.cc" && path === "/models",
@@ -26,3 +28,7 @@ export const sitePlugin = {
   preset,
   request: requestPolicy(() => CHEAP_ROUTER_PRICING_ENDPOINT, { credentials: "omit" })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -18,7 +20,7 @@ const preset = {
   adapter: { kind: "fuck-everyone-model-plaza", endpoint: FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "fuck-everyone-model-plaza" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "fuck-everyone",
   preserveRechargeRateVerification: true,
   host: "fuck-everyone.com",
@@ -48,3 +50,7 @@ export const sitePlugin = {
   preset,
   request: requestPolicy(() => FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT, { credentials: "omit" })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

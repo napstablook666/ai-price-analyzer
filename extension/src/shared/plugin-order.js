@@ -1,0 +1,25 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+export const SITE_PLUGIN_ORDER = [
+  "sevenai",
+  "tokenflux",
+  "linux-do-marketplace",
+  "windhub",
+  "centos",
+  "true-sota",
+  "sidrune",
+  "nodeai",
+  "killai",
+  "fuck-everyone",
+  "cun",
+  "soleapi",
+  "dddai",
+  "liuguang",
+  "public-pricing",
+  "hepingan",
+  "all-in-one",
+  "aiapi",
+  "fastaitoken",
+  "nexavlinks",
+  "cheaprouter",
+  "jiji"
+];

@@ -1,0 +1,8 @@
+{
+  "id": "nexavlinks",
+  "name": "NexaVlinks",
+  "host": "nexavlinks.com",
+  "mode": "page",
+  "order": 20,
+  "description": "读取当前账号的模型渠道"
+}

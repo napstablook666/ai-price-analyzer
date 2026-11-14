@@ -1,0 +1,11 @@
+{
+  "id": "all-in-one",
+  "name": "all-in-one.icu",
+  "host": "all-in-one.icu",
+  "mode": "page",
+  "order": 17,
+  "paths": [
+    "/tenant/models"
+  ],
+  "description": "租户模型价格，页面会话采集"
+}

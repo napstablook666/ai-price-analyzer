@@ -1,0 +1,8 @@
+{
+  "id": "fastaitoken",
+  "name": "fastaitoken.com",
+  "host": "fastaitoken.com",
+  "mode": "page",
+  "order": 19,
+  "description": "读取当前账号的可用渠道"
+}

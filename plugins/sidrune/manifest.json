@@ -1,0 +1,11 @@
+{
+  "id": "sidrune",
+  "name": "Sidrune",
+  "host": "sidrune.ai",
+  "mode": "direct",
+  "order": 7,
+  "paths": [
+    "/model-plaza"
+  ],
+  "description": "公开模型广场，支持汇率配置"
+}

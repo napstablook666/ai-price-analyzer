@@ -1,0 +1,12 @@
+{
+  "id": "linux-do-marketplace",
+  "name": "Linux.do Marketplace",
+  "host": "hub.linux.do",
+  "mode": "page",
+  "order": 3,
+  "paths": [
+    "/marketplace"
+  ],
+  "category": "public",
+  "description": "只读 GraphQL 价格，页面会话采集"
+}

@@ -1,0 +1,12 @@
+{
+  "id": "dddai",
+  "name": "dddai.dev",
+  "host": "dddai.dev",
+  "mode": "direct",
+  "order": 13,
+  "paths": [
+    "/",
+    "/pricing"
+  ],
+  "description": "公开模型价格 API"
+}

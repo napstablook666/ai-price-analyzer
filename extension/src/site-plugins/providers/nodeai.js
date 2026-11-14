@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { NODEAI_MODEL_PLAZA_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -13,7 +15,7 @@ const preset = {
   adapter: { kind: "nodeai-model-plaza", endpoint: NODEAI_MODEL_PLAZA_ENDPOINT, method: "GET", responseFormat: "nodeai-model-plaza" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "nodeai",
   host: "nodeai.cc",
   matches: ({ hostname, path }) => hostname === "nodeai.cc" && path === "/model-plaza",
@@ -31,3 +33,7 @@ export const sitePlugin = {
   preset,
   request: requestPolicy(() => NODEAI_MODEL_PLAZA_ENDPOINT, { credentials: "omit" })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

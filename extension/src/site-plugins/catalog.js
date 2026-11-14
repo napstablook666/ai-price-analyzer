@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { stationContext } from "../core/provider-registry.js";
 import { sitePlugin as sevenaiPlugin } from "./providers/sevenai.js";
 import { sitePlugin as tokenfluxPlugin } from "./providers/tokenflux.js";
@@ -39,27 +41,27 @@ const entry = (id, name, host, mode, load, options = {}) => ({
 // MV3 service workers require static module imports; provider registration stays on demand.
 export const SITE_PLUGIN_CATALOG = [
   entry("sevenai", "SevenAI", "sevenai.moe", "direct", () => ({ sitePlugin: sevenaiPlugin }), { paths: ["/model-plaza"], description: "公开模型广场，直连采集" }),
-  entry("tokenflux", "TokenFlux", "tokenflux.cloud", "direct", () => ({ sitePlugin: tokenfluxPlugin }), { paths: ["/", "/pricing"], description: "公开定价 API，直连采集" }),
-  entry("linux-do-marketplace", "Linux.do Marketplace", "hub.linux.do", "page", () => ({ sitePlugin: linuxDoMarketplacePlugin }), { category: "public", paths: ["/marketplace"], description: "只读 GraphQL 价格，页面会话采集" }),
-  entry("windhub", "WindHub", "windhub.cc", "direct", () => ({ sitePlugin: windhubPlugin }), { category: "public", paths: ["/pricing"], description: "公益站公开价格接口" }),
+  entry("tokenflux", "TokenFlux", "tokenflux.cloud", "direct", () => ({ sitePlugin: tokenfluxPlugin }), { paths: ["/","/pricing"], description: "公开定价 API，直连采集" }),
+  entry("linux-do-marketplace", "Linux.do Marketplace", "hub.linux.do", "page", () => ({ sitePlugin: linuxDoMarketplacePlugin }), { paths: ["/marketplace"], category: "public", description: "只读 GraphQL 价格，页面会话采集" }),
+  entry("windhub", "WindHub", "windhub.cc", "direct", () => ({ sitePlugin: windhubPlugin }), { paths: ["/pricing"], category: "public", description: "公益站公开价格接口" }),
   entry("centos", "ai.centos.hk", "ai.centos.hk", "direct", () => ({ sitePlugin: centosPlugin }), { paths: ["/pricing"], description: "公开定价 API，直连采集" }),
   entry("true-sota", "TrueSOTA", "true-sota.com", "direct", () => ({ sitePlugin: trueSotaPlugin }), { paths: ["/model-pricing"], description: "公开模型价格 API" }),
   entry("sidrune", "Sidrune", "sidrune.ai", "direct", () => ({ sitePlugin: sidrunePlugin }), { paths: ["/model-plaza"], description: "公开模型广场，支持汇率配置" }),
   entry("nodeai", "NodeAI", "nodeai.cc", "direct", () => ({ sitePlugin: nodeaiPlugin }), { paths: ["/model-plaza"], description: "公开模型广场，直连采集" }),
-  entry("killai", "KillAI", "api.killai.cc", "page", () => ({ sitePlugin: killaiPlugin }), { paths: ["/pricing", "/model-plaza"], description: "New API 价格，支持会话刷新" }),
+  entry("killai", "KillAI", "api.killai.cc", "page", () => ({ sitePlugin: killaiPlugin }), { paths: ["/pricing","/model-plaza"], description: "New API 价格，支持会话刷新" }),
   entry("fuck-everyone", "fuck-everyone.com", "fuck-everyone.com", "direct", () => ({ sitePlugin: fuckEveryonePlugin }), { paths: ["/model-plaza"], description: "公开模型广场，直连采集" }),
-  entry("cun", "CUN.AI", "cun.ai", "page", () => ({ sitePlugin: cunPlugin }), { paths: ["/", "/pricing"], description: "复用登录态读取价格 API" }),
-  entry("soleapi", "SoleAPI", "soleapi.com", "direct", () => ({ sitePlugin: soleapiPlugin }), { addable: false, description: "通过 Agent 添加具体模型页面" }),
-  entry("dddai", "dddai.dev", "dddai.dev", "direct", () => ({ sitePlugin: dddaiPlugin }), { paths: ["/", "/pricing"], description: "公开模型价格 API" }),
-  entry("liuguang", "liuguang.ai", "liuguang.ai", "direct", () => ({ sitePlugin: liuguangPlugin }), { paths: ["/", "/pricing"], description: "公开模型价格 API" }),
-  entry("public-pricing", "公开价格 API", "nomissapi.com", "direct", () => ({ sitePlugin: publicPricingPlugin }), { hosts: ["nomissapi.com", "yorhamc.com", "token123.cfd"], addable: false, description: "通用公开价格适配，通过 Agent 添加" }),
+  entry("cun", "CUN.AI", "cun.ai", "page", () => ({ sitePlugin: cunPlugin }), { paths: ["/","/pricing"], description: "复用登录态读取价格 API" }),
+  entry("soleapi", "SoleAPI", "soleapi.com", "direct", () => ({ sitePlugin: soleapiPlugin }), { addable: false, description: "按具体模型页地址添加" }),
+  entry("dddai", "dddai.dev", "dddai.dev", "direct", () => ({ sitePlugin: dddaiPlugin }), { paths: ["/","/pricing"], description: "公开模型价格 API" }),
+  entry("liuguang", "liuguang.ai", "liuguang.ai", "direct", () => ({ sitePlugin: liuguangPlugin }), { paths: ["/","/pricing"], description: "公开模型价格 API" }),
+  entry("public-pricing", "公开价格 API", "nomissapi.com", "direct", () => ({ sitePlugin: publicPricingPlugin }), { hosts: ["nomissapi.com","yorhamc.com","token123.cfd"], addable: false, description: "通用公开价格适配，按站点地址添加" }),
   entry("hepingan", "hepingan.top", "api.hepingan.top", "page", () => ({ sitePlugin: hepinganPlugin }), { paths: ["/available-channels"], description: "复用当前浏览器持久登录态" }),
   entry("all-in-one", "all-in-one.icu", "all-in-one.icu", "page", () => ({ sitePlugin: allInOnePlugin }), { paths: ["/tenant/models"], description: "租户模型价格，页面会话采集" }),
   entry("aiapi", "AIAPI", "cn.aiapi.bot", "page", () => ({ sitePlugin: aiapiPlugin }), { paths: ["/dashboard/model-prices"], description: "模型目录与价格，页面会话采集" }),
   entry("fastaitoken", "fastaitoken.com", "fastaitoken.com", "page", () => ({ sitePlugin: fastaitokenPlugin }), { description: "读取当前账号的可用渠道" }),
   entry("nexavlinks", "NexaVlinks", "nexavlinks.com", "page", () => ({ sitePlugin: nexavlinksPlugin }), { description: "读取当前账号的模型渠道" }),
   entry("cheaprouter", "CheapRouter", "cheaprouter.cc", "direct", () => ({ sitePlugin: cheaprouterPlugin }), { paths: ["/models"], description: "公开模型价格 API" }),
-  entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { addable: false, description: "带 token 的模型市场，通过 Agent 添加" })
+  entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { addable: false, description: "带 token 的模型市场，按站点地址添加" })
 ];
 
 export function sitePluginById(id) {

@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { NEXA_CHANNEL_CATALOG_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -10,7 +12,7 @@ const preset = {
   adapter: { endpoint: NEXA_CHANNEL_CATALOG_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "nexavlinks",
   host: "nexavlinks.com",
   matches: ({ hostname }) => hostname === "nexavlinks.com",
@@ -27,3 +29,7 @@ export const sitePlugin = {
   preset,
   request: requestPolicy(() => NEXA_CHANNEL_CATALOG_ENDPOINT, { credentials: "include" })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

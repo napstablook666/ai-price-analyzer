@@ -35,10 +35,6 @@ export function loadedSitePluginIds() {
   return SITE_PLUGIN_CATALOG.filter(plugin => providerById(plugin.id)).map(plugin => plugin.id);
 }
 
-export async function loadAllSitePlugins() {
-  return loadSitePlugins(SITE_PLUGIN_CATALOG.map(plugin => plugin.id));
-}
-
 export function resetSitePluginLoader() {
   resetProviderRegistry();
 }

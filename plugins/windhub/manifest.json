@@ -1,0 +1,12 @@
+{
+  "id": "windhub",
+  "name": "WindHub",
+  "host": "windhub.cc",
+  "mode": "direct",
+  "order": 4,
+  "paths": [
+    "/pricing"
+  ],
+  "category": "public",
+  "description": "公益站公开价格接口"
+}

@@ -1,8 +1,8 @@
 import { collectStation, createPageFetch } from "./core/collectors.js";
-import { prepareStationInput, providerForStation } from "./core/provider-registry.js";
+import { modelAliasesForStations, prepareStationInput, providerForStation } from "./core/provider-registry.js";
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
-import { suggestStationAdapter, inferStationAdapter } from "./core/adapters.js";
+import { inferStationAdapter } from "./core/adapters.js";
 import { addProviderStationPresets } from "./core/station-presets.js";
 import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins } from "./site-plugins/loader.js";
 import { sitePluginById, sitePluginCatalogForStations, sitePluginForStation } from "./site-plugins/catalog.js";
@@ -10,15 +10,12 @@ import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
 import { fetchReferences } from "./core/openrouter.js";
-import { fetchModelCatalog, requestJevChoices, testModelConnection } from "./core/model-api.js";
 import { buildComparisonRows, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
-import { getJevModelCandidates, matchModelWithOverrides, normalizeProxyModelName } from "./core/matching.js";
-import { buildJevComparisonTask, buildJevModelMatchTask, isExtensionPageSender, JEV_NO_MATCH, resolveJevTaskConfig } from "./core/jev-tasks.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
-import { activeJevProfile, DEFAULT_JEV_CONFIG, DEFAULT_LLM_CONFIG, isSecureRemoteUrl, normalizeSettings, normalizeStation } from "./shared/schema.js";
+import { normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
-import { getJevApiKey, getLlmApiKey, getProviderApiKey, getStationCredential, hasJevApiKey, hasLlmApiKey, hasProviderApiKey, removeProviderApiKey, removeStationCredential, selectProviderApiKey, setJevApiKey, setLlmApiKey, setProviderApiKey, setStationCredential } from "./shared/credentials.js";
+import { getStationCredential, removeStationCredential, setStationCredential } from "./shared/credentials.js";
 import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
 
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
@@ -39,28 +36,8 @@ async function getSettings() {
   return normalizeSettings(await getValue("settings", {}));
 }
 
-async function profilesForUi(kind, profiles) {
-  return Promise.all((profiles || []).map(async profile => ({
-    ...profile,
-    hasApiKey: await hasProviderApiKey(kind, profile.id)
-  })));
-}
 async function settingsForUi() {
-  const value = await getSettings();
-  const [legacyLlmKey, legacyJevKey, activeLlmKey, activeJevKey, llmProfiles, jevProfiles] = await Promise.all([
-    hasLlmApiKey(),
-    hasJevApiKey(),
-    hasProviderApiKey("llm", value.activeProviders.llm),
-    hasProviderApiKey("jev", value.activeProviders.jev),
-    profilesForUi("llm", value.providerProfiles.llm),
-    profilesForUi("jev", value.providerProfiles.jev)
-  ]);
-  return {
-    ...value,
-    providerProfiles: { llm: llmProfiles, jev: jevProfiles },
-    llm: { ...value.llm, hasApiKey: activeLlmKey || legacyLlmKey },
-    jev: { ...value.jev, hasApiKey: value.activeProviders.jev ? activeJevKey : legacyJevKey }
-  };
+  return await getSettings();
 }
 
 async function stationWithCredentials(station) {
@@ -513,9 +490,6 @@ async function refreshOfficialReferences(force = false) {
   notifyReferencesRefresh(true);
   return task;
 }
-function assertModelMatchJevIdle() {
-  if (refreshAllTask || refreshReferencesTask) throw new Error("数据刷新中，模型匹配核验已停止");
-}
 
 async function refreshAll(options = {}) {
   if (refreshAllTask) {
@@ -574,6 +548,7 @@ async function dashboard() {
       usage: savedSettings.usage,
       rules: savedSettings.matchingRules,
       modelMatchOverrides: savedSettings.modelMatchOverrides,
+      modelAliases: modelAliasesForStations(comparisonStations),
       showUnmatched: savedSettings.showUnmatched,
       recommendationProfile: savedSettings.recommendationProfile
     });
@@ -753,103 +728,11 @@ async function saveComparisonMode(mode) {
   return dashboard();
 }
 
-async function saveSettings(input, { llmApiKey, clearLlmApiKey, jevApiKey, clearJevApiKey } = {}) {
-  const llmBaseUrl = String(input?.llm?.baseUrl || "").trim();
-  const jevBaseUrl = String(input?.jev?.baseUrl || "").trim();
-  if (llmBaseUrl && !isSecureRemoteUrl(llmBaseUrl)) throw new Error("LLM 地址必须使用 HTTPS；仅允许 localhost 使用 HTTP");
-  if (jevBaseUrl && !isSecureRemoteUrl(jevBaseUrl)) throw new Error("JEV 地址必须使用 HTTPS；仅允许 localhost 使用 HTTP");
+async function saveSettings(input = {}) {
   const next = normalizeSettings(input);
   const invalidation = invalidateRefreshPreflight();
-  for (const kind of ["llm", "jev"]) {
-    const activeId = next.activeProviders[kind];
-    if (!activeId) continue;
-    next.providerProfiles[kind] = next.providerProfiles[kind].map(profile => profile.id === activeId ? { ...profile, ...next[kind] } : profile);
-  }
-  if (clearLlmApiKey) {
-    await setLlmApiKey("");
-    if (next.activeProviders.llm) await removeProviderApiKey("llm", next.activeProviders.llm);
-  } else if (llmApiKey !== undefined && String(llmApiKey).trim()) {
-    await setLlmApiKey(llmApiKey);
-    if (next.activeProviders.llm) await setProviderApiKey("llm", next.activeProviders.llm, llmApiKey);
-  }
-  if (clearJevApiKey) {
-    await setJevApiKey("");
-    if (next.activeProviders.jev) await removeProviderApiKey("jev", next.activeProviders.jev);
-  } else if (jevApiKey !== undefined && String(jevApiKey).trim()) {
-    await setJevApiKey(jevApiKey);
-    if (next.activeProviders.jev) await setProviderApiKey("jev", next.activeProviders.jev, jevApiKey);
-  }
   await setValue("settings", next);
   await invalidation;
-  return settingsForUi();
-}
-async function saveProviderProfile({ kind, profileId, name, config = {}, apiKey, clearApiKey } = {}) {
-  const normalizedKind = kind === "jev" ? "jev" : "llm";
-  const baseUrl = String(config.baseUrl || "").trim();
-  if (!baseUrl) throw new Error("请先填写 API 地址");
-  if (!isSecureRemoteUrl(baseUrl)) throw new Error(`${normalizedKind === "jev" ? "JEV" : "LLM"} 地址必须使用 HTTPS；仅允许 localhost 使用 HTTP`);
-  const current = await getSettings();
-  const id = String(profileId || crypto.randomUUID()).trim();
-  const displayName = String(name || "").trim() || new URL(baseUrl).hostname;
-  const profile = normalizeSettings({
-    providerProfiles: { [normalizedKind]: [{ id, name: displayName, ...config, baseUrl }] }
-  }).providerProfiles[normalizedKind][0];
-  const profiles = current.providerProfiles[normalizedKind].filter(item => item.id !== id);
-  const next = normalizeSettings({
-    ...current,
-    [normalizedKind]: profile,
-    providerProfiles: { ...current.providerProfiles, [normalizedKind]: [...profiles, profile] },
-    activeProviders: { ...current.activeProviders, [normalizedKind]: id }
-  });
-  if (clearApiKey) await removeProviderApiKey(normalizedKind, id);
-  else if (String(apiKey || "").trim()) await setProviderApiKey(normalizedKind, id, apiKey);
-  else if (!await hasProviderApiKey(normalizedKind, id)) {
-    const legacyKey = normalizedKind === "jev" ? await getJevApiKey() : await getLlmApiKey();
-    if (legacyKey) await setProviderApiKey(normalizedKind, id, legacyKey);
-  }
-  const storedKey = await getProviderApiKey(normalizedKind, id);
-  if (normalizedKind === "jev") await setJevApiKey(storedKey);
-  else await setLlmApiKey(storedKey);
-  await setValue("settings", next);
-  return settingsForUi();
-}
-async function switchProvider({ kind, profileId } = {}) {
-  const normalizedKind = kind === "jev" ? "jev" : "llm";
-  const current = await getSettings();
-  const profile = current.providerProfiles[normalizedKind].find(item => item.id === String(profileId || ""));
-  if (!profile) throw new Error("供应商档案不存在或已删除");
-  const next = normalizeSettings({
-    ...current,
-    [normalizedKind]: profile,
-    activeProviders: { ...current.activeProviders, [normalizedKind]: profile.id }
-  });
-  const key = await getProviderApiKey(normalizedKind, profile.id);
-  if (normalizedKind === "jev") await setJevApiKey(key);
-  else await setLlmApiKey(key);
-  await setValue("settings", next);
-  return dashboard();
-}
-async function deleteProviderProfile({ kind, profileId } = {}) {
-  const normalizedKind = kind === "jev" ? "jev" : "llm";
-  const current = await getSettings();
-  const id = String(profileId || "");
-  if (!id) return settingsForUi();
-  const wasActive = current.activeProviders[normalizedKind] === id;
-  const remaining = current.providerProfiles[normalizedKind].filter(profile => profile.id !== id);
-  const nextProfile = remaining[0] || null;
-  const next = normalizeSettings({
-    ...current,
-    [normalizedKind]: nextProfile || (normalizedKind === "jev" ? DEFAULT_JEV_CONFIG : DEFAULT_LLM_CONFIG),
-    providerProfiles: { ...current.providerProfiles, [normalizedKind]: remaining },
-    activeProviders: { ...current.activeProviders, [normalizedKind]: nextProfile?.id || "" }
-  });
-  await removeProviderApiKey(normalizedKind, id);
-  if (wasActive) {
-    const key = nextProfile ? await getProviderApiKey(normalizedKind, nextProfile.id) : "";
-    if (normalizedKind === "jev") await setJevApiKey(key);
-    else await setLlmApiKey(key);
-  }
-  await setValue("settings", next);
   return settingsForUi();
 }
 
@@ -864,7 +747,7 @@ function discoveryFromSnapshot(snapshot) {
 async function adaptStation(message) {
   const current = normalizeSettings(message.settings || await getSettings());
   const station = message.station || {};
-  const local = inferStationAdapter(station, current.jev);
+  const local = inferStationAdapter(station);
   const probeStation = { ...station, adapter: { ...(station.adapter || {}), endpoint: local.endpoint, method: "GET", responseFormat: "auto" } };
   let discovery = null;
   let discoveryWarning = "";
@@ -875,145 +758,19 @@ async function adaptStation(message) {
     discovery = { url: station.baseUrl || "", status: 0, sourceFormat: "error", modelCount: 0, models: [] };
     discoveryWarning = `公开模型列表探测失败（仍可确认添加）：${error.message}`;
   }
-  const activeKey = await getProviderApiKey("llm", current.activeProviders.llm);
-  const apiKey = String(message.llmApiKey || "").trim() || activeKey || await getLlmApiKey();
   const notices = discoveryWarning ? [discoveryWarning] : [];
-  try {
-    const suggestion = await suggestStationAdapter({ station, llm: current.llm, jev: current.jev, discovery, apiKey });
-    if (!current.llm.enabled) notices.push("未启用 LLM，已使用本地规则");
-    return { suggestion, discovery, warning: notices.join("；") };
-  } catch (error) {
-    return {
-      suggestion: { ...local, source: "fallback" },
-      discovery,
-      warning: [...notices, `LLM 未响应，已使用本地规则：${error.message}`].join("；")
-    };
-  }
-}
-
-async function getModelRequestConfig(message) {
-  const kind = message.kind === "jev" ? "jev" : "llm";
-  const settings = normalizeSettings(message.settings || await getSettings());
-  const isJev = kind === "jev";
-  const baseUrl = String(isJev ? settings.jev.baseUrl : settings.llm.baseUrl).trim();
-  const modelId = String(message.modelId || (isJev ? settings.jev.modelId : settings.llm.model) || "").trim();
-  const explicitKey = String(isJev ? (message.jevApiKey || "") : (message.llmApiKey || "")).trim();
-  const profileId = settings.activeProviders[kind];
-  const activeKey = await getProviderApiKey(kind, profileId);
-  const legacyKey = isJev ? (profileId ? "" : await getJevApiKey()) : await getLlmApiKey();
-  const storedKey = selectProviderApiKey(kind, profileId, activeKey, legacyKey);
-  return { kind, baseUrl, modelId, apiKey: explicitKey || storedKey };
-}
-
-async function fetchModels(message) {
-  const config = await getModelRequestConfig(message);
-  return fetchModelCatalog(config);
-}
-
-async function testModel(message) {
-  const config = await getModelRequestConfig(message);
-  return testModelConnection({ ...config, model: config.modelId });
+  return { suggestion: local, discovery, warning: notices.join("；") };
 }
 
 
 
-async function jevRequestConfig(settings) {
-  const profile = activeJevProfile(settings);
-  const profileId = settings.activeProviders.jev;
-  const activeKey = await getProviderApiKey("jev", profileId);
-  const legacyKey = profileId ? "" : await getJevApiKey();
-  const apiKey = selectProviderApiKey("jev", profileId, activeKey, legacyKey);
-  return resolveJevTaskConfig({ jev: profile }, apiKey);
-}
 
-async function runJevTask(message) {
-  const task = message.task === "model_match" ? "model_match" : message.task === "comparison_review" ? "comparison_review" : "";
-  if (!task) throw new Error("未知 JEV 任务");
-  if (task === "model_match") assertModelMatchJevIdle();
-  const stationId = String(message.stationId || "").trim();
-  const modelName = String(message.modelName || "").trim();
-  if (!stationId || !modelName) throw new Error("缺少站点或模型标识");
 
-  const data = await dashboard();
-  const station = data.stations.find(item => item.id === stationId);
-  const snapshot = data.snapshots.find(item => item.stationId === stationId);
-  const source = snapshot?.normalized?.data?.find(item => item.model_name === modelName && !item.catalogOnly);
-  if (!station || !source) throw new Error("当前站点中没有此模型报价");
 
-  const settings = await getSettings();
-  const config = await jevRequestConfig(settings);
-  if (Number(message.collectedAt) !== Number(snapshot.collectedAt) || (message.referencesFetchedAt ?? null) !== (data.references.fetchedAt ?? null) || message.jevProfileId !== settings.activeProviders.jev || message.jevBaseUrl !== config.baseUrl || message.jevModelId !== config.model) {
-    throw new Error("报价、官方目录或 JEV 配置已变化，请刷新页面后重试");
-  }
-  let requestTask;
-  let questionId;
-  let collectedAt = snapshot.collectedAt;
-  if (task === "model_match") {
-    if (settings.modelMatchOverrides.some(item => item.stationId === stationId && normalizeProxyModelName(item.modelName) === normalizeProxyModelName(modelName))) throw new Error("该模型已有人工确认的匹配");
-    const { directMatches, candidates } = getJevModelCandidates(modelName, data.references.models || [], settings.matchingRules);
-    if (directMatches.length === 1 && directMatches[0].ruleId === "exact") throw new Error("该模型已有精确匹配，无需 JEV 建议");
-    requestTask = buildJevModelMatchTask(modelName, candidates);
-    questionId = "model_match";
-  } else {
-    const groupName = String(message.groupName || "").trim();
-    const tierName = String(message.tierName || "").trim();
-    const offer = flattenComparisonRows(data.comparisons).find(item => item.stationId === stationId && item.modelName === modelName && item.groupName === groupName && item.tierName === tierName && item.officialName === String(message.officialName || "").trim());
-    if (!offer?.officialName) throw new Error("找不到当前官方匹配报价");
-    collectedAt = offer.collectedAt;
-    requestTask = buildJevComparisonTask(offer);
-    questionId = "comparison_review";
-  }
 
-  const result = await requestJevChoices({ ...config, ...requestTask });
-  if (task === "model_match") assertModelMatchJevIdle();
-  return {
-    task, stationId, modelName, groupName: String(message.groupName || ""), tierName: String(message.tierName || ""), collectedAt,
-    jevProfileId: settings.activeProviders.jev, jevBaseUrl: config.baseUrl, jevModelId: config.model,
-    referencesFetchedAt: data.references.fetchedAt ?? null, taskState: requestTask.state,
-    candidateIds: task === "model_match" ? Object.keys(requestTask.questions[questionId].criteria).filter(id => id !== JEV_NO_MATCH).sort() : [],
-    choice: result.answers[questionId].choice, confidence: result.answers[questionId].confidence
-  };
-}
 
-async function saveJevModelMatch(message) {
-  assertModelMatchJevIdle();
-  const stationId = String(message.stationId || "").trim();
-  const modelName = String(message.modelName || "").trim();
-  const officialModelId = String(message.officialModelId || "").trim();
-  const [stations, snapshots, references, settings] = await Promise.all([
-    getStations(), getSnapshots({ stationId, limit: 500 }), getValue("references", {}), getSettings()
-  ]);
-  if (!stations.some(station => station.id === stationId)) throw new Error("中转站不存在");
-  const activeJev = activeJevProfile(settings);
-  if (Number(message.collectedAt) !== Number(snapshots[0]?.collectedAt) || (message.referencesFetchedAt ?? null) !== (references.fetchedAt ?? null) || message.jevProfileId !== settings.activeProviders.jev || message.jevBaseUrl !== String(activeJev.baseUrl || "").trim() || message.jevModelId !== String(activeJev.modelId || "").trim()) {
-    throw new Error("报价、官方目录或 JEV 配置已变化，请刷新页面后重试");
-  }
-  if (!["success", "partial"].includes(snapshots[0]?.status) || !snapshots[0].normalized?.data?.some(item => item.model_name === modelName && !item.catalogOnly)) throw new Error("最新报价已变化或采集失败，请先重新采集");
-  if (!references.models?.some(model => (model.id || model.name) === officialModelId)) throw new Error("官方模型候选已失效，请重新获取官方数据");
-  if (settings.modelMatchOverrides.some(item => item.stationId === stationId && normalizeProxyModelName(item.modelName) === normalizeProxyModelName(modelName))) throw new Error("该模型已有人工确认的匹配");
-  const { directMatches, candidates } = getJevModelCandidates(modelName, references.models, settings.matchingRules);
-  const currentCandidateIds = candidates.map(model => String(model.id || model.name)).sort();
-  if (JSON.stringify(message.candidateIds) !== JSON.stringify(currentCandidateIds)) throw new Error("官方模型候选已变化，请重新获取 JEV 建议");
-  if (directMatches.length === 1 && directMatches[0].ruleId === "exact") throw new Error("该模型已有精确匹配，无需人工覆盖");
-  if (officialModelId === JEV_NO_MATCH || !candidates.some(model => (model.id || model.name) === officialModelId)) throw new Error("模型不在当前 JEV 候选范围内");
-  const modelMatchOverrides = [...settings.modelMatchOverrides, { stationId, modelName, officialModelId }];
-  assertModelMatchJevIdle();
-  await setValue("settings", normalizeSettings({ ...settings, modelMatchOverrides }));
-  return dashboard();
-}
 
-async function removeJevModelMatch(message) {
-  const stationId = String(message.stationId || "").trim();
-  const modelName = String(message.modelName || "").trim();
-  const settings = await getSettings();
-  const modelMatchOverrides = settings.modelMatchOverrides.filter(item => !(item.stationId === stationId && normalizeProxyModelName(item.modelName) === normalizeProxyModelName(modelName)));
-  await setValue("settings", normalizeSettings({ ...settings, modelMatchOverrides }));
-  return dashboard();
-}
 
-function requireExtensionPage(sender) {
-  if (!isExtensionPageSender(sender, chrome.runtime.getURL(""))) throw new Error("此 JEV 操作仅能从扩展面板发起");
-}
 
 
 async function handle(message, sender) {
@@ -1022,23 +779,9 @@ async function handle(message, sender) {
     case "SAVE_COMPARISON_MODE": return saveComparisonMode(message.mode);
     case "GET_SETTINGS": return settingsForUi();
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
-    case "SAVE_PROVIDER_PROFILE": return saveProviderProfile(message);
-    case "SWITCH_PROVIDER": return switchProvider(message);
-    case "DELETE_PROVIDER_PROFILE": return deleteProviderProfile(message);
     case "SAVE_STATIONS": return saveStations(message.stations);
     case "ADD_SITE_PLUGINS": return addSitePlugins(message.ids);
     case "ADAPT_STATION": return adaptStation(message);
-    case "FETCH_MODELS": return fetchModels(message);
-    case "TEST_MODEL": return testModel(message);
-    case "ANALYZE_JEV":
-      requireExtensionPage(sender);
-      return runJevTask(message);
-    case "SAVE_JEV_MODEL_MATCH":
-      requireExtensionPage(sender);
-      return saveJevModelMatch(message);
-    case "REMOVE_JEV_MODEL_MATCH":
-      requireExtensionPage(sender);
-      return removeJevModelMatch(message);
     case "CHECKIN_STATUS":
       return checkinAll({ stationId: message.stationId, stationOrigin: message.stationOrigin, claim: false, autoOnly: false });
     case "CHECKIN_NOW":

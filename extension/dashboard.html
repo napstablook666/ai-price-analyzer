@@ -17,10 +17,6 @@
     <nav class="top-actions" aria-label="页面操作">
       <span class="system-readout"><span class="status-dot" id="connection-dot"></span><span id="last-updated">尚未刷新</span></span>
       <a class="button button-quiet" href="options.html#stations"><span data-icon="settings-2" class="icon"></span><span>站点与设置</span></a>
-      <div class="provider-switchers" aria-label="快速切换供应商">
-        <label class="provider-switch"><span>LLM</span><select id="llm-provider-switch"><option value="">未保存档案</option></select></label>
-        <label class="provider-switch"><span>JEV</span><select id="jev-provider-switch"><option value="">未保存档案</option></select></label>
-      </div>
       <button class="button button-quiet" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
       <button class="button button-quiet" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
       <button class="button button-primary" id="refresh-all" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新全部</span></button>
@@ -69,7 +65,6 @@
         <details class="facet-menu model-filter-menu" id="model-filter-menu"><summary><span data-icon="sliders-horizontal" class="icon"></span><span id="model-filter-label">模型对比</span></summary><div class="facet-menu-body model-filter-body"><div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div></div></details>
         <label class="select-field sort-field"><span class="sr-only">排序方式</span><span data-icon="arrow-down-up" class="icon"></span><select id="sort-by"><option value="groupName">分组</option><option value="provider" data-paid-only="true">官方源</option><option value="model">模型名称</option><option value="monthlyCost" data-paid-only="true" selected>月成本</option><option value="diffPercent" data-paid-only="true">相对官方</option><option value="recommendationScore" data-paid-only="true">推荐分</option><option value="confidenceScore">匹配置信度</option></select></label>
         <label class="select-field direction-field"><span class="sr-only">排序方向</span><select id="sort-direction"><option value="asc" selected>升序</option><option value="desc">降序</option></select></label>
-        <button class="button button-primary paid-only-control" id="batch-jev-match" type="button" title="逐个核验模型与官方匹配，自动确认 JEV 置信度达到 50% 的结果"><span data-icon="sparkles" class="icon"></span><span>批量 JEV 核验模型匹配 ≥50%</span></button>
         <button class="button button-quiet paid-only-control" id="fetch-references" type="button"><span data-icon="external-link" class="icon"></span><span>更新官方价</span></button>
         <button class="button button-quiet" id="reset-filters" type="button" title="重置筛选"><span data-icon="x" class="icon"></span><span>重置</span></button>
       </div>

@@ -194,11 +194,11 @@ export function addRecommendationScores(comparisons, profile = "price") {
   return comparisons;
 }
 
-export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, modelMatchOverrides = [], showUnmatched = true, recommendationProfile = "price" } = {}) {
+export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, modelMatchOverrides = [], modelAliases = {}, showUnmatched = true, recommendationProfile = "price" } = {}) {
   const stationMap = new Map(stations.map(station => [station.id, station]));
   const referenceList = Array.isArray(references.models) ? references.models : [];
   const latestByStation = new Map();
-  const matchingIndex = buildModelMatchIndex(referenceList, modelMatchOverrides);
+  const matchingIndex = buildModelMatchIndex(referenceList, modelMatchOverrides, { modelAliases });
   for (const snapshot of snapshots) {
     const previous = latestByStation.get(snapshot.stationId);
     if (!previous || snapshot.collectedAt > previous.collectedAt) latestByStation.set(snapshot.stationId, snapshot);
@@ -243,7 +243,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         for (const result of matchResults) {
           let costPrices = baseCostPrices;
           const official = result.match;
-          const canonicalModel = official?.name || item.model_name;
+          // 规范模型名优先：同一个模型在不同中转站的不同写法，最终都落到同一行。
+          const canonicalModel = result.canonical?.name || official?.name || item.model_name;
           const rowKey = [station.id, item.model_name, official?.name || "", official?.provider || "", group, item.tier_name ? "tier" : `item:${itemIndex}`].join("\u0000");
           const row = grouped.get(rowKey) || {
             canonicalModel,

@@ -1,0 +1,11 @@
+{
+  "id": "aiapi",
+  "name": "AIAPI",
+  "host": "cn.aiapi.bot",
+  "mode": "page",
+  "order": 18,
+  "paths": [
+    "/dashboard/model-prices"
+  ],
+  "description": "模型目录与价格，页面会话采集"
+}

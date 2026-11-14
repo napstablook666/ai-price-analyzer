@@ -5,14 +5,15 @@ import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
 import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
-import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, LINUX_DO_MARKETPLACE_URL, WINDHUB_PRICING_ENDPOINT, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
+import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, LINUX_DO_MARKETPLACE_URL, WINDHUB_PRICING_ENDPOINT, PROVIDER_REGISTRY, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationScores, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, getTierShares, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
 import { createDashboardIndex, createModelBands, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
-import { buildModelMatchIndex, getJevModelCandidates, matchModel, matchModelWithOverrides, matchOne, suggestModelCandidates } from "../src/core/matching.js";
+import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
+import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
 import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
 import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
@@ -32,19 +33,17 @@ import {
   PAGE_WINDOW_RESPONSE_TYPE
 } from "../src/core/bridge-protocol.js";
 import { ensurePageBridge, findOrOpenPageTab, resetContentBridge, selectPageTab } from "../src/core/page-tabs.js";
-import { inferStationAdapter, parseAdapterSuggestion } from "../src/core/adapters.js";
-import { addStationIfNeeded, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, putSnapshot, putStations, redactStation } from "../src/shared/db.js";
-import { getProviderApiKey, hasProviderApiKey, selectProviderApiKey, setProviderApiKey } from "../src/shared/credentials.js";
-import { buildJevComparisonTask, buildJevModelMatchTask, getJevModelBatchTargets, isExtensionPageSender, resolveJevTaskConfig } from "../src/core/jev-tasks.js";
-import { fetchModelCatalog, parseModelCatalog, requestJevChoices, testModelConnection } from "../src/core/model-api.js";
-import { addAiApiStationPreset, addAllInOneStationPreset, addCentosStationPreset, addPublicStationPresets, addHepinganStationPreset, addCheapRouterStationPreset, addCunStationPreset, addDddaiStationPreset, addFastAiStationPreset, addFuckEveryoneStationPreset, addLiuguangStationPreset, addLinuxDoMarketplaceStationPreset, addNexaStationPreset, addRegisteredStationPresets, addSidruneStationPreset, addTrueSotaStationPreset, addWindHubStationPreset } from "../src/core/station-presets.js";
+import { inferStationAdapter } from "../src/core/adapters.js";
+import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, putSnapshot, putStations, redactStation } from "../src/shared/db.js";
+import { addProviderStationPresets } from "../src/core/station-presets.js";
 import { runWithConcurrency, withKeyedLock } from "../src/core/concurrency.js";
 import { runRefreshAll } from "../src/core/refresh-scheduler.js";
 
-import { loadAllSitePlugins } from "../src/site-plugins/loader.js";
+import { loadSitePlugins } from "../src/site-plugins/loader.js";
+import { SITE_PLUGIN_CATALOG } from "../src/site-plugins/catalog.js";
 
 // Legacy collector fixtures exercise every adapter; production loading is tested separately.
-await loadAllSitePlugins();
+await loadSitePlugins(SITE_PLUGIN_CATALOG.map(plugin => plugin.id));
 const collectStationInput = (stationInput, options = {}) => {
   const collection = resolveStationCollection(stationInput);
   return collectPreparedStation(collection.station, { ...options, collection });
@@ -465,15 +464,15 @@ const fuckEveryoneScreenshotFixture = {
     }]
   }
 };
-test("adds the all-in-one station preset idempotently without changing empty defaults", () => {
-  const stations = addAllInOneStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+test("adds the all-in-one station preset idempotently and seeds an empty list", () => {
+  const stations = addProviderStationPresets([{ id: "one", baseUrl: "https://soleapi.com" }], [providerById("all-in-one")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].baseUrl, "https://all-in-one.icu/#/tenant/models");
   assert.equal(stations[1].mode, "page");
   assert.equal(stations[1].adapter.endpoint, ALL_IN_ONE_MODELS_ENDPOINT);
   assert.equal(stations[1].adapter.responseFormat, "all-in-one-models");
-  assert.equal(addAllInOneStationPreset(stations), stations);
-  assert.equal(addAllInOneStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(stations, [providerById("all-in-one")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("all-in-one")]).length, 1);
 });
 
 test("opens the all-in-one hash-route page when no site tab is available", async () => {
@@ -499,26 +498,26 @@ test("opens the all-in-one hash-route page when no site tab is available", async
 
 test("adds the missing AIAPI station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addAiApiStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("aiapi")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].baseUrl, "https://cn.aiapi.bot/dashboard/model-prices");
   assert.equal(stations[1].mode, "page");
   assert.equal(stations[1].adapter.kind, "aiapi-model-catalog");
   assert.equal(stations[1].adapter.responseFormat, "aiapi-model-catalog");
-  assert.equal(addAiApiStationPreset(stations), stations);
-  assert.equal(addAiApiStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(stations, [providerById("aiapi")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("aiapi")]).length, 1);
 });
 
 
 test("adds and collects TrueSOTA public model pricing", async () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addTrueSotaStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("true-sota")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].baseUrl, "https://true-sota.com/model-pricing");
   assert.equal(stations[1].mode, "direct");
   assert.equal(stations[1].adapter.kind, "true-sota-model-pricing");
-  assert.equal(addTrueSotaStationPreset(stations), stations);
-  assert.equal(addTrueSotaStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(stations, [providerById("true-sota")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("true-sota")]).length, 1);
 
   const station = {
     id: "station-true-sota",
@@ -1742,21 +1741,21 @@ test("keeps model-list credits independent from recharge payment currency", asyn
 
 test("adds the missing DDDai station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addDddaiStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("dddai")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[0], current[0]);
   assert.equal(stations[1].id, "dddai");
   assert.equal(stations[1].name, "dddai.dev");
   assert.equal(stations[1].baseUrl, "https://dddai.dev/pricing");
   assert.equal(stations[1].enabled, true);
-  assert.equal(addDddaiStationPreset(stations), stations);
-  const collision = addDddaiStationPreset([{ id: "dddai", baseUrl: "https://other.example" }]);
+  assert.equal(addProviderStationPresets(stations, [providerById("dddai")]), stations);
+  const collision = addProviderStationPresets([{ id: "dddai", baseUrl: "https://other.example" }], [providerById("dddai")]);
   assert.equal(collision[1].id, "dddai-2");
-  assert.equal(addDddaiStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets([], [providerById("dddai")]).length, 1);
 });
 test("adds the missing Liuguang station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addLiuguangStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("liuguang")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[0], current[0]);
   assert.equal(stations[1].id, "liuguang");
@@ -1764,60 +1763,60 @@ test("adds the missing Liuguang station once for an existing registry", () => {
   assert.equal(stations[1].baseUrl, "https://www.liuguang.ai/pricing");
   assert.equal(stations[1].adapter.endpoint, "/api/models");
   assert.equal(stations[1].enabled, true);
-  assert.equal(addLiuguangStationPreset(stations), stations);
-  const collision = addLiuguangStationPreset([{ id: "liuguang", baseUrl: "https://other.example" }]);
+  assert.equal(addProviderStationPresets(stations, [providerById("liuguang")]), stations);
+  const collision = addProviderStationPresets([{ id: "liuguang", baseUrl: "https://other.example" }], [providerById("liuguang")]);
   assert.equal(collision[1].id, "liuguang-2");
 });
 
 test("adds the missing CheapRouter station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addCheapRouterStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("cheaprouter")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].id, "cheaprouter");
   assert.equal(stations[1].baseUrl, "https://cheaprouter.cc/models");
   assert.equal(stations[1].mode, "direct");
   assert.equal(stations[1].adapter.kind, "cheaprouter");
   assert.equal(stations[1].adapter.endpoint, "/api/v1/pricing/public?timezone=Asia%2FShanghai");
-  assert.equal(addCheapRouterStationPreset(stations), stations);
-  assert.equal(addCheapRouterStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(stations, [providerById("cheaprouter")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("cheaprouter")]).length, 1);
 });
 
 
 test("adds the missing FastAIToken station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addFastAiStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("fastaitoken")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[0], current[0]);
   assert.equal(stations[1].baseUrl, "https://www.fastaitoken.com/available-channels");
   assert.equal(stations[1].enabled, true);
-  assert.equal(addFastAiStationPreset(stations), stations);
-  const collision = addFastAiStationPreset([{ id: "fastaitoken", baseUrl: "https://other.example" }]);
+  assert.equal(addProviderStationPresets(stations, [providerById("fastaitoken")]), stations);
+  const collision = addProviderStationPresets([{ id: "fastaitoken", baseUrl: "https://other.example" }], [providerById("fastaitoken")]);
   assert.equal(collision[1].id, "fastaitoken-2");
-  assert.equal(addFastAiStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets([], [providerById("fastaitoken")]).length, 1);
 });
 
 test("adds the missing NexaVlinks station once for an existing registry", () => {
   const current = [{ id: "one", baseUrl: "https://soleapi.com" }];
-  const stations = addNexaStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("nexavlinks")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].baseUrl, "https://www.nexavlinks.com/modelsmarket");
   assert.equal(stations[1].mode, "page");
   assert.equal(stations[1].adapter.endpoint, "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai");
-  assert.equal(addNexaStationPreset(stations), stations);
-  assert.equal(addNexaStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(stations, [providerById("nexavlinks")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("nexavlinks")]).length, 1);
 });
 
 test("adds the missing CUN.AI station once for an existing registry", () => {
-  const stations = addCunStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+  const stations = addProviderStationPresets([{ id: "one", baseUrl: "https://soleapi.com" }], [providerById("cun")]);
   assert.equal(stations[1].baseUrl, "https://www.cun.ai/pricing");
   assert.equal(stations[1].mode, "page");
   assert.equal(stations[1].adapter.kind, "cun");
-  assert.equal(addCunStationPreset(stations), stations);
-  assert.equal(addCunStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(stations, [providerById("cun")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("cun")]).length, 1);
 });
 
 test("adds the Hepingan station preset", () => {
-  const stations = addHepinganStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+  const stations = addProviderStationPresets([{ id: "one", baseUrl: "https://soleapi.com" }], [providerById("hepingan")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].id, "hepingan");
   assert.equal(stations[1].baseUrl, "https://api.hepingan.top/available-channels");
@@ -1827,7 +1826,7 @@ test("adds the Hepingan station preset", () => {
 
 test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
-  const stations = addRegisteredStationPresets(current, { exchangeRate: 8.2 });
+  const stations = addProviderStationPresets(current, PROVIDER_REGISTRY, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
   assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "linux-do-marketplace", "windhub"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
@@ -1857,54 +1856,11 @@ test("injects every registry preset and forwards the exchange rate", () => {
   assert.equal(normalizeStation(killAi).rechargeRateVerified, false);
 });
 test("allocates a unique preset id when an existing station uses the provider id", () => {
-  const stations = addRegisteredStationPresets([{ id: "dddai", baseUrl: "https://other.example" }]);
+  const stations = addProviderStationPresets([{ id: "dddai", baseUrl: "https://other.example" }], PROVIDER_REGISTRY);
   const dddai = stations.find(station => station.baseUrl === "https://dddai.dev/pricing");
   assert.equal(dddai.id, "dddai-2");
 });
 
-
-test("adds a missing station preset in one transaction without rewriting saved stations", async () => {
-  const previousIndexedDb = globalThis.indexedDB;
-  const records = [{ id: "existing", baseUrl: "https://relay.example", auth: { type: "bearer", token: "keep-me" } }];
-  const database = {
-    close() {},
-    transaction() {
-      const transaction = { objectStore: () => ({
-        getAll() {
-          const request = {};
-          queueMicrotask(() => { request.result = structuredClone(records); request.onsuccess?.(); });
-          return request;
-        },
-        add(value) {
-          const request = {};
-          queueMicrotask(() => { records.push(structuredClone(value)); request.onsuccess?.(); });
-          return request;
-        }
-      }) };
-      setTimeout(() => transaction.oncomplete?.(), 0);
-      return transaction;
-    }
-  };
-  globalThis.indexedDB = { open() {
-    const request = { result: database };
-    queueMicrotask(() => request.onsuccess?.());
-    return request;
-  } };
-  try {
-    const addPreset = stations => {
-      const next = addFastAiStationPreset(stations);
-      return next === stations ? null : next.at(-1);
-    };
-    assert.equal(await addStationIfNeeded(addPreset), true);
-    assert.equal(records.length, 2);
-    assert.deepEqual(records[0], { id: "existing", baseUrl: "https://relay.example", auth: { type: "bearer", token: "keep-me" } });
-    assert.equal(await addStationIfNeeded(addPreset), false);
-    assert.equal(records.length, 2);
-  } finally {
-    if (previousIndexedDb === undefined) delete globalThis.indexedDB;
-    else globalThis.indexedDB = previousIndexedDb;
-  }
-});
 
 test("collects FastAIToken channel prices through the logged-in page", async () => {
   const station = {
@@ -2232,7 +2188,7 @@ test("shares partial diagnostic formatting across refresh consumers", () => {
 });
 
 test("keeps tier-level model-plaza gaps across unlabeled interval order", async () => {
-  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const [, preset] = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], [providerById("fuck-everyone")]);
   const adapter = inferStationAdapter(preset);
   const settings = { ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true };
   const createFixture = intervals => ({
@@ -2348,7 +2304,7 @@ test("keeps screenshot model quotes in source USD while gating converted compari
 });
 
 test("collects fuck-everyone directly and compares unconfirmed recharge rates at 1:1", async () => {
-  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const [, preset] = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], [providerById("fuck-everyone")]);
   assert.equal(preset.priceCurrency, "CREDITS");
   const adapter = inferStationAdapter(preset);
   assert.equal(adapter.endpoint, "/api/v1/model-plaza");
@@ -2429,7 +2385,7 @@ test("collects fuck-everyone directly and compares unconfirmed recharge rates at
 
 
 test("keeps model-plaza unpriced diagnostics for empty and mixed groups", async () => {
-  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const [, preset] = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], [providerById("fuck-everyone")]);
   const adapter = inferStationAdapter(preset);
   const settings = { ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true };
   const emptyFixture = {
@@ -2496,7 +2452,7 @@ test("migrates legacy fuck-everyone UNKNOWN source currency during station prepa
 });
 
 test("rejects invalid model-plaza multipliers and per-request prices", async () => {
-  const [, preset] = addFuckEveryoneStationPreset([{ id: "seed", baseUrl: "https://seed.example" }]);
+  const [, preset] = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], [providerById("fuck-everyone")]);
   const adapter = inferStationAdapter(preset);
   const invalidMultiplier = structuredClone(fuckEveryoneFixture);
   invalidMultiplier.data.groups[0].rate_multiplier = -1;
@@ -2682,11 +2638,10 @@ test("adapts NodeAI model plaza to its JSON API endpoint", async () => {
   assert.equal(snapshot.normalized.sourceFormat, "nodeai-model-plaza");
 });
 test("collects SevenAI public model-plaza intervals as comparable CREDITS", async () => {
-  const registered = addRegisteredStationPresets([{ id: "existing", baseUrl: "https://relay.example" }]);
+  const registered = addProviderStationPresets([{ id: "existing", baseUrl: "https://relay.example" }], PROVIDER_REGISTRY);
   const preset = registered.find(station => station.id === "sevenai");
   assert.ok(preset);
-  assert.equal(addRegisteredStationPresets(registered), registered);
-  assert.equal(addRegisteredStationPresets([]).length, 0);
+  assert.equal(addProviderStationPresets(registered, PROVIDER_REGISTRY), registered);
   assert.equal(preset.rechargeRateVerified, false);
 
   const prepared = prepareStationInput({
@@ -2761,7 +2716,7 @@ test("collects SevenAI public model-plaza intervals as comparable CREDITS", asyn
 });
 
 test("adapts KillAI pricing through the logged-in page", async () => {
-  const preset = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://seed.example" }])
+  const preset = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], PROVIDER_REGISTRY)
     .find(station => station.baseUrl === "https://api.killai.cc/pricing");
   assert.ok(preset);
   assert.equal(preset.mode, "page");
@@ -2920,7 +2875,7 @@ test("does not misclassify all-in-one envelopes without its explicit format", ()
 });
 
 test("adapts the TokenFlux pricing API and station preset", async () => {
-  const registered = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://relay.example" }]);
+  const registered = addProviderStationPresets([{ id: "seed", baseUrl: "https://relay.example" }], PROVIDER_REGISTRY);
   const preset = registered.find(station => station.id === "tokenflux");
   assert.ok(preset);
   assert.equal(preset.mode, "direct");
@@ -3096,19 +3051,19 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   assert.equal(centosOffer.monthlyCost, 0.4);
 
   const current = [{ id: "seed", baseUrl: "https://relay.example" }];
-  const stations = addCentosStationPreset(current);
+  const stations = addProviderStationPresets(current, [providerById("centos")]);
   assert.equal(stations.length, 2);
   assert.equal(stations[1].id, "centos");
   assert.equal(stations[1].name, "ai.centos.hk");
   assert.equal(stations[1].baseUrl, "https://ai.centos.hk/pricing");
   assert.equal(stations[1].rechargeRateVerified, false);
-  assert.equal(addCentosStationPreset(stations), stations);
-  assert.equal(addCentosStationPreset([]).length, 0);
-  const conflict = addCentosStationPreset([{ id: "centos", baseUrl: "https://relay.example" }]);
+  assert.equal(addProviderStationPresets(stations, [providerById("centos")]), stations);
+  assert.equal(addProviderStationPresets([], [providerById("centos")]).length, 1);
+  const conflict = addProviderStationPresets([{ id: "centos", baseUrl: "https://relay.example" }], [providerById("centos")]);
   assert.equal(conflict[1].id, "centos-2");
 });
 test("adapts Linux.do Marketplace to the authenticated GraphQL page contract", async () => {
-  const preset = addLinuxDoMarketplaceStationPreset([{ id: "seed", baseUrl: "https://relay.example" }]).find(station => station.id === "linux-do-marketplace");
+  const preset = addProviderStationPresets([{ id: "seed", baseUrl: "https://relay.example" }], [providerById("linux-do-marketplace")]).find(station => station.id === "linux-do-marketplace");
   assert.ok(preset);
   assert.equal(preset.category, "public");
   assert.equal(preset.enabled, true);
@@ -3510,7 +3465,7 @@ test("adapts WindHub's verified public pricing contract and keeps anonymous requ
   windhub.supported_endpoint = { openai: { path: "/v1/chat/completions", method: "POST" } };
   windhub.data[0].vendor_id = 3;
   windhub.data[0].supported_endpoint_types = ["openai"];
-  const registered = addRegisteredStationPresets([{ id: "seed", baseUrl: "https://relay.example" }]);
+  const registered = addProviderStationPresets([{ id: "seed", baseUrl: "https://relay.example" }], PROVIDER_REGISTRY);
   const preset = registered.find(station => station.id === "windhub");
   const linuxDo = registered.find(station => station.id === "linux-do-marketplace");
   assert.ok(preset);
@@ -3525,8 +3480,8 @@ test("adapts WindHub's verified public pricing contract and keeps anonymous requ
   assert.equal(preset.rechargeCredits, 1);
   assert.equal(preset.adapter.endpoint, WINDHUB_PRICING_ENDPOINT);
   assert.equal(preset.adapter.responseFormat, "windhub");
-  assert.equal(addWindHubStationPreset(registered), registered);
-  assert.equal(addWindHubStationPreset([]).length, 0);
+  assert.equal(addProviderStationPresets(registered, [providerById("windhub")]), registered);
+  assert.equal(addProviderStationPresets([], [providerById("windhub")]).length, 1);
   const provider = providerForStation({ baseUrl: "https://windhub.cc/pricing" });
   assert.equal(provider.id, "windhub");
   assert.equal(providerForStation({ baseUrl: "https://windhub.cc/other" }), null);
@@ -3571,11 +3526,10 @@ test("surfaces an empty successful WindHub envelope as a station error snapshot"
 });
 
 test("seeds public presets for an empty station list without changing general preset defaults", () => {
-  const publicStations = addPublicStationPresets([]);
+  const publicStations = addProviderStationPresets([], [providerById("linux-do-marketplace"), providerById("windhub")]);
   assert.deepEqual(publicStations.map(station => station.id), ["linux-do-marketplace", "windhub"]);
   assert.ok(publicStations.every(station => station.category === "public" && station.enabled === true));
-  assert.deepEqual(addPublicStationPresets(publicStations), publicStations);
-  assert.equal(addRegisteredStationPresets([]).length, 0);
+  assert.deepEqual(addProviderStationPresets(publicStations, [providerById("linux-do-marketplace"), providerById("windhub")]), publicStations);
 });
 
 test("filters paid and public comparison groups without mixing summaries", () => {
@@ -3618,7 +3572,7 @@ test("adapts the Sidrune model plaza URL and station preset", () => {
   assert.equal(prepared.mode, "direct");
   assert.equal(prepared.auth.type, "none");
   assert.equal(prepared.adapter.kind, "sidrune-model-plaza");
-  const stations = addSidruneStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }]);
+  const stations = addProviderStationPresets([{ id: "one", baseUrl: "https://soleapi.com" }], [providerById("sidrune")]);
   assert.equal(stations[1].baseUrl, "https://sidrune.ai/model-plaza");
   const sidrune = normalizeStation(stations[1]);
   assert.equal(sidrune.rechargeCurrency, "USD");
@@ -3626,7 +3580,7 @@ test("adapts the Sidrune model plaza URL and station preset", () => {
   assert.equal(sidrune.rechargeCredits, 1);
   assert.equal(sidrune.rechargeRate, DEFAULT_EXCHANGE_RATE);
   assert.equal(convertRechargeAmount(sidrune.rechargeRmb, "CNY", "USD", DEFAULT_EXCHANGE_RATE), 1);
-  const customRate = addSidruneStationPreset([{ id: "one", baseUrl: "https://soleapi.com" }], 8.2);
+  const customRate = addProviderStationPresets([{ id: "one", baseUrl: "https://soleapi.com" }], [providerById("sidrune")], { exchangeRate: 8.2 });
   assert.equal(normalizeStation(customRate[1]).rechargeRate, 8.2);
   const customSidrune = normalizeStation({
     baseUrl: "https://sidrune.ai/model-plaza",
@@ -3637,7 +3591,7 @@ test("adapts the Sidrune model plaza URL and station preset", () => {
   });
   assert.equal(customSidrune.rechargeCurrency, "CNY");
   assert.equal(customSidrune.rechargeRate, 4);
-  assert.equal(addSidruneStationPreset(stations), stations);
+  assert.equal(addProviderStationPresets(stations, [providerById("sidrune")]), stations);
 });
 
 
@@ -3798,21 +3752,12 @@ test("collects CheapRouter prices from the public API directly", async () => {
   assert.equal(snapshot.normalized.data[0].price_currency, "CREDITS");
 });
 
-test("suggests official candidates for unmatched proxy names and scopes confirmed mappings", () => {
+test("scopes confirmed model overrides by station", () => {
   const official = [
     { id: "anthropic/claude-3.7-sonnet", name: "Claude 3.7 Sonnet", provider: "anthropic" },
     { id: "anthropic/claude-3.7-haiku", name: "Claude 3.7 Haiku", provider: "anthropic" },
     { id: "openai/gpt-4o", name: "GPT-4o", provider: "openai" }
   ];
-  const suggestions = suggestModelCandidates("claude-3.7-sonnet-custom", official);
-  assert.equal(suggestions[0].id, "anthropic/claude-3.7-sonnet");
-  assert.ok(suggestions.length <= 40);
-
-  const fuzzyOfficial = [{ id: "alpha", name: "alpha" }];
-  const fuzzyCandidates = getJevModelCandidates("xalpha", fuzzyOfficial, [{ id: "fuzzy", enabled: true }]);
-  assert.equal(fuzzyCandidates.directMatches[0].ruleId, "fuzzy");
-  assert.deepEqual(fuzzyCandidates.candidates, fuzzyOfficial);
-
   const override = [{ stationId: "station-a", modelName: "relay-sonnet", officialModelId: "anthropic/claude-3.7-sonnet" }];
   assert.equal(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-a", overrides: override })[0].ruleId, "manual");
   assert.equal(matchModelWithOverrides("relay-sonnet-expires-on-2026-12-31", official, { stationId: "station-a", overrides: override })[0].ruleId, "manual");
@@ -3827,7 +3772,7 @@ test("indexed model matcher preserves rule priority, suffixes, versions, fuzzy m
     { id: "google/gemini-2.0-flash", name: "google/gemini-2.0-flash", aliases: ["gemini-2.0-flash"] }
   ];
   const overrides = [{ stationId: "station-a", modelName: "relay-sonnet", officialModelId: "anthropic/claude-3.7-sonnet" }];
-  const index = buildModelMatchIndex(official, overrides);
+  const index = buildModelMatchIndex(official, overrides, { canonicalIndex: null });
   const rules = [
     { id: "exact", enabled: true },
     { id: "suffix", enabled: true },
@@ -3845,6 +3790,39 @@ test("indexed model matcher preserves rule priority, suffixes, versions, fuzzy m
   }
   assert.equal(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-a", overrides, index })[0].ruleId, "manual");
   assert.deepEqual(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-b", overrides, index }), []);
+});
+
+test("canonical layer unifies relay spellings before the legacy rules", () => {
+  const official = [
+    { id: "z-ai/glm-5.3", name: "GLM-5.3" },
+    { id: "anthropic/claude-opus-4.8", name: "Claude Opus 4.8" }
+  ];
+  const index = buildModelMatchIndex(official);
+  const rules = [{ id: "exact", enabled: true }];
+  const cases = [
+    ["z-ai/glm-5.3:thinking", "z-ai/glm-5.3"],
+    ["【限时】GLM-5.3", "z-ai/glm-5.3"],
+    ["GLM-5-3", "z-ai/glm-5.3"],
+    ["claude-opus-4.8", "anthropic/claude-opus-4.8"],
+    ["Claude Opus 4.8", "anthropic/claude-opus-4.8"],
+    ["Anthropic: Claude Opus 4.8", "anthropic/claude-opus-4.8"]
+  ];
+  for (const [name, expected] of cases) {
+    const [result] = matchModel(name, official, rules, index);
+    assert.equal(result.match.id, expected, name);
+    assert.equal(result.ruleId, "canonical", name);
+    assert.equal(result.canonical.id, canonicalKey(expected));
+  }
+  assert.deepEqual(matchModel("unknown-relay-model", official, rules, index), []);
+  assert.deepEqual(matchModel("GLM-5.3", official, [{ id: "exact", enabled: false }], index), []);
+});
+
+test("canonical helpers normalize paths, decorations, and vendor prefixes", () => {
+  assert.equal(canonicalKey("openrouter/anthropic/claude-opus-4.8:thinking"), "claude-opus-4-8");
+  assert.equal(canonicalKey("【限时】GLM-5.3"), "glm-5-3");
+  assert.equal(canonicalKey("gpt-5.5-20260101"), "gpt-5-5");
+  assert.equal(resolveCanonicalModel("deepseek-v4.1-flash-1017")?.id, "deepseek-v4-1-flash");
+  assert.equal(resolveCanonicalModel("totally-unknown-model-x"), null);
 });
 
 test("pagination keeps every quote reachable while bounding each page", () => {
@@ -4463,46 +4441,19 @@ test("matches official model and compares station offer", () => {
   assert.equal(comparison.offers[0].monthlyCost, 1.4);
 });
 
-test("normalizes model settings and adapter suggestions", () => {
-  const settings = normalizeSettings({
-    refreshIntervalMinutes: 0,
-    defaultCurrency: "EUR",
-    llm: { enabled: true, apiKey: "secret", temperature: 2 },
-    jev: { enabled: true, modelId: "custom-model-v2", endpoint: "https://jev.example/api/pricing", responseFormat: "pqh" }
-  });
+test("normalizes settings and infers adapters from local rules", () => {
+  const settings = normalizeSettings({ refreshIntervalMinutes: 0, defaultCurrency: "EUR" });
   assert.equal("refreshIntervalMinutes" in settings, false);
   assert.equal(settings.defaultCurrency, "CNY");
-  assert.equal(settings.llm.temperature, 1);
-  assert.equal("apiKey" in settings.llm, false);
-  assert.equal(settings.jev.modelId, "custom-model-v2");
-  assert.equal("apiKey" in settings.jev, false);
-  assert.equal(normalizeSettings({ jev: { baseUrl: "http://relay.example" } }).jev.baseUrl, "");
-  const inferred = inferStationAdapter({ baseUrl: "https://relay.example/sora", auth: { type: "bearer" } }, settings.jev);
-  assert.equal(inferred.endpoint, "/api/pricing");
-  const pricingPage = inferStationAdapter({ baseUrl: "https://relay.example/pricing" }, {});
+  const inferred = inferStationAdapter({ baseUrl: "https://relay.example/sora", auth: { type: "bearer" } });
+  assert.equal(inferred.endpoint, "/api/sora");
+  assert.equal(inferred.responseFormat, "sora");
+  const pricingPage = inferStationAdapter({ baseUrl: "https://relay.example/pricing" });
   assert.equal(pricingPage.endpoint, "/api/pricing");
-  assert.equal(inferred.responseFormat, "pqh");
-  const modelList = inferStationAdapter({ baseUrl: "https://relay.example/v1/models", adapter: { endpoint: "/api/ai/pricing" } }, {});
+  const modelList = inferStationAdapter({ baseUrl: "https://relay.example/v1/models", adapter: { endpoint: "/api/ai/pricing" } });
   assert.equal(modelList.endpoint, "/v1/models");
-  const suggestion = parseAdapterSuggestion('```json\n{"endpoint":"pricing","method":"post","confidence":120}\n```');
-  assert.equal(suggestion.endpoint, "/pricing");
-  assert.equal(suggestion.method, "POST");
-  assert.equal(suggestion.confidence, 100);
 });
 
-test("normalizes provider profiles and active selection", () => {
-  const settings = normalizeSettings({
-    providerProfiles: {
-      llm: [{ id: "openrouter", name: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", apiKey: "secret", temperature: 2 }],
-      jev: [{ id: "jev-main", name: "Jev", baseUrl: "https://jev.example/v1/systemone" }]
-    },
-    activeProviders: { llm: "openrouter", jev: "jev-main" }
-  });
-  assert.equal(settings.activeProviders.llm, "openrouter");
-  assert.equal(settings.providerProfiles.llm[0].temperature, 1);
-  assert.equal(settings.providerProfiles.jev[0].baseUrl, "https://jev.example/v1/systemone");
-  assert.equal("apiKey" in settings.providerProfiles.llm[0], false);
-});
 
 test("keeps zero pricing values and blocks insecure remote URLs", () => {
   const station = normalizeStation({ baseUrl: "https://relay.example", rechargeRate: 0, basePricePerMillion: 0 });
@@ -4512,9 +4463,7 @@ test("keeps zero pricing values and blocks insecure remote URLs", () => {
   assert.equal(isSecureRemoteUrl("http://localhost:3000"), true);
   assert.equal(isSecureRemoteUrl("http://relay.example"), false);
   assert.throws(() => normalizeStation({ baseUrl: "http://relay.example" }), /HTTPS/);
-  assert.equal(normalizeSettings({ llm: { baseUrl: "http://relay.example" } }).llm.baseUrl, "");
 });
-
 test("current-site registration keeps only allowed HTTP origins", () => {
   assert.equal(currentSiteOrigin("https://user:secret@relay.example:8443/pricing?token=secret#section"), "https://relay.example:8443");
   assert.equal(currentSiteOrigin("http://localhost:3000/pricing"), "http://localhost:3000");
@@ -4749,52 +4698,6 @@ test("redacts station credentials from portable state", () => {
 });
 
 
-test("builds bounded JEV choices and sends only comparison fields", () => {
-  const candidates = [{ name: "openai/gpt-4o", display_name: "GPT-4o", provider: "openai", aliases: ["gpt-4o"] }];
-  const matchTask = buildJevModelMatchTask("relay-gpt-4o", candidates);
-  assert.equal(matchTask.questions.model_match.type, "choice");
-  assert.ok(matchTask.questions.model_match.criteria["__no_match__"]);
-  assert.ok(matchTask.questions.model_match.criteria["openai/gpt-4o"]);
-  assert.equal(matchTask.state.proxy_model, "relay-gpt-4o");
-  assert.equal(buildJevModelMatchTask("relay\nmodel", candidates).state.proxy_model, "relay model");
-
-  const reviewTask = buildJevComparisonTask({
-    stationId: "private-station-id", stationName: "Private station", modelName: "relay-gpt-4o",
-    officialName: "openai/gpt-4o", groupName: "private group", groupRatio: 1.2, tierName: "night",
-    prices: { input: 1, output: 2, cacheWrite1h: 3 }, officialPrices: { input: 5, output: 15, cacheWrite1h: 6 },
-    diffPercent: -75, stale: false, evidence: "estimated", cacheReadEstimated: true, incomplete: true, unsupportedBillingModes: ["per_second"], pricingUnavailableReasons: ["recharge_rate_unverified"], invalidPricingValues: ["video-model"], unpricedModels: ["Missing:shared-model:default"],
-    baseUrl: "https://private.example", rawMeta: { token: "station-secret" }
-  });
-  assert.equal(reviewTask.questions.comparison_review.type, "choice");
-  assert.equal(reviewTask.state.comparison.price_gap_direction, "proxy_cheaper");
-  assert.ok(reviewTask.state.comparison.proxy_price_fields.includes("cacheWrite1h"));
-  assert.equal(reviewTask.state.comparison.incomplete, true);
-  assert.deepEqual(reviewTask.state.comparison.unsupported_billing_modes, ["per_second"]);
-  assert.deepEqual(reviewTask.state.comparison.invalid_pricing_values, ["video-model"]);
-  assert.deepEqual(reviewTask.state.comparison.unpriced_models, ["Missing:shared-model:default"]);
-  assert.deepEqual(reviewTask.state.comparison.pricing_unavailable_reasons, ["recharge_rate_unverified"]);
-  assert.equal(reviewTask.questions.comparison_review.criteria.partial_proxy_catalog, "中转目录部分解析，存在未支持计费模式");
-  assert.equal(reviewTask.questions.comparison_review.criteria.invalid_pricing_values, "中转目录存在异常价格字段或倍率");
-  assert.equal(reviewTask.questions.comparison_review.criteria.unpriced_models, "中转目录存在已识别但未定价模型");
-  assert.equal(buildJevComparisonTask({ modelName: "relay", officialName: "openai/model", diffPercent: null }).state.comparison.price_gap_direction, "unavailable");
-  const serialized = JSON.stringify(reviewTask);
-  assert.doesNotMatch(serialized, /private-station-id|private group|private\.example|station-secret/);
-  assert.doesNotMatch(serialized, /"input":1|"output":2|"officialPrices"|-75/);
-});
-
-
-test("selects unique unresolved rows for batch JEV matching", () => {
-  const targets = getJevModelBatchTargets([
-    { stationId: "station-a", modelName: "relay-gpt-4o", matchRuleId: "fuzzy", matchCandidateCount: 1, matchConfidence: 0.75 },
-    { stationId: "station-a", modelName: "relay-gpt-4o", matchRuleId: "fuzzy", matchCandidateCount: 1, matchConfidence: 0.75 },
-    { stationId: "station-a", modelName: "[Provider] RELAY-GPT-4O-EXPIRES-ON-2026-10-07", matchRuleId: "fuzzy", matchCandidateCount: 1, matchConfidence: 0.75 },
-    { stationId: "station-a", modelName: "gpt-4o", matchRuleId: "exact", matchCandidateCount: 1, matchConfidence: 1 },
-    { stationId: "station-a", modelName: "duplicate-gpt", matchRuleId: "exact", matchCandidateCount: 2, matchConfidence: 1 },
-    { stationId: "station-b", modelName: "gpt-4o", matchRuleId: "manual", matchCandidateCount: 1, matchConfidence: 1 },
-    { stationId: "station-b", modelName: "relay-claude", matchRuleId: "unmatched", matchCandidateCount: 0, matchConfidence: 0 }
-  ]);
-  assert.deepEqual(targets.map(({ stationId, modelName }) => [stationId, modelName]), [["station-a", "relay-gpt-4o"], ["station-a", "duplicate-gpt"], ["station-b", "relay-claude"]]);
-});
 
 test("bounds refresh workers and settles station failures in input order", async () => {
   let active = 0;
@@ -5021,183 +4924,6 @@ test("keeps refresh progress labels aligned with parallel-slot semantics", () =>
   assert.equal(options.includes("${progress.current || 1}/${progress.total}"), false);
 });
 
-test("blocks batch JEV during worker and official-reference refreshes", () => {
-  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
-  const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url), "utf8");
-  const scheduler = readFileSync(new URL("../src/core/refresh-scheduler.js", import.meta.url), "utf8");
-  assert.ok(worker.includes('refreshInProgress: !["complete", "error"].includes(progress.phase) || Boolean(refreshReferencesTask)'));
-  assert.ok(scheduler.includes('references = await refreshOfficialReferences(forceReferences)'));
-  assert.ok(worker.includes('await refreshOfficialReferences(true)'));
-  assert.ok(worker.includes('const activeForced = refreshReferencesForced'));
-  assert.ok(worker.includes("if (!force || activeForced) return result"));
-  assert.ok(worker.includes("return refreshOfficialReferences(true)"));
-  assert.ok(worker.includes("notifyReferencesRefresh(true)"));
-  assert.ok(worker.includes("notifyReferencesRefresh(false)"));
-  assert.ok(worker.includes("function assertModelMatchJevIdle()"));
-  assert.ok(worker.includes('if (task === "model_match") assertModelMatchJevIdle()'));
-  assert.ok(worker.includes("assertModelMatchJevIdle();"));
-  assert.ok(dashboard.includes('error.message === "数据刷新中，模型匹配核验已停止"'));
-  assert.ok(dashboard.includes('error.message === "报价、官方目录或 JEV 配置已变化，请刷新页面后重试"'));
-  assert.ok(dashboard.includes("row.pricingUnavailable"));
-  assert.ok(dashboard.includes("interrupted = rows.length - index"));
-  assert.equal(worker.match(/assertModelMatchJevIdle\(\);/g)?.length, 4);
-  assert.ok(dashboard.includes('message?.type === "REFERENCES_REFRESHING"'));
-  assert.ok(dashboard.includes("state.refreshInProgress = Boolean(data.refreshInProgress)"));
-  assert.ok(dashboard.includes('state.refreshInProgress = progress.refreshInProgress ?? !["complete", "error"].includes(progress.phase)'));
-  assert.ok(dashboard.includes('if (state.refreshInProgress || ["#refresh-all", "#fetch-references"]'));
-});
-
-test("requires a dedicated JEV profile and validates typed JEV Choice answers", async () => {
-  const config = resolveJevTaskConfig({ jev: { baseUrl: "https://jev.example/v1/systemone", modelId: "jev-latest" } }, "jev-secret");
-  assert.deepEqual(config, { baseUrl: "https://jev.example/v1/systemone", model: "jev-latest", apiKey: "jev-secret" });
-  assert.throws(() => resolveJevTaskConfig({ llm: { baseUrl: "https://llm.example/v1", model: "gpt-4o" } }, "llm-secret"), /JEV/);
-  assert.throws(() => resolveJevTaskConfig({ jev: { baseUrl: "https://jev.example/v1/systemone", modelId: "jev-latest" } }, ""), /JEV API Key/);
-
-  const questions = { model_match: { type: "choice", instructions: "Choose a matching model.", criteria: { "openai/gpt-4o": "GPT-4o", __no_match__: "No candidate matches" } } };
-  let requestDetails;
-  const result = await requestJevChoices({
-    ...config, state: { proxy_model: "relay-gpt-4o" }, questions,
-    fetchImpl: async (url, init) => {
-      requestDetails = { url, init };
-      return response({ model: "jev-1.13.0", answers: { model_match: { type: "choice", choice: "openai/gpt-4o", confidence: 0.92, probabilities: { "openai/gpt-4o": 0.92, __no_match__: 0.08 } } } });
-    }
-  });
-  assert.equal(requestDetails.url, "https://jev.example/v1/systemone");
-  assert.equal(requestDetails.init.headers.Authorization, "Bearer jev-secret");
-  assert.deepEqual(JSON.parse(requestDetails.init.body).questions, questions);
-  assert.equal(result.answers.model_match.choice, "openai/gpt-4o");
-
-  await assert.rejects(requestJevChoices({
-    ...config, state: {}, questions,
-    fetchImpl: async () => response({ answers: { model_match: { type: "choice", choice: "not-a-candidate", confidence: 0.99, probabilities: {} } } })
-  }), /JEV.*choice/i);
-});
-
-test("does not fall back from an active JEV profile to a legacy key", () => {
-  assert.equal(selectProviderApiKey("jev", "profile-a", "", "legacy-secret"), "");
-  assert.equal(selectProviderApiKey("jev", "", "", "legacy-secret"), "legacy-secret");
-  assert.equal(selectProviderApiKey("jev", "profile-a", "active-secret", "legacy-secret"), "active-secret");
-  assert.equal(selectProviderApiKey("llm", "profile-a", "", "legacy-secret"), "legacy-secret");
-});
-
-test("stores provider keys separately by channel and profile", async () => {
-  const values = {};
-  const area = {
-    async get(key) { return key ? { [key]: values[key] } : values; },
-    async set(next) { Object.assign(values, next); },
-    async remove(key) { delete values[key]; }
-  };
-  const chromeApi = { storage: { session: area } };
-  await setProviderApiKey("llm", "openrouter", "llm-secret", chromeApi);
-  await setProviderApiKey("jev", "jev-main", "jev-secret", chromeApi);
-  assert.equal(await getProviderApiKey("llm", "openrouter", chromeApi), "llm-secret");
-  assert.equal(await getProviderApiKey("jev", "jev-main", chromeApi), "jev-secret");
-  assert.equal(await hasProviderApiKey("llm", "openrouter", chromeApi), true);
-  assert.equal(await getProviderApiKey("llm", "jev-main", chromeApi), "");
-});
-
-test("persists provider keys in local storage and migrates session values", async () => {
-  const localValues = {};
-  const sessionValues = { "ai-price-analyzer:provider-api-keys": { llm: { legacy: "old-secret" } } };
-  const area = values => ({
-    async get(key) { return key ? { [key]: values[key] } : values; },
-    async set(next) { Object.assign(values, next); },
-    async remove(key) { delete values[key]; }
-  });
-  const chromeApi = { storage: { local: area(localValues), session: area(sessionValues) } };
-  assert.equal(await getProviderApiKey("llm", "legacy", chromeApi), "old-secret");
-  await setProviderApiKey("llm", "legacy", "new-secret", chromeApi);
-  assert.deepEqual(localValues["ai-price-analyzer:provider-api-keys"], { llm: { legacy: "new-secret" } });
-  assert.equal(sessionValues["ai-price-analyzer:provider-api-keys"], undefined);
-});
-
-test("discovers model catalogs and probes LLM/JEV endpoints", async () => {
-  assert.deepEqual(parseModelCatalog({ data: [{ id: "gpt-4o" }, { id: "gpt-4o" }, { id: "disabled", enabled: false }] }).map(model => model.id), ["gpt-4o"]);
-  assert.deepEqual(parseModelCatalog({ models: [{ id: "other" }, { id: "jev-pro", kind: "decision" }] }, "jev").map(model => model.id), ["jev-pro"]);
-
-  let listingRequest;
-  const listing = await fetchModelCatalog({
-    baseUrl: "https://api.example/",
-    apiKey: "secret",
-    fetchImpl: async (url, init) => {
-      listingRequest = { url, init };
-      return { ok: true, status: 200, url, json: async () => ({ data: [{ id: "gpt-4o", name: "GPT-4o" }] }) };
-    }
-  });
-  assert.equal(listingRequest.url, "https://api.example/v1/models");
-  assert.equal(listingRequest.init.headers.Authorization, "Bearer secret");
-  assert.equal(listing.models[0].name, "GPT-4o");
-
-  let llmRequest;
-  const llmResult = await testModelConnection({
-    baseUrl: "https://api.example",
-    apiKey: "secret",
-    model: "gpt-4o",
-    fetchImpl: async (url, init) => {
-      llmRequest = { url, init };
-      return { ok: true, status: 200, json: async () => ({ model: "gpt-4o", choices: [{ message: { content: "连接正常" } }] }) };
-    }
-  });
-  assert.equal(llmRequest.url, "https://api.example/v1/chat/completions");
-  assert.equal(JSON.parse(llmRequest.init.body).model, "gpt-4o");
-  assert.equal(llmResult.model, "gpt-4o");
-
-  let jevListingRequest;
-  const jevListing = await fetchModelCatalog({
-    baseUrl: "https://jev.example/v1/systemone",
-    apiKey: "jev-secret",
-    kind: "jev",
-    fetchImpl: async (url, init) => {
-      jevListingRequest = { url, init };
-      return { ok: true, status: 200, url, json: async () => ({ data: [{ id: "jev-latest" }, { id: "gpt-4o" }] }) };
-    }
-  });
-  assert.equal(jevListingRequest.url, "https://jev.example/v1/models");
-  assert.deepEqual(jevListing.models.map(model => model.id), ["jev-latest"]);
-
-  let jevRequest;
-  await testModelConnection({
-    baseUrl: "https://jev.example/v1/systemone",
-    apiKey: "jev-secret",
-    model: "jev-pro",
-    kind: "jev",
-    fetchImpl: async (url, init) => {
-      jevRequest = { url, init };
-      return { ok: true, status: 200, json: async () => ({ answers: { income_hype: { type: "noul", noul: 0.97 } } }) };
-    }
-  });
-  assert.equal(jevRequest.url, "https://jev.example/v1/systemone");
-  assert.equal(JSON.parse(jevRequest.init.body).questions.income_hype.type, "noul");
-});
-
-test("limits JEV actions to the extension UI", () => {
-  assert.equal(isExtensionPageSender({ url: "chrome-extension://abc/dashboard.html" }, "chrome-extension://abc/"), true);
-  assert.equal(isExtensionPageSender({ url: "https://relay.example/pricing" }, "chrome-extension://abc/"), false);
-});
-
-test("blocks JEV worker actions from station pages", async () => {
-  const previousChrome = globalThis.chrome;
-  let onMessage;
-  globalThis.chrome = {
-    runtime: {
-      onMessage: { addListener(listener) { onMessage = listener; } },
-      onInstalled: { addListener() {} },
-      onStartup: { addListener() {} },
-      getURL: () => "chrome-extension://test-extension/"
-    },
-    alarms: { onAlarm: { addListener() {} } }
-  };
-  try {
-    await import(`../src/service-worker.js?test=${Date.now()}`);
-    for (const type of ["ANALYZE_JEV", "SAVE_JEV_MODEL_MATCH", "REMOVE_JEV_MODEL_MATCH"]) {
-      const response = await new Promise(resolve => onMessage({ type }, { id: "test-extension", url: "https://relay.example/pricing" }, resolve));
-      assert.deepEqual(response, { ok: false, error: "此 JEV 操作仅能从扩展面板发起" });
-    }
-  } finally {
-    if (previousChrome === undefined) delete globalThis.chrome;
-    else globalThis.chrome = previousChrome;
-  }
-});
 
 test("keeps dashboard facet checkboxes at a compact fixed size", () => {
   const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
@@ -5238,7 +4964,7 @@ test("keeps every section card collapsible behind the global toggles", () => {
       assert.match(html.slice(match.index, match.index + 200), /class="(panel-heading|config-heading|toolbar-main|data-panel-copy)"/, `first child of ${key} must hold the collapse toggle`);
     }
   }
-  assert.equal(cardCount, 7);
+  assert.equal(cardCount, 5);
 });
 
 test("refreshes only the selected dashboard station", () => {

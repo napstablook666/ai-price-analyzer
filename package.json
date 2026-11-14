@@ -7,6 +7,11 @@
     "version:patch": "node scripts/sync-version.mjs patch",
     "version:minor": "node scripts/sync-version.mjs minor",
     "version:major": "node scripts/sync-version.mjs major",
-    "version:check": "node scripts/sync-version.mjs --check"
+    "version:check": "node scripts/sync-version.mjs --check",
+    "plugins:build": "node scripts/plugin-build.mjs",
+    "plugins:check": "node scripts/plugin-build.mjs --check",
+    "models:build": "node canonical/build.mjs",
+    "models:lookup": "node scripts/model-lookup.mjs",
+    "test": "npm --prefix extension test"
   }
 }

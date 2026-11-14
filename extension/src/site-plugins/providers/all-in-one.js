@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { ALL_IN_ONE_MODELS_ENDPOINT, ALL_IN_ONE_PRICE_KEYS, localStoragePageAuth, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -15,7 +17,7 @@ const preset = {
 
 const pageAuth = localStoragePageAuth("tenant_auth", "Authorization", "未找到 all-in-one.icu 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401, 403], null, ["state.token", "token", "state.accessToken", "accessToken"]);
 
-export const sitePlugin = {
+const pluginSource = {
   id: "all-in-one",
   preserveRechargeRateVerification: true,
   host: "all-in-one.icu",
@@ -47,3 +49,7 @@ export const sitePlugin = {
     skipCapture: true
   })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

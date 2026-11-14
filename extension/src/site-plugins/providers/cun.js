@@ -1,3 +1,5 @@
+// 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
+
 import { localStoragePageAuth, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
@@ -10,7 +12,7 @@ const preset = {
   adapter: { kind: "cun", endpoint: "/api/pricing", method: "GET", responseFormat: "auto" }
 };
 
-export const sitePlugin = {
+const pluginSource = {
   id: "cun",
   host: "cun.ai",
   matches: ({ hostname, path }) => hostname === "cun.ai" && ["/", "/pricing"].includes(path),
@@ -32,3 +34,7 @@ export const sitePlugin = {
     pageAuth: localStoragePageAuth("uid", "New-Api-User", "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试")
   })
 };
+
+const MODEL_ALIASES = [];
+
+export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

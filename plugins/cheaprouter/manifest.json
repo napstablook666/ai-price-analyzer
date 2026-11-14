@@ -1,0 +1,11 @@
+{
+  "id": "cheaprouter",
+  "name": "CheapRouter",
+  "host": "cheaprouter.cc",
+  "mode": "direct",
+  "order": 21,
+  "paths": [
+    "/models"
+  ],
+  "description": "公开模型价格 API"
+}

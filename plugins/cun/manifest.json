@@ -1,0 +1,12 @@
+{
+  "id": "cun",
+  "name": "CUN.AI",
+  "host": "cun.ai",
+  "mode": "page",
+  "order": 11,
+  "paths": [
+    "/",
+    "/pricing"
+  ],
+  "description": "复用登录态读取价格 API"
+}

@@ -29,7 +29,7 @@ AI Price Analyzer 目前以无需构建的 Chromium MV3 浏览器扩展作为唯
 | 对比面板 | 使用 IndexedDB 保存快照，筛选、排序报价，并比较估算月成本和推荐结果。 |
 | 直接接口与页面采集 | CORS 允许时直接请求 JSON 接口；需要当前浏览器登录态时使用页面桥接。 |
 | 公开参考数据 | 缓存 OpenRouter 模型数据和中国银行汇率参考数据。 |
-| 可选账户工作流 | 对支持的站点执行签到，并在启用后使用单独配置的 JEV 或 LLM 服务商。 |
+| 可选账户工作流 | 对支持的站点执行签到。 |
 
 ## 架构
 
@@ -60,6 +60,14 @@ AI Price Analyzer 目前以无需构建的 Chromium MV3 浏览器扩展作为唯
      +------------------+
 ```
 
+## 站点插件与模型归一
+
+站点适配是独立插件，源码在 [`plugins/`](./plugins/)，一个站点一个目录；`extension/src/site-plugins/` 下的同名文件与 `catalog.js` 由 `node scripts/plugin-build.mjs` 生成，不要手改。
+
+同一模型在不同站的写法往往不同（`GLM-5.3`、`z-ai/glm-5.3`、`glm-5.3:thinking`），扩展按三层把它们收敛到同一个模型身份：规范模型表（由 models.dev 与 OpenRouter 生成）→ 插件自带的 `models.json` 别名 → 人工确认的覆盖。
+
+插件协议见 [docs/plugin-development.md](./docs/plugin-development.md)，数据流与两仓拆分路线见 [docs/architecture.md](./docs/architecture.md)。
+
 ## 快速安装
 
 1. 从 [GitHub Releases](https://github.com/napstablook666/ai-price-analyzer/releases) 下载 `ai-relay-price-extension-v<version>.zip`，也可以直接使用源码仓库中的 `extension/` 目录。
@@ -76,7 +84,7 @@ AI Price Analyzer 目前以无需构建的 Chromium MV3 浏览器扩展作为唯
 4. 保存站点和设置，返回对比面板，点击“刷新全部”。
 5. 在对比表中查看已采集模型、OpenRouter 参考价、匹配状态、估算月成本和推荐结果。
 
-设置页面还提供参考价刷新、JEV 或 LLM 服务商配置、支持站点的签到设置，以及 JSON 状态导入导出。导出的状态不包含站点密钥或 API Key。
+设置页面还提供参考价刷新、支持站点的签到设置，以及 JSON 状态导入导出。导出的状态不包含站点密钥或 API Key。
 
 ## 站点采集
 
@@ -92,7 +100,6 @@ AI Price Analyzer 目前以无需构建的 Chromium MV3 浏览器扩展作为唯
 - 扩展从配置的中转站页面或接口读取模型和价格数据。
 - 扩展可能请求公开的 OpenRouter 模型目录：`https://openrouter.ai/api/v1/models`；也可能请求中国银行外汇牌价页面：`https://www.boc.cn/sourcedb/whpj/`。
 - 设置和采集快照保存在扩展本地存储与 IndexedDB 中。导出的状态不包含站点密钥和 API Key。
-- 可选的 JEV 或 LLM 操作只会把用户选择的数据发送到单独配置的服务商。启用前请阅读 [`PRIVACY.md`](./PRIVACY.md)。
 - 不要在 Issue 或 Pull Request 中粘贴私有 API 响应、Cookie、授权请求头、账户标识或凭据。
 
 ## 已归档的用户脚本

@@ -5,7 +5,7 @@ import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pi
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, modelCatalog: { llm: [], jev: [] }, collapsedStationIds: new Set(), selectedPluginIds: new Set(), pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
+const state = { stations: [], sitePlugins: [], settings: null, collapsedStationIds: new Set(), selectedPluginIds: new Set(), pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 
@@ -107,7 +107,7 @@ function selected(value, expected) { return value === expected ? " selected" : "
 function checked(value) { return value ? " checked" : ""; }
 
 
-const SETTINGS_VIEWS = ["stations", "providers", "costs", "workspace"];
+const SETTINGS_VIEWS = ["stations", "costs", "workspace"];
 const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益" };
 
 function activateSettingsView(requested, { focus = false, updateHash = true } = {}) {
@@ -156,9 +156,9 @@ function renderSitePlugins() {
       `<span class="site-plugin-badge">${plugin.mode === "page" ? "页面模式" : "直接接口"}</span>`,
       `<span class="site-plugin-badge">${escapeHtml(plugin.authLabel || "无需登录")}</span>`,
       added ? `<span class="site-plugin-badge is-added">已添加 ${plugin.stationCount || 1} 个</span>` : "",
-      !plugin.addable ? `<span class="site-plugin-badge">Agent 添加</span>` : ""
+      !plugin.addable ? `<span class="site-plugin-badge">需按地址添加</span>` : ""
     ].join("");
-    return `<label class="site-plugin-card${added ? " is-added" : ""}${!plugin.addable ? " is-agent-only" : ""}">
+    return `<label class="site-plugin-card${added ? " is-added" : ""}${!plugin.addable ? " is-address-only" : ""}">
       <input type="checkbox" data-plugin-id="${escapeHtml(plugin.id)}" aria-label="选择 ${escapeHtml(plugin.name)}"${state.selectedPluginIds.has(plugin.id) ? " checked" : ""}${selectable ? "" : " disabled"}>
       <span class="site-plugin-content">
         <span class="site-plugin-title"><strong>${escapeHtml(plugin.name)}</strong></span>
@@ -217,86 +217,8 @@ function stationCategoryOptions(value) {
     .join("");
 }
 
-function modelSelect(kind) {
-  return $(kind === "jev" ? "#jev-model-id" : "#llm-model");
-}
 
 
-function profileSelect(kind) {
-  return $(kind === "jev" ? "#jev-profile" : "#llm-profile");
-}
-function profileNameInput(kind) {
-  return $(kind === "jev" ? "#jev-profile-name" : "#llm-profile-name");
-}
-function renderProviderProfiles(kind) {
-  const select = profileSelect(kind);
-  const nameInput = profileNameInput(kind);
-  if (!select || !nameInput) return;
-  const profiles = state.settings?.providerProfiles?.[kind] || [];
-  const activeId = state.settings?.activeProviders?.[kind] || "";
-  select.innerHTML = `<option value="">当前配置（未保存）</option>${profiles.map(profile => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.name || profile.baseUrl || profile.id)}</option>`).join("")}`;
-  select.value = activeId;
-  nameInput.value = profiles.find(profile => profile.id === activeId)?.name || "";
-}
-function renderModelOptions(kind, selectedValue = "") {
-  const field = modelSelect(kind);
-  if (!field) return;
-  const selected = String(selectedValue || "").trim();
-  const models = [...(state.modelCatalog[kind] || [])];
-  if (selected && !models.some(model => String(model.id || "") === selected)) models.unshift({ id: selected, name: "已保存" });
-  const options = models.map(model => {
-    const id = String(model.id || "").trim();
-    const name = String(model.name || "").trim();
-    return id ? { id, label: name && name !== id ? `${id} · ${name}` : id } : null;
-  }).filter(Boolean);
-  if (field instanceof HTMLInputElement) {
-    const datalist = $(`#${kind}-model-list`);
-    if (datalist) datalist.innerHTML = options.map(({ id, label }) => `<option value="${escapeHtml(id)}" label="${escapeHtml(label)}"></option>`).join("");
-    field.value = selected;
-    return;
-  }
-  field.innerHTML = `<option value="">${options.length ? "选择模型" : "先获取模型列表"}</option>${options.map(({ id, label }) => `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`).join("")}`;
-  field.value = selected;
-}
-
-function modelStatus(kind, message, error = false) {
-  const node = $(`#${kind}-model-status`);
-  node.textContent = message;
-  node.dataset.error = error ? "true" : "false";
-}
-
-async function runModelAction(kind, action) {
-  const button = $(`#${action === "fetch" ? `fetch-${kind}-models` : `test-${kind}-model`}`);
-  const original = button.innerHTML;
-  button.disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>${action === "fetch" ? "获取中" : "测试中"}</span>`;
-  modelStatus(kind, action === "fetch" ? "正在获取模型列表..." : "正在测试模型...");
-  try {
-    const message = {
-      kind,
-      settings: readSettings(),
-      llmApiKey: $("#llm-api-key").value.trim(),
-      jevApiKey: $("#jev-api-key").value.trim()
-    };
-    if (action === "test") message.modelId = modelSelect(kind).value;
-    const result = await callService(action === "fetch" ? "FETCH_MODELS" : "TEST_MODEL", message);
-    if (action === "fetch") {
-      state.modelCatalog[kind] = result.models || [];
-      renderModelOptions(kind, modelSelect(kind).value);
-      modelStatus(kind, result.models?.length ? `已获取 ${result.models.length} 个模型` : "接口未返回模型");
-    } else {
-      modelStatus(kind, result.message || "模型可用");
-      toast(result.message || "模型测试通过");
-    }
-  } catch (error) {
-    modelStatus(kind, error.message, true);
-    toast(error.message);
-  } finally {
-    button.disabled = false;
-    button.innerHTML = original;
-    hydrateIcons(button);
-  }
-}
 
 function nonNegativeNumber(value, fallback) {
   const parsed = Number(value);
@@ -354,7 +276,6 @@ function stationCard(station, index) {
   const origin = currentSiteOrigin(station.baseUrl);
   const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
   const isLinuxDoMarketplace = adapter.kind === "linux-do-marketplace";
-  const unavailableAction = "";
   const stationHint = isLinuxDoMarketplace
     ? "页面模式：请先在当前 Chrome 配置文件登录 Linux.do，扩展只通过页面会话读取价格。"
     : station.mode === "page"
@@ -367,21 +288,16 @@ function stationCard(station, index) {
         <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${category === "public" ? "公益站：不计算汇率" : `${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币`}</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
       </summary>
       <div class="station-content">
-        <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-refresh-station type="button"${unavailableAction} title="查询模型">${icon("refresh-cw", { className: "icon" })}<span>查询模型</span></button><button class="button button-quiet button-small" data-autofill-station type="button"${unavailableAction} title="智能填充">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button"${unavailableAction} title="测试连接">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
+        <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-refresh-station type="button" title="查询模型">${icon("refresh-cw", { className: "icon" })}<span>查询模型</span></button><button class="button button-quiet button-small" data-autofill-station type="button" title="智能填充">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button" title="测试连接">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
         <div class="station-query-status" data-query-status role="status" aria-live="polite" aria-atomic="true" hidden>
           <progress max="1" value="0" aria-label="站点模型查询进度"></progress>
           <span data-query-message></span>
         </div>
         <div class="station-grid">
           <label><span>站点名称</span><input data-field="name" value="${escapeHtml(station.name)}" placeholder="例如：主用站"></label>
-          <label class="wide"><span>模型列表 / 站点地址</span><input data-field="baseUrl" type="url" value="${escapeHtml(station.baseUrl)}" placeholder="https://relay.example.com/v1/models" required></label>
           <label><span>采集模式</span><select data-field="mode"><option value="direct"${selected(station.mode, "direct")}>直接接口</option><option value="page"${selected(station.mode, "page")}>页面桥接</option></select></label>
           <label><span>站点类型</span><select data-field="category">${stationCategoryOptions(category)}</select></label>
-          <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
-          <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
-          <label><span>响应格式</span><select data-field="responseFormat">${responseFormatOptions(adapter.responseFormat)}</select></label>
-          <label class="wide"><span>手动价格 JSON（可选）</span><textarea data-field="rawJson" rows="3" placeholder='{"data":[{"model":"gpt-4o","input":2,"output":8}]}'>${escapeHtml(adapter.rawJson || "")}</textarea></label>
-          <label><span>请求方式</span><select data-field="method"><option value="GET"${selected(adapter.method, "GET")}>GET</option><option value="POST"${selected(adapter.method, "POST")}>POST</option></select></label>
+          <label class="wide"><span>模型列表 / 站点地址</span><input data-field="baseUrl" type="url" value="${escapeHtml(station.baseUrl)}" placeholder="https://relay.example.com/v1/models" required></label>
           <label><span>认证方式</span><select data-field="authType"><option value="none"${selected(auth.type, "none")}>无</option><option value="bearer"${selected(auth.type, "bearer")}>Bearer Token</option><option value="api-key"${selected(auth.type, "api-key")}>X-API-Key</option><option value="basic"${selected(auth.type, "basic")}>Basic</option></select></label>
           <label><span>Token / 密钥</span><input data-field="token" type="password" value="${escapeHtml(auth.token || "")}" placeholder="留空则保留已有密钥"></label>
           <label><span>用户名</span><input data-field="username" value="${escapeHtml(auth.username || "")}" autocomplete="off"></label>
@@ -389,13 +305,23 @@ function stationCard(station, index) {
           <div class="station-money-field"><label for="station-recharge-amount-${index}">充值金额</label><div class="station-money-input"><input id="station-recharge-amount-${index}" data-field="rechargeAmount" type="number" min="0" step="any" value="${rechargeAmount}"><select data-field="rechargeCurrency" data-previous-currency="${rechargeCurrency}" aria-label="充值金额币种"><option value="CNY"${selected(rechargeCurrency, "CNY")}>人民币 CNY</option><option value="USD"${selected(rechargeCurrency, "USD")}>美元 USD</option></select></div></div>
           <label><span>到账中转币</span><input data-field="rechargeCredits" type="number" min="0.000001" step="0.01" value="${rechargeCredits}"></label>
           <label><span>充值比例（¥ / 币）</span><input data-field="rechargeRate" type="number" min="0" step="0.0001" value="${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}" readonly><small data-recharge-rate-display>每 1 中转币成本 ¥${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}</small></label>
-          <input type="hidden" data-field="rechargeRateNote" value="${escapeHtml(rechargeRateNote)}">
+          <label><span>基础价 / 1M USD</span><input data-field="basePricePerMillion" type="number" min="0" step="0.0001" value="${nonNegativeNumber(station.basePricePerMillion, 2)}"></label>
           <label><span>模型列表单位</span><input data-field="priceCurrency" value="CREDITS" readonly aria-readonly="true"></label>
           <label class="check-label"><input data-field="priceCurrencyVerified" type="checkbox"${checked(priceCurrencyVerified)}><span>我已核实模型价格币种</span></label>
-          <label class="wide"><span>模型单位核验备注</span><input data-field="priceCurrencyNote" value="${escapeHtml(priceCurrencyNote)}" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>
-          <label><span>基础价 / 1M USD</span><input data-field="basePricePerMillion" type="number" min="0" step="0.0001" value="${nonNegativeNumber(station.basePricePerMillion, 2)}"></label>
           <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与比价与批量查询</span></label>
         </div>
+        <details class="station-advanced">
+          <summary class="station-advanced-summary"><span class="station-advanced-title">高级适配设置</span><span class="station-advanced-hint">请求体、接口路径、响应格式、手动价格 JSON、核验备注</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></summary>
+          <div class="station-grid">
+            <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
+            <label><span>响应格式</span><select data-field="responseFormat">${responseFormatOptions(adapter.responseFormat)}</select></label>
+            <label><span>请求方式</span><select data-field="method"><option value="GET"${selected(adapter.method, "GET")}>GET</option><option value="POST"${selected(adapter.method, "POST")}>POST</option></select></label>
+            <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
+            <label class="wide"><span>手动价格 JSON（可选）</span><textarea data-field="rawJson" rows="3" placeholder='{"data":[{"model":"gpt-4o","input":2,"output":8}]}'>${escapeHtml(adapter.rawJson || "")}</textarea></label>
+            <label class="wide"><span>模型单位核验备注</span><input data-field="priceCurrencyNote" value="${escapeHtml(priceCurrencyNote)}" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>
+            <input type="hidden" data-field="rechargeRateNote" value="${escapeHtml(rechargeRateNote)}">
+          </div>
+        </details>
         <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${stationHint}</p>
         ${isLinuxDoMarketplace ? `<p class="station-price-warning" role="alert">仅使用当前页面登录会话读取 Linux.do Marketplace；令牌不会写入站点配置或扩展存储。站点积分仅按 1:1 作为展示基准，不代表人民币成本。</p>` : priceCurrencyVerified ? "" : `<p class="station-price-warning" role="alert">模型价格映射未核实：${escapeHtml(priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。")}</p>`}
       </div>
@@ -486,33 +412,6 @@ function renderSettings() {
     const input = document.querySelector(`[data-matching-rule="${rule.id}"]`);
     if (input) input.checked = Boolean(rule.enabled);
   }
-  const llm = settings.llm || {};
-  $("#llm-enabled").checked = Boolean(llm.enabled);
-  renderProviderProfiles("llm");
-  $("#llm-provider").value = llm.provider || "openai-compatible";
-  $("#llm-base-url").value = llm.baseUrl || "";
-  renderModelOptions("llm", llm.model);
-  $("#llm-temperature").value = llm.temperature ?? 0.1;
-  $("#llm-system-prompt").value = llm.systemPrompt || "";
-  $("#llm-api-key").value = "";
-  $("#clear-llm-key").checked = false;
-  $("#llm-api-key").placeholder = llm.hasApiKey ? "已配置，留空保持当前密钥" : "sk-...";
-  $("#llm-key-status").textContent = llm.hasApiKey ? "已配置 API Key" : "尚未配置 API Key";
-
-  const jev = settings.jev || {};
-  renderProviderProfiles("jev");
-  $("#jev-enabled").checked = Boolean(jev.enabled);
-  $("#jev-base-url").value = jev.baseUrl || "";
-  $("#jev-api-key").value = "";
-  $("#clear-jev-key").checked = false;
-  $("#jev-api-key").placeholder = jev.hasApiKey ? "已配置，留空保持当前密钥" : "sk-...";
-  $("#jev-key-status").textContent = jev.hasApiKey ? "已配置 API Key" : "尚未配置 API Key";
-  renderModelOptions("jev", jev.modelId);
-  $("#jev-model-name").value = jev.modelName || "";
-  $("#jev-version").value = jev.version || "";
-  $("#jev-endpoint").value = jev.endpoint || "";
-  $("#jev-response-format").value = jev.responseFormat || "auto";
-  $("#jev-notes").value = jev.notes || "";
 }
 
 function readStations() {
@@ -555,24 +454,6 @@ function readSettings() {
     matchingRules: [...document.querySelectorAll("[data-matching-rule]")].map(input => ({ id: input.dataset.matchingRule, name: input.parentElement.textContent.trim(), enabled: input.checked })),
     usage: readUsageInputs(),
     showUnmatched: $("#show-unmatched").checked,
-    llm: {
-      enabled: $("#llm-enabled").checked,
-      provider: $("#llm-provider").value,
-      baseUrl: $("#llm-base-url").value,
-      model: $("#llm-model").value,
-      temperature: Number($("#llm-temperature").value),
-      systemPrompt: $("#llm-system-prompt").value
-    },
-    jev: {
-      enabled: $("#jev-enabled").checked,
-      baseUrl: $("#jev-base-url").value,
-      modelId: $("#jev-model-id").value,
-      modelName: $("#jev-model-name").value,
-      version: $("#jev-version").value,
-      endpoint: $("#jev-endpoint").value,
-      responseFormat: $("#jev-response-format").value,
-      notes: $("#jev-notes").value
-    }
   });
 }
 
@@ -601,9 +482,9 @@ async function adaptStation(card, preservePageMode = false, sourceTabId) {
   button.dataset.label = button.innerHTML;
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>分析中</span>`;
   try {
-    const result = await callService("ADAPT_STATION", { station, settings: readSettings(), llmApiKey: $("#llm-api-key").value.trim(), ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
+    const result = await callService("ADAPT_STATION", { station, ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
     applySuggestion(card, { ...result.suggestion, ...(preservePageMode ? { mode: "page" } : {}) });
-    const source = result.suggestion?.source === "llm" ? "LLM" : result.suggestion?.source === "fallback" ? "本地规则" : "本地探测";
+    const source = "本地规则";
     const detail = result.discovery ? `，已探测 ${result.discovery.modelCount || 0} 个模型` : "";
     toast(`${result.warning ? `${result.warning}；` : ""}已用 ${source}填充采集字段${detail}，请点击当前站点的“保存站点”`);
   } catch (error) { toast(error.message); }
@@ -675,65 +556,7 @@ async function refreshStation(card) {
 }
 
 
-async function saveProviderProfile(kind) {
-  const settings = readSettings();
-  const result = await callService("SAVE_PROVIDER_PROFILE", {
-    kind,
-    profileId: profileSelect(kind).value,
-    name: profileNameInput(kind).value.trim(),
-    config: settings[kind],
-    apiKey: $(`#${kind}-api-key`).value.trim(),
-    clearApiKey: $(`#clear-${kind}-key`).checked
-  });
-  state.settings = result;
-  state.modelCatalog[kind] = [];
-  renderSettings();
-  await saveWorkspace({ notify: false });
-  toast("供应商档案已保存");
-}
-async function saveModelSettings(kind) {
-  const button = $(`#save-${kind}-settings`);
-  const current = readSettings();
-  const settings = normalizeSettings({ ...state.settings, [kind]: current[kind] });
-  const apiKey = $(`#${kind}-api-key`).value.trim();
-  const clearApiKey = $(`#clear-${kind}-key`).checked;
-  const keyFields = kind === "llm"
-    ? { llmApiKey: apiKey, clearLlmApiKey: clearApiKey }
-    : { jevApiKey: apiKey, clearJevApiKey: clearApiKey };
-  const original = button.innerHTML;
-  button.disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>保存中</span>`;
-  try {
-    state.settings = await callService("SAVE_SETTINGS", { settings, ...keyFields });
-    renderSettings();
-    await saveWorkspace({ notify: false });
-    toast(`${kind === "jev" ? "JEV" : "LLM"} 配置已保存；API Key 已安全保存，不会回显`);
-  } finally {
-    button.disabled = false;
-    button.innerHTML = original;
-    hydrateIcons(button);
-  }
-}
 
-async function switchProvider(kind, profileId) {
-  if (!profileId) return;
-  const result = await callService("SWITCH_PROVIDER", { kind, profileId });
-  state.settings = result.settings;
-  state.modelCatalog[kind] = [];
-  renderSettings();
-  await saveWorkspace({ notify: false });
-  toast(`已切换 ${kind === "jev" ? "JEV" : "LLM"} 供应商`);
-}
-async function deleteProviderProfile(kind) {
-  const profileId = profileSelect(kind).value;
-  if (!profileId) return toast("当前配置还没有保存为供应商档案");
-  if (!window.confirm("删除当前供应商档案？对应 API Key 也会删除。")) return;
-  state.settings = await callService("DELETE_PROVIDER_PROFILE", { kind, profileId });
-  state.modelCatalog[kind] = [];
-  renderSettings();
-  await saveWorkspace({ notify: false });
-  toast("供应商档案已删除");
-}
 async function load() {
   try {
     const data = await callService("GET_DASHBOARD");
@@ -742,7 +565,6 @@ async function load() {
     state.selectedPluginIds.clear();
     state.collapsedStationIds = new Set(state.stations.map(station => station.id));
     state.settings = data.settings;
-    state.modelCatalog = { llm: [], jev: [] };
     renderSettings();
     renderSitePlugins();
     renderStations();
@@ -784,7 +606,7 @@ function showStationPreview(result, rechargeRatio) {
   for (const [field, value] of Object.entries(fields)) {
     $(`[data-preview-field="${field}"]`).textContent = String(value);
   }
-  const source = suggestion.source === "llm" ? "LLM" : suggestion.source === "fallback" ? "本地规则" : "本地探测";
+  const source = "本地规则";
   const modelCount = Number(result.discovery?.modelCount);
   const details = [result.warning, `分析来源：${source}${Number.isFinite(modelCount) ? `，探测到 ${modelCount} 个模型` : ""}`, suggestion.rationale].filter(Boolean);
   $("#station-preview-status").textContent = details.join("；");
@@ -849,7 +671,7 @@ async function analyzeStation(siteUrl, sourceTabId) {
   button.setAttribute("aria-busy", "true");
   button.querySelector("span:last-child").textContent = "分析中";
   try {
-    const result = await callService("ADAPT_STATION", { station, settings: readSettings(), llmApiKey: $("#llm-api-key").value.trim(), ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
+    const result = await callService("ADAPT_STATION", { station, ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
     if (requestId === state.previewRequestId) showStationPreview(result, previousRatio);
   } catch (error) {
     if (requestId === state.previewRequestId) {
@@ -960,7 +782,6 @@ $("#select-visible-plugins").addEventListener("click", () => {
 });
 $("#add-selected-plugins").addEventListener("click", addSelectedPlugins);
 
-$("#add-station").addEventListener("click", () => openStationDialog());
 $("#add-station-top").addEventListener("click", () => openStationDialog());
 $("#cancel-add-station").addEventListener("click", closeStationDialog);
 $("#cancel-preview-station").addEventListener("click", closeStationDialog);
@@ -1061,27 +882,6 @@ $("#stations-list").addEventListener("change", event => {
   updateStationRechargeRate(card, true);
 });
 
-$("#fetch-llm-models").addEventListener("click", () => runModelAction("llm", "fetch"));
-$("#test-llm-model").addEventListener("click", () => runModelAction("llm", "test"));
-$("#fetch-jev-models").addEventListener("click", () => runModelAction("jev", "fetch"));
-$("#test-jev-model").addEventListener("click", () => runModelAction("jev", "test"));
-$("#save-llm-profile").addEventListener("click", () => saveProviderProfile("llm").catch(error => toast(error.message)));
-$("#delete-llm-profile").addEventListener("click", () => deleteProviderProfile("llm").catch(error => toast(error.message)));
-$("#save-jev-profile").addEventListener("click", () => saveProviderProfile("jev").catch(error => toast(error.message)));
-$("#save-llm-settings").addEventListener("click", () => saveModelSettings("llm").catch(error => toast(error.message)));
-$("#save-jev-settings").addEventListener("click", () => saveModelSettings("jev").catch(error => toast(error.message)));
-$("#delete-jev-profile").addEventListener("click", () => deleteProviderProfile("jev").catch(error => toast(error.message)));
-$("#llm-profile").addEventListener("change", event => switchProvider("llm", event.target.value).catch(error => toast(error.message)));
-$("#jev-profile").addEventListener("change", event => switchProvider("jev", event.target.value).catch(error => toast(error.message)));
-["llm", "jev"].forEach(kind => {
-  const maybeFetchModels = () => {
-    const hasBaseUrl = $(`#${kind}-base-url`).value.trim();
-    const hasKey = $(`#${kind}-api-key`).value.trim() || state.settings?.[kind]?.hasApiKey || (kind === "jev" && ($("#llm-api-key").value.trim() || state.settings?.llm?.hasApiKey));
-    if (hasBaseUrl && hasKey) runModelAction(kind, "fetch");
-  };
-  $(`#${kind}-base-url`).addEventListener("change", maybeFetchModels);
-  $(`#${kind}-api-key`).addEventListener("change", maybeFetchModels);
-});
 
 $("#usage-preset").addEventListener("change", event => applyUsagePreset(event.target.value));
 for (const { id } of USAGE_INPUTS) $(`#${id}`).addEventListener("input", syncUsagePreset);
@@ -1114,10 +914,6 @@ $("#save-all").addEventListener("click", async event => {
     renderStations();
     state.settings = await callService("SAVE_SETTINGS", {
       settings: readSettings(),
-      llmApiKey: $("#llm-api-key").value.trim(),
-      clearLlmApiKey: $("#clear-llm-key").checked,
-      jevApiKey: $("#jev-api-key").value.trim(),
-      clearJevApiKey: $("#clear-jev-key").checked
     });
     renderSettings();
     await saveWorkspace({ notify: false });

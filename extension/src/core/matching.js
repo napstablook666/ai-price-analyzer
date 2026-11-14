@@ -1,7 +1,6 @@
 import { DEFAULT_MATCHING_RULES } from "../shared/schema.js";
+import { canonicalKeysForModel, getCanonicalIndex, resolveCanonicalModel } from "./canonical.js";
 
-export const JEV_MODEL_CANDIDATE_LIMIT = 40;
-const GENERIC_MODEL_TOKENS = new Set(["chat", "instruct", "latest", "model"]);
 
 const MODEL_ALIASES = {
   "deepseek-v4.1-flash": ["deepseek-v4-flash", "deepseek-flash"]
@@ -50,14 +49,17 @@ function modelsForIndexes(indexes, index) {
   return [...indexes].sort((left, right) => left - right).map(modelIndex => index.models[modelIndex]);
 }
 
-export function buildModelMatchIndex(officialList = [], overrides = []) {
+export function buildModelMatchIndex(officialList = [], overrides = [], { canonicalIndex = getCanonicalIndex(), modelAliases = {} } = {}) {
   const index = {
     models: officialList,
     namesByModel: [],
     byName: new Map(),
     byVersionlessName: new Map(),
+    byCanonical: new Map(),
+    canonicalIndex,
     modelById: new Map(),
-    overridesByStation: new Map()
+    overridesByStation: new Map(),
+    aliasesByStation: new Map()
   };
   officialList.forEach((model, modelIndex) => {
     const names = getOfficialNames(model);
@@ -68,7 +70,19 @@ export function buildModelMatchIndex(officialList = [], overrides = []) {
       addIndexedModel(index.byName, name, modelIndex);
       addIndexedModel(index.byVersionlessName, removeVersion(name), modelIndex);
     }
+    if (canonicalIndex) {
+      for (const key of canonicalKeysForModel(model)) addIndexedModel(index.byCanonical, key, modelIndex);
+    }
   });
+  for (const [stationId, aliases] of Object.entries(modelAliases || {})) {
+    const normalized = new Map();
+    for (const item of aliases || []) {
+      const alias = normalizeProxyModelName(item?.alias ?? item?.modelName ?? "");
+      const target = String(item?.canonicalId ?? item?.officialModelId ?? "").trim();
+      if (alias && target && !normalized.has(alias)) normalized.set(alias, target);
+    }
+    if (normalized.size) index.aliasesByStation.set(stationId, normalized);
+  }
   for (const override of overrides) {
     let stationOverrides = index.overridesByStation.get(override.stationId);
     if (!stationOverrides) index.overridesByStation.set(override.stationId, stationOverrides = new Map());
@@ -81,7 +95,16 @@ export function buildModelMatchIndex(officialList = [], overrides = []) {
 export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHING_RULES, index = buildModelMatchIndex(officialList)) {
   const rawName = String(proxyName || "").trim().toLowerCase();
   const normalized = normalizeProxyModelName(rawName);
-  for (const rule of rules?.length ? rules : DEFAULT_MATCHING_RULES) {
+  const activeRules = rules?.length ? rules : DEFAULT_MATCHING_RULES;
+  // 规范模型优先：中转站随便写什么名字，只要归一后命中同一模型身份就统一。
+  if (index.canonicalIndex && activeRules.some(rule => rule?.enabled)) {
+    const canonical = resolveCanonicalModel(rawName, index.canonicalIndex);
+    const candidateIndexes = canonical && index.byCanonical.get(canonical.id);
+    if (candidateIndexes?.size) {
+      return modelsForIndexes(candidateIndexes, index).map(match => ({ match, rule: "规范模型", ruleId: "canonical", confidence: 1, canonical }));
+    }
+  }
+  for (const rule of activeRules) {
     if (!rule?.enabled) continue;
     let matches = [];
     if (rule.id === "exact") {
@@ -119,45 +142,24 @@ export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHIN
   return [];
 }
 
-export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules, index } = {}) {
-  const matchingIndex = index || buildModelMatchIndex(officialList, overrides);
+export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules, index, canonicalIndex } = {}) {
+  const matchingIndex = index || buildModelMatchIndex(officialList, overrides, { canonicalIndex });
   const normalized = normalizeProxyModelName(proxyName);
   const overrideId = matchingIndex.overridesByStation.get(stationId)?.get(normalized);
   const match = overrideId && matchingIndex.modelById.get(overrideId);
-  return match ? [{ match, rule: "人工确认", ruleId: "manual", confidence: 1 }] : matchModel(proxyName, officialList, rules, matchingIndex);
+  if (match) return [{ match, rule: "人工确认", ruleId: "manual", confidence: 1 }];
+  // 插件声明的拼写直接改写成规范 id，再走统一查表。
+  const pluginTarget = matchingIndex.aliasesByStation.get(stationId)?.get(normalized);
+  if (pluginTarget) {
+    const aliased = matchModel(pluginTarget, officialList, rules, matchingIndex);
+    if (aliased.length) return aliased.map(result => ({ ...result, rule: "插件拼写", ruleId: "plugin-alias", confidence: 0.95 }));
+    const direct = matchingIndex.modelById.get(pluginTarget);
+    if (direct) return [{ match: direct, rule: "插件拼写", ruleId: "plugin-alias", confidence: 0.95 }];
+  }
+  return matchModel(proxyName, officialList, rules, matchingIndex);
 }
 
-export function suggestModelCandidates(proxyName, officialList = [], limit = JEV_MODEL_CANDIDATE_LIMIT) {
-  const tokens = new Set(cleanModelName(normalizeProxyModelName(proxyName)).split(/[^a-z0-9]+/).filter(token => token.length > 1 && !GENERIC_MODEL_TOKENS.has(token)));
-  if (!tokens.size) return [];
-  const count = Math.min(JEV_MODEL_CANDIDATE_LIMIT, Math.max(1, Math.trunc(Number(limit)) || JEV_MODEL_CANDIDATE_LIMIT));
-  // ponytail: token overlap gives JEV a 40-model shortlist; expand only if real matches are missed.
-  return officialList.map(model => {
-    const score = Math.max(0, ...[...getOfficialNames(model), model?.id, model?.display_name].filter(Boolean).map(name => {
-    const candidateTokens = new Set(cleanModelName(name).split(/[^a-z0-9]+/).filter(token => token.length > 1 && !GENERIC_MODEL_TOKENS.has(token)));
-      const shared = [...tokens].filter(token => candidateTokens.has(token)).length;
-      return shared / Math.max(tokens.size, candidateTokens.size);
-    }));
-    return { model, score };
-  }).filter(({ score }) => score > 0)
-    .sort((a, b) => b.score - a.score || String(a.model.id || a.model.name).localeCompare(String(b.model.id || b.model.name)))
-    .slice(0, count)
-    .map(({ model }) => model);
-}
 
-export function getJevModelCandidates(proxyName, officialList = [], rules = DEFAULT_MATCHING_RULES) {
-  const directMatches = matchModel(proxyName, officialList, rules);
-  const seen = new Set();
-  const candidates = [...directMatches.map(result => result.match), ...suggestModelCandidates(proxyName, officialList)]
-    .filter(model => {
-      const id = String(model?.id || model?.name || "").trim();
-      if (!id || seen.has(id)) return false;
-      seen.add(id);
-      return true;
-    })
-    .slice(0, JEV_MODEL_CANDIDATE_LIMIT);
-  return { directMatches, candidates };
-}
 
 export function matchOne(proxyName, officialList, rules) {
   return matchModel(proxyName, officialList, rules)[0] || null;
