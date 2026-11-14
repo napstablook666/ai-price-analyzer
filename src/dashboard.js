@@ -1,14 +1,14 @@
 import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "./dashboard-index.js";
-import { initCollapsibleCards } from "./shared/collapse.js";
+import { buildChartGroups, createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "./dashboard-index.js";
+import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
-const state = { data: null, comparisonMode: "paid", rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
+const state = { data: null, comparisonMode: "paid", rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
   stationIndexes: new Map()
 };
 const $ = selector => document.querySelector(selector);
@@ -16,7 +16,6 @@ let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();
 const RATING_LABELS = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
-const ESTIMATED_FIELD_LABELS = { cacheRead: "缓存读", cacheWrite: "缓存写" };
 const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
 
@@ -37,7 +36,6 @@ function rowMatches(row, query) {
   if (state.comparisonMode !== "public" && Array.isArray(state.filters.provider) && !state.filters.provider.includes(row.provider)) return false;
   if (Array.isArray(state.filters.group) && !state.filters.group.includes(row.groupName)) return false;
   if (state.comparisonMode !== "public" && !state.filters.showUnmatched && !row.officialName) return false;
-  if (!state.filters.showStale && row.stale) return false;
   return true;
 }
 
@@ -61,11 +59,10 @@ function partialStatusLabel(row) {
 function statusMarkup(row, includeOfficial = true) {
   const tags = [];
   if (row.incomplete) tags.push(`<span class="status-tag warning">${icon("triangle-alert", { className: "icon" })}${partialStatusLabel(row)}</span>`);
-  if (row.stale) tags.push(`<span class="status-tag warning">${icon("clock-3", { className: "icon" })}过期</span>`);
   if (includeOfficial && !row.officialName) tags.push(`<span class="status-tag muted">${icon("circle-help", { className: "icon" })}未匹配</span>`);
   if (row.evidence === "estimated") tags.push(`<span class="status-tag warning">${icon("calculator", { className: "icon" })}价格推导</span>`);
   if (row.pricingUnavailable) tags.push(`<span class="status-tag warning">${icon("circle-alert", { className: "icon" })}${pricingUnavailableLabel(row)}</span>`);
-  if (!tags.length) tags.push(`<span class="status-tag">${icon("badge-check", { className: "icon" })}已校准</span>`);
+  if (!tags.length) return "";
   return `<div class="status-cluster">${tags.join("")}</div>`;
 }
 
@@ -77,12 +74,12 @@ function renderSummary(rows) {
   const isPublic = state.comparisonMode === "public";
   const matched = rows.filter(row => row.officialName);
   const recommended = rows.filter(row => row.recommended).length;
-  const needsReview = rows.filter(row => (state.comparisonMode !== "public" && !row.officialName) || row.evidence === "estimated" || row.stale || row.incomplete || row.pricingUnavailable).length;
+  const needsReview = rows.filter(row => (state.comparisonMode !== "public" && !row.officialName) || row.evidence === "estimated" || row.incomplete || row.pricingUnavailable).length;
   const reviewReasons = rows.flatMap(row => row.pricingUnavailableReasons || []).reduce((counts, reason) => ({ ...counts, [reason]: (counts[reason] || 0) + 1 }), {});
   const reviewNote = [
     rows.filter(row => row.incomplete).length ? `${rows.filter(row => row.incomplete).length} 条部分解析` : "",
     ...Object.entries(reviewReasons).map(([reason, count]) => `${count} 条${PRICING_REASON_LABELS[reason] || "价格待核验"}`)
-  ].filter(Boolean).join("、") || (isPublic ? "部分解析或过期数据" : "未匹配、推导或过期数据");
+  ].filter(Boolean).join("、") || (isPublic ? "部分解析数据" : "未匹配或推导数据");
   const modelCount = new Set(rows.map(row => row.canonicalModel)).size;
   const stationCount = new Set(rows.map(row => row.stationId)).size;
   const matchRate = rows.length ? Math.round(matched.length / rows.length * 100) : 0;
@@ -142,20 +139,51 @@ function renderFacetFilters(rows) {
 }
 
 const MODEL_FILTER_BOXES = 4;
+const MODEL_FILTER_BOX_LIMIT = 24;
+const MODEL_FILTER_BOX_STORE = "model-atlas:model-filter-boxes";
+function readModelFilterBoxCount() {
+  try {
+    const stored = Math.trunc(Number(localStorage.getItem(MODEL_FILTER_BOX_STORE)));
+    if (Number.isFinite(stored) && stored > MODEL_FILTER_BOXES) return Math.min(stored, MODEL_FILTER_BOX_LIMIT);
+  } catch { /* 隐私模式读不到，按默认四个框渲染 */ }
+  return MODEL_FILTER_BOXES;
+}
+function saveModelFilterBoxCount() {
+  try { localStorage.setItem(MODEL_FILTER_BOX_STORE, String(modelFilterBoxCount)); } catch { /* 写不进去不影响本次会话 */ }
+}
+let modelFilterBoxCount = readModelFilterBoxCount();
 function updateModelFilterLabel() {
   const count = state.filters.models.filter(query => query.trim()).length;
   $("#model-filter-label").textContent = count ? `模型对比 · ${count}` : "模型对比";
 }
+function syncModelFilterActions() {
+  const removeBox = $("#model-filter-remove-box");
+  if (removeBox) removeBox.hidden = modelFilterBoxCount <= MODEL_FILTER_BOXES;
+}
 function renderModelFilter() {
   const queries = state.filters.models;
-  const boxes = Array.from({ length: MODEL_FILTER_BOXES }, (_, index) => queries[index] || "");
-  $("#model-filter-inputs").innerHTML = boxes.map((value, index) => `<input class="facet-search model-filter-input" type="search" data-model-filter="${index}" value="${escapeHtml(value)}" placeholder="模型 ${index + 1}" autocomplete="off" aria-label="模型对比 ${index + 1}">`).join("");
+  modelFilterBoxCount = Math.max(modelFilterBoxCount, MODEL_FILTER_BOXES, queries.length);
+  const boxes = Array.from({ length: modelFilterBoxCount }, (_, index) => queries[index] || "");
+  $("#model-filter-inputs").innerHTML = boxes.map((value, index) => {
+    const removable = index >= MODEL_FILTER_BOXES;
+    const removeButton = removable
+      ? `<button class="model-filter-remove" type="button" data-model-filter-remove="${index}" aria-label="移除模型 ${index + 1}" title="移除这个筛选框"><span data-icon="x" class="icon"></span></button>`
+      : "";
+    return `<span class="model-filter-field${removable ? " is-removable" : ""}"><input class="facet-search model-filter-input" type="search" data-model-filter="${index}" value="${escapeHtml(value)}" placeholder="模型 ${index + 1}" autocomplete="off" aria-label="模型对比 ${index + 1}">${removeButton}</span>`;
+  }).join("");
+  hydrateIcons($("#model-filter-inputs"));
+  syncModelFilterActions();
   updateModelFilterLabel();
 }
 
+// 模型对比固定展开，折叠操作直接弹回。
 $("#model-filter-menu").addEventListener("toggle", event => {
   const menu = event.currentTarget;
-  if (menu.open && !menu.querySelector("input[data-model-filter]")) renderModelFilter();
+  if (!menu.open) {
+    menu.open = true;
+    return;
+  }
+  if (!menu.querySelector("input[data-model-filter]")) renderModelFilter();
 });
 
 function sortValue(row, key) {
@@ -226,7 +254,6 @@ function renderComparisonMode() {
   if (isPublic && ["monthlyCost", "blendedUnitPrice", "diffPercent"].includes(state.filters.sortSecondary)) state.filters.sortSecondary = "none";
   $("#sort-by").value = state.filters.sortBy;
   $("#sort-secondary").value = state.filters.sortSecondary;
-  $("#model-column-heading").textContent = isPublic ? "模型" : "模型 / 官方匹配";
   renderStationErrors();
 }
 
@@ -243,7 +270,7 @@ function sanitizeFiltersForRows(rows) {
 function renderRows() {
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
-  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.showStale, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
+  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
   if (pageFilterKey !== null && pageFilterKey !== filterKey) state.page = 0;
   pageFilterKey = filterKey;
   const filtered = sortRows(state.rows.filter(row => rowMatches(row, query)));
@@ -269,23 +296,25 @@ function renderRows() {
     const monthlyCost = formatPrice(row.monthlyCost, monthlyCostCurrency);
     const hasOfficialCost = Number.isFinite(row.officialMonthlyCost);
     const monthlyDifference = hasOfficialCost && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) ? row.officialMonthlyCost - row.monthlyCost : null;
-    const blendedText = Number.isFinite(row.blendedUnitPrice) ? `混合 ${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}/M` : "";
-    const costMeta = row.stationCategory === "public" ? "仅公益站之间比较" : `官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}${blendedText ? ` · ${blendedText}` : ""}`;
     const officialQuotedPrices = row.officialQuotedPrices || null;
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
-    const matchNote = row.officialName
-      ? `匹配 ${row.officialName} · ${row.matchRule || "官方目录"} · 置信 ${row.confidenceScore}%`
-      : "没有对应的官方目录记录";
+    const candidateList = Array.isArray(row.officialCandidates) ? row.officialCandidates : [];
+    const candidateTag = candidateList.length > 1
+      ? `<details class="candidate-details"><summary class="candidate-tag" title="同一规范模型下的其他官方条目">+${candidateList.length - 1} 候选</summary><div class="candidate-list">${candidateList.map(candidate => `<div class="candidate-item"><span class="candidate-name">${escapeHtml(candidate.name)}</span><span class="candidate-cost">${Number.isFinite(candidate.monthlyCost) ? formatPrice(candidate.monthlyCost, currency, 2) : "—"}</span><span class="candidate-delta">${Number.isFinite(candidate.diffPercent) ? `${candidate.diffPercent < 0 ? "低" : "高"} ${Math.abs(candidate.diffPercent).toFixed(1)}%` : ""}</span></div>`).join("")}</div></details>`
+      : "";
+    const officialNote = row.officialName
+      ? `<span class="official-name" title="官方模型 ${escapeHtml(row.officialName)}">${escapeHtml(row.officialName)}</span><span class="confidence-tag" title="匹配置信度 ${row.confidenceScore}%">${row.confidenceScore}%</span>${candidateTag}`
+      : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
-      <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(isPublic ? "公益站模型 · 仅在公益站模式比较" : matchNote)}</span></div></td>
-      <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(STATION_CATEGORY_LABELS[row.stationCategory] || "付费中转站")}</span><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>
+      <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
+      <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
       <td data-label="中转单价">${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</td>
       <td data-label="官方单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</td>
-      <td data-label="月成本" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="cost-cell"><strong>${monthlyCost}<small> / 月</small></strong><span class="cost-meta">${costMeta}</span>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
+      <td data-label="月成本" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="cost-cell"><strong>${monthlyCost}<small>/月</small></strong>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方" class="paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
-      <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell"><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small> / M</small></strong><span class="cost-meta">${row.blendedMix ? `按 ${mixLabel(row.blendedMix)} 混合` : ""}${Number.isFinite(row.officialBlendedUnitPrice) ? ` · 官方 ${formatPrice(row.officialBlendedUnitPrice, currency, 4)}` : ""}</span></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
-      <td data-label="推荐与状态" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${row.estimatedFields?.length ? `含推导：${row.estimatedFields.map(key => ESTIMATED_FIELD_LABELS[key] || key).join("/")}` : "价格齐全"} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}</div></td>
+      <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
+      <td data-label="推荐" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}${statusMarkup(row)}</div></td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");
@@ -295,7 +324,52 @@ function renderRows() {
   }
   $("#empty-state").hidden = visible.length > 0;
   $(".table-wrap").hidden = visible.length === 0;
+  renderChart(filtered);
   hydrateIcons($("#comparison-body"));
+}
+
+function chartBarClass(category) {
+  if (category === "excellent" || category === "good") return "is-ok";
+  if (category === "fair") return "is-warn";
+  if (category === "bad") return "is-danger";
+  return "is-muted";
+}
+
+function renderChart(rows) {
+  const panel = $("#price-chart");
+  const body = $("#price-chart-body");
+  if (!panel || !body) return;
+  if (state.comparisonMode === "public") {
+    panel.hidden = true;
+    return;
+  }
+  panel.hidden = false;
+  const currency = state.data?.settings?.defaultCurrency || "CNY";
+  const { groups, totalGroups } = buildChartGroups(rows, { maxGroups: 12 });
+  body.innerHTML = groups.map(group => {
+    const official = Number.isFinite(group.officialBlendedUnitPrice) ? group.officialBlendedUnitPrice : null;
+    const officialLabel = official === null ? "" : `<span class="chart-official">官方 ${formatPrice(official, currency, 4)}/M</span>`;
+    const officialLine = official === null ? "" : `<span class="chart-line" style="left:${Number(group.officialLeftPercent).toFixed(2)}%" aria-hidden="true"></span>`;
+    return `<div class="chart-group">
+      <div class="chart-group-head"><span class="chart-model">${escapeHtml(group.displayName)}</span>${group.provider ? `<span class="provider-tag">${escapeHtml(group.provider)}</span>` : ""}${officialLabel}</div>
+      ${group.bars.map(bar => {
+        const delta = bar.diffPercent;
+        const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
+        const deltaLabel = delta === null ? "" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(1))}%`;
+        return `<button class="chart-row" type="button" data-chart-station="${escapeHtml(bar.stationId)}" data-chart-model="${escapeHtml(group.displayName)}" title="按 ${escapeHtml(bar.stationName)} 与 ${escapeHtml(group.displayName)} 筛选">
+          <span class="chart-station">${escapeHtml(bar.stationName)}</span>
+          <span class="chart-track"><span class="chart-bar ${chartBarClass(bar.category)}" style="width:${bar.widthPercent.toFixed(2)}%"></span>${officialLine}</span>
+          <span class="chart-value">${formatPrice(bar.blendedUnitPrice, currency, 4)}<small>/M</small></span>
+          <span class="chart-delta ${deltaClass}">${deltaLabel}</span>
+        </button>`;
+      }).join("")}
+    </div>`;
+  }).join("");
+  $("#price-chart-empty").hidden = groups.length > 0;
+  const footnote = $("#price-chart-footnote");
+  footnote.textContent = totalGroups > groups.length ? `还有 ${totalGroups - groups.length} 个模型未展示，用模型对比缩小范围。` : "";
+  const meta = panel.querySelector(".chart-meta");
+  if (meta) meta.textContent = groups.length ? `${groups.length} 个模型 · 每站最低档` : "";
 }
 
 function renderReferenceStatus() {
@@ -303,21 +377,27 @@ function renderReferenceStatus() {
   if (!ref) return;
   if (state.comparisonMode === "public") {
     $("#reference-status").textContent = "公益站独立比较";
-    $("#reference-note").textContent = "不使用官方价格；金额仅表示站点积分/额度，首版展示比例 1:1。";
+    $("#reference-note").textContent = "";
+    $("#reference-dot").classList.remove("is-live");
+    $("#reference-pill").title = "公益站之间比较，不使用官方价格";
     return;
   }
-  $("#reference-status").textContent = ref.models?.length ? `官方参考价 · ${ref.models.length} 个模型` : "官方参考价未加载";
-  $("#reference-note").textContent = ref.fetchedAt ? `更新 ${new Date(ref.fetchedAt).toLocaleString("zh-CN", { hour12: false })}；${ref.warnings?.length ? ref.warnings.join("；") : "官方目录 · USD credit 1:1 · 人民币按设置汇率"}` : "官方目录每日缓存，可手动更新。";
+  const count = ref.models?.length || 0;
+  $("#reference-status").textContent = count ? `官方价 ${count}` : "官方价未加载";
+  $("#reference-note").textContent = ref.fetchedAt ? new Date(ref.fetchedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+  $("#reference-dot").classList.toggle("is-live", count > 0);
+  $("#reference-pill").title = ref.warnings?.length ? ref.warnings.join("；") : "官方目录每日缓存 · USD credit 1:1 · 人民币按设置汇率";
 }
 function renderCheckin(data) {
   const list = $("#checkin-list");
   const group = $("#checkin-group");
+  const toggle = $("#checkin-toggle");
   const sep = $("#checkin-sep");
-  if (!list || !group) return;
+  if (!list || !group || !toggle) return;
   const stations = data.checkinStations || [];
   // 签到能力由插件仓库的签到插件提供，扩展里不再内置站点适配
   const installed = data.checkinPluginInstalled === true || stations.length > 0;
-  group.hidden = false;
+  toggle.hidden = false;
   if (sep) sep.hidden = false;
   if (!installed) {
     list.innerHTML = `
@@ -403,9 +483,7 @@ function render(data) {
   state.reference = data.references;
   renderComparisonMode();
   state.filters.showUnmatched = Boolean(data.settings?.showUnmatched);
-  state.filters.showStale = data.settings?.showStale !== false;
   $("#show-unmatched").checked = state.filters.showUnmatched;
-  $("#show-stale").checked = state.filters.showStale;
   renderSummary(state.rows);
   renderStationFilter(state.rows);
   renderFacetFilters(state.rows);
@@ -489,6 +567,37 @@ document.addEventListener("click", event => {
   for (const menu of document.querySelectorAll(".facet-menu[open]")) {
     if (menu !== activeMenu) menu.open = false;
   }
+  if (event.target.closest("#model-filter-add")) {
+    if (modelFilterBoxCount >= MODEL_FILTER_BOX_LIMIT) return;
+    modelFilterBoxCount += 1;
+    saveModelFilterBoxCount();
+    renderModelFilter();
+    const inputs = [...document.querySelectorAll("input[data-model-filter]")];
+    inputs[inputs.length - 1]?.focus();
+    return;
+  }
+  const removeButton = event.target.closest("[data-model-filter-remove]");
+  if (removeButton) {
+    const index = Number(removeButton.dataset.modelFilterRemove);
+    const values = [...document.querySelectorAll("input[data-model-filter]")].map(input => input.value);
+    values.splice(index, 1);
+    state.filters.models = values;
+    modelFilterBoxCount = Math.max(MODEL_FILTER_BOXES, values.length);
+    saveModelFilterBoxCount();
+    renderModelFilter();
+    renderRows();
+    return;
+  }
+  if (event.target.closest("#model-filter-remove-box")) {
+    const values = [...document.querySelectorAll("input[data-model-filter]")].map(input => input.value);
+    values.pop();
+    state.filters.models = values;
+    modelFilterBoxCount = Math.max(MODEL_FILTER_BOXES, values.length);
+    saveModelFilterBoxCount();
+    renderModelFilter();
+    renderRows();
+    return;
+  }
   const button = event.target.closest("[data-facet-action]");
   if (!button) return;
   const key = button.dataset.facetKey;
@@ -500,7 +609,9 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
+  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
+  modelFilterBoxCount = MODEL_FILTER_BOXES;
+  saveModelFilterBoxCount();
   $("#search").value = "";
   renderModelFilter();
   renderStationFilter(state.rows);
@@ -509,12 +620,10 @@ $("#reset-filters").addEventListener("click", () => {
   $("#sort-secondary").value = "diffPercent";
   $("#sort-direction").value = "asc";
   $("#show-unmatched").checked = true;
-  $("#show-stale").checked = true;
   renderFacetFilters(state.rows);
   renderRows();
 });
 $("#show-unmatched").addEventListener("change", event => { state.filters.showUnmatched = event.target.checked; renderRows(); });
-$("#show-stale").addEventListener("change", event => { state.filters.showStale = event.target.checked; renderRows(); });
 
 
 
@@ -556,6 +665,8 @@ function renderRefreshProgress(progress) {
     lastRefreshSummary = progress.summary;
     const summary = progress.summary;
     message.textContent = formatRefreshSummary(summary);
+    // 进度里的完成信号先于消息响应到达，这里主动同步一次，避免响应丢失时表格停在旧数据。
+    load();
   } else if (progress.phase === "error") {
     message.textContent = progress.message;
   }
@@ -576,6 +687,20 @@ backToTop.addEventListener("click", () => {
   pageShell.scrollTo({ top: 0, behavior });
   tableWrap.scrollTo({ top: 0, behavior });
 });
+$("#price-chart-body").addEventListener("click", event => {
+  const button = event.target.closest("[data-chart-station]");
+  if (!button) return;
+  state.filters.stationId = button.dataset.chartStation;
+  const model = button.dataset.chartModel || "";
+  if (model) {
+    state.filters.search = model;
+    $("#search").value = model;
+  }
+  renderStationFilter(state.rows);
+  renderRows();
+  document.querySelector(".table-wrap")?.scrollIntoView({ block: "start", behavior: "smooth" });
+});
+
 $("#comparison-body").addEventListener("click", async event => {
   const button = event.target.closest("[data-focus-station]");
   if (!button) return;
@@ -654,7 +779,8 @@ $("#confirm-refresh-all").addEventListener("click", async event => {
     render(data);
     toast(formatRefreshSummary(lastRefreshSummary));
   } catch (error) {
-    toast(error.message);
+    const channelLost = /message port closed|Could not establish connection|Receiving end does not exist/i.test(error.message || "");
+    toast(channelLost ? "刷新已完成，正在同步最新结果" : error.message);
     if (error.code === "REFRESH_CONFIRMATION_REQUIRED") {
       await callService("CANCEL_REFRESH_PREFLIGHT").catch(() => {});
       state.refreshPreflight = null;
@@ -665,6 +791,8 @@ $("#confirm-refresh-all").addEventListener("click", async event => {
     $("#refresh-station").disabled = false;
     button.innerHTML = `${icon("check", { className: "icon" })}<span>确认开始刷新全部</span>`;
     updateRefreshStationButton();
+    // 采集数据在 service worker 里已经落库，响应可能因为长任务丢包，这里统一再同步一次。
+    await load();
     renderRefreshPreflight();
   }
 });
@@ -692,11 +820,18 @@ $("#checkin-refresh").addEventListener("click", async event => {
   catch (error) { toast(error.message); }
   finally { button.disabled = false; }
 });
+$("#checkin-toggle").addEventListener("click", () => {
+  const toggle = $("#checkin-toggle");
+  const group = $("#checkin-group");
+  const open = group.hidden;
+  group.hidden = !open;
+  toggle.setAttribute("aria-expanded", String(open));
+});
 
 document.addEventListener("click", async event => {
   const installButton = event.target.closest("[data-checkin-action='install']");
   if (installButton) {
-    openSettingsView("stations");
+    openSettingsView("installed");
     return;
   }
   const claimButton = event.target.closest("[data-checkin-action='claim']");
@@ -732,8 +867,7 @@ document.addEventListener("change", async event => {
 });
 
 hydrateIcons();
-const cards = initCollapsibleCards("dashboard");
-$("#expand-all").addEventListener("click", () => cards.setAll(false));
+const cards = initCardCollapse("dashboard");
 initTopMenu();
 // 设置抽屉：顶栏齿轮就地打开站点与设置，不再跳到独立的设置页
 const settingsLayer = $("#settings-layer");
@@ -741,7 +875,7 @@ const settingsFrame = $("#settings-frame");
 const settingsTrigger = $("#open-settings");
 let settingsReloadToken = 0;
 let settingsDirty = false;
-function openSettingsView(view = "stations") {
+function openSettingsView(view = "installed") {
   if (!settingsLayer || !settingsFrame) return;
   const src = `options.html?embed=1${settingsDirty ? `&r=${++settingsReloadToken}` : ""}#${view}`;
   if (settingsFrame.getAttribute("src") !== src) settingsFrame.setAttribute("src", src);
@@ -760,7 +894,7 @@ settingsTrigger?.addEventListener("click", () => {
   else openSettingsView();
 });
 for (const trigger of document.querySelectorAll("[data-open-settings]")) {
-  trigger.addEventListener("click", () => openSettingsView(trigger.dataset.openSettings || "stations"));
+  trigger.addEventListener("click", () => openSettingsView(trigger.dataset.openSettings || "installed"));
 }
 settingsLayer?.addEventListener("click", event => {
   if (event.target.closest("[data-close-settings]")) closeSettingsView();
@@ -774,7 +908,6 @@ window.addEventListener("message", event => {
   settingsDirty = true;
   load();
 });
-$("#collapse-all").addEventListener("click", () => cards.setAll(true));
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
 });

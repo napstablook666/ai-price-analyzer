@@ -2346,7 +2346,6 @@ test("collects fuck-everyone directly and compares unconfirmed recharge rates at
   const partialOffer = partialRows.find(row => row.canonicalModel === "image-model")?.offers[0];
   assert.equal(partialOffer.incomplete, true);
   assert.deepEqual(partialOffer.unsupportedBillingModes, ["per_second"]);
-  assert.equal(partialOffer.stale, false);
   const unpricedFixture = structuredClone(fuckEveryoneFixture);
   unpricedFixture.data.groups[0].models.push({ name: "unpriced-model", pricing: { billing_mode: "token" } });
   const unpricedSnapshot = await collectStationInput({ ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }, { fetchImpl: async () => response(unpricedFixture) });
@@ -3563,7 +3562,7 @@ test("filters paid and public comparison groups without mixing summaries", () =>
   ];
   assert.deepEqual(filterComparisonsByMode(comparisons, "paid"), [comparisons[0]]);
   assert.deepEqual(filterComparisonsByMode(comparisons, "public"), [comparisons[1]]);
-  assert.deepEqual(summarizeComparisons(filterComparisonsByMode(comparisons, "public")), { modelCount: 1, offerCount: 1, stationCount: 1, staleCount: 0, bestSaving: 0 });
+  assert.deepEqual(summarizeComparisons(filterComparisonsByMode(comparisons, "public")), { modelCount: 1, offerCount: 1, stationCount: 1, bestSaving: 0 });
 });
 
 test("rejects a failed TokenFlux envelope in its explicit format", () => {
@@ -4962,13 +4961,10 @@ test("uses shared partial diagnostics in refresh progress", async () => {
 });
 
 test("keeps refresh progress labels aligned with parallel-slot semantics", () => {
-  const popup = readFileSync(new URL("../src/popup.js", import.meta.url), "utf8");
   const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
-  assert.ok(popup.includes("并行槽位 ${progress.current}"));
   assert.ok(dashboard.includes("并行槽位 ${progress.current}"));
   assert.ok(options.includes("并行槽位 ${progress.current || 1}"));
-  assert.equal(popup.includes("正在查询 ${progress.current}/${total}"), false);
   assert.equal(options.includes("${progress.current || 1}/${progress.total}"), false);
 });
 
@@ -4999,8 +4995,7 @@ test("keeps every section card collapsible behind the global toggles", () => {
   let cardCount = 0;
   for (const page of ["dashboard.html", "options.html"]) {
     const html = read(page);
-    assert.match(html, /id="expand-all"/, `${page} is missing the expand-all button`);
-    assert.match(html, /id="collapse-all"/, `${page} is missing the collapse-all button`);
+    assert.match(html, /id="collapse-toggle"/, `${page} is missing the collapse toggle button`);
     const keys = new Set();
     for (const match of html.matchAll(/<[a-z-]+ [^>]*data-collapsible[^>]*>/g)) {
       cardCount += 1;
@@ -5033,7 +5028,7 @@ test("opens site and settings inside the dashboard topbar", () => {
   assert.match(topActions, /id="open-settings"[^>]*aria-haspopup="dialog"/);
   assert.match(topActions, /data-comparison-mode="paid"[\s\S]*data-comparison-mode="public"/);
   assert.match(html, /id="settings-layer" hidden/);
-  assert.match(html, /data-embed-src="options\.html\?embed=1#stations"/);
+  assert.match(html, /data-embed-src="options\.html\?embed=1#installed"/);
   assert.match(html, /data-close-settings/);
   assert.ok(!/class="top-menu-item"[^>]*href=/.test(html), "topbar menu should not link away to the settings page");
   assert.ok(!/data-jump="checkin-panel"/.test(html), "check-in jumps belong in the sidebar panel, not the menu");
@@ -5059,7 +5054,7 @@ test("shows Linux.do deferred collection state in station settings", () => {
   assert.match(source, /Linux\.do Marketplace/);
   assert.match(source, /adapter\??\.kind === "linux-do-marketplace"/);
   assert.match(source, /当前 Chrome 配置文件登录 Linux\.do/);
-  assert.match(html, /id="stations-list"/);
+  assert.match(html, /id="plugin-installed-list"/);
 });
 
 test("normalizes dashboard comparison mode with paid as the default", () => {
@@ -5093,8 +5088,7 @@ test("indexes dashboard search text and station lookups", () => {
 test("labels global section controls for icon-only mobile layout", () => {
   for (const page of ["dashboard.html", "options.html"]) {
     const html = readFileSync(new URL(`../${page}`, import.meta.url), "utf8");
-    assert.match(html, /id="expand-all"[^>]*aria-label="展开全部卡片"/);
-    assert.match(html, /id="collapse-all"[^>]*aria-label="折叠全部卡片"/);
+    assert.match(html, /id="collapse-toggle"[^>]*aria-label="折叠全部卡片"/);
   }
 });
 
@@ -5135,6 +5129,12 @@ test("filters quotes by any entered model across all stations", () => {
   assert.match(html, /id="model-filter-inputs"/);
   assert.match(dashboard, /state\.modelTextByRow = index\.modelTextByRow/);
   assert.match(dashboard, /data-model-filter/);
+  assert.match(html, /id="model-filter-add"/);
+  assert.match(dashboard, /MODEL_FILTER_BOXES = 4/);
+  assert.match(dashboard, /data-model-filter-remove/);
+  assert.match(html, /id="model-filter-remove-box"/);
+  assert.match(dashboard, /MODEL_FILTER_BOX_STORE = "model-atlas:model-filter-boxes"/);
+  assert.match(dashboard, /saveModelFilterBoxCount\(\)/);
 });
 
 
@@ -5162,4 +5162,207 @@ test("removes recharge-rate warnings while retaining option inputs and legacy fi
   assert.match(options, /rechargeRateVerified: collected\.rechargeRmb > 0 && collected\.rechargeCredits > 0/);
   assert.match(options, /rechargeRateVerified: station\.rechargeRateVerified !== false/);
   assert.match(options, /rechargeRateNote: station\.rechargeRateNote \|\| ""/);
+});
+
+test("installing a registry plugin adds its addable stations to the workspace right away", async () => {
+  const previousChrome = globalThis.chrome;
+  const previousIndexedDb = globalThis.indexedDB;
+  const kv = new Map();
+  const stationRows = [];
+  const kvStore = {
+    get(key) {
+      const request = {};
+      queueMicrotask(() => { request.result = kv.get(key); request.onsuccess?.(); });
+      return request;
+    },
+    put(value, key) {
+      const request = {};
+      queueMicrotask(() => { kv.set(key ?? value?.id ?? "settings", structuredClone(value)); request.onsuccess?.(); });
+      return request;
+    }
+  };
+  const stationStore = {
+    getAll() {
+      const request = {};
+      queueMicrotask(() => { request.result = stationRows.map(row => structuredClone(row)); request.onsuccess?.(); });
+      return request;
+    },
+    put(value) {
+      const request = {};
+      queueMicrotask(() => {
+        const index = stationRows.findIndex(row => row.id === value.id);
+        if (index < 0) stationRows.push(structuredClone(value));
+        else stationRows[index] = structuredClone(value);
+        request.onsuccess?.();
+      });
+      return request;
+    },
+    delete(key) {
+      const request = {};
+      queueMicrotask(() => {
+        const index = stationRows.findIndex(row => row.id === key);
+        if (index >= 0) stationRows.splice(index, 1);
+        request.onsuccess?.();
+      });
+      return request;
+    }
+  };
+  const database = {
+    close() {},
+    objectStoreNames: { contains: () => true },
+    transaction(name) {
+      const transaction = {
+        objectStore: () => (name === "kv" ? kvStore : stationStore)
+      };
+      queueMicrotask(() => transaction.oncomplete?.());
+      return transaction;
+    }
+  };
+  globalThis.indexedDB = {
+    open() {
+      const request = { result: database };
+      queueMicrotask(() => { request.onupgradeneeded?.(); request.onsuccess?.(); });
+      return request;
+    }
+  };
+  globalThis.chrome = {
+    runtime: {
+      lastError: undefined,
+      onMessage: { addListener() {} },
+      onInstalled: { addListener() {} },
+      onStartup: { addListener() {} },
+      getURL: () => "chrome-extension://test-extension/",
+      getManifest: () => ({ version: "0.0.0-test" })
+    },
+    alarms: { onAlarm: { addListener() {} } },
+    tabs: { onUpdated: { addListener() {}, removeListener() {} }, onRemoved: { addListener() {}, removeListener() {} } }
+  };
+  try {
+    const { installPlugins } = await import(`../src/service-worker.js?install-auto-add=${Date.now()}`);
+    const first = await installPlugins(["true-sota"]);
+    assert.deepEqual(first.installed, ["true-sota"]);
+    assert.equal(first.stationsAdded, 1);
+    assert.equal(first.results[0].stations, 1);
+    assert.equal(stationRows.length, 1);
+    assert.equal(stationRows[0].pluginId, "true-sota");
+    assert.equal(first.workspace.registry.entries.find(item => item.id === "true-sota")?.installedVersion, "0.2.1");
+
+    const second = await installPlugins(["true-sota"]);
+    assert.deepEqual(second.skipped, ["true-sota"]);
+    assert.equal(second.stationsAdded, 0);
+    assert.equal(stationRows.length, 1);
+  } finally {
+    if (previousChrome === undefined) delete globalThis.chrome;
+    else globalThis.chrome = previousChrome;
+    if (previousIndexedDb === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = previousIndexedDb;
+  }
+});
+
+test("bulk uninstall removes registry records, local plugins, and their stations in one pass", async () => {
+  const previousChrome = globalThis.chrome;
+  const previousIndexedDb = globalThis.indexedDB;
+  const kv = new Map();
+  const stationRows = [];
+  const kvStore = {
+    get(key) {
+      const request = {};
+      queueMicrotask(() => { request.result = kv.get(key); request.onsuccess?.(); });
+      return request;
+    },
+    put(value, key) {
+      const request = {};
+      queueMicrotask(() => { kv.set(key ?? value?.id ?? "settings", structuredClone(value)); request.onsuccess?.(); });
+      return request;
+    }
+  };
+  const stationStore = {
+    getAll() {
+      const request = {};
+      queueMicrotask(() => { request.result = stationRows.map(row => structuredClone(row)); request.onsuccess?.(); });
+      return request;
+    },
+    put(value) {
+      const request = {};
+      queueMicrotask(() => {
+        const index = stationRows.findIndex(row => row.id === value.id);
+        if (index < 0) stationRows.push(structuredClone(value));
+        else stationRows[index] = structuredClone(value);
+        request.onsuccess?.();
+      });
+      return request;
+    },
+    delete(key) {
+      const request = {};
+      queueMicrotask(() => {
+        const index = stationRows.findIndex(row => row.id === key);
+        if (index >= 0) stationRows.splice(index, 1);
+        request.onsuccess?.();
+      });
+      return request;
+    }
+  };
+  const database = {
+    close() {},
+    objectStoreNames: { contains: () => true },
+    transaction(name) {
+      const transaction = { objectStore: () => (name === "kv" ? kvStore : stationStore) };
+      queueMicrotask(() => transaction.oncomplete?.());
+      return transaction;
+    }
+  };
+  globalThis.indexedDB = {
+    open() {
+      const request = { result: database };
+      queueMicrotask(() => { request.onupgradeneeded?.(); request.onsuccess?.(); });
+      return request;
+    }
+  };
+  globalThis.chrome = {
+    runtime: {
+      lastError: undefined,
+      onMessage: { addListener() {} },
+      onInstalled: { addListener() {} },
+      onStartup: { addListener() {} },
+      getURL: () => "chrome-extension://test-extension/",
+      getManifest: () => ({ version: "0.0.0-test" })
+    },
+    alarms: { onAlarm: { addListener() {} } },
+    tabs: { onUpdated: { addListener() {}, removeListener() {} }, onRemoved: { addListener() {}, removeListener() {} } }
+  };
+  try {
+    const { installPlugins, uninstallPlugins } = await import(`../src/service-worker.js?uninstall-bulk=${Date.now()}`);
+    const installed = await installPlugins(["true-sota"]);
+    assert.deepEqual(installed.installed, ["true-sota"]);
+    assert.equal(stationRows.length, 1);
+
+    const removed = await uninstallPlugins(["true-sota"]);
+    assert.deepEqual(removed.removed, ["true-sota"]);
+    assert.equal(stationRows.length, 0);
+    assert.equal(removed.registry.entries.find(item => item.id === "true-sota")?.installed, false);
+    assert.equal(kv.get("settings").pluginRegistry.installed["true-sota"], undefined);
+
+    await assert.rejects(uninstallPlugins([]), /没有选中要移除的插件/);
+  } finally {
+    if (previousChrome === undefined) delete globalThis.chrome;
+    else globalThis.chrome = previousChrome;
+    if (previousIndexedDb === undefined) delete globalThis.indexedDB;
+    else globalThis.indexedDB = previousIndexedDb;
+  }
+});
+
+test("plugin lists support select-all and shift range selection wired to bulk actions", () => {
+  const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
+const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url), "utf8");
+  assert.match(options, /function applyRangeSelection\(order, anchorId, currentId, checked, selection, isSelectable\)/);
+  assert.match(options, /state\.installedSelectable = new Set\(ordered\.filter\(plugin => plugin\.removable !== false\)/);
+  assert.match(options, /state\.registryOrder = visible\.map\(entry => String\(entry\.id\)\)/);
+  assert.match(options, /applyRangeSelection\(state\.registryOrder, state\.registryAnchorId, id, check\.checked, state\.registrySelected, isSelectable\)/);
+  assert.match(options, /applyRangeSelection\(state\.installedOrder, state\.installedAnchorId, id, check\.checked, state\.installedSelected, isSelectable\)/);
+  assert.match(options, /callService\("UNINSTALL_PLUGINS", \{ ids \}\)/);
+  assert.match(worker, /case "UNINSTALL_PLUGINS": return uninstallPlugins\(message\.ids\)/);
+  assert.match(html, /id="installed-select-all" type="checkbox"/);
+  assert.match(html, /id="uninstall-selected-plugins"[^>]*disabled/);
+  assert.match(html, /id="registry-select-all" type="checkbox"/);
 });

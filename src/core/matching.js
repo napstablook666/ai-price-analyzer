@@ -72,7 +72,13 @@ export function buildModelMatchIndex(officialList = [], overrides = [], { canoni
       addIndexedModel(index.byVersionlessName, removeVersion(name), modelIndex);
     }
     if (canonicalIndex) {
-      for (const key of canonicalKeysForModel(model)) addIndexedModel(index.byCanonical, key, modelIndex);
+      const canonicalKeys = canonicalKeysForModel(model);
+      for (const key of canonicalKeys) addIndexedModel(index.byCanonical, key, modelIndex);
+      // 同一规范模型下的不同官方条目（-1017、:batch 等别名）也要能按 canonical id 一起取出。
+      for (const key of canonicalKeys) {
+        const owner = canonicalIndex.byKey.get(key);
+        if (owner?.id) addIndexedModel(index.byCanonical, owner.id, modelIndex);
+      }
     }
   });
   for (const [stationId, aliases] of Object.entries(modelAliases || {})) {

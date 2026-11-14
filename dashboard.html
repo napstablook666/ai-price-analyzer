@@ -25,13 +25,13 @@
       <details class="top-menu" id="top-menu">
         <summary class="button button-quiet" aria-label="打开菜单" aria-expanded="false"><span data-icon="menu" class="icon"></span><span>菜单</span></summary>
         <div class="top-menu-body" role="menu" aria-label="页面操作">
-          <button class="top-menu-item" role="menuitem" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
-          <button class="top-menu-item" role="menuitem" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
+          <button class="top-menu-item" role="menuitem" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
           <div class="top-menu-sep" role="separator"></div>
           <button class="top-menu-item" role="menuitem" id="refresh-station" type="button" disabled title="先在站点筛选中选择一个站点" aria-label="刷新当前站点"><span data-icon="refresh-cw" class="icon"></span><span>刷新当前站点</span></button>
           <div class="top-menu-sep" role="separator" id="checkin-sep" hidden></div>
+          <button class="top-menu-item" role="menuitem" id="checkin-toggle" type="button" aria-expanded="false" aria-controls="checkin-group" data-menu-stay hidden><span data-icon="badge-check" class="icon"></span><span>每日签到</span><span data-icon="chevron-right" class="icon checkin-caret"></span></button>
           <div class="top-menu-checkin" id="checkin-group" role="group" aria-label="每日签到" hidden>
-            <div class="top-menu-checkin-head"><span>每日签到</span><button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button></div>
+            <div class="top-menu-checkin-head"><button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button></div>
             <div class="checkin-list" id="checkin-list"></div>
           </div>
         </div>
@@ -59,6 +59,12 @@
     </section>
 
     <section class="summary-grid" id="summary" aria-label="统计摘要"></section>
+    <section class="panel price-chart-panel" id="price-chart" data-collapsible aria-labelledby="price-chart-title" hidden>
+      <div class="panel-heading"><div><h2 id="price-chart-title">价格分布</h2></div><span class="chart-meta"></span></div>
+      <div class="price-chart-body" id="price-chart-body"></div>
+      <p class="chart-footnote" id="price-chart-footnote"></p>
+      <p class="chart-empty" id="price-chart-empty" hidden>当前筛选下没有可画的价格数据。</p>
+    </section>
 
 <div class="dashboard-workspace">
       <aside class="dashboard-sidebar" aria-label="筛选与签到">
@@ -75,16 +81,16 @@
             <button class="button button-quiet paid-only-control" id="fetch-references" type="button"><span data-icon="external-link" class="icon"></span><span>更新官方价</span></button>
             <button class="button button-quiet" id="reset-filters" type="button" title="重置筛选"><span data-icon="x" class="icon"></span><span>重置</span></button>
           </div>
-          <details class="facet-menu model-filter-menu compare-row" id="model-filter-menu"><summary><span data-icon="sliders-horizontal" class="icon"></span><span id="model-filter-label">模型对比</span></summary><div class="facet-menu-body model-filter-body"><div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div></div></details>
-          <div class="toolbar-options"><label class="check-label paid-only-control"><input id="show-unmatched" type="checkbox"><span>显示未匹配</span></label><label class="check-label"><input id="show-stale" type="checkbox" checked><span>显示过期</span></label><p class="comparison-mode-note" id="comparison-mode-note" role="status" aria-live="polite"></p><div id="station-errors" class="station-errors" role="status" aria-live="polite" hidden></div></div>
+          <details class="facet-menu model-filter-menu compare-row" id="model-filter-menu" open><summary><span data-icon="sliders-horizontal" class="icon"></span><span id="model-filter-label">模型对比</span></summary><div class="facet-menu-body model-filter-body"><div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div><div class="model-filter-actions"><button class="model-filter-add" id="model-filter-add" type="button" aria-label="添加筛选框" title="添加筛选框"><span data-icon="plus" class="icon"></span><span>添加筛选框</span></button><button class="model-filter-remove-box" id="model-filter-remove-box" type="button" aria-label="移除最后一个筛选框" title="移除最后一个筛选框" hidden><span data-icon="x" class="icon"></span></button></div></div></details>
+          <div class="toolbar-options"><label class="check-label paid-only-control"><input id="show-unmatched" type="checkbox"><span>显示未匹配</span></label><p class="comparison-mode-note" id="comparison-mode-note" role="status" aria-live="polite"></p><div id="station-errors" class="station-errors" role="status" aria-live="polite" hidden></div></div>
         </section>
 </aside>
 
         <section class="panel comparison-panel" id="comparison-panel" data-collapsible aria-labelledby="comparison-title">
-      <div class="panel-heading"><div><h2 id="comparison-title">价格明细</h2></div><div class="comparison-meta"><span class="result-count" id="result-count">0 条报价</span><div class="reference-readout"><strong id="reference-status">官方参考价未加载</strong><span id="reference-note">参考价与汇率每日缓存</span></div></div></div>
+      <div class="panel-heading"><div><h2 id="comparison-title">价格明细</h2></div><div class="comparison-meta"><span class="result-count" id="result-count">0 条报价</span><span class="reference-status" id="reference-pill"><span class="status-dot" id="reference-dot"></span><span id="reference-status">官方价未加载</span><span class="reference-time" id="reference-note"></span></span></div></div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="模型价格表，可滚动">
         <table class="comparison-table">
-          <thead><tr><th scope="col" data-sort-keys="model provider"><span id="model-column-heading">模型 / 官方匹配</span></th><th scope="col" data-sort-keys="groupName">中转站 / 分组</th><th scope="col">中转币 / M token</th><th scope="col" class="paid-only-column">官方单价 <span>中转币 / M token</span></th><th scope="col" class="paid-only-column" data-sort-keys="monthlyCost">月成本</th><th scope="col" class="paid-only-column" data-sort-keys="diffPercent">相对官方</th><th scope="col" class="paid-only-column" data-sort-keys="blendedUnitPrice">混合单价 <span>本站币 / M token</span></th><th scope="col" class="paid-only-column" data-sort-keys="confidenceScore">推荐与状态</th><th scope="col" class="public-only-column" hidden>状态</th></tr></thead>
+          <thead><tr><th scope="col" data-sort-keys="model provider">模型</th><th scope="col" data-sort-keys="groupName">中转站</th><th scope="col">中转单价</th><th scope="col" class="paid-only-column">官方单价</th><th scope="col" class="paid-only-column" data-sort-keys="monthlyCost">月成本</th><th scope="col" class="paid-only-column" data-sort-keys="diffPercent">相对官方</th><th scope="col" class="paid-only-column" data-sort-keys="blendedUnitPrice">混合单价</th><th scope="col" class="paid-only-column" data-sort-keys="confidenceScore">推荐</th><th scope="col" class="public-only-column" hidden>状态</th></tr></thead>
           <tbody id="comparison-body"></tbody>
         </table>
       </div>
@@ -105,7 +111,7 @@
         <div><p class="eyebrow">WORKSPACE SETTINGS</p><h2 id="settings-sheet-title">站点与设置</h2></div>
         <button class="button button-quiet" id="close-settings" type="button" data-close-settings><span data-icon="x" class="icon"></span><span>关闭</span></button>
       </header>
-      <iframe class="settings-frame" id="settings-frame" title="站点与设置" data-embed-src="options.html?embed=1#stations"></iframe>
+      <iframe class="settings-frame" id="settings-frame" title="站点与设置" data-embed-src="options.html?embed=1#installed"></iframe>
     </aside>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>

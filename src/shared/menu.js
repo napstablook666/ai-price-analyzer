@@ -8,7 +8,10 @@ export function initTopMenu(id = "top-menu") {
 
   menu.addEventListener("toggle", sync);
   menu.addEventListener("click", event => {
-    if (event.target.closest(".top-menu-item")) close();
+    const item = event.target.closest(".top-menu-item");
+    // data-menu-stay 的条目在面板内展开二级内容，不收起菜单
+    if (!item || item.hasAttribute("data-menu-stay")) return;
+    close();
   });
   document.addEventListener("pointerdown", event => {
     if (menu.open && !menu.contains(event.target)) close();
