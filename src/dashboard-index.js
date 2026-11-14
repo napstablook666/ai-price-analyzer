@@ -74,15 +74,16 @@ export function buildChartGroups(rows = [], { maxGroups = 12 } = {}) {
     const bars = [...group.bars.values()].sort((left, right) => left.blendedUnitPrice - right.blendedUnitPrice);
     if (!bars.length) continue;
     const official = group.officialBlendedUnitPrice;
-    const max = Math.max(...bars.map(bar => bar.blendedUnitPrice), official || 0);
-    for (const bar of bars) bar.widthPercent = max > 0 ? bar.blendedUnitPrice / max * 100 : 0;
+    const baseline = Math.max(...bars.map(bar => bar.blendedUnitPrice));
+    for (const bar of bars) bar.widthPercent = baseline > 0 ? bar.blendedUnitPrice / baseline * 100 : 0;
     const lowest = bars[0].blendedUnitPrice;
     groups.push({
       canonicalModel: group.canonicalModel,
       displayName: group.displayName,
       provider: group.provider,
       officialBlendedUnitPrice: official,
-      officialLeftPercent: official ? official / max * 100 : null,
+      // 官方价只在没有超过轨道满格时才有位置可画；超出说明全站都比官方便宜
+      officialLeftPercent: official > 0 && official <= baseline ? official / baseline * 100 : null,
       savingRatio: official > 0 ? 1 - lowest / official : Number.NEGATIVE_INFINITY,
       bars
     });

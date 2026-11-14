@@ -348,8 +348,8 @@ function renderChart(rows) {
   const { groups, totalGroups } = buildChartGroups(rows, { maxGroups: 12 });
   body.innerHTML = groups.map(group => {
     const official = Number.isFinite(group.officialBlendedUnitPrice) ? group.officialBlendedUnitPrice : null;
+    const officialLine = group.officialLeftPercent === null ? "" : `<span class="chart-line" style="left:${Number(group.officialLeftPercent).toFixed(2)}%" aria-hidden="true"></span>`;
     const officialLabel = official === null ? "" : `<span class="chart-official">官方 ${formatPrice(official, currency, 4)}/M</span>`;
-    const officialLine = official === null ? "" : `<span class="chart-line" style="left:${Number(group.officialLeftPercent).toFixed(2)}%" aria-hidden="true"></span>`;
     return `<div class="chart-group">
       <div class="chart-group-head"><span class="chart-model">${escapeHtml(group.displayName)}</span>${group.provider ? `<span class="provider-tag">${escapeHtml(group.provider)}</span>` : ""}${officialLabel}</div>
       ${group.bars.map(bar => {

@@ -100,9 +100,14 @@ test("buildChartGroups groups by canonical model, normalizes bars and excludes p
   assert.equal(groups.length, 2);
   assert.equal(groups[0].canonicalModel, "m1");
   assert.deepEqual(groups[0].bars.map(bar => bar.stationId), ["a", "b", "c"]);
+  // 轨道满格 = 组内最贵的一站；官方价比满格还贵时不给参考线位置
   assert.deepEqual(groups[0].bars.map(bar => bar.widthPercent), [12.5, 25, 100]);
   assert.equal(groups[0].officialLeftPercent, 50);
+  assert.equal(groups[1].officialLeftPercent, 100);
+  assert.equal(groups[1].bars[0].widthPercent, 100);
   assert.equal(groups[0].officialBlendedUnitPrice, 4);
+  const aboveTrack = buildChartGroups([row({ blendedUnitPrice: 1, officialBlendedUnitPrice: 40 })]);
+  assert.equal(aboveTrack.groups[0].officialLeftPercent, null);
 
   const truncated = buildChartGroups(rows, { maxGroups: 1 });
   assert.equal(truncated.groups.length, 1);
