@@ -223,3 +223,10 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 - 新增 `createModelBands()`，按当前页 `canonicalModel` 首次出现顺序分配 `model-band-even/odd`，同一模型多站点报价保持同色，不同模型交替白色/浅灰。
 - 浏览器实测：1440×900 表格 1108×601，1280×720 表格 938×411，360px 无页面横向溢出。搜索、签到、分页保持可用，hover 与移动卡片色带正常。
 - 验证：241/241 测试、全部 src JS `node --check`、`git diff --check` 通过。证据在 `out/ui-browser/workspace-report.json` 和 `workspace-*.png`。未提交 git commit。
+## 2026-11-14 清理 LLM/JEV 残留与死代码
+
+- 阶段一修设置页崩溃：`SETTINGS_VIEWS` 里残留的 `providers` 让 `activateSettingsView()` 对 `null` 调 `setAttribute`，整个 `extension/src/options.js` 初始化中断。同步清掉「Agent 添加」措辞（`options.html` 首屏重复按钮删除、视图内按钮改 plus 图标）、`is-agent-only` → `is-address-only`、`plugins/*/manifest.json` 里三条地址型插件描述、孤儿样式 `.config-*` / `.field-grid` / `.provider-profile-*`、恒空的 `unavailableAction`。
+- 阶段二清死代码：`extension/src/core/station-presets.js` 104 行压到 17 行，15 个 `addXxxStationPreset` 包装与 `addRegisteredStationPresets` / `addPublicStationPresets` 合并成 `addProviderStationPresets`；删掉永不生效的 `allowEmpty` 守卫（生产一直传 true，空列表播种是现状）；`db.js` 的 `addStationIfNeeded`、`loader.js` 的 `loadAllSitePlugins` 连同只测它们的假 IndexedDB 用例一起删除。
+- `core.test.js` 166 行改动：56 处包装调用走 `addProviderStationPresets(stations, [providerById(id)])`，9 处注册表调用传 `PROVIDER_REGISTRY`，`addXxx([]).length === 0` 断言按现状改成 `=== 1`。
+- 踩坑记录：`options.html` 与 `options.js` 有另一条任务在同时改写，按钮 id 中途从 `add-station` 变成 `add-station-top`，按磁盘现状对齐后用静态 id 比对脚本验证（61 个 id、38 个引用，缺 0）。`git diff` 的 486 行变更里只有 166 行属于本次，用改前快照逐行差分才分得清。
+- 验证：241/241 测试、`plugin-build.mjs --check` 22 个插件同步、`sync-version.mjs --check` 0.2.1、工作区干净。commit ffd7a30。
