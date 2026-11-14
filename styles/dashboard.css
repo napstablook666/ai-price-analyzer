@@ -98,21 +98,28 @@
 .reference-status .status-dot.is-live { background: var(--ok); }
 .reference-time { color: var(--text-3); font-weight: 500; font-variant-numeric: tabular-nums; }
 .table-wrap { position: relative; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; border-top: 1px solid var(--line); }
-.comparison-table { width: 100%; min-width: 1180px; table-layout: fixed; border-collapse: separate; border-spacing: 0; color: var(--text-2); font-size: 12.5px; }
-.comparison-table th, .comparison-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
-.comparison-table th:nth-child(1) { width: 20%; }
-.comparison-table th:nth-child(2) { width: 15%; }
-.comparison-table th:nth-child(3), .comparison-table th:nth-child(4) { width: 11%; }
-.comparison-table th:nth-child(5) { width: 10%; }
-.comparison-table th:nth-child(6) { width: 9%; }
-.comparison-table th:nth-child(7) { width: 11%; }
-.comparison-table th:nth-child(8) { width: 13%; }
-.comparison-table thead th { position: sticky; top: 0; z-index: 3; height: 40px; color: var(--text-2); background: var(--surface); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.comparison-table { width: 100%; min-width: 1000px; table-layout: fixed; border-collapse: separate; border-spacing: 0; color: var(--text-2); font-size: 12.5px; }
+.comparison-table th, .comparison-table td { padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.comparison-table th:nth-child(1) { width: 18%; }
+.comparison-table th:nth-child(2) { width: 11%; }
+.comparison-table th:nth-child(3) { width: 47%; }
+.comparison-table th:nth-child(4) { width: 8%; }
+.comparison-table th:nth-child(5) { width: 11%; }
+.comparison-table th:nth-child(6) { width: 5%; }
+/* 公益站模式只剩模型、中转站、状态三列，按 3 列重新分配宽度 */
+.comparison-table.is-public th:nth-child(1) { width: 40%; }
+.comparison-table.is-public th:nth-child(2) { width: 24%; }
+.comparison-table.is-public th:nth-child(6) { width: 36%; }
+@media (min-width: 1101px) {
+  .comparison-table th + th, .comparison-table td + td { border-left: 1px solid color-mix(in srgb, var(--line-strong) 72%, transparent); }
+}
+.comparison-table thead th { position: sticky; top: 0; z-index: 3; height: 42px; color: var(--text-2); background: var(--surface); font-size: 11.5px; font-weight: 650; letter-spacing: .02em; white-space: nowrap; border-bottom: 1px solid var(--line-strong); }
 .comparison-table tbody tr:last-child td { border-bottom: 0; }
 .comparison-table tbody tr.row-even td { background: var(--surface); }
 .comparison-table tbody tr.row-odd td { background: var(--row-tint); }
 .comparison-table tbody tr.model-band-start td { border-top: 1px solid var(--line-strong); }
 .comparison-table tbody tr:hover td { background: var(--accent-soft); }
+.comparison-table tbody td { transition: background-color .12s ease; }
 .comparison-table [hidden] { display: none !important; }
 .model-cell { display: grid; gap: 4px; min-width: 0; }
 .model-head { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
@@ -125,10 +132,10 @@
 .station-filter-link > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .station-meta { flex-basis: 100%; color: var(--text-3); font-size: 10px; }
 .status-dot.is-live { background: var(--ok); }
-.price-lines { display: grid; gap: 3px; }
-.price-line { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; color: var(--text-3); font-size: 10.5px; }
+.price-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--text-3); font-size: 10.5px; line-height: 1.45; }
+.price-lines { display: grid; gap: 2px; }
 .price-line-primary { color: var(--text-2); }
-.price-key { flex: 0 0 auto; }
+.price-key { flex: 0 0 auto; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .price-value { color: var(--text); font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .price-empty { color: var(--text-3); font-size: 11.5px; }
 .cost-cell { display: grid; gap: 3px; }
@@ -142,6 +149,7 @@
 .delta-tag.delta-fair { color: var(--cat-fair); border-color: var(--warn-line); background: var(--warn-soft); }
 .delta-tag.delta-bad { color: var(--cat-bad); border-color: color-mix(in srgb, var(--cat-bad) 30%, var(--line)); background: var(--danger-soft); }
 .delta-tag.neutral { color: var(--text-3); background: var(--surface-2); }
+.comparison-table .delta-tag { padding: 3px 9px; border-radius: var(--radius-pill); font-weight: 650; font-variant-numeric: tabular-nums; }
 .recommendation-cell { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; min-width: 0; }
 .status-cluster { display: flex; flex-wrap: wrap; gap: 3px; }
 .status-tag .icon { width: 10px; height: 10px; }
@@ -231,7 +239,7 @@
   .comparison-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 9px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; }
   .comparison-table td { display: grid; gap: 4px; min-width: 0; padding: 0; border: 0; }
   .comparison-table td::before { content: attr(data-label); color: var(--text-3); font-size: 9px; }
-  .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="状态"] { grid-column: 1 / -1; }
+  .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="状态"], .comparison-table td.merged-price-cell { grid-column: 1 / -1; }
   .comparison-table tbody tr:hover td { background: transparent; }
   .top-menu-checkin { width: min(88vw, 320px); max-height: none; }
 }
@@ -286,6 +294,38 @@
 .cell-chart .chart-bar.is-muted { background: var(--text-3); }
 .cell-chart .chart-line { position: absolute; top: -3px; bottom: -3px; width: 1px; margin-left: -1px; border-left: 1px dashed var(--text); opacity: .65; }
 
+
+
+/* 三列合并报价区：固定分隔线和统一月成本标尺，信息密度不变 */
+.merged-price-heading-label { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.monthly-cost-scale-switch { display: inline-flex; flex: 0 0 auto; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); font-size: 10px; font-weight: 500; }
+.monthly-cost-scale-switch button { padding: 3px 7px; border: 0; border-radius: 3px; color: var(--text-3); background: transparent; cursor: pointer; font: inherit; white-space: nowrap; }
+.monthly-cost-scale-switch button:hover { color: var(--text-1); background: var(--surface-2); }
+.monthly-cost-scale-switch button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); font-weight: 700; }
+.cost-header-ruler { display: grid; gap: 3px; margin-top: 6px; }
+.cost-header-track { display: block; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.cost-header-track > span { display: block; width: 100%; height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 45%, var(--surface))); }
+.cost-header-scale { display: flex; justify-content: space-between; gap: 8px; color: var(--text-3); font-size: 9px; font-weight: 400; }
+.merged-price-content { display: grid; gap: 8px; min-width: 0; }
+.merged-price-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); min-width: 0; }
+.merged-price-unit { min-width: 0; padding: 0 10px; }
+.merged-price-unit:first-child { padding-left: 0; }
+.merged-price-unit:last-child { padding-right: 0; }
+.merged-price-unit + .merged-price-unit { border-left: 1px solid var(--line); }
+.merged-price-label { display: block; margin-bottom: 4px; color: var(--text-3); font-size: 9.5px; font-weight: 600; }
+.monthly-cost-details { position: relative; min-width: 0; }
+.monthly-cost-summary { display: block; padding: 3px 0; cursor: pointer; list-style: none; }
+.monthly-cost-summary::-webkit-details-marker { display: none; }
+.monthly-cost-summary .cell-chart { display: block; width: 100%; max-width: none; min-width: 0; margin: 0; }
+.monthly-cost-summary .chart-track { height: 7px; background: color-mix(in srgb, var(--text-3) 22%, transparent); }
+.cell-chart.is-monthly-cost .chart-bar { background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 58%, var(--surface))); }
+.monthly-cost-details:hover .monthly-cost-summary, .monthly-cost-details[open] .monthly-cost-summary { background: var(--accent-soft); }
+.monthly-cost-popover { display: none; position: absolute; z-index: 35; top: calc(100% + 5px); left: 0; width: min(640px, calc(100vw - 32px)); padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-pop); }
+.monthly-cost-details[open] .monthly-cost-popover { display: grid; gap: 10px; }
+.monthly-cost-popover-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-3); font-size: 10px; }
+.monthly-cost-popover-heading strong { color: var(--text); font-size: 11px; }
+.monthly-cost-popover-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.monthly-cost-popover-grid > div { min-width: 0; }
 /* 模型匹配详情：表格里只保留置信度，其余信息悬停或点击展开 */
 .model-match-details { display: inline-block; position: relative; }
 .model-match-details > summary { cursor: pointer; list-style: none; }
@@ -303,3 +343,11 @@
 .candidate-item { display: grid; grid-template-columns: minmax(0, 1fr) 80px 56px; gap: 8px; color: var(--text-3); }
 .candidate-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .candidate-cost, .candidate-delta { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 放在桌面基础规则之后，避免移动端单列与浮层宽度被覆盖。 */
+@media (max-width: 760px) {
+  .merged-price-columns, .monthly-cost-popover-grid { grid-template-columns: 1fr; gap: 10px; }
+  .merged-price-unit { padding: 0; }
+  .merged-price-unit + .merged-price-unit { padding-top: 10px; border-top: 1px solid var(--line); border-left: 0; }
+  .monthly-cost-popover { width: 100%; max-height: 60dvh; overflow-y: auto; }
+}

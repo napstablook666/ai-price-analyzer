@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
-import { buildChartGroups, deltaTone } from "../src/dashboard-index.js";
+import { buildChartGroups, buildMonthlyCostScale, deltaTone, monthlyCostBarWidth, monthlyCostBaselineFor } from "../src/dashboard-index.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
 
@@ -156,4 +156,62 @@ test("dashboard folds official matching into one confidence detail control", () 
   assert.match(script, /document\.addEventListener\("click", event => \{\s*closeModelMatchDetails\(event\.target\.closest\("\.model-match-details"\)\);/);
   assert.match(script, /document\.addEventListener\("mouseout", event =>/);
   assert.match(script, /details\.contains\(event\.relatedTarget\)/);
+});
+
+
+test("monthlyCostBarWidth uses one shared baseline and clamps overflow", () => {
+  assert.equal(monthlyCostBarWidth(25, 100), 25);
+  assert.equal(monthlyCostBarWidth(100, 100), 100);
+  assert.equal(monthlyCostBarWidth(160, 100), 100);
+  assert.equal(monthlyCostBarWidth(0, 100), 0);
+  assert.equal(monthlyCostBarWidth(null, 100), null);
+  assert.equal(monthlyCostBarWidth(20, 0), null);
+  assert.equal(monthlyCostBarWidth(Number.NaN, 100), null);
+  assert.ok(Math.abs(monthlyCostBarWidth(49.2392, 70.9523) - 49.2392 / 70.9523 * 100) < 1e-10);
+});
+
+test("monthly cost scale supports per-model and global baselines", () => {
+  const rows = [
+    { canonicalModel: "model-a", monthlyCost: 40 },
+    { canonicalModel: "model-a", monthlyCost: 100 },
+    { canonicalModel: "model-b", monthlyCost: 20 },
+    { canonicalModel: "model-b", monthlyCost: 10 },
+    { canonicalModel: "model-c", monthlyCost: null },
+  ];
+  const scale = buildMonthlyCostScale(rows);
+  assert.equal(scale.globalMax, 100);
+  assert.equal(scale.byModel.get("model-a"), 100);
+  assert.equal(scale.byModel.get("model-b"), 20);
+  assert.equal(monthlyCostBaselineFor(rows[0], scale, "model"), 100);
+  assert.equal(monthlyCostBaselineFor(rows[2], scale, "model"), 20);
+  assert.equal(monthlyCostBaselineFor(rows[2], scale, "global"), 100);
+  assert.equal(monthlyCostBaselineFor(rows[4], scale, "model"), 0);
+  assert.equal(monthlyCostBarWidth(40, 100), 40);
+  assert.equal(monthlyCostBarWidth(20, 100), 20);
+});
+
+test("dashboard merges three price columns with an explicit shared monthly-cost bar", () => {
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
+  assert.match(html, /<th scope="col" colspan="3" class="paid-only-column merged-price-heading"/);
+  assert.match(html, /id="monthly-cost-scale-max"/);
+  assert.match(html, /data-monthly-cost-scale="model"/);
+  assert.match(html, /data-monthly-cost-scale="global"/);
+  assert.match(script, /<td colspan="3" data-label="中转单价 \/ 官方单价 \/ 月成本" class="merged-price-cell/);
+  assert.equal(script.includes('<td data-label="中转单价">'), false);
+  assert.match(script, /<details class="monthly-cost-details">/);
+  assert.match(script, /class="monthly-cost-popover-grid"/);
+  assert.match(script, /monthlyCostBarWidth\(row\.monthlyCost, baseline\)/);
+  assert.match(script, /const chartState = applyChartBars\(filtered\)/);
+  assert.match(script, /const scaleMode = state\.filters\.monthlyCostScale === "global" \? "global" : "model"/);
+  assert.match(script, /data-monthly-cost-scale/);
+  assert.match(script, /style="width:\$\{safeWidth\.toFixed\(2\)\}%"/);
+  assert.match(script, /closeMonthlyCostDetails\(event\.target\.closest\("\.monthly-cost-details"\)\)/);
+  assert.match(css, /\.comparison-table th \+ th, \.comparison-table td \+ td \{ border-left: 1px solid/);
+  assert.match(css, /\.merged-price-unit \+ \.merged-price-unit \{ border-left: 1px solid/);
+  assert.match(css, /\.monthly-cost-details\[open\] \.monthly-cost-popover/);
+  assert.match(script, /document\.addEventListener\("mouseover", event =>/);
+  assert.match(script, /details\.dataset\.hoverOpen = "true"/);
+  assert.match(css, /\.monthly-cost-popover \{ width: 100%; max-height: 60dvh; overflow-y: auto; \}/);
 });

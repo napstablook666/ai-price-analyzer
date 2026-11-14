@@ -100,3 +100,36 @@ export function buildChartGroups(rows = [], { maxGroups = 12 } = {}) {
   groups.sort((left, right) => (right.savingRatio - left.savingRatio) || String(left.displayName).localeCompare(String(right.displayName)));
   return { groups: groups.slice(0, limit), totalGroups: groups.length };
 }
+
+
+// 同一筛选结果共用一把月成本尺子，跨行可以直接比较，不做行内归一。
+export function monthlyCostBarWidth(value, baseline) {
+  if (value === null || value === undefined || value === "") return null;
+  const cost = Number(value);
+  const max = Number(baseline);
+  if (!Number.isFinite(cost) || cost < 0 || !Number.isFinite(max) || max <= 0) return null;
+  return Math.min(100, cost / max * 100);
+}
+
+// 月成本提供两种明确标尺：同模型相对比较，或跨模型全局绝对比较。
+export function monthlyCostModelKey(row) {
+  return row?.canonicalModel || row?.modelName || row?.displayName || "";
+}
+
+export function buildMonthlyCostScale(rows = []) {
+  const byModel = new Map();
+  let globalMax = 0;
+  for (const row of rows) {
+    const cost = Number(row?.monthlyCost);
+    if (!Number.isFinite(cost) || cost <= 0) continue;
+    globalMax = Math.max(globalMax, cost);
+    const key = monthlyCostModelKey(row);
+    if (key) byModel.set(key, Math.max(byModel.get(key) || 0, cost));
+  }
+  return { globalMax, byModel };
+}
+
+export function monthlyCostBaselineFor(row, scale, mode = "model") {
+  if (mode === "global") return scale?.globalMax || 0;
+  return scale?.byModel?.get(monthlyCostModelKey(row)) || 0;
+}
