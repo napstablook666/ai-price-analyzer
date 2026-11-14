@@ -2251,6 +2251,9 @@ test("renders the one-hour cache write price in dashboard price lines", () => {
 
 test("keeps screenshot model quotes in source USD while gating converted comparison costs", () => {
   assert.equal(formatSourcePrice(10, "USD"), "$10");
+  assert.equal(formatSourcePrice(0.09, "CREDITS"), "0.09");
+  assert.equal(formatSourcePrice(0.1313, "CREDITS", 6), "0.1313");
+  assert.equal(formatSourcePrice(0.375, "CNY"), "¥0.375");
   const station = {
     id: "station-fuck-everyone-screenshot",
     name: "fuck-everyone.com",

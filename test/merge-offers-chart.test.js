@@ -169,7 +169,8 @@ test("dashboard merges comparison columns and exposes same-model monthly cost ra
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
-  assert.match(html, /<th scope="col" colspan="3" class="paid-only-column merged-price-heading" data-sort-keys="monthlyCost">报价与月成本<\/th>/);
+  assert.match(html, /data-sort-keys="monthlyCost"><span class="th-label">报价与月成本<\/span><details class="unit-hint">/);
+  assert.match(html, /class="unit-hint-popover".*中转币/);
   assert.match(html, /<th scope="col" colspan="2" class="paid-only-column" data-sort-keys="diffPercent blendedUnitPrice">价差 \/ 混合单价<\/th>/);
   assert.equal(html.includes("data-monthly-cost-scale"), false);
   assert.equal(html.includes("monthly-cost-ruler"), false);

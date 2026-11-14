@@ -259,11 +259,10 @@ function priceGridMarkup(row, currency, officialQuotedPrices) {
   collect(officialLines, "official");
   const hasOfficial = officialLines.length > 0;
   const hasRelay = relayLines.length > 0;
-  const displayCode = code => (code === "CREDITS" ? "CR" : code);
   const officialFormat = officialQuotedPrices
-    ? cell => formatSourcePrice(cell.value, displayCode(row.officialCurrency || "CREDITS"), cell.precise ? 6 : 4)
+    ? cell => formatSourcePrice(cell.value, row.officialCurrency || "CREDITS", cell.precise ? 6 : 4)
     : cell => formatPrice(cell.value, currency, cell.precise ? 6 : 4);
-  const relayFormat = cell => formatSourcePrice(cell.value, displayCode(row.sourceCurrency), cell.precise ? 6 : 4);
+  const relayFormat = cell => formatSourcePrice(cell.value, row.sourceCurrency, cell.precise ? 6 : 4);
   const cellMarkup = (cell, format) => cell
     ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}"${cell.estimated ? ' title="估算值"' : ""}>${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
     : `<span class="price-value price-value-missing">—</span>`;
@@ -678,6 +677,10 @@ document.addEventListener("click", event => {
   const activeMenu = event.target.closest(".facet-menu");
   for (const menu of document.querySelectorAll(".facet-menu[open]")) {
     if (menu !== activeMenu) menu.open = false;
+  }
+  const activeHint = event.target.closest(".unit-hint");
+  for (const hint of document.querySelectorAll(".unit-hint[open]")) {
+    if (hint !== activeHint) hint.open = false;
   }
   if (event.target.closest("#model-filter-add")) {
     if (modelFilterBoxCount >= MODEL_FILTER_BOX_LIMIT) return;
