@@ -19,15 +19,13 @@
         <div class="top-menu-body" role="menu" aria-label="快速跳转">
           <a class="top-menu-item" role="menuitem" href="dashboard.html"><span data-icon="chevron-right" class="icon icon-flip"></span><span>返回价格对比</span></a>
           <div class="top-menu-sep" role="separator"></div>
-          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-manager"><span data-icon="puzzle" class="icon"></span><span>插件管理</span></button>
-          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-browser"><span data-icon="compass" class="icon"></span><span>可选站点</span></button>
-          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="stations-heading"><span data-icon="server" class="icon"></span><span>已添加站点</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-installed"><span data-icon="package" class="icon"></span><span>已安装</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-registry"><span data-icon="store" class="icon"></span><span>插件仓库</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="settings-panel"><span data-icon="calculator" class="icon"></span><span>成本估算</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="assistant-panel"><span data-icon="bot" class="icon"></span><span>AI 辅助</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="data-panel"><span data-icon="database" class="icon"></span><span>数据管理</span></button>
           <div class="top-menu-sep" role="separator"></div>
-          <button class="top-menu-item" role="menuitem" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
-          <button class="top-menu-item" role="menuitem" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
+          <button class="top-menu-item" role="menuitem" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
         </div>
       </details>
       <button class="theme-toggle" id="theme-toggle" type="button" data-theme-toggle aria-label="切换到夜晚主题" title="切换到夜晚"><span data-icon="moon" class="icon theme-icon-moon"></span><span data-icon="sun" class="icon theme-icon-sun"></span></button>
@@ -38,20 +36,11 @@
     <section class="settings-intro"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>站点与设置</h1><p>插件与成本口径。密钥只在会话存储，不进导出文件。</p></div></section>
     <div class="settings-layout">
       <nav class="settings-nav" role="navigation" aria-label="设置分区">
-        <div class="settings-nav-group" data-nav-group="stations">
-          <button id="settings-tab-stations" type="button" role="tab" aria-selected="true" aria-controls="settings-view-stations" aria-expanded="true" data-settings-target="stations"><span data-icon="layers-3" class="icon"></span><span>站点与插件</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
-          <ul class="settings-subnav" aria-label="站点与插件">
-            <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="plugin-manager"><span data-icon="puzzle" class="icon"></span><span class="settings-subnav-label">插件管理</span></button>
-              <ul class="settings-subnav is-third">
-                <li><button type="button" class="settings-subnav-item" data-nav-jump="plugin-installed" data-nav-plugin-tab="installed"><span data-icon="package" class="icon"></span><span class="settings-subnav-label">已安装</span><span class="settings-subnav-count" data-nav-count="plugin-installed">0</span></button></li>
-                <li><button type="button" class="settings-subnav-item" data-nav-jump="plugin-registry" data-nav-plugin-tab="registry"><span data-icon="store" class="icon"></span><span class="settings-subnav-label">插件仓库</span></button></li>
-              </ul>
-            </li>
-            <li><button type="button" class="settings-subnav-item" data-nav-jump="plugin-browser"><span data-icon="compass" class="icon"></span><span class="settings-subnav-label">可选站点</span></button></li>
-            <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="stations-heading"><span data-icon="server" class="icon"></span><span class="settings-subnav-label">已添加站点</span><span class="settings-subnav-count" data-nav-count="stations">0</span></button>
-              <ul class="settings-subnav is-third" id="nav-station-children"></ul>
-            </li>
-          </ul>
+        <div class="settings-nav-group" data-nav-group="installed">
+          <button id="settings-tab-installed" type="button" role="tab" aria-selected="true" aria-controls="settings-view-installed" data-settings-target="installed"><span data-icon="package" class="icon"></span><span>已安装</span></button>
+        </div>
+        <div class="settings-nav-group" data-nav-group="registry">
+          <button id="settings-tab-registry" type="button" role="tab" aria-selected="false" aria-controls="settings-view-registry" data-settings-target="registry" tabindex="-1"><span data-icon="store" class="icon"></span><span>插件仓库</span></button>
         </div>
         <div class="settings-nav-group" data-nav-group="costs">
           <button id="settings-tab-costs" type="button" role="tab" aria-selected="false" aria-controls="settings-view-costs" aria-expanded="false" data-settings-target="costs" tabindex="-1"><span data-icon="coins" class="icon"></span><span>偏好与成本</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
@@ -83,69 +72,54 @@
       </nav>
 
       <div class="settings-content">
-        <section class="settings-view" id="settings-view-stations" role="tabpanel" aria-labelledby="settings-tab-stations" data-settings-view="stations">
-          <div class="view-heading"><div><h2>站点插件</h2><p>默认不装任何插件；装好后才能从插件里挑站点添加，没装的插件不参与匹配与采集。</p></div><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div>
-          <section class="plugin-manager" id="plugin-manager" data-nav-anchor="plugin-manager" aria-labelledby="plugin-manager-title">
+        <section class="settings-view" id="settings-view-installed" role="tabpanel" aria-labelledby="settings-tab-installed" data-settings-view="installed">
+          <div class="view-heading"><div><h2>已安装插件</h2><p>插件就是站点适配器，装好即把它的站点加入工作区；凭据与开关在插件行里配置。</p></div><div class="view-heading-actions"><span id="station-count" class="station-count">0</span><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div></div>
+          <section class="plugin-manager" id="plugin-installed" data-nav-anchor="plugin-installed" aria-labelledby="plugin-installed-title">
             <div class="plugin-manager-head">
-              <div><h3 id="plugin-manager-title">插件</h3><p>默认不装任何插件：需要哪个就从线上插件仓库装哪个，本地插件只在开发模式下加载，各自标注来源。</p></div>
-              <div class="plugin-source-legend" aria-hidden="true"><span class="plugin-source-badge is-registry">仓库安装</span><span class="plugin-source-badge is-local">本地插件</span></div>
+              <div><h3 id="plugin-installed-title">已安装插件</h3><p>装好即把站点加入工作区；展开插件行配置站点开关与凭据。</p></div>
             </div>
-            <div class="plugin-manager-tabs" role="tablist" aria-label="插件管理">
-              <button id="plugin-tab-installed" type="button" role="tab" aria-selected="true" aria-controls="plugin-panel-installed" data-plugin-tab="installed">已安装</button>
-              <button id="plugin-tab-registry" type="button" role="tab" aria-selected="false" aria-controls="plugin-panel-registry" data-plugin-tab="registry" tabindex="-1">插件仓库</button>
+            <div class="plugin-toolbar plugin-toolbar-installed">
+              <label class="check-label" title="Shift 点勾选框选一整段"><input id="installed-select-all" type="checkbox"><span>全选</span></label>
+              <span id="installed-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
+              <button class="button button-quiet button-small" id="uninstall-selected-plugins" type="button" disabled><span data-icon="trash-2" class="icon"></span><span>移除所选</span></button>
             </div>
-            <div class="plugin-panel" id="plugin-panel-installed" data-nav-anchor="plugin-installed" role="tabpanel" aria-labelledby="plugin-tab-installed" data-plugin-panel="installed">
-              <div id="plugin-installed-list" class="plugin-list" aria-live="polite"></div>
-            </div>
-            <div class="plugin-panel" id="plugin-panel-registry" data-nav-anchor="plugin-registry" role="tabpanel" aria-labelledby="plugin-tab-registry" data-plugin-panel="registry" hidden>
-              <div class="registry-toolbar">
-                <label class="plugin-search registry-url-field"><span data-icon="link" class="icon"></span><span class="sr-only">插件仓库地址</span><input id="plugin-registry-url" type="url" placeholder="https://raw.githubusercontent.com/…/plugins.json" autocomplete="off"></label>
-                <button class="button button-quiet button-small" id="plugin-registry-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新仓库</span></button>
-                <label class="check-label dev-mode-toggle"><input id="dev-mode" type="checkbox"><span>开发模式</span></label>
-              </div>
-              <p class="registry-status" id="plugin-registry-status" role="status" aria-live="polite">尚未拉取插件仓库</p>
-              <div class="plugin-toolbar registry-actions">
-                <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索插件仓库</span><input id="plugin-registry-search" type="search" placeholder="搜索插件、域名" autocomplete="off"></label>
-                <div class="plugin-filters" role="group" aria-label="仓库筛选">
-                  <button type="button" data-registry-filter="all" aria-pressed="true">全部</button>
-                  <button type="button" data-registry-filter="available" aria-pressed="false">未安装</button>
-                  <button type="button" data-registry-filter="installed" aria-pressed="false">已安装</button>
-                  <button type="button" data-registry-filter="update" aria-pressed="false">有更新</button>
-                </div>
-                <label class="check-label"><input id="registry-select-all" type="checkbox"><span>全选</span></label>
-                <span id="registry-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
-                <button class="button button-primary button-small" id="install-selected-plugins" type="button" disabled><span data-icon="package" class="icon"></span><span>安装所选</span></button>
-              </div>
-              <div id="plugin-registry-list" class="plugin-list" aria-live="polite"></div>
-              <section class="dev-plugin-panel" id="dev-plugin-panel" hidden aria-labelledby="dev-plugin-title">
-                <div class="dev-plugin-heading"><div><h4 id="dev-plugin-title">本地插件</h4><p>只加载到本机，关闭开发模式会一并卸载。</p></div><label class="button button-quiet button-small file-button"><span data-icon="upload" class="icon"></span><span>选择 JSON 文件</span><input id="dev-plugin-file" type="file" accept="application/json,.json"></label></div>
-                <textarea id="dev-plugin-spec" class="dev-plugin-spec" rows="6" spellcheck="false" placeholder="粘贴插件 JSON 规格"></textarea>
-                <div class="dev-plugin-actions"><button class="button button-primary button-small" id="dev-plugin-load" type="button"><span data-icon="plus" class="icon"></span><span>加载本地插件</span></button></div>
-                <div id="local-plugin-list" class="plugin-list" aria-live="polite"></div>
-              </section>
-            </div>
+            <div id="plugin-installed-list" class="plugin-list" aria-live="polite"></div>
           </section>
-          <section class="plugin-browser" id="plugin-browser" data-nav-anchor="plugin-browser" aria-labelledby="plugin-browser-title">
-            <div class="plugin-browser-heading"><div><h3 id="plugin-browser-title">可选站点</h3><p>从已安装的插件里挑选站点，一次添加到工作区。</p></div><span id="plugin-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span></div>
-            <div class="plugin-toolbar">
-              <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索站点插件</span><input id="plugin-search" type="search" placeholder="搜索站点或域名" autocomplete="off"></label>
-              <div class="plugin-filters" role="group" aria-label="插件分类"><button type="button" data-plugin-category="all" aria-pressed="true">全部</button><button type="button" data-plugin-category="paid" aria-pressed="false">付费</button><button type="button" data-plugin-category="public" aria-pressed="false">公益</button></div>
-              <button class="button button-quiet button-small" id="select-visible-plugins" type="button">选择当前筛选</button>
-              <button class="button button-primary" id="add-selected-plugins" type="button" disabled><span data-icon="plus" class="icon"></span><span>添加所选站点</span></button>
+        </section>
+
+        <section class="settings-view" id="settings-view-registry" role="tabpanel" aria-labelledby="settings-tab-registry" data-settings-view="registry" hidden>
+          <div class="view-heading"><div><h2>插件仓库</h2><p>从线上插件仓库挑插件，支持批量安装；开发模式下另加载本地插件。</p></div></div>
+          <section class="plugin-manager" id="plugin-registry" data-nav-anchor="plugin-registry" aria-labelledby="plugin-registry-title">
+            <div class="plugin-manager-head">
+              <div><h3 id="plugin-registry-title">插件仓库</h3><p>仓库地址可换成自建清单；装好即把站点加入工作区。</p></div>
             </div>
-            <div id="site-plugin-list" class="site-plugin-list" role="group" aria-label="可选择站点插件"></div>
+            <div class="registry-toolbar">
+              <label class="plugin-search registry-url-field"><span data-icon="link" class="icon"></span><span class="sr-only">插件仓库地址</span><input id="plugin-registry-url" type="url" placeholder="https://raw.githubusercontent.com/…/plugins.json" autocomplete="off"></label>
+              <button class="button button-quiet button-small" id="plugin-registry-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新仓库</span></button>
+              <label class="check-label dev-mode-toggle"><input id="dev-mode" type="checkbox"><span>开发模式</span></label>
+            </div>
+            <p class="registry-status" id="plugin-registry-status" role="status" aria-live="polite">尚未拉取插件仓库</p>
+<section class="dev-plugin-panel" id="dev-plugin-panel" hidden aria-labelledby="dev-plugin-title">
+              <div class="dev-plugin-heading"><div><h4 id="dev-plugin-title">本地插件</h4><p>只加载到本机，关闭开发模式会一并卸载。</p></div><label class="button button-quiet button-small file-button"><span data-icon="upload" class="icon"></span><span>选择 JSON 文件</span><input id="dev-plugin-file" type="file" accept="application/json,.json"></label></div>
+              <textarea id="dev-plugin-spec" class="dev-plugin-spec" rows="6" spellcheck="false" placeholder="粘贴插件 JSON 规格"></textarea>
+              <div class="dev-plugin-actions"><button class="button button-primary button-small" id="dev-plugin-load" type="button"><span data-icon="plus" class="icon"></span><span>加载本地插件</span></button></div>
+              <div id="local-plugin-list" class="plugin-list" aria-live="polite"></div>
+            </section>
+            <div class="plugin-toolbar registry-actions">
+              <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索插件仓库</span><input id="plugin-registry-search" type="search" placeholder="搜索插件、域名" autocomplete="off"></label>
+              <div class="plugin-filters" role="group" aria-label="仓库筛选">
+                <button type="button" data-registry-filter="all" aria-pressed="true">全部</button>
+                <button type="button" data-registry-filter="available" aria-pressed="false">未安装</button>
+                <button type="button" data-registry-filter="installed" aria-pressed="false">已安装</button>
+                <button type="button" data-registry-filter="update" aria-pressed="false">有更新</button>
+              </div>
+              <label class="check-label"><input id="registry-select-all" type="checkbox"><span>全选</span></label>
+              <span id="registry-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
+              <button class="button button-primary button-small" id="install-selected-plugins" type="button" disabled><span data-icon="package" class="icon"></span><span>安装所选</span></button>
+              <span class="plugin-selection-hint">Shift 点勾选框选一整段</span>
+            </div>
+            <div id="plugin-registry-list" class="plugin-list" aria-live="polite"></div>
           </section>
-          <div class="station-list-heading" id="stations-heading" data-nav-anchor="stations-heading"><div><h2>已添加站点</h2><span id="station-count" class="station-count">0</span></div><p>开关与批量操作后点击顶部“保存全部”；配置项在弹层内单独保存。</p></div>
-          <div class="station-batch-bar">
-            <label class="check-label"><input id="station-select-all" type="checkbox"><span>全选</span></label>
-            <span id="station-selected-count" class="station-selected-count" aria-live="polite">已选 0 / 0</span>
-            <div class="station-batch-actions">
-              <button class="button button-quiet button-small" data-station-batch="enable" type="button" disabled>批量启用</button>
-              <button class="button button-quiet button-small" data-station-batch="disable" type="button" disabled>批量停用</button>
-              <button class="button button-quiet button-small danger-icon" data-station-batch="remove" type="button" disabled>批量删除</button>
-            </div>
-          </div>
-          <section id="stations-list" class="stations-list" aria-live="polite"></section>
         </section>
 
 

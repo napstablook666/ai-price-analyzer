@@ -590,11 +590,8 @@ async function dashboard() {
   const refresh = refreshScope(stations, savedSettings.comparisonMode);
   const stationsById = new Map(comparisonStations.map(station => [station.id, station]));
   const snapshots = await getLatestSnapshots(comparisonStations.map(station => station.id), snapshot => !snapshotNeedsRefresh(stationsById.get(snapshot.stationId), snapshot));
-  const staleAfter = 30 * 60 * 1000;
-  const now = Date.now();
   const normalizedSnapshots = snapshots.map(snapshot => ({
     ...snapshot,
-    stale: snapshot.status !== "success" && snapshot.status !== "partial" || now - snapshot.collectedAt > staleAfter,
   incomplete: snapshot.status === "partial" || Boolean(snapshot.normalized?.incomplete),
   unsupportedBillingModes: snapshot.normalized?.unsupportedBillingModes || snapshot.rawMeta?.unsupportedBillingModes || [],
   unpricedModels: snapshot.normalized?.unpricedModels || snapshot.rawMeta?.unpricedModels || []
@@ -604,7 +601,7 @@ async function dashboard() {
   const llmMatches = llmMatchesFromCache(llmCache);
   const revision = getComparisonRevision();
   const cacheable = revisionAtStart === revision;
-  const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => [snapshot.id, snapshot.stale]), llmMatches]);
+  const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => snapshot.id), llmMatches]);
   let comparisonResult = cacheable && comparisonCache?.key === comparisonKey ? comparisonCache : null;
   if (!comparisonResult) {
     const comparisons = buildComparisonRows({
@@ -1179,19 +1176,21 @@ async function refreshPluginRegistry(message = {}) {
 }
 
 async function installPlugin(id) {
-  const { workspace, results } = await installPlugins([id]);
+  const { workspace, results, stationsAdded } = await installPlugins([id]);
   const failure = results.find(item => !item.ok && !item.skipped);
   if (failure) throw new Error(failure.error);
-  return workspace;
+  return { ...workspace, lastInstall: { stationsAdded: stationsAdded || 0 } };
 }
 
 // 批量安装：一次加锁、一次落库、一次重算工作区，返回逐项结果，界面据此提示跳过与失败。
-async function installPlugins(ids) {
+export async function installPlugins(ids) {
   const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id || "").trim()).filter(Boolean))];
   if (!wanted.length) throw new Error("没有选中要安装的插件");
   return withKeyedLock("plugin-install", async () => {
     const settings = await getSettings();
-    const registry = normalizeRegistryState(settings.pluginRegistry);
+    // 仓库视图按内置快照兜底展示，安装也应认快照里的条目，否则首次装内置插件会被「先刷新插件仓库」挡住。
+    const registry = seededRegistry(settings.pluginRegistry);
+    const stored = normalizeRegistryState(settings.pluginRegistry);
     const installed = { ...registry.installed };
     const results = [];
     for (const id of wanted) {
@@ -1213,14 +1212,26 @@ async function installPlugins(ids) {
       installed[id] = { version: entry.version, installedAt: Date.now() };
       results.push({ id, ok: true, skipped: false, version: entry.version });
     }
+    let stationsAdded = 0;
     if (results.some(item => item.ok)) {
-      await persistSettings({ ...settings, pluginRegistry: { ...registry, installed } });
+      await persistSettings({ ...settings, pluginRegistry: { ...stored, installed } });
       workspacePluginsSynced = false;
       await ensureWorkspacePlugins({ force: true });
+      // 装完即加站：插件自带的 addable 站点直接进工作区；签到与按地址添加的插件不产生站点。
+      const autoIds = results.filter(item => item.ok).map(item => item.id)
+        .filter(id => sitePluginById(id)?.addable && [...activePluginIds()].includes(id));
+      if (autoIds.length) {
+        const addResult = await addSitePlugins(autoIds);
+        const counts = new Map();
+        for (const pluginId of addResult.added || []) counts.set(pluginId, (counts.get(pluginId) || 0) + 1);
+        for (const item of results) if (item.ok) item.stations = counts.get(item.id) || 0;
+        stationsAdded = (addResult.added || []).length;
+      }
     }
     const workspace = await pluginWorkspaceState();
     return {
       workspace,
+      stationsAdded,
       results,
       installed: results.filter(item => item.ok).map(item => item.id),
       skipped: results.filter(item => item.skipped).map(item => item.id),
@@ -1232,24 +1243,33 @@ async function installPlugins(ids) {
 async function uninstallPlugin(id) {
   const pluginId = String(id || "").trim();
   if (!pluginId) throw new Error("插件不存在");
-  const settings = await getSettings();
-  const registry = normalizeRegistryState(settings.pluginRegistry);
-  const installed = { ...registry.installed };
-  delete installed[pluginId];
-  const localPlugins = settings.localPlugins.filter(spec => spec.id !== pluginId);
-  unloadSpecSitePlugin(pluginId);
-  // 移除插件等于把这个插件的采集能力一起带走，挂在它下面的站点也删掉。
-  const stations = await getStations();
-  const kept = stations.filter(station => sitePluginForStation(station)?.id !== pluginId);
-  for (const station of stations) {
-    if (!kept.includes(station)) await removeStationCredential(station.id);
-  }
-  if (kept.length !== stations.length) await putStations(kept);
-  await persistSettings({ ...settings, pluginRegistry: { ...registry, installed }, localPlugins });
-  workspacePluginsSynced = false;
-  await ensureWorkspacePlugins({ force: true });
-  pruneSitePlugins(kept, [...installedPluginIds(await getSettings())]);
-  return pluginWorkspaceState();
+  const { workspace } = await uninstallPlugins([pluginId]);
+  return workspace;
+}
+
+// 批量移除：一次加锁、一次落库，把仓库安装记录与本地插件一起清掉，并删掉挂在它们下面的站点。
+export async function uninstallPlugins(ids) {
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id || "").trim()).filter(Boolean))];
+  if (!wanted.length) throw new Error("没有选中要移除的插件");
+  return withKeyedLock("plugin-install", async () => {
+    const settings = await getSettings();
+    const registry = normalizeRegistryState(settings.pluginRegistry);
+    const installed = { ...registry.installed };
+    for (const id of wanted) delete installed[id];
+    const localPlugins = settings.localPlugins.filter(spec => !wanted.includes(spec.id));
+    for (const id of wanted) unloadSpecSitePlugin(id);
+    const stations = await getStations();
+    const kept = stations.filter(station => !wanted.includes(sitePluginForStation(station)?.id));
+    for (const station of stations) {
+      if (!kept.includes(station)) await removeStationCredential(station.id);
+    }
+    if (kept.length !== stations.length) await putStations(kept);
+    await persistSettings({ ...settings, pluginRegistry: { ...registry, installed }, localPlugins });
+    workspacePluginsSynced = false;
+    await ensureWorkspacePlugins({ force: true });
+    pruneSitePlugins(kept, [...installedPluginIds(await getSettings())]);
+    return { ...(await pluginWorkspaceState()), removed: wanted };
+  });
 }
 
 async function saveDevMode(enabled) {
@@ -1313,6 +1333,7 @@ async function handle(message, sender) {
     case "INSTALL_PLUGIN": return installPlugin(message.id);
     case "INSTALL_PLUGINS": return installPlugins(message.ids);
     case "UNINSTALL_PLUGIN": return uninstallPlugin(message.id);
+case "UNINSTALL_PLUGINS": return uninstallPlugins(message.ids);
     case "SAVE_DEV_MODE": return saveDevMode(message.enabled);
     case "ADD_LOCAL_PLUGIN": return addLocalPlugin(message.spec);
     case "REMOVE_LOCAL_PLUGIN": return removeLocalPlugin(message.id);
@@ -1396,6 +1417,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "REFRESH_PROGRESS") return;
   handle(message, sender).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || String(error), ...(error.code ? { code: error.code } : {}) }));
   return true;
+});
+
+const DASHBOARD_PAGE = "dashboard.html";
+
+// 工具栏图标直接开扩展页面，不再有 popup；页面已经开着就切过去。
+async function openDashboardTab() {
+  const target = chrome.runtime.getURL(DASHBOARD_PAGE);
+  const tabs = await chrome.tabs.query({}).catch(() => []);
+  const existing = tabs.find(tab => typeof tab.url === "string" && tab.url.startsWith(target));
+  if (existing?.id !== undefined) {
+    await chrome.tabs.update(existing.id, { active: true }).catch(() => {});
+    if (existing.windowId !== undefined) await chrome.windows?.update?.(existing.windowId, { focused: true }).catch(() => {});
+    return;
+  }
+  await chrome.tabs.create({ url: target });
+}
+
+chrome.action?.onClicked?.addListener(() => {
+  openDashboardTab().catch(error => console.warn("[AI比价] 打开扩展页面失败", error));
 });
 
 chrome.tabs?.onRemoved?.addListener(tabId => {

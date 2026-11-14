@@ -1,12 +1,12 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
 import { callService, escapeHtml, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { initCollapsibleCards } from "./shared/collapse.js";
+import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pickWorkspace, readWorkspace, writeWorkspace } from "./shared/workspace.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, pluginTab: "installed", selectedPluginIds: new Set(), selectedStationIds: new Set(), stationSourceTabIds: new Map(), configStationId: null, pluginCategory: "all", pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), expandedRegistryId: "", expandedInstalledId: "" };
+const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "" };
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 const EMBEDDED = new URLSearchParams(location.search).get("embed") === "1";
@@ -110,12 +110,12 @@ function selected(value, expected) { return value === expected ? " selected" : "
 function checked(value) { return value ? " checked" : ""; }
 
 
-const SETTINGS_VIEWS = ["stations", "costs", "assistant", "workspace"];
+const SETTINGS_VIEWS = ["installed", "registry", "costs", "assistant", "workspace"];
 const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益", benchmark: "基准" };
 const PLUGIN_MODE_LABELS = { direct: "直接接口", page: "页面模式" };
 
 function activateSettingsView(requested, { focus = false, updateHash = true } = {}) {
-  const view = SETTINGS_VIEWS.includes(requested) ? requested : "stations";
+  const view = SETTINGS_VIEWS.includes(requested) ? requested : SETTINGS_VIEWS[0];
   for (const name of SETTINGS_VIEWS) {
     const active = name === view;
     const tab = $(`[data-settings-target="${name}"]`);
@@ -141,10 +141,11 @@ let navPinnedAt = 0;
 
 function syncNavGroup(view) {
   for (const group of document.querySelectorAll(".settings-nav-group")) {
-    const expanded = group.dataset.navGroup === view;
-    group.querySelector(":scope > button")?.setAttribute("aria-expanded", String(expanded));
     const subnav = group.querySelector(":scope > .settings-subnav");
-    if (subnav) subnav.hidden = !expanded;
+    if (!subnav) continue;
+    const expanded = group.dataset.navGroup === view;
+    subnav.hidden = !expanded;
+    group.querySelector(":scope > button")?.setAttribute("aria-expanded", String(expanded));
   }
 }
 
@@ -163,7 +164,6 @@ function jumpToNavTarget(key) {
   if (!target || !item) return;
   const view = item.closest(".settings-nav-group")?.dataset.navGroup;
   if (view) activateSettingsView(view);
-  if (item.dataset.navPluginTab) syncPluginTab(item.dataset.navPluginTab);
 navPinnedKey = key;
   navPinnedAt = performance.now();
   setNavActiveKey(key);
@@ -218,94 +218,7 @@ let activeKey = anchors[0].dataset.navAnchor;
   setNavActiveKey(activeKey);
 }
 
-function setNavCount(key, value) {
-  const text = String(value);
-  for (const node of document.querySelectorAll(`[data-nav-count="${key}"]`)) node.textContent = text;
-}
 
-function renderNavStations() {
-  const list = $("#nav-station-children");
-  if (!list) return;
-  list.innerHTML = state.stations.map(station => {
-    const label = station.name || stationHostName(station.baseUrl) || "未命名站点";
-    return `<li><button type="button" class="settings-subnav-item" data-nav-jump="station-card-${escapeHtml(station.id)}" title="${escapeHtml(label)}"><span data-icon="globe" class="icon"></span><span class="settings-subnav-label">${escapeHtml(label)}</span></button></li>`;
-  }).join("");
-  hydrateIcons(list);
-}
-
-function filteredSitePlugins() {
-  const query = $("#plugin-search").value.trim().toLowerCase();
-  return state.sitePlugins.filter(plugin => {
-    if (state.pluginCategory !== "all" && plugin.category !== state.pluginCategory) return false;
-    return !query || [plugin.name, plugin.host, plugin.description].some(value => String(value || "").toLowerCase().includes(query));
-  });
-}
-
-function updatePluginSelection() {
-  const count = state.selectedPluginIds.size;
-  $("#plugin-selected-count").textContent = `已选 ${count} 项`;
-  const button = $("#add-selected-plugins");
-  button.disabled = count === 0;
-  button.querySelector("span:last-child").textContent = count ? `一键添加 ${count} 个站点` : "添加所选站点";
-}
-
-function renderSitePlugins() {
-  const list = $("#site-plugin-list");
-  const byId = new Map(state.sitePlugins.map(plugin => [plugin.id, plugin]));
-  for (const id of state.selectedPluginIds) {
-    const plugin = byId.get(id);
-    if (!plugin?.addable || plugin.added) state.selectedPluginIds.delete(id);
-  }
-  const plugins = filteredSitePlugins();
-  list.innerHTML = plugins.length ? plugins.map(plugin => {
-    const added = Boolean(plugin.added);
-    const selectable = plugin.addable && !added;
-    const badges = [
-      `<span class="site-plugin-badge">${escapeHtml(PLUGIN_CATEGORY_LABELS[plugin.category] || plugin.category)}</span>`,
-      `<span class="site-plugin-badge">${plugin.mode === "page" ? "页面模式" : "直接接口"}</span>`,
-      `<span class="site-plugin-badge">${escapeHtml(plugin.authLabel || "无需登录")}</span>`,
-      added ? `<span class="site-plugin-badge is-added">已添加 ${plugin.stationCount || 1} 个</span>` : "",
-      !plugin.addable ? `<span class="site-plugin-badge">需按地址添加</span>` : ""
-    ].join("");
-    return `<label class="site-plugin-card${added ? " is-added" : ""}${!plugin.addable ? " is-address-only" : ""}">
-      <input type="checkbox" data-plugin-id="${escapeHtml(plugin.id)}" aria-label="选择 ${escapeHtml(plugin.name)}"${state.selectedPluginIds.has(plugin.id) ? " checked" : ""}${selectable ? "" : " disabled"}>
-      <span class="site-plugin-content">
-        <span class="site-plugin-title"><strong>${escapeHtml(plugin.name)}</strong></span>
-        <span class="site-plugin-host">${escapeHtml(plugin.host)}</span>
-        <span class="site-plugin-description">${escapeHtml(plugin.description || "本地站点采集插件")}</span>
-        <span class="site-plugin-badges">${badges}</span>
-      </span>
-    </label>`;
-  }).join("") : `<p class="site-plugin-empty">${(state.pluginWorkspace?.repositoryPlugins?.length || state.pluginWorkspace?.localPlugins?.length) ? "没有匹配的站点插件。" : "还没装插件，先到「插件仓库」装一个。"}</p>`;
-  updatePluginSelection();
-}
-
-async function addSelectedPlugins() {
-  const ids = [...state.selectedPluginIds];
-  if (!ids.length) return;
-  const button = $("#add-selected-plugins");
-  const original = button.innerHTML;
-  button.disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>正在添加</span>`;
-  try {
-    const result = await callService("ADD_SITE_PLUGINS", { ids });
-    const existingIds = new Set(state.stations.map(station => station.id));
-    for (const station of result.stations || []) if (!existingIds.has(station.id)) state.stations.push(station);
-    state.sitePlugins = result.sitePlugins || state.sitePlugins;
-    state.selectedPluginIds.clear();
-    renderSitePlugins();
-    renderStations();
-    await saveWorkspace({ notify: false });
-    const skipped = result.alreadyAdded?.length || 0;
-    toast(`已添加 ${result.added?.length || 0} 个站点${skipped ? `，${skipped} 个已在列表中` : ""}`);
-  } catch (error) {
-    toast(error.message || String(error));
-  } finally {
-    button.innerHTML = original;
-    hydrateIcons(button);
-    updatePluginSelection();
-  }
-}
 const PLUGIN_SOURCE_LABELS = { bundled: "随扩展", registry: "仓库安装", local: "本地插件" };
 const PLUGIN_SOURCE_ORDER = ["registry", "local"];
 const PLUGIN_GROUP_TITLES = { registry: "仓库安装", local: "本地插件" };
@@ -341,24 +254,24 @@ function pluginDetailBlocks({ description, rows, note = "" }) {
 }
 
 // 一行放完：图标、名称、徽标、域名、站点数、操作，介绍收进展开区。
-function pluginRow(plugin, actions = "") {
+function pluginRow(plugin, actions = "", { stations = true, selectable = false } = {}) {
+  const checked = selectable && state.installedSelected.has(String(plugin.id));
   const source = pluginSourceKey(plugin);
   const count = Number(plugin.stationCount) || 0;
   const expanded = state.expandedInstalledId === String(plugin.id);
-  const badges = [
-    pluginSourceBadge(plugin),
-    plugin.version ? `<span class="plugin-version">v${escapeHtml(plugin.version)}</span>` : ""
-  ].filter(Boolean).join("");
+  const badges = pluginSourceBadge(plugin);
+  const meta = [plugin.version ? `v${escapeHtml(plugin.version)}` : "", count ? `${count} 个站点` : "未添加站点"].filter(Boolean).join(" · ");
   const hosts = (plugin.hosts?.length ? plugin.hosts : [plugin.host]).filter(Boolean);
   return `<section class="plugin-entry${expanded ? " is-expanded" : ""}">
     <div class="plugin-row" data-plugin-row="${escapeHtml(plugin.id)}">
+      ${selectable ? `<input class="plugin-check" type="checkbox" data-installed-check="${escapeHtml(plugin.id)}"${checked ? " checked" : ""} aria-label="选择 ${escapeHtml(plugin.name || plugin.id)}">` : ""}
       <span class="plugin-row-icon is-${source}" aria-hidden="true">${pluginInitial(plugin)}</span>
       <button class="plugin-row-toggle" type="button" data-plugin-toggle="${escapeHtml(plugin.id)}" aria-expanded="${expanded}" title="${escapeHtml(plugin.description || plugin.name || plugin.id)}">
-        <span class="plugin-row-name">${escapeHtml(plugin.name || plugin.id)}</span>
-        <span class="plugin-row-badges">${badges}</span>
-        <span class="plugin-row-host">${escapeHtml(hosts.join(" / "))}</span>
+        <span class="plugin-row-main">
+          <span class="plugin-row-line1"><span class="plugin-row-name">${escapeHtml(plugin.name || plugin.id)}</span>${badges}</span>
+          <span class="plugin-row-line2"><span class="plugin-row-host">${escapeHtml(hosts.join(" / "))}</span><span class="plugin-row-meta">${meta}</span></span>
+        </span>
       </button>
-      <span class="plugin-row-count">${count ? `${count} 个站点` : "未添加站点"}</span>
       <div class="plugin-row-actions">${actions}</div>
       ${icon("chevron-right", { className: "icon plugin-row-caret" })}
     </div>
@@ -366,8 +279,6 @@ function pluginRow(plugin, actions = "") {
       description: plugin.description,
       rows: [
         ["插件 id", plugin.id],
-        ["版本", plugin.version ? `v${plugin.version}` : ""],
-        ["域名", hosts.join(" / ")],
         ["采集方式", PLUGIN_MODE_LABELS[plugin.mode] || ""],
         ["认证", plugin.authLabel || ""],
         ["分类", PLUGIN_CATEGORY_LABELS[plugin.category] || plugin.category || ""],
@@ -375,14 +286,20 @@ function pluginRow(plugin, actions = "") {
         ["站点数", count ? `${count} 个` : "未添加站点"]
       ]
     }) : ""}
+    ${stations ? pluginStations(plugin) : ""}
   </section>`;
 }
 
 function pluginInstalledActions(plugin) {
   const parts = [];
   if (plugin.addable && !plugin.added) parts.push(`<button class="button button-quiet button-small" data-plugin-add="${escapeHtml(plugin.id)}" type="button">添加站点</button>`);
-  if (pluginSourceKey(plugin) !== "bundled") parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(plugin.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
+  if (plugin.removable !== false) parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(plugin.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
   return parts.join("");
+}
+function pluginStations(plugin) {
+  const stations = state.stations.filter(station => station.pluginId === plugin.id);
+  if (!stations.length) return "";
+  return `<div class="stations-list plugin-stations">${stations.map(stationCard).join("")}</div>`;
 }
 
 // 已安装列表把内置、仓库安装、本地开发三类合在一起，按来源分组；同 id 时本地盖过仓库。
@@ -395,7 +312,7 @@ function installedPluginEntries() {
     if (!station.pluginId || counts.has(station.pluginId)) continue;
     extraCounts.set(station.pluginId, (extraCounts.get(station.pluginId) || 0) + 1);
   }
-  const merged = new Map(catalog.map(plugin => [plugin.id, { ...plugin, source: pluginSourceKey(plugin) }]));
+  const merged = new Map(catalog.map(plugin => [plugin.id, { ...plugin, source: pluginSourceKey(plugin), removable: plugin.source !== "bundled" }]));
   for (const plugin of workspace.repositoryPlugins || []) {
     if (merged.has(plugin.id)) continue;
     merged.set(plugin.id, { ...plugin, source: "registry" });
@@ -408,18 +325,30 @@ function renderPluginInstalled() {
   const list = $("#plugin-installed-list");
   if (!list) return;
   const plugins = installedPluginEntries();
-  setNavCount("plugin-installed", plugins.length);
-  if (!plugins.length) {
-    list.innerHTML = `<p class="plugin-empty">还没有可用插件。</p>`;
+  const knownIds = new Set(plugins.map(plugin => plugin.id));
+  const orphans = state.stations.filter(station => !station.pluginId || !knownIds.has(station.pluginId));
+  if (!plugins.length && !orphans.length) {
+state.installedOrder = [];
+    state.installedSelectable = new Set();
+    list.innerHTML = `<p class="plugin-empty">还没有可用插件。到「插件仓库」装一个，或点右上「添加站点」。</p>`;
+    updateInstalledSelection();
     return;
   }
-  const groups = new Map(PLUGIN_SOURCE_ORDER.map(key => [key, []]));
+const groups = new Map(PLUGIN_SOURCE_ORDER.map(key => [key, []]));
   for (const plugin of plugins) groups.get(pluginSourceKey(plugin)).push(plugin);
+  // installedOrder 按渲染顺序记下可选条目，Shift 区间选择直接照这个顺序取。
+  const ordered = PLUGIN_SOURCE_ORDER.filter(key => groups.get(key).length).flatMap(key => groups.get(key));
+  state.installedOrder = ordered.map(plugin => String(plugin.id));
+  state.installedSelectable = new Set(ordered.filter(plugin => plugin.removable !== false).map(plugin => String(plugin.id)));
   list.innerHTML = PLUGIN_SOURCE_ORDER.filter(key => groups.get(key).length).map(key => `<section class="plugin-group">
     <div class="plugin-group-heading"><h4>${PLUGIN_GROUP_TITLES[key]}</h4><span>${groups.get(key).length}</span></div>
-    ${groups.get(key).map(plugin => pluginRow(plugin, pluginInstalledActions(plugin))).join("")}
-  </section>`).join("");
+    ${groups.get(key).map(plugin => pluginRow(plugin, pluginInstalledActions(plugin), { selectable: plugin.removable !== false })).join("")}
+  </section>`).join("") + (orphans.length ? `<section class="plugin-group">
+    <div class="plugin-group-heading"><h4>未关联插件</h4><span>${orphans.length}</span></div>
+    ${orphans.map(stationCard).join("")}
+  </section>` : "");
   hydrateIcons(list);
+  updateInstalledSelection();
 }
 
 function formatPluginTime(timestamp) {
@@ -430,7 +359,6 @@ function formatPluginTime(timestamp) {
 
 function registryEntryBadges(entry) {
   return [
-    entry.version ? `<span class="plugin-version">v${escapeHtml(entry.version)}</span>` : "",
     entry.kind === "checkin" ? `<span class="station-badge">签到插件</span>` : "",
     entry.needsCode && !entry.builtin ? `<span class="station-badge is-warning">需更新扩展</span>` : "",
     entry.installed ? `<span class="plugin-source-badge is-registry">已安装</span>` : "",
@@ -464,9 +392,10 @@ function registryRow(entry) {
       <input class="plugin-check" type="checkbox" data-registry-check="${escapeHtml(entry.id)}"${state.registrySelected.has(entry.id) ? " checked" : ""}${selectable ? "" : " disabled"} aria-label="选择 ${escapeHtml(entry.name || entry.id)}">
       <span class="plugin-row-icon is-registry" aria-hidden="true">${pluginInitial(entry)}</span>
       <button class="plugin-row-toggle" type="button" data-registry-toggle="${escapeHtml(entry.id)}" aria-expanded="${expanded}" title="${escapeHtml(entry.description || entry.name || entry.id)}">
-        <span class="plugin-row-name">${escapeHtml(entry.name || entry.id)}</span>
-        <span class="plugin-row-badges">${registryEntryBadges(entry)}</span>
-        <span class="plugin-row-host">${escapeHtml((entry.hosts || []).join(" / "))}</span>
+        <span class="plugin-row-main">
+          <span class="plugin-row-line1"><span class="plugin-row-name">${escapeHtml(entry.name || entry.id)}</span>${registryEntryBadges(entry)}</span>
+          <span class="plugin-row-line2"><span class="plugin-row-host">${escapeHtml((entry.hosts || []).join(" / "))}</span><span class="plugin-row-meta">v${escapeHtml(entry.version || "?")}${entry.installed ? " · 已安装" : ""}</span></span>
+        </span>
       </button>
       <span class="plugin-row-actions">${registryEntryActions(entry)}</span>
       ${icon("chevron-right", { className: "icon plugin-row-caret" })}
@@ -540,6 +469,65 @@ function filteredRegistryEntries(entries) {
   return entries.filter(entry => registryMatchesQuery(entry, query) && registryMatchesFilter(entry));
 }
 
+// Shift 点勾选框：按当前可见顺序把首尾之间整段设成同一个状态，不能选的条目跳过。
+function applyRangeSelection(order, anchorId, currentId, checked, selection, isSelectable) {
+  const start = order.indexOf(anchorId);
+  const end = order.indexOf(currentId);
+  if (start < 0 || end < 0 || start === end) return false;
+  const [lo, hi] = start <= end ? [start, end] : [end, start];
+  for (const id of order.slice(lo, hi + 1)) {
+    if (!isSelectable(id)) continue;
+    if (checked) selection.add(id);
+    else selection.delete(id);
+  }
+  return true;
+}
+
+function updateInstalledSelection() {
+  for (const id of [...state.installedSelected]) {
+    if (!state.installedSelectable.has(id)) state.installedSelected.delete(id);
+  }
+  const count = state.installedSelected.size;
+  const counter = $("#installed-selected-count");
+  if (counter) counter.textContent = `已选 ${count} 项`;
+  const button = $("#uninstall-selected-plugins");
+  if (button) {
+    button.disabled = count === 0;
+    const label = button.querySelector("span:last-child");
+    if (label) label.textContent = count ? `移除所选 ${count} 个` : "移除所选";
+  }
+  const selectAll = $("#installed-select-all");
+  if (selectAll) {
+    const total = state.installedSelectable.size;
+    selectAll.disabled = total === 0;
+    selectAll.checked = total > 0 && count === total;
+    selectAll.indeterminate = count > 0 && count < total;
+  }
+}
+
+// 已安装列表的批量移除：一次提交，后端同时清仓库安装记录与本地插件，并删掉挂在插件下的站点。
+async function uninstallSelectedPlugins() {
+  const ids = [...state.installedSelected].filter(id => state.installedSelectable.has(id));
+  if (!ids.length) return;
+  if (!window.confirm(`移除所选 ${ids.length} 个插件？它们下面已添加的站点会一起删掉，需要时重新装插件再加回来。`)) return;
+  const button = $("#uninstall-selected-plugins");
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>正在移除 ${ids.length} 个</span>`;
+  try {
+    const workspace = await callService("UNINSTALL_PLUGINS", { ids });
+    state.installedSelected.clear();
+    applyPluginWorkspace(workspace);
+    toast(`已移除 ${ids.length} 个插件`);
+  } catch (error) {
+    toast(error.message || String(error));
+  } finally {
+    button.innerHTML = original;
+    hydrateIcons(button);
+    updateInstalledSelection();
+  }
+}
+
 function updateRegistrySelection() {
   const entries = state.pluginWorkspace?.registry?.entries || [];
   for (const id of [...state.registrySelected]) {
@@ -593,6 +581,7 @@ function renderPluginRegistry() {
   const entries = registry?.entries || [];
   const visible = filteredRegistryEntries(entries);
   list.innerHTML = visible.length ? visible.map(registryRow).join("") : `<p class="plugin-empty">${entries.length ? "没有匹配的插件，换个关键词或筛选试试。" : "仓库里还没有条目，填好仓库地址后点「刷新仓库」。"}</p>`;
+state.registryOrder = visible.map(entry => String(entry.id));
   hydrateIcons(list);
   updateRegistrySelection();
 }
@@ -613,20 +602,10 @@ function renderLocalPlugins() {
     ...plugin,
     source: "local",
     stationCount: catalog.find(item => item.id === plugin.id)?.stationCount || 0
-  }, `<button class="icon-button danger-icon" data-plugin-remove="${escapeHtml(plugin.id)}" type="button" title="移除本地插件" aria-label="移除本地插件">${icon("trash-2", { className: "icon" })}</button>`)).join("") : `<p class="plugin-empty">开发模式下还没有加载本地插件。</p>`;
+  }, `<button class="icon-button danger-icon" data-plugin-remove="${escapeHtml(plugin.id)}" type="button" title="移除本地插件" aria-label="移除本地插件">${icon("trash-2", { className: "icon" })}</button>`), { stations: false }).join("") : `<p class="plugin-empty">开发模式下还没有加载本地插件。</p>`;
   hydrateIcons(list);
 }
 
-function syncPluginTab(tab = state.pluginTab, { focus = false } = {}) {
-  state.pluginTab = tab === "registry" ? "registry" : "installed";
-  for (const button of document.querySelectorAll("[data-plugin-tab]")) {
-    const active = button.dataset.pluginTab === state.pluginTab;
-    button.setAttribute("aria-selected", String(active));
-    button.tabIndex = active ? 0 : -1;
-    if (active && focus) button.focus();
-  }
-  for (const panel of document.querySelectorAll("[data-plugin-panel]")) panel.hidden = panel.dataset.pluginPanel !== state.pluginTab;
-}
 
 function renderPluginWorkspace() {
   if (!state.pluginWorkspace) return;
@@ -634,8 +613,6 @@ function renderPluginWorkspace() {
   renderPluginInstalled();
   renderPluginRegistry();
   renderLocalPlugins();
-  syncPluginTab();
-  renderSitePlugins();
 }
 
 function applyPluginWorkspace(workspace) {
@@ -670,7 +647,9 @@ async function installPluginVersion(pluginId) {
     const workspace = await callService("INSTALL_PLUGIN", { id: pluginId });
     applyPluginWorkspace(workspace);
     const entry = workspace.registry.entries.find(item => item.id === pluginId);
-    toast(`已安装 ${entry?.name || pluginId}${entry?.version ? ` v${entry.version}` : ""}`);
+    const added = workspace.lastInstall?.stationsAdded || 0;
+    const suffix = added ? `，${added} 个站点已加入工作区` : "";
+    toast(`已安装 ${entry?.name || pluginId}${entry?.version ? ` v${entry.version}` : ""}${suffix}`);
   } catch (error) {
     toast(error.message);
   }
@@ -691,11 +670,12 @@ async function installSelectedPlugins() {
     const result = await callService("INSTALL_PLUGINS", { ids });
     applyPluginWorkspace(result.workspace);
     state.registrySelected.clear();
-    const installed = result.installed?.length || 0;
     const skipped = result.skipped?.length || 0;
     const failed = result.failed || [];
+    const stations = result.stationsAdded || 0;
+    const suffix = stations ? `、${stations} 个站点已加入工作区` : "";
     if (failed.length) toast(`已安装 ${installed} 个，失败 ${failed.length} 个：${failed.map(item => item.id).join("、")}`);
-    else toast(`已安装 ${installed} 个插件${skipped ? `，${skipped} 个已经装过` : ""}`);
+    else toast(`已安装 ${installed} 个插件${suffix}${skipped ? `，${skipped} 个已经装过` : ""}`);
   } catch (error) {
     toast(error.message || String(error));
   } finally {
@@ -838,8 +818,7 @@ function stationCard(station) {
     pluginDescriptor ? `<span class="plugin-source-badge is-${pluginSourceKey(pluginDescriptor)}">${PLUGIN_SOURCE_LABELS[pluginSourceKey(pluginDescriptor)]} · ${escapeHtml(pluginDescriptor.name)}</span>` : "",
     verified ? "" : `<span class="station-badge is-warning">币种未核实</span>`
   ].join("");
-  return `<article class="station-card${station.enabled ? "" : " is-disabled"}" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-nav-anchor="station-card-${escapeHtml(station.id)}">
-    <input type="checkbox" class="station-select" data-select-station aria-label="选择站点"${state.selectedStationIds.has(station.id) ? " checked" : ""}>
+  return `<article class="station-card${station.enabled ? "" : " is-disabled"}" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}">
     <div class="station-card-main">
       <div class="station-card-head">
         <strong class="station-name" title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
@@ -863,28 +842,10 @@ function stationCard(station) {
   </article>`;
 }
 
-function updateStationBatchBar() {
-  const total = state.stations.length;
-  const selected = state.selectedStationIds.size;
-  $("#station-selected-count").textContent = `已选 ${selected} / ${total}`;
-  const selectAll = $("#station-select-all");
-  selectAll.checked = total > 0 && selected === total;
-  selectAll.indeterminate = selected > 0 && selected < total;
-  for (const button of document.querySelectorAll("[data-station-batch]")) button.disabled = selected === 0;
-}
-
 function renderStations() {
-  const activeIds = new Set(state.stations.map(station => station.id));
-  for (const id of state.selectedStationIds) if (!activeIds.has(id)) state.selectedStationIds.delete(id);
-  const list = $("#stations-list");
-  list.innerHTML = state.stations.length
-    ? state.stations.map(stationCard).join("")
-    : `<div class="station-empty"><span data-icon="database" class="icon empty-icon"></span><strong>还没有站点</strong><span>添加后开始跨站点比较。</span></div>`;
-  $("#station-count").textContent = String(state.stations.length);
-  setNavCount("stations", state.stations.length);
-  updateStationBatchBar();
-  hydrateIcons(list);
-  renderNavStations();
+  const count = $("#station-count");
+  if (count) count.textContent = String(state.stations.length);
+  renderPluginInstalled();
 }
 function updateStationQueryStatus(progress) {
   const card = document.getElementById(`station-card-${progress.stationId}`);
@@ -1245,7 +1206,6 @@ async function load() {
     state.pluginWorkspace = pluginWorkspace;
     state.stations = data.stations || [];
     state.sitePlugins = pluginWorkspace.catalog?.length ? pluginWorkspace.catalog : data.sitePlugins || [];
-    state.selectedPluginIds.clear();
     state.settings = data.settings;
     renderSettings();
 renderPluginWorkspace();
@@ -1332,7 +1292,7 @@ async function analyzeStation(siteUrl, sourceTabId) {
   input.setCustomValidity("");
   const existing = state.stations.find(station => currentSiteOrigin(station.baseUrl) === siteOrigin);
   if (existing && !window.confirm("该站点已有配置。仍要添加一份独立配置吗？")) {
-    const card = [...$("#stations-list").querySelectorAll(".station-card")].find(item => item.dataset.stationId === existing.id);
+    const card = [...$("#plugin-installed-list").querySelectorAll(".station-card")].find(item => item.dataset.stationId === existing.id);
     card?.scrollIntoView({ behavior: "smooth", block: "center" });
     toast("已保留现有站点配置");
     return;
@@ -1456,34 +1416,7 @@ $(".settings-nav").addEventListener("keydown", event => {
   activateSettingsView(SETTINGS_VIEWS[next], { focus: true });
 });
 window.addEventListener("hashchange", () => activateSettingsView(location.hash.slice(1), { updateHash: false }));
-$("#plugin-search").addEventListener("input", renderSitePlugins);
-for (const button of document.querySelectorAll("[data-plugin-category]")) {
-  button.addEventListener("click", () => {
-    state.pluginCategory = button.dataset.pluginCategory;
-    for (const item of document.querySelectorAll("[data-plugin-category]")) item.setAttribute("aria-pressed", String(item === button));
-    renderSitePlugins();
-  });
-}
-$("#site-plugin-list").addEventListener("change", event => {
-  const id = event.target.dataset.pluginId;
-  if (!id) return;
-  event.target.checked ? state.selectedPluginIds.add(id) : state.selectedPluginIds.delete(id);
-  updatePluginSelection();
-});
-$("#select-visible-plugins").addEventListener("click", () => {
-  for (const plugin of filteredSitePlugins()) if (plugin.addable && !plugin.added) state.selectedPluginIds.add(plugin.id);
-  renderSitePlugins();
-});
-$("#add-selected-plugins").addEventListener("click", addSelectedPlugins);
 
-for (const button of document.querySelectorAll("[data-plugin-tab]")) {
-  button.addEventListener("click", () => syncPluginTab(button.dataset.pluginTab, { focus: true }));
-  button.addEventListener("keydown", event => {
-    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-    event.preventDefault();
-    syncPluginTab(state.pluginTab === "installed" ? "registry" : "installed", { focus: true });
-  });
-}
 $("#plugin-registry-refresh").addEventListener("click", refreshPluginRegistry);
 $("#plugin-registry-url").addEventListener("keydown", event => {
   if (event.key !== "Enter") return;
@@ -1545,8 +1478,20 @@ $("#plugin-registry-list").addEventListener("click", event => {
 $("#plugin-registry-list").addEventListener("change", event => {
   const check = event.target.closest("[data-registry-check]");
   if (!check) return;
-  if (check.checked) state.registrySelected.add(check.dataset.registryCheck);
-  else state.registrySelected.delete(check.dataset.registryCheck);
+  const id = check.dataset.registryCheck;
+  const entries = state.pluginWorkspace?.registry?.entries || [];
+  const isSelectable = targetId => {
+    const entry = entries.find(item => item.id === targetId);
+    return Boolean(entry) && registryEntrySelectable(entry);
+  };
+  if (event.shiftKey && applyRangeSelection(state.registryOrder, state.registryAnchorId, id, check.checked, state.registrySelected, isSelectable)) {
+    state.registryAnchorId = id;
+    renderPluginRegistry();
+    return;
+  }
+  if (check.checked) state.registrySelected.add(id);
+  else state.registrySelected.delete(id);
+  state.registryAnchorId = id;
   updateRegistrySelection();
 });
 $("#plugin-registry-search").addEventListener("input", renderPluginRegistry);
@@ -1565,6 +1510,29 @@ $("#registry-select-all").addEventListener("change", event => {
   }
   renderPluginRegistry();
 });
+$("#plugin-installed-list").addEventListener("change", event => {
+  const check = event.target.closest("[data-installed-check]");
+  if (!check) return;
+  const id = check.dataset.installedCheck;
+  const isSelectable = targetId => state.installedSelectable.has(targetId);
+  if (event.shiftKey && applyRangeSelection(state.installedOrder, state.installedAnchorId, id, check.checked, state.installedSelected, isSelectable)) {
+    state.installedAnchorId = id;
+    renderPluginInstalled();
+    return;
+  }
+  if (check.checked) state.installedSelected.add(id);
+  else state.installedSelected.delete(id);
+  state.installedAnchorId = id;
+  updateInstalledSelection();
+});
+$("#installed-select-all").addEventListener("change", event => {
+  for (const id of state.installedSelectable) {
+    if (event.currentTarget.checked) state.installedSelected.add(id);
+    else state.installedSelected.delete(id);
+  }
+  renderPluginInstalled();
+});
+$("#uninstall-selected-plugins").addEventListener("click", uninstallSelectedPlugins);
 $("#install-selected-plugins").addEventListener("click", installSelectedPlugins);
 $("#local-plugin-list").addEventListener("click", event => {
   const removeButton = event.target.closest("[data-plugin-remove]");
@@ -1596,12 +1564,11 @@ $("#add-station-form").addEventListener("submit", event => {
   void analyzeStation(input.value);
 });
 
-$("#stations-list").addEventListener("click", async event => {
+$("#plugin-installed-list").addEventListener("click", async event => {
   const card = event.target.closest(".station-card");
   if (!card) return;
   const stationId = card.dataset.stationId;
   if (event.target.closest("[data-remove-station]")) {
-    state.selectedStationIds.delete(stationId);
     state.stationSourceTabIds.delete(stationId);
     state.stations = state.stations.filter(station => station.id !== stationId);
     renderStations();
@@ -1616,46 +1583,16 @@ $("#stations-list").addEventListener("click", async event => {
       updateStationQueryStatus({ stationId, status: "error", error: error.message || String(error) });
       toast(error.message || String(error));
     });
-    return;
   }
 });
-$("#stations-list").addEventListener("change", event => {
+$("#plugin-installed-list").addEventListener("change", event => {
   const card = event.target.closest(".station-card");
-  if (event.target.matches("[data-select-station]")) {
-    const stationId = card?.dataset.stationId;
-    if (!stationId) return;
-    event.target.checked ? state.selectedStationIds.add(stationId) : state.selectedStationIds.delete(stationId);
-    updateStationBatchBar();
-    return;
-  }
-  if (!event.target.matches('[data-field="enabled"]') || !card) return;
+  if (!card || !event.target.matches('[data-field="enabled"]')) return;
   const station = state.stations.find(item => item.id === card.dataset.stationId);
   if (!station) return;
   station.enabled = event.target.checked;
   card.classList.toggle("is-disabled", !station.enabled);
 });
-$("#station-select-all").addEventListener("click", event => {
-  state.selectedStationIds = event.target.checked ? new Set(state.stations.map(station => station.id)) : new Set();
-  renderStations();
-});
-for (const button of document.querySelectorAll("[data-station-batch]")) {
-  button.addEventListener("click", () => {
-    const selected = new Set(state.selectedStationIds);
-    if (button.dataset.stationBatch === "remove") {
-      if (!selected.size || !window.confirm(`确定删除选中的 ${selected.size} 个站点？`)) return;
-      state.stations = state.stations.filter(station => !selected.has(station.id));
-      for (const id of selected) state.stationSourceTabIds.delete(id);
-      state.selectedStationIds.clear();
-      renderStations();
-      toast(`已移除 ${selected.size} 个站点，点击“保存全部”生效`);
-      return;
-    }
-    const enabled = button.dataset.stationBatch === "enable";
-    for (const station of state.stations) if (selected.has(station.id)) station.enabled = enabled;
-    renderStations();
-    toast(`已${enabled ? "启用" : "停用"} ${selected.size} 个站点，点击“保存全部”生效`);
-  });
-}
 $("#station-config-form").addEventListener("submit", event => {
   event.preventDefault();
   void saveStationConfig();
@@ -1723,10 +1660,7 @@ const [initialView, initialJump] = location.hash.slice(1).split(":");
 activateSettingsView(initialView);
 if (initialJump) requestAnimationFrame(() => jumpToNavTarget(initialJump));
 hydrateIcons();
-const cards = initCollapsibleCards("options");
-const setAllSections = collapsed => cards.setAll(collapsed);
-$("#expand-all").addEventListener("click", () => setAllSections(false));
-$("#collapse-all").addEventListener("click", () => setAllSections(true));
+const cards = initCardCollapse("options");
 onRefreshProgress(progress => {
   if (progress.phase === "station") updateStationQueryStatus(progress);
 });

@@ -267,7 +267,6 @@ test("preflight signatures and displayed URLs omit URL credentials and secret qu
 test("dashboard shows preflight results and reserves REFRESH_ALL for explicit confirmation", () => {
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
-  const popup = readFileSync(new URL("../src/popup.js", import.meta.url), "utf8");
   const startHandler = script.indexOf('$("#refresh-all").addEventListener');
   const confirmHandler = script.indexOf('$("#confirm-refresh-all").addEventListener');
   const cancelHandler = script.indexOf('$("#cancel-refresh-preflight").addEventListener');
@@ -278,9 +277,6 @@ test("dashboard shows preflight results and reserves REFRESH_ALL for explicit co
   assert.match(html, /id="refresh-preflight-results"/);
   assert.match(html, /id="confirm-refresh-all"/);
   assert.match(html, /id="cancel-refresh-preflight"/);
-  assert.match(popup, /summary\.join\("；"\)/);
-  assert.match(popup, /comparisonLabel/);
-  assert.match(popup, /callService\("REFRESH_ALL", \{ preflightToken: activeRefreshPreflight\.token, confirmed: true \}\)/);
 });
 
 test("GET_DASHBOARD prepares legacy station data and scheduler collection uses the same verified shape", async () => {

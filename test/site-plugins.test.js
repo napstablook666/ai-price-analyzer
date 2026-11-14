@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { PROVIDER_REGISTRY, providerById } from "../src/core/provider-registry.js";
 import { addProviderStationPresets } from "../src/core/station-presets.js";
@@ -83,7 +84,7 @@ test("adds multiple selected presets once and derives added state from stations"
 });
 
 test("keeps every static script selector and local page asset connected", () => {
-  for (const page of ["dashboard", "options", "popup"]) {
+  for (const page of ["dashboard", "options"]) {
     const html = readFileSync(new URL(`../${page}.html`, import.meta.url), "utf8");
     const source = readFileSync(new URL(`../src/${page}.js`, import.meta.url), "utf8");
     const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);
@@ -101,18 +102,17 @@ test("keeps every static script selector and local page asset connected", () => 
   }
 });
 
-test("opens settings from the popup in a tab instead of replacing the popup", () => {
-  const html = readFileSync(new URL("../popup.html", import.meta.url), "utf8");
-  const source = readFileSync(new URL("../src/popup.js", import.meta.url), "utf8");
-  assert.doesNotMatch(html, /<a\b[^>]*href="[^"]*\.html/, "popup 内指向扩展页面的链接会顶掉弹窗，必须走 chrome.tabs.create");
-  for (const id of ["open-settings", "manage-stations"]) {
-    assert.ok(html.includes(`id="${id}"`), `popup.html is missing #${id}`);
-    assert.ok(source.includes(`querySelector("#${id}").addEventListener("click", () => openPage("options.html#stations"))`), `popup.js must open #${id} in a tab`);
-  }
+test("toolbar icon opens the dashboard instead of a popup", () => {
+  const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
+  assert.equal(manifest.action?.default_popup, undefined, "工具栏图标不能再挂 popup");
+  const source = readFileSync(new URL("../src/service-worker.js", import.meta.url), "utf8");
+  assert.ok(source.includes("chrome.action?.onClicked?.addListener"), "service worker 必须接住图标点击");
+  assert.ok(source.includes('"dashboard.html"'), "图标点击要落到 dashboard.html");
+  assert.equal(existsSync(new URL("../popup.html", import.meta.url)), false, "popup.html 已删，别再加载回来");
 });
 
 test("keeps dialogs as siblings instead of nesting them", () => {
-  for (const page of ["dashboard", "options", "popup"]) {
+  for (const page of ["dashboard", "options"]) {
     const html = readFileSync(new URL(`../${page}.html`, import.meta.url), "utf8");
     const stack = [];
     for (const match of html.matchAll(/<\/?dialog\b[^>]*>/g)) {
@@ -126,4 +126,23 @@ test("keeps dialogs as siblings instead of nesting them", () => {
     }
     assert.equal(stack.length, 0, `${page} leaves a dialog unclosed`);
   }
+});
+// 页面脚本跑在浏览器里，语法错误不是测试能靠字符串断言抓到的，这里直接让 Node 解析一遍。
+test("every source module parses as a valid ES module", () => {
+  const visit = directory => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const target = new URL(entry.name + (entry.isDirectory() ? "/" : ""), directory);
+      if (entry.isDirectory()) {
+        visit(target);
+        continue;
+      }
+      if (!entry.name.endsWith(".js")) continue;
+      const source = readFileSync(target);
+      assert.doesNotThrow(
+        () => execFileSync(process.execPath, ["--input-type=module", "--check"], { input: source, stdio: ["pipe", "pipe", "pipe"] }),
+        `syntax error in ${target.pathname}`
+      );
+    }
+  };
+  visit(new URL("../src/", import.meta.url));
 });
