@@ -105,7 +105,9 @@
 .station-money-input { display: grid; grid-template-columns: minmax(0, 1fr) minmax(88px, auto); gap: 6px; }
 .station-money-input input, .station-money-input select { width: 100%; min-width: 0; }
 .station-config-grid label, .station-config-grid .station-money-field { display: grid; align-content: start; gap: 6px; min-width: 0; color: var(--text-2); font-size: 11px; font-weight: 600; }
-.station-config-grid .check-label { display: flex; align-items: center; align-self: end; min-height: 36px; }
+.station-config-grid .check-label { display: flex; align-items: center; gap: 8px; align-self: start; min-height: 36px; }
+.station-config-grid .check-label input { flex: 0 0 auto; width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; }
+.station-config-grid .check-label span { line-height: 1.35; }
 .station-config-grid small { color: var(--text-3); font-size: 10px; font-weight: 400; }
 .station-hint { display: flex; align-items: center; gap: 7px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--text-2); font-size: 11px; }
 .station-price-warning { margin: 10px 0 0; color: var(--warn); font-size: 11px; line-height: 1.5; }
@@ -130,7 +132,8 @@
 .station-dialog [hidden] { display: none; }
 .station-dialog h2 { margin: 0; font-size: 16px; }
 .station-dialog label { color: var(--text-2); font-size: 12px; font-weight: 600; }
-.station-dialog input { width: 100%; min-width: 0; }
+.station-dialog input:not([type="checkbox"]):not([type="radio"]) { width: 100%; min-width: 0; }
+.station-dialog input[readonly] { color: var(--text-2); background: var(--surface-2); }
 .station-dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .station-preview-status { margin: 0; color: var(--text-2); font-size: 12px; line-height: 1.5; }
 .station-preview-list { display: grid; gap: 9px; margin: 0; }
@@ -166,6 +169,7 @@
   .site-plugin-card { min-height: 112px; }
   .site-plugin-card > input { width: 20px; height: 20px; }
   .station-config-grid { grid-template-columns: 1fr; }
+  .station-dialog-actions .button { flex: 1 1 calc(50% - 4px); min-height: 44px; }
   .settings-row { grid-template-columns: 1fr; gap: 8px; }
   .usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wide { grid-column: auto; }
