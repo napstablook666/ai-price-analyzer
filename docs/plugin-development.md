@@ -119,7 +119,7 @@ export const sitePlugin = {
 | `fields` | 否 | 接口响应里各字段的路径，如 `streak` / `canClaim` / `rewardAmount` |
 | `cooldownHours` | 否 | 两次签到的最小间隔，默认 24 |
 
-登录态来自浏览器本身：签到请求带 `credentials: "include"`，没有可用 token 时由 `chrome.scripting` 在页面主世界读一次 localStorage / cookie 补上。PATCH/DELETE 这类非简单请求需要 `extraHeaders`，popup 不在场时 service worker 可能被 CORS 预检拦住，这是浏览器限制，不是插件的问题。
+登录态来自浏览器本身：签到请求带 `credentials: "include"`，没有可用 token 时由 `chrome.scripting` 在页面主世界读一次 localStorage / cookie 补上。PATCH/DELETE 这类非简单请求需要 `extraHeaders`，扩展页面不在场时 service worker 可能被 CORS 预检拦住，这是浏览器限制，不是插件的问题。
 
 签到卡片在顶栏「菜单 → 每日签到」里，站点按 `manifest.hosts` 匹配。
 

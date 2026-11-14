@@ -59,7 +59,7 @@ normalizedModelName = modelName.toLowerCase()
 
 ## 人工覆盖
 
-在站点行的「模型 / 官方匹配」列上点选，从候选里挑一个官方模型，就写进 `modelMatchOverrides`：
+在站点行的「模型」列上点选，从候选里挑一个官方模型，就写进 `modelMatchOverrides`：
 
 ```js
 { stationId: "s2api", modelName: "claude 3.5 sonnet (20241022)", officialModelId: "claude-3-5-sonnet" }

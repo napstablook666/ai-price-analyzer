@@ -48,9 +48,9 @@ node scripts/plugin-build.mjs --check
 | --- | --- |
 | 检出 | 本仓库 + `napstablook666/ai-price-analyzer-plugins`（`main` 分支）检出到 `plugins/` |
 | 生成物 | `node scripts/plugin-build.mjs --check` |
-| 语法 | `node --check` 六个入口：`service-worker`、`dashboard`、`options`、`content-bridge`、`page-bridge`、`popup` |
+| 语法 | `node --check` 五个入口：`service-worker`、`dashboard`、`options`、`content-bridge`、`page-bridge` |
 | manifest | `manifest.json` 能解析 |
-| 必需文件 | 三个 HTML、五个图标、`README.md`、`README.zh-CN.md`、`LICENSE`、`PRIVACY.md`、`docs/user-guide.md`、`docs/development.md`、`docs/plugin-development.md`、`assets/tokenflux-pricing-analysis.png` |
+| 必需文件 | 两个 HTML、五个图标、`README.md`、`README.en.md`、`LICENSE`、`PRIVACY.md`、`docs/user-guide.md`、`docs/development.md`、`docs/plugin-development.md`、`assets/tokenflux-pricing-analysis.png` |
 | 单测 | `npm test` |
 | 密钥扫描 | 正则扫私钥头、`AKIA…`、`ghp_…`、`sk-…`、长 password 赋值，命中即失败 |
 

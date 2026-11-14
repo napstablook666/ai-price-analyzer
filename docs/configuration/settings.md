@@ -63,7 +63,6 @@
 | `matchingRules` | 只开「精确名称」 | 四条规则，可逐条开关 |
 | `modelMatchOverrides` | 空 | 人工指定「站点模型 → 官方模型」 |
 | `showUnmatched` | 开 | 没对上官方价的行是否进表 |
-| `showStale` | 开 | 过期快照是否进表 |
 
 匹配规则与优先级的细节见[模型匹配](./matching)。
 
