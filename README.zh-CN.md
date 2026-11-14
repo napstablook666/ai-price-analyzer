@@ -11,6 +11,7 @@
   <a href="https://github.com/napstablook666/ai-price-analyzer/actions/workflows/ci.yml"><img src="https://github.com/napstablook666/ai-price-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI 状态"></a>
   <a href="https://github.com/napstablook666/ai-price-analyzer/releases"><img src="https://img.shields.io/github/v/release/napstablook666/ai-price-analyzer?style=flat-square" alt="最新版本"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat-square" alt="GPL-3.0 许可证"></a>
+  <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-%E5%9C%A8%E7%BA%BF-0F766E?style=flat-square" alt="文档"></a>
 </p>
 
 AI Price Analyzer 从配置的 AI 中转站采集模型价格，把不同站点的模型写法归一到统一模型身份，并在本地面板中展示比价结果。它是 Chromium Manifest V3 扩展，不需要打包器或服务端。
@@ -58,7 +59,7 @@ AI Price Analyzer 从配置的 AI 中转站采集模型价格，把不同站点�
 - [开发手册](./docs/development.md)
 - [架构与数据流](./docs/architecture.md)
 - [扩展侧插件协议](./docs/plugin-development.md)
-- 完整文档站（VitePress）：在本仓库跑 `npm run docs:dev` 本地预览，或直接在 GitHub 上看 [`docs/`](./docs/)
+- 完整文档站：<https://napstablook666.github.io/ai-price-analyzer/>（VitePress，本地预览跑 `npm run docs:dev`）
 - [插件仓库 README](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/README.md)
 - [插件仓库开发手册](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/DEVELOPMENT.md)
 

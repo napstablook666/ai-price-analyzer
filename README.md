@@ -11,6 +11,7 @@
   <a href="https://github.com/napstablook666/ai-price-analyzer/actions/workflows/ci.yml"><img src="https://github.com/napstablook666/ai-price-analyzer/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
   <a href="https://github.com/napstablook666/ai-price-analyzer/releases"><img src="https://img.shields.io/github/v/release/napstablook666/ai-price-analyzer?style=flat-square" alt="Latest release"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat-square" alt="GPL-3.0 license"></a>
+  <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-live-0F766E?style=flat-square" alt="Documentation"></a>
 </p>
 
 AI Price Analyzer collects model prices from configured AI gateway stations, normalizes different model names to a shared identity, and presents local comparison tables. It runs as a Chromium Manifest V3 extension and does not require a bundler or hosted backend.
@@ -58,7 +59,7 @@ The settings page also provides reference refresh, supported check-in settings, 
 - [Development guide](./docs/development.md)
 - [Architecture and data flow](./docs/architecture.md)
 - [Extension-side plugin contract](./docs/plugin-development.md)
-- Full docs site (VitePress): run `npm run docs:dev` in this repository, or read [`docs/`](./docs/) on GitHub
+- Full docs site: <https://napstablook666.github.io/ai-price-analyzer/> (VitePress; run `npm run docs:dev` for a local preview)
 - [Plugin repository README](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/README.md)
 - [Plugin repository development guide](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/DEVELOPMENT.md)
 
