@@ -127,13 +127,6 @@
 .station-empty { display: grid; justify-items: center; gap: 8px; padding: 36px 20px; color: var(--text-2); border: 1px dashed var(--line-strong); border-radius: var(--radius-card); background: var(--surface); }
 .station-empty strong { color: var(--text); font-size: 14px; }
 
-.data-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px 24px; padding: 16px; }
-.data-panel-copy { display: flex; align-items: flex-start; gap: 14px; }
-.data-panel-copy h2 { margin: 0 0 6px; font-size: 14px; }
-.data-panel p { max-width: 540px; margin: 0; font-size: 11px; line-height: 1.6; }
-.data-panel .workspace-status { margin-top: 8px; color: var(--text-2); }
-.data-panel .workspace-status[data-error="true"] { color: var(--warn); }
-.data-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .file-button { position: relative; overflow: hidden; }
 .file-button input { position: absolute; inset: 0; width: 100%; height: 100%; cursor: pointer; opacity: 0; }
 
@@ -186,8 +179,6 @@
   .settings-row { grid-template-columns: 1fr; gap: 8px; }
   .usage-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wide { grid-column: auto; }
-  .data-panel { grid-template-columns: 1fr; }
-  .data-actions { justify-content: flex-start; }
   .station-ratio-fields { grid-template-columns: 1fr; }
 }
 .plugin-manager { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
@@ -213,6 +204,7 @@
 .plugin-row-icon { display: inline-grid; flex: 0 0 26px; place-items: center; width: 26px; height: 26px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-2); color: var(--text); font-size: 12px; font-weight: 700; }
 .plugin-row-icon.is-registry { border-color: var(--row-tint); background: var(--row-tint); color: var(--cat-good); }
 .plugin-row-icon.is-local { border-color: var(--warn-soft); background: var(--warn-soft); color: var(--warn); }
+.plugin-row-logo { width: 20px; height: 20px; border-radius: 5px; object-fit: contain; }
 .plugin-row-toggle { display: flex; flex: 1 1 auto; align-items: center; gap: 8px; min-width: 0; min-height: 30px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .plugin-row-toggle:focus-visible { border-radius: 6px; outline: 2px solid var(--text-2); outline-offset: 2px; }
 .plugin-row-main { display: grid; flex: 1 1 auto; min-width: 0; gap: 2px; }
@@ -258,8 +250,8 @@
 /* 操作区与标题左右对齐：面板内所有内容统一 18px 内缩 */
 #assistant-panel > .settings-form { padding: 16px 18px; }
 .assistant-test-actions { align-items: center; justify-content: flex-start; gap: 12px; padding-inline: 18px; }
-.assistant-test-actions .workspace-status { margin: 0; color: var(--text-2); font-size: 11px; line-height: 1.5; }
-.assistant-test-actions .workspace-status[data-error="true"] { color: var(--warn); }
+.assistant-test-actions .assistant-status { margin: 0; color: var(--text-2); font-size: 11px; line-height: 1.5; }
+.assistant-test-actions .assistant-status[data-error="true"] { color: var(--warn); }
 /* 动作按钮等宽排成一块，避免长短不齐 */
 .assistant-review-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; justify-content: initial; padding-inline: 18px; }
 .assistant-review-list { display: grid; gap: 8px; margin-top: 12px; padding: 0 18px 18px; }

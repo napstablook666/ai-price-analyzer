@@ -21,17 +21,26 @@
         <button class="comparison-mode-button is-active" type="button" data-comparison-mode="paid" aria-pressed="true">付费中转站</button>
         <button class="comparison-mode-button" type="button" data-comparison-mode="public" aria-pressed="false">公益站</button>
       </div>
-      <button class="button button-primary" id="refresh-all" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新全部</span></button>
-      <details class="top-menu" id="top-menu">
-        <summary class="button button-quiet" aria-label="打开菜单" aria-expanded="false"><span data-icon="menu" class="icon"></span><span>菜单</span></summary>
-        <div class="top-menu-body" role="menu" aria-label="页面操作">
-          <button class="top-menu-item" role="menuitem" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
-          <div class="top-menu-sep" role="separator"></div>
-          <button class="top-menu-item" role="menuitem" id="refresh-station" type="button" disabled title="先在站点筛选中选择一个站点" aria-label="刷新当前站点"><span data-icon="refresh-cw" class="icon"></span><span>刷新当前站点</span></button>
-          <div class="top-menu-sep" role="separator" id="checkin-sep" hidden></div>
-          <button class="top-menu-item" role="menuitem" id="checkin-toggle" type="button" aria-expanded="false" aria-controls="checkin-group" data-menu-stay hidden><span data-icon="badge-check" class="icon"></span><span>每日签到</span><span data-icon="chevron-right" class="icon checkin-caret"></span></button>
-          <div class="top-menu-checkin" id="checkin-group" role="group" aria-label="每日签到" hidden>
-            <div class="top-menu-checkin-head"><button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button></div>
+      <div class="refresh-actions">
+        <details class="top-menu" id="refresh-station-menu">
+          <summary class="button button-quiet" aria-label="刷新指定站点" aria-expanded="false" title="刷新指定站点"><span data-icon="list-checks" class="icon"></span><span>刷新指定站点</span></summary>
+          <div class="top-menu-body refresh-station-body" role="group" aria-label="刷新指定站点">
+            <div class="refresh-station-heading"><strong>选择站点</strong><span id="refresh-station-count" aria-live="polite">未选择</span></div>
+            <input class="facet-search refresh-station-search" id="refresh-station-search" type="search" placeholder="搜索站点" aria-label="搜索要刷新的站点" autocomplete="off">
+            <div class="facet-options refresh-station-options" id="refresh-station-options" role="group" aria-label="选择要刷新的站点"></div>
+            <span class="facet-empty" id="refresh-station-empty" hidden>无匹配站点</span>
+            <div class="facet-menu-actions refresh-station-tools"><button id="refresh-station-select-all" type="button">选择当前结果</button><button id="refresh-station-clear" type="button">清空</button></div>
+            <button class="button button-primary refresh-station-submit" id="refresh-station" type="button" disabled><span data-icon="refresh-cw" class="icon"></span><span>刷新已选站点</span></button>
+          </div>
+        </details>
+        <button class="button button-primary" id="refresh-all" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新全部</span></button>
+      </div>
+      <button class="button button-quiet" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
+      <details class="top-menu" id="checkin-menu">
+        <summary class="button button-quiet" aria-label="每日签到" aria-expanded="false" title="每日签到"><span data-icon="badge-check" class="icon"></span><span>每日签到</span></summary>
+        <div class="top-menu-body checkin-body" role="group" aria-label="每日签到">
+          <div class="top-menu-checkin" id="checkin-group">
+            <div class="top-menu-checkin-head"><span>签到站点</span><button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button></div>
             <div class="checkin-list" id="checkin-list"></div>
           </div>
         </div>
@@ -84,7 +93,7 @@
       <div class="panel-heading"><div><h2 id="comparison-title">价格明细</h2></div><div class="comparison-meta"><span class="result-count" id="result-count">0 条报价</span><span class="reference-status" id="reference-pill"><span class="status-dot" id="reference-dot"></span><span id="reference-status">官方价未加载</span><span class="reference-time" id="reference-note"></span></span></div></div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="模型价格表，可滚动">
         <table class="comparison-table">
-          <thead><tr><th scope="col" data-sort-keys="model provider">模型</th><th scope="col" data-sort-keys="groupName">中转站</th><th scope="col" colspan="3" class="paid-only-column merged-price-heading" data-sort-keys="monthlyCost"><span class="merged-price-heading-label"><span>中转单价 / 官方单价 / 月成本</span><span class="monthly-cost-scale-switch" role="group" aria-label="月成本柱标尺"><button type="button" data-monthly-cost-scale="model" aria-pressed="true" title="每个模型独立按组内最高月成本满格">同模型</button><button type="button" data-monthly-cost-scale="global" aria-pressed="false" title="所有筛选后的模型共用最高月成本标尺">全局绝对</button></span></span><span class="cost-header-ruler" id="monthly-cost-ruler" title="同模型对比：每个模型组内最高月成本满格"><span class="cost-header-track"><span></span></span><span class="cost-header-scale"><span>0</span><span id="monthly-cost-scale-max">— / 月</span></span></span></th><th scope="col" class="paid-only-column" data-sort-keys="diffPercent">价差</th><th scope="col" class="paid-only-column" data-sort-keys="blendedUnitPrice" title="柱子表示当前行混合单价；虚线是官方混合单价">混合单价</th><th scope="col" class="public-only-column" hidden>状态</th></tr></thead>
+          <thead><tr><th scope="col" data-sort-keys="model provider">模型</th><th scope="col" data-sort-keys="groupName">中转站</th><th scope="col" colspan="3" class="paid-only-column merged-price-heading" data-sort-keys="monthlyCost"><span class="th-label">报价与月成本</span><details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong>价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。表里每个数字都是每 1M tokens 消耗的中转币数量，官方和中转两列已折算到同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></th><th scope="col" colspan="2" class="paid-only-column" data-sort-keys="diffPercent blendedUnitPrice">价差 / 混合单价</th><th scope="col" class="public-only-column" hidden>状态</th></tr></thead>
           <tbody id="comparison-body"></tbody>
         </table>
       </div>

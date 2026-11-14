@@ -49,7 +49,7 @@ node scripts/plugin-build.mjs      # 生成 src/site-plugins/*
 
 ## 卸载与数据残留
 
-卸载扩展会清掉 `chrome.storage` 里的设置和快照，但**不会**删掉你连过的本地工作区文件。工作区是磁盘上的普通 JSON 文件，需要自己处理。
+卸载扩展会清掉 `chrome.storage` 里的设置、站点和快照，重新安装后要重新加站、重填凭据。
 
 ## 常见加载失败
 

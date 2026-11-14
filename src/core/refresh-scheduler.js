@@ -44,6 +44,7 @@ async function persistErrorSnapshot({ station, error, getSnapshots, errorSnapsho
 export async function runRefreshAll({
   forceReferences = false,
   stationId,
+  stationIds,
   sourceTabId,
   concurrency = 3,
   getStations,
@@ -55,7 +56,8 @@ export async function runRefreshAll({
   errorSnapshot,
   notifyProgress
 }) {
-  const allStations = (await getStations()).filter(station => station.enabled === true && (!stationId || station.id === stationId));
+  const selectedStationIds = Array.isArray(stationIds) ? new Set(stationIds) : stationId ? new Set([stationId]) : null;
+  const allStations = (await getStations()).filter(station => station.enabled === true && (!selectedStationIds || selectedStationIds.has(station.id)));
   const startedAt = Date.now();
   const total = allStations.length;
   const results = new Array(total);

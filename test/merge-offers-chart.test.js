@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
-import { buildChartGroups, buildMonthlyCostScale, deltaTone, monthlyCostBarWidth, monthlyCostBaselineFor } from "../src/dashboard-index.js";
+import { buildMonthlyCostRankings, deltaTone, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
 
@@ -72,48 +72,6 @@ test("pickPrimaryOfficial prefers the undecorated exact name, then the cheapest 
   assert.equal(pickPrimaryOfficial([], "m"), null);
 });
 
-test("buildChartGroups groups by canonical model, normalizes bars and excludes public stations", () => {
-  const row = (overrides) => ({
-    canonicalModel: "m1",
-    displayName: "M1",
-    provider: "openai",
-    stationId: "a",
-    stationName: "A",
-    stationCategory: "paid",
-    blendedUnitPrice: 1,
-    officialBlendedUnitPrice: 4,
-    diffPercent: -75,
-    category: "excellent",
-    pricingUnavailable: false,
-    ...overrides
-  });
-  const rows = [
-    row({}),
-    row({ stationId: "b", stationName: "B", blendedUnitPrice: 2 }),
-    row({ stationId: "c", stationName: "C", blendedUnitPrice: 8 }),
-    row({ stationId: "p", stationName: "P", stationCategory: "public", blendedUnitPrice: 0.5 }),
-    row({ stationId: "u", stationName: "U", pricingUnavailable: true, blendedUnitPrice: null }),
-    row({ canonicalModel: "m2", displayName: "M2", stationId: "a", blendedUnitPrice: 3, officialBlendedUnitPrice: 3, diffPercent: 0 })
-  ];
-
-  const { groups, totalGroups } = buildChartGroups(rows);
-  assert.equal(totalGroups, 2);
-  assert.equal(groups.length, 2);
-  assert.equal(groups[0].canonicalModel, "m1");
-  assert.deepEqual(groups[0].bars.map(bar => bar.stationId), ["a", "b", "c"]);
-  // 轨道满格 = 组内最贵的一站；官方价比满格还贵时不给参考线位置
-  assert.deepEqual(groups[0].bars.map(bar => bar.widthPercent), [12.5, 25, 100]);
-  assert.equal(groups[0].officialLeftPercent, 50);
-  assert.equal(groups[1].officialLeftPercent, 100);
-  assert.equal(groups[1].bars[0].widthPercent, 100);
-  assert.equal(groups[0].officialBlendedUnitPrice, 4);
-  const aboveTrack = buildChartGroups([row({ blendedUnitPrice: 1, officialBlendedUnitPrice: 40 })]);
-  assert.equal(aboveTrack.groups[0].officialLeftPercent, null);
-
-  const truncated = buildChartGroups(rows, { maxGroups: 1 });
-  assert.equal(truncated.groups.length, 1);
-  assert.equal(truncated.totalGroups, 2);
-});
 
 test("deltaTone maps price difference percentages to readable color levels", () => {
   assert.equal(deltaTone(null), "neutral");
@@ -133,11 +91,11 @@ test("dashboard drops the paid recommendation column and keeps one delta sort op
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const header = html.match(/<thead>[\s\S]*?<\/thead>/)?.[0] || "";
   assert.equal(header.includes(">推荐</th>"), false);
-  assert.match(header, /data-sort-keys="diffPercent">价差<\/th>/);
+  assert.match(header, /data-sort-keys="diffPercent blendedUnitPrice">价差 \/ 混合单价<\/th>/);
   const secondary = html.match(/<select id="sort-secondary">[\s\S]*?<\/select>/)?.[0] || "";
   assert.equal((secondary.match(/value="diffPercent"/g) || []).length, 1);
   assert.equal(script.includes('data-label="推荐"'), false);
-  assert.match(script, /data-label="价差"/);
+  assert.match(script, /data-label="价差 \/ 混合单价"/);
 });
 
 test("dashboard folds official matching into one confidence detail control", () => {
@@ -153,9 +111,13 @@ test("dashboard folds official matching into one confidence detail control", () 
   assert.match(css, /\.model-match-details:hover \.model-match-popover/);
   assert.match(css, /\.model-match-details\[open\] \.model-match-popover/);
   assert.match(script, /function closeModelMatchDetails\(except = null\)/);
-  assert.match(script, /document\.addEventListener\("click", event => \{\s*closeModelMatchDetails\(event\.target\.closest\("\.model-match-details"\)\);/);
+assert.match(script, /const matchDetails = event\.target\.closest\("\.model-match-details"\);/);
+  assert.match(script, /closeModelMatchDetails\(matchDetails\)/);
   assert.match(script, /document\.addEventListener\("mouseout", event =>/);
   assert.match(script, /details\.contains\(event\.relatedTarget\)/);
+assert.equal(script.includes('.monthly-cost-summary, .model-match-details > .confidence-tag'), true);
+  assert.match(script, /matchDetails\.open = true;\s*\n\s*delete matchDetails\.dataset\.hoverOpen;/);
+  assert.equal(css.includes('.model-match-popover::before'), true);
 });
 
 
@@ -170,48 +132,69 @@ test("monthlyCostBarWidth uses one shared baseline and clamps overflow", () => {
   assert.ok(Math.abs(monthlyCostBarWidth(49.2392, 70.9523) - 49.2392 / 70.9523 * 100) < 1e-10);
 });
 
-test("monthly cost scale supports per-model and global baselines", () => {
-  const rows = [
-    { canonicalModel: "model-a", monthlyCost: 40 },
-    { canonicalModel: "model-a", monthlyCost: 100 },
-    { canonicalModel: "model-b", monthlyCost: 20 },
-    { canonicalModel: "model-b", monthlyCost: 10 },
-    { canonicalModel: "model-c", monthlyCost: null },
-  ];
-  const scale = buildMonthlyCostScale(rows);
-  assert.equal(scale.globalMax, 100);
-  assert.equal(scale.byModel.get("model-a"), 100);
-  assert.equal(scale.byModel.get("model-b"), 20);
-  assert.equal(monthlyCostBaselineFor(rows[0], scale, "model"), 100);
-  assert.equal(monthlyCostBaselineFor(rows[2], scale, "model"), 20);
-  assert.equal(monthlyCostBaselineFor(rows[2], scale, "global"), 100);
-  assert.equal(monthlyCostBaselineFor(rows[4], scale, "model"), 0);
+test("monthly cost rankings use every filtered offer and keep the cheapest ten", () => {
+  const rows = Array.from({ length: 12 }, (_, index) => ({
+    canonicalModel: "model-a",
+    monthlyCost: (12 - index) * 10,
+    stationId: `a${index}`,
+    stationName: `A${index}`
+  }));
+  rows.push(
+    { canonicalModel: "model-a", monthlyCost: null, stationId: "unknown", stationName: "Unknown" },
+    { canonicalModel: "model-b", monthlyCost: 5, stationId: "b0", stationName: "B0" },
+    { canonicalModel: "model-b", monthlyCost: 5, stationId: "b1", stationName: "B1" }
+  );
+  const rankings = buildMonthlyCostRankings(rows);
+  const highest = monthlyCostRankingFor(rows[0], rankings);
+  assert.equal(highest.rank, 12);
+  assert.equal(highest.total, 12);
+  assert.equal(highest.baseline, 120);
+  assert.equal(highest.top.length, 10);
+  assert.deepEqual(highest.top.map(entry => entry.monthlyCost), [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  assert.equal(monthlyCostRankingFor(rows[11], rankings).rank, 1);
+  const unavailable = monthlyCostRankingFor(rows[12], rankings);
+  assert.equal(unavailable.rank, null);
+  assert.equal(unavailable.total, 12);
+  assert.equal(unavailable.baseline, 120);
+  assert.equal(unavailable.top.length, 10);
+  assert.equal(monthlyCostRankingFor(rows[13], rankings).rank, 1);
+  assert.equal(monthlyCostRankingFor(rows[14], rankings).rank, 1);
+  assert.equal(monthlyCostRankingFor(rows[14], rankings).total, 2);
+  assert.equal(monthlyCostRankingFor(rows[14], rankings).baseline, 5);
   assert.equal(monthlyCostBarWidth(40, 100), 40);
   assert.equal(monthlyCostBarWidth(20, 100), 20);
 });
 
-test("dashboard merges three price columns with an explicit shared monthly-cost bar", () => {
+test("dashboard merges comparison columns and exposes same-model monthly cost rankings", () => {
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
-  assert.match(html, /<th scope="col" colspan="3" class="paid-only-column merged-price-heading"/);
-  assert.match(html, /id="monthly-cost-scale-max"/);
-  assert.match(html, /data-monthly-cost-scale="model"/);
-  assert.match(html, /data-monthly-cost-scale="global"/);
-  assert.match(script, /<td colspan="3" data-label="中转单价 \/ 官方单价 \/ 月成本" class="merged-price-cell/);
+  assert.match(html, /<th scope="col" colspan="3" class="paid-only-column merged-price-heading" data-sort-keys="monthlyCost">报价与月成本<\/th>/);
+  assert.match(html, /<th scope="col" colspan="2" class="paid-only-column" data-sort-keys="diffPercent blendedUnitPrice">价差 \/ 混合单价<\/th>/);
+  assert.equal(html.includes("data-monthly-cost-scale"), false);
+  assert.equal(html.includes("monthly-cost-ruler"), false);
+  assert.match(script, /<td colspan="3" data-label="报价与月成本" class="merged-price-cell/);
+  assert.match(script, /<td colspan="2" data-label="价差 \/ 混合单价" class="merged-comparison-cell paid-only-column"/);
   assert.equal(script.includes('<td data-label="中转单价">'), false);
+  assert.equal(script.includes("is-blended-unit-price"), false);
+  assert.equal(script.includes("chart-line"), false);
+  assert.equal(script.includes("月省"), false);
+  assert.equal(script.includes("月多付"), false);
+  assert.equal(script.includes("<small>/月</small>"), false);
   assert.match(script, /<details class="monthly-cost-details">/);
-  assert.match(script, /class="monthly-cost-popover-grid"/);
+  assert.match(script, /class="monthly-cost-ranking-list"/);
+  assert.match(script, /月成本最低前 \$\{top\.length\} 条/);
+  assert.match(script, /buildMonthlyCostRankings\(filtered\)/);
+  assert.match(script, /monthlyCostRankingFor\(row, monthlyCostRankings\)/);
   assert.match(script, /monthlyCostBarWidth\(row\.monthlyCost, baseline\)/);
-  assert.match(script, /const chartState = applyChartBars\(filtered\)/);
-  assert.match(script, /const scaleMode = state\.filters\.monthlyCostScale === "global" \? "global" : "model"/);
-  assert.match(script, /data-monthly-cost-scale/);
-  assert.match(script, /style="width:\$\{safeWidth\.toFixed\(2\)\}%"/);
   assert.match(script, /closeMonthlyCostDetails\(event\.target\.closest\("\.monthly-cost-details"\)\)/);
-  assert.match(css, /\.comparison-table th \+ th, \.comparison-table td \+ td \{ border-left: 1px solid/);
-  assert.match(css, /\.merged-price-unit \+ \.merged-price-unit \{ border-left: 1px solid/);
-  assert.match(css, /\.monthly-cost-details\[open\] \.monthly-cost-popover/);
   assert.match(script, /document\.addEventListener\("mouseover", event =>/);
   assert.match(script, /details\.dataset\.hoverOpen = "true"/);
-  assert.match(css, /\.monthly-cost-popover \{ width: 100%; max-height: 60dvh; overflow-y: auto; \}/);
+  assert.match(css, /\.merged-comparison-columns/);
+  assert.match(css, /\.monthly-cost-ranking-list/);
+  assert.match(css, /\.monthly-cost-details\[open\] > \.monthly-cost-popover/);
+  assert.match(css, /\.comparison-table td\.merged-comparison-cell/);
+  assert.equal(css.includes("monthly-cost-scale-switch"), false);
+  assert.equal(css.includes("chart-line"), false);
+  assert.equal(css.includes(".merged-price-unit + .merged-price-unit"), false);
 });

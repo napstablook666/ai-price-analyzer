@@ -22,8 +22,6 @@ Thumbs.db
 /out/
 /canonical/.cache/
 
-# Local workspace runtime data (stations and settings) - never commit
-/ai-price-analyzer.workspace.json
 
 # Plugin sources live in the sibling repository, checked out at ../plugins
 

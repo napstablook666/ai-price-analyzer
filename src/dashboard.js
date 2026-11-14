@@ -1,15 +1,17 @@
 import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { buildChartGroups, buildMonthlyCostScale, createDashboardIndex, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostBaselineFor, paginateRows, rowBandClasses } from "./dashboard-index.js";
+import { buildMonthlyCostRankings, createDashboardIndex, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, paginateRows, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
+import { providerIconMarkup, providerLogoFor } from "./shared/provider-icons.js";
+import { siteIconMarkup } from "./shared/site-icon.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
-const state = { data: null, comparisonMode: "paid", rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc", monthlyCostScale: "model" },
-  stationIndexes: new Map()
+const state = { data: null, comparisonMode: "paid", rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
+  stationIndexes: new Map(), refreshStationIds: new Set(), refreshStationQuery: "", refreshStationOptionsKey: ""
 };
 const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
@@ -102,15 +104,44 @@ function renderStationFilter(rows) {
   const stations = [...stationsById.entries()];
   const selectedName = stations.find(([id]) => id === current)?.[1];
   $("#station-filter-label").textContent = selectedName || "全部中转站";
-  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}><span>${escapeHtml(name)}</span>${state.stationIndexes.get(id) ? `<span class="facet-metric" title="本站混合单价 / 官方混合单价的中位数（样本 ${state.stationIndexes.get(id).sampleSize} 个模型）">×${(state.stationIndexes.get(id).median).toFixed(2)}</span>` : ""}</label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
-  updateRefreshStationButton();
+  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}>${siteIconMarkup(state.stationById.get(id)?.pluginId, name, { size: 15 })}<span>${escapeHtml(name)}</span>${state.stationIndexes.get(id) ? `<span class="facet-metric" title="本站混合单价 / 官方混合单价的中位数（样本 ${state.stationIndexes.get(id).sampleSize} 个模型）">×${(state.stationIndexes.get(id).median).toFixed(2)}</span>` : ""}</label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
   filterFacetOptions("station");
+}
+function selectedRefreshStationIds() {
+  const enabledIds = new Set((state.data?.stations || []).filter(station => station.enabled === true).map(station => station.id));
+  return [...state.refreshStationIds].filter(id => enabledIds.has(id));
 }
 function updateRefreshStationButton() {
   const button = $("#refresh-station");
-  const station = (state.data?.stations || []).find(item => item.id === state.filters.stationId);
-  button.disabled = !station?.enabled;
-  button.title = !station ? "先在站点筛选中选择一个站点" : station.enabled ? `刷新${station.name}的数据` : "该站点未启用";
+  const count = selectedRefreshStationIds().length;
+  $("#refresh-station-count").textContent = count ? `已选 ${count} 个` : "未选择";
+  button.disabled = !count || state.refreshInProgress || state.preflightLoading;
+  button.title = count ? `刷新已选的 ${count} 个站点` : "先选择至少一个启用站点";
+}
+function filterRefreshStationOptions() {
+  const query = state.refreshStationQuery.trim().toLowerCase();
+  let matches = 0;
+  for (const option of document.querySelectorAll("#refresh-station-options .refresh-station-option")) {
+    option.hidden = !option.textContent.toLowerCase().includes(query);
+    if (!option.hidden) matches += 1;
+  }
+  $("#refresh-station-empty").hidden = matches > 0;
+}
+function renderRefreshStationOptions() {
+  const stations = state.data?.stations || [];
+  const enabledIds = new Set(stations.filter(station => station.enabled === true).map(station => station.id));
+  for (const id of state.refreshStationIds) if (!enabledIds.has(id)) state.refreshStationIds.delete(id);
+  const optionsKey = JSON.stringify(stations.map(station => [station.id, station.name, station.enabled, station.pluginId]));
+  if (optionsKey !== state.refreshStationOptionsKey) {
+    $("#refresh-station-options").innerHTML = stations.map(station => `<label class="facet-option refresh-station-option"><input type="checkbox" data-refresh-station-id value="${escapeHtml(station.id)}"${state.refreshStationIds.has(station.id) ? " checked" : ""}${station.enabled === true ? "" : " disabled"}>${siteIconMarkup(station.pluginId, station.name || station.id, { size: 15 })}<span>${escapeHtml(station.name || station.id)}</span>${station.enabled === true ? "" : "<small>未启用</small>"}</label>`).join("");
+    state.refreshStationOptionsKey = optionsKey;
+  }
+  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) {
+    input.checked = state.refreshStationIds.has(input.value);
+    input.disabled = !enabledIds.has(input.value);
+  }
+  filterRefreshStationOptions();
+  updateRefreshStationButton();
 }
 
 function filterFacetOptions(key) {
@@ -131,7 +162,7 @@ function renderFacetFilters(rows) {
     const values = [...new Set(rows.map(row => row[key === "provider" ? "provider" : "groupName"]).filter(Boolean))].sort();
     const selected = state.filters[key] === null ? new Set(values) : new Set(state.filters[key]);
     container.innerHTML = values.length
-      ? `${values.map(value => `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}><span>${escapeHtml(value)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`
+      ? `${values.map(value => `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}>${key === "provider" && providerLogoFor(value) ? providerIconMarkup(value, { size: 14 }) : ""}<span>${escapeHtml(value)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`
       : `<span class="facet-empty">暂无可选项</span>`;
     filterFacetOptions(key);
   }
@@ -206,15 +237,45 @@ function sortRows(rows) {
     return `${left.stationName} ${left.modelName}`.localeCompare(`${right.stationName} ${right.modelName}`);
   });
 }
-function unitPricesMarkup(prices, currency, row, official = false, sourceCurrency = false) {
-  if (official && row.stationCategory === "public") return `<span class="price-empty">公益站仅与公益站比较</span>`;
-  if (!prices) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
-  const lines = dashboardPriceLines(prices, row, official);
-  const visibleLines = lines.filter(([, value]) => value !== null && value !== undefined);
-  if (!visibleLines.length) return `<span class="price-empty">${official ? (row.officialName ? "官方价格未收录" : "无官方匹配价") : "中转价格未收录"}</span>`;
-  const displayCurrency = currency === "CREDITS" ? "CR" : currency;
-  const formatter = sourceCurrency ? formatSourcePrice : formatPrice;
-  return `<div class="price-lines">${visibleLines.map(([label, value, precise], index) => `<div class="price-line${index < 2 ? " price-line-primary" : ""}"><span class="price-key">${label}</span><span class="price-value">${formatter(value, displayCurrency, precise ? 6 : 4)}</span></div>`).join("")}</div>`;
+function priceGridMarkup(row, currency, officialQuotedPrices) {
+  const relayLines = row.quotedPrices ? dashboardPriceLines(row.quotedPrices, row, false).filter(([, value]) => value !== null && value !== undefined) : [];
+  const officialSource = officialQuotedPrices || row.officialPrices || null;
+  const officialBlocked = row.stationCategory === "public";
+  const officialLines = officialSource && !officialBlocked ? dashboardPriceLines(officialSource, row, true).filter(([, value]) => value !== null && value !== undefined) : [];
+  const officialNote = officialBlocked ? "公益站仅与公益站比较" : officialLines.length ? null : row.officialName ? "官方价格未收录" : "无官方匹配价";
+  const relayNote = relayLines.length ? null : "中转价格未收录";
+  if (!relayLines.length && !officialLines.length) return `<span class="price-empty">${relayNote || officialNote}</span>`;
+  const grid = new Map();
+  const collect = (lines, side) => {
+    for (const [label, value, precise] of lines) {
+      const estimated = label.endsWith("（估算）");
+      const base = estimated ? label.replace(/（估算）$/, "") : label;
+      const entry = grid.get(base) || { base, relay: null, official: null };
+      entry[side] = { value, precise, estimated };
+      grid.set(base, entry);
+    }
+  };
+  collect(relayLines, "relay");
+  collect(officialLines, "official");
+  const hasOfficial = officialLines.length > 0;
+  const hasRelay = relayLines.length > 0;
+  const displayCode = code => (code === "CREDITS" ? "CR" : code);
+  const officialFormat = officialQuotedPrices
+    ? cell => formatSourcePrice(cell.value, displayCode(row.officialCurrency || "CREDITS"), cell.precise ? 6 : 4)
+    : cell => formatPrice(cell.value, currency, cell.precise ? 6 : 4);
+  const relayFormat = cell => formatSourcePrice(cell.value, displayCode(row.sourceCurrency), cell.precise ? 6 : 4);
+  const cellMarkup = (cell, format) => cell
+    ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}"${cell.estimated ? ' title="估算值"' : ""}>${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
+    : `<span class="price-value price-value-missing">—</span>`;
+  const headRow = `<div class="price-grid-row"><span class="price-grid-head" aria-hidden="true"></span>${hasOfficial ? `<span class="price-grid-head">官方</span>` : ""}${hasRelay ? `<span class="price-grid-head">中转</span>` : ""}</div>`;
+  const bodyRows = [...grid.values()].map((entry, index) => {
+    const primary = index < 2 ? " price-line-primary" : "";
+    const officialCell = hasOfficial ? cellMarkup(entry.official, officialFormat) : "";
+    const relayCell = hasRelay ? cellMarkup(entry.relay, relayFormat) : "";
+    return `<div class="price-grid-row${primary}"><span class="price-key">${escapeHtml(entry.base)}</span>${officialCell}${relayCell}</div>`;
+  }).join("");
+  const notes = [officialNote, relayNote].filter(Boolean).map(note => `<span class="price-grid-note">${note}</span>`).join("");
+  return `<div class="price-grid">${headRow}${bodyRows}</div>${notes ? `<div class="price-grid-notes">${notes}</div>` : ""}`;
 }
 
 
@@ -274,7 +335,6 @@ function modelMatchMarkup(row, currency) {
   const officialName = hasOfficial ? row.officialName : "没有对应的官方目录记录";
   const provider = row.provider && row.provider !== "未匹配" ? row.provider : "未匹配";
   const rule = row.matchRule || (hasOfficial ? "官方匹配" : "未匹配");
-  const detailTitle = hasOfficial ? `官方模型 ${officialName} · ${rule} · 置信度 ${confidence}%` : "未匹配官方目录";
   const candidateItems = candidates.map(candidate => {
     const name = candidate.name || "未命名候选";
     const cost = Number.isFinite(candidate.monthlyCost) ? formatPrice(candidate.monthlyCost, currency, 2) : "—";
@@ -284,12 +344,15 @@ function modelMatchMarkup(row, currency) {
     return `<div class="candidate-item"><span class="candidate-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span><span class="candidate-cost">${cost}</span><span class="candidate-delta">${delta}</span></div>`;
   }).join("");
   const candidatesMarkup = candidateItems ? `<div class="match-candidates"><div class="match-detail-heading">官方候选（${candidates.length}）</div><div class="candidate-list">${candidateItems}</div></div>` : "";
-  return `<details class="model-match-details"><summary class="confidence-tag" title="${escapeHtml(`${detailTitle}；悬停或点击查看详情`)}" aria-label="匹配置信度 ${confidence}%，查看官方匹配详情">${confidence}%</summary><div class="model-match-popover" aria-label="官方匹配详情"><div class="match-detail-primary"><span class="match-detail-label">官方模型</span><strong>${escapeHtml(officialName)}</strong></div><div class="match-detail-line"><span>供应商</span><span>${escapeHtml(provider)}</span></div><div class="match-detail-line"><span>匹配规则</span><span>${escapeHtml(rule)}</span></div><div class="match-detail-line"><span>置信度</span><span>${confidence}%</span></div>${candidatesMarkup}</div></details>`;
+  return `<details class="model-match-details"><summary class="confidence-tag" aria-label="匹配置信度 ${confidence}%，查看官方匹配详情">${confidence}%</summary><div class="model-match-popover" aria-label="官方匹配详情"><div class="match-detail-primary"><span class="match-detail-label">官方模型</span><strong>${escapeHtml(officialName)}</strong></div><div class="match-detail-line"><span>供应商</span><span>${escapeHtml(provider)}</span></div><div class="match-detail-line"><span>匹配规则</span><span>${escapeHtml(rule)}</span></div><div class="match-detail-line"><span>置信度</span><span>${confidence}%</span></div>${candidatesMarkup}</div></details>`;
 }
 
 function closeModelMatchDetails(except = null) {
   for (const details of document.querySelectorAll(".model-match-details[open]")) {
-    if (details !== except) details.open = false;
+    if (details !== except) {
+      details.open = false;
+      delete details.dataset.hoverOpen;
+    }
   }
 }
 
@@ -302,6 +365,9 @@ function closeMonthlyCostDetails(except = null) {
   }
 }
 
+function modelIconMarkup(row) {
+  return providerIconMarkup([row.provider, row.canonicalModel, row.modelName, row.displayName], { size: 15 });
+}
 function renderRows() {
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
@@ -312,20 +378,7 @@ function renderRows() {
   const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
   state.page = page.page;
   const visible = page.rows;
-  const chartState = applyChartBars(filtered);
-  const scaleMode = state.filters.monthlyCostScale === "global" ? "global" : "model";
-  const chartFor = chartState.barFor;
-  $("#monthly-cost-scale-max").textContent = scaleMode === "global" && chartState.monthlyCostScale.globalMax > 0
-    ? `${formatPrice(chartState.monthlyCostScale.globalMax, currency)} / 月`
-    : scaleMode === "global" ? "— / 月" : "组内最高 / 月";
-  $("#monthly-cost-ruler").title = scaleMode === "global"
-    ? `全局绝对成本：所有筛选后的模型共用最高月成本 ${formatPrice(chartState.monthlyCostScale.globalMax, currency)} 作为满格`
-    : "同模型对比：每个模型组内最高月成本满格，不用于跨模型比较绝对成本";
-  for (const button of document.querySelectorAll("[data-monthly-cost-scale]")) {
-    const active = button.dataset.monthlyCostScale === scaleMode;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  }
+  const monthlyCostRankings = buildMonthlyCostRankings(filtered);
   const bandClasses = rowBandClasses(visible);
   const pagination = $("#comparison-pagination");
   pagination.hidden = filtered.length === 0;
@@ -346,11 +399,10 @@ function renderRows() {
     const officialNote = !isPublic ? modelMatchMarkup(row, currency) : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
-      <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
-      <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
-      <td colspan="3" data-label="中转单价 / 官方单价 / 月成本" class="merged-price-cell paid-only-column"${isPublic ? " hidden" : ""}><div class="merged-price-content"><div class="merged-price-columns"><div class="merged-price-unit"><span class="merged-price-label">中转单价</span>${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</div><div class="merged-price-unit"><span class="merged-price-label">官方单价</span>${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</div><div class="merged-price-unit"><span class="merged-price-label">月成本</span>${monthlyCostSummaryMarkup(row, currency)}</div></div>${monthlyCostDetailsMarkup(row, currency, officialQuotedPrices, monthlyCostBaselineFor(row, chartState.monthlyCostScale, scaleMode), scaleMode)}</div></td>
-      <td data-label="价差" class="paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
-      <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong>${chartBarMarkup(row, chartFor(row))}</div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
+      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
+      <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span>${siteIconMarkup(station.pluginId, row.stationName, { size: 16 })}<span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
+      <td colspan="3" data-label="报价与月成本" class="merged-price-cell paid-only-column"${isPublic ? " hidden" : ""}><div class="merged-price-content"><div class="merged-price-columns"><div class="merged-price-unit">${priceGridMarkup(row, currency, officialQuotedPrices)}</div><div class="merged-price-unit"><span class="merged-price-label">月成本</span>${monthlyCostSummaryMarkup(row, currency)}</div></div>${monthlyCostDetailsMarkup(row, currency, monthlyCostRankingFor(row, monthlyCostRankings))}</div></td>
+      <td colspan="2" data-label="价差 / 混合单价" class="merged-comparison-cell paid-only-column"${isPublic ? " hidden" : ""}><div class="merged-comparison-columns"><div class="merged-comparison-unit"><span class="merged-price-label">价差</span><span class="delta-tag ${deltaClass}">${deltaLabel}</span></div><div class="merged-comparison-unit"><span class="merged-price-label">混合单价</span>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</div></div></td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");
@@ -363,57 +415,33 @@ function renderRows() {
   hydrateIcons($("#comparison-body"));
 }
 
-// 每行只归一一次：柱子表示当前模型报价，不把分页排序或 DOM 位置当作归一基准。
-function applyChartBars(rows) {
-  const barByRow = new WeakMap();
-  for (const row of rows) {
-    const { groups } = buildChartGroups([row], { maxGroups: 1 });
-    const bar = groups[0]?.bars[0];
-    if (bar) barByRow.set(row, { ...bar, baselineUnitPrice: bar.blendedUnitPrice, officialLeftPercent: groups[0].officialLeftPercent });
-  }
-  const monthlyCostScale = buildMonthlyCostScale(rows);
-  return { barFor: row => barByRow.get(row) || null, monthlyCostBaseline: monthlyCostScale.globalMax, monthlyCostScale };
-}
-
-function cellChartMarkup({ width, tone = "is-muted", kind = "is-blended-unit-price", title, reference = "" }) {
+// 条长只做同模型月成本相对比较，排名来自完整筛选结果。
+function cellChartMarkup({ width, kind = "is-monthly-cost", title }) {
   const safeWidth = Number.isFinite(width) ? Math.max(0, Math.min(100, width)) : 0;
-  return `<span class="cell-chart ${kind}" role="img" aria-label="${escapeHtml(title)}"><span class="chart-track" title="${escapeHtml(title)}"><span class="chart-bar ${tone}" style="width:${safeWidth.toFixed(2)}%"></span>${reference}</span></span>`;
+  return `<span class="cell-chart ${kind}" role="img" aria-label="${escapeHtml(title)}"><span class="chart-track" title="${escapeHtml(title)}"><span class="chart-bar" style="width:${safeWidth.toFixed(2)}%"></span></span></span>`;
 }
-
-function chartBarMarkup(row, bar) {
-  if (!bar) return "";
-  const width = Number.isFinite(bar.widthPercent) ? bar.widthPercent : 0;
-  const title = `混合单价 ${formatPrice(bar.blendedUnitPrice, row.costCurrency || "CNY", 4)}/M，当前行满格，占 ${width.toFixed(1)}%`;
-  const line = bar.officialLeftPercent === null ? "" : `<span class="chart-line" style="left:${bar.officialLeftPercent.toFixed(2)}%" title="官方混合单价"></span>`;
-  return cellChartMarkup({ width, tone: chartBarClass(row.category), title, reference: line });
-}
-
-function chartBarClass(category) {
-  if (category === "excellent" || category === "good") return "is-ok";
-  if (category === "fair") return "is-warn";
-  if (category === "bad") return "is-danger";
-  return "is-muted";
-}
-
 
 function monthlyCostSummaryMarkup(row, currency) {
-  const costCurrency = row.costCurrency || currency;
-  const monthlyDifference = Number.isFinite(row.officialMonthlyCost) && !row.pricingUnavailable && Number.isFinite(row.monthlyCost)
-    ? row.officialMonthlyCost - row.monthlyCost
-    : null;
-  return `<div class="cost-cell"><strong>${formatPrice(row.monthlyCost, costCurrency)}<small>/月</small></strong>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), costCurrency)}</span>`}</div>`;
+  return `<div class="cost-cell"><strong>${formatPrice(row.monthlyCost, row.costCurrency || currency)}</strong></div>`;
 }
 
-function monthlyCostDetailsMarkup(row, currency, officialQuotedPrices, baseline, scaleMode = "model") {
-  const width = monthlyCostBarWidth(row.monthlyCost, baseline);
-  const costCurrency = row.costCurrency || currency;
-  const scaleLabel = scaleMode === "global" ? "全局满格" : "同模型满格";
-  const baselineText = baseline > 0 ? formatPrice(baseline, costCurrency) : "—";
-  const title = width === null
-    ? "月成本不可用，无法计算长条长度"
-    : `月成本 ${formatPrice(row.monthlyCost, costCurrency)}/月，${scaleLabel} ${baselineText}，当前占 ${width.toFixed(2)}%`;
-  const chart = cellChartMarkup({ width, kind: "is-monthly-cost", title });
-  return `<details class="monthly-cost-details"><summary class="monthly-cost-summary" aria-label="月成本长条，点击查看中转单价、官方单价和月成本对比" title="${escapeHtml(`${title}；悬停或点击查看三列对比`)}">${chart}</summary><div class="monthly-cost-popover" aria-label="三列单价对比"><div class="monthly-cost-popover-heading"><strong>三列单价对比</strong><span>${scaleLabel} ${baselineText}</span></div><div class="monthly-cost-popover-grid"><div><span class="merged-price-label">中转单价</span>${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</div><div><span class="merged-price-label">官方单价</span>${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</div><div><span class="merged-price-label">月成本</span>${monthlyCostSummaryMarkup(row, currency)}</div></div></div></details>`;
+function monthlyCostDetailsMarkup(row, currency, ranking) {
+  const { rank, total, baseline, top } = ranking;
+  const width = rank ? monthlyCostBarWidth(row.monthlyCost, baseline) : null;
+  const title = !rank
+    ? "月成本不可用，无法参与同模型排名"
+    : `同模型第 ${rank} / ${total} 名，月成本 ${formatPrice(row.monthlyCost, row.costCurrency || currency)}；柱长按组内最高月成本 ${formatPrice(baseline, row.costCurrency || currency)} 归一`;
+  const chart = cellChartMarkup({ width, title });
+  const rankLabel = rank ? `#${rank}<small> / ${total}</small>` : "—";
+  const items = top.map(entry => {
+    const entryRow = entry.row;
+    const entryCurrency = entryRow.costCurrency || currency;
+    const entryTitle = `第 ${entry.rank} 名，${entryRow.stationName}，月成本 ${formatPrice(entry.monthlyCost, entryCurrency)}`;
+    const entryWidth = monthlyCostBarWidth(entry.monthlyCost, baseline) ?? 0;
+    return `<li class="monthly-cost-ranking-item${entryRow === row ? " is-current" : ""}"><div class="monthly-cost-ranking-meta"><span class="monthly-cost-ranking-position">#${entry.rank}</span><span class="monthly-cost-ranking-station" title="${escapeHtml(`${entryRow.stationName} · ${entryRow.groupName || "未分组"}`)}">${escapeHtml(entryRow.stationName)}</span><strong class="monthly-cost-ranking-cost">${formatPrice(entry.monthlyCost, entryCurrency)}</strong></div><span class="monthly-cost-ranking-group">${escapeHtml(entryRow.groupName || "未分组")}</span>${cellChartMarkup({ width: entryWidth, title: entryTitle })}</li>`;
+  }).join("");
+  const ariaLabel = rank ? `同模型月成本第 ${rank} / ${total} 名，查看最低的前 ${top.length} 条报价` : "月成本不可用，查看同模型排名";
+  return `<details class="monthly-cost-details"><summary class="monthly-cost-summary" aria-label="${escapeHtml(ariaLabel)}" title="${escapeHtml(`${title}；悬停或点击查看同模型月成本最低的前 ${top.length} 条报价`)}"><span class="monthly-cost-rank" aria-hidden="true">${rankLabel}</span>${chart}</summary><div class="monthly-cost-popover" aria-label="同模型月成本排名"><div class="monthly-cost-popover-heading"><strong>月成本最低前 ${top.length} 条</strong><span>当前第 ${rank || "—"} / ${total} 名</span></div><ol class="monthly-cost-ranking-list">${items || '<li class="monthly-cost-ranking-empty">暂无可排名报价</li>'}</ol></div></details>`;
 }
 
 
@@ -435,15 +463,12 @@ function renderReferenceStatus() {
 }
 function renderCheckin(data) {
   const list = $("#checkin-list");
-  const group = $("#checkin-group");
-  const toggle = $("#checkin-toggle");
-  const sep = $("#checkin-sep");
-  if (!list || !group || !toggle) return;
+  const menu = $("#checkin-menu");
+  if (!list || !menu) return;
   const stations = data.checkinStations || [];
   // 签到能力由插件仓库的签到插件提供，扩展里不再内置站点适配
   const installed = data.checkinPluginInstalled === true || stations.length > 0;
-  toggle.hidden = false;
-  if (sep) sep.hidden = false;
+  menu.hidden = false;
   if (!installed) {
     list.innerHTML = `
       <div class="checkin-empty">
@@ -531,6 +556,7 @@ function render(data) {
   $("#show-unmatched").checked = state.filters.showUnmatched;
   renderSummary(state.rows);
   renderStationFilter(state.rows);
+  renderRefreshStationOptions();
   renderFacetFilters(state.rows);
   renderModelFilter();
   $("#sort-by").value = state.filters.sortBy;
@@ -608,18 +634,28 @@ document.addEventListener("input", event => {
   if (input) filterFacetOptions(input.dataset.facetSearch);
 });
 document.addEventListener("mouseover", event => {
-  const summary = event.target.closest(".monthly-cost-summary");
+  const summary = event.target.closest(".monthly-cost-summary, .model-match-details > .confidence-tag");
   if (!summary) return;
-  const details = summary.parentElement;
+  const details = summary.closest("details");
+  if (!details) return;
   if (event.relatedTarget && details.contains(event.relatedTarget)) return;
-  closeMonthlyCostDetails(details);
+  // 未展开的 details 不渲染子内容，悬停必须由 JS 打开，CSS :hover 起不到作用。
+  if (details.classList.contains("model-match-details")) closeModelMatchDetails(details);
+  else closeMonthlyCostDetails(details);
   if (!details.open) {
     details.open = true;
     details.dataset.hoverOpen = "true";
   }
 });
 document.addEventListener("click", event => {
-  closeModelMatchDetails(event.target.closest(".model-match-details"));
+  const matchDetails = event.target.closest(".model-match-details");
+  closeModelMatchDetails(matchDetails);
+  if (matchDetails?.dataset.hoverOpen === "true" && event.target.closest(".confidence-tag")) {
+    // 悬停已展开时，点击只固定当前展开态，避免 summary 默认行为立刻关掉。
+    event.preventDefault();
+    matchDetails.open = true;
+    delete matchDetails.dataset.hoverOpen;
+  }
   const summary = event.target.closest(".monthly-cost-summary");
   const details = summary?.parentElement;
   if (details?.dataset.hoverOpen === "true") {
@@ -684,14 +720,8 @@ document.addEventListener("click", event => {
 $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event.target.value; renderRows(); });
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
-document.querySelectorAll("[data-monthly-cost-scale]").forEach(button => {
-  button.addEventListener("click", () => {
-    state.filters.monthlyCostScale = button.dataset.monthlyCostScale === "global" ? "global" : "model";
-    renderRows();
-  });
-});
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc", monthlyCostScale: "model" };
+  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
   modelFilterBoxCount = MODEL_FILTER_BOXES;
   saveModelFilterBoxCount();
   $("#search").value = "";
@@ -778,25 +808,51 @@ $("#comparison-body").addEventListener("click", async event => {
   renderRows();
 });
 
+$("#refresh-station-search").addEventListener("input", event => {
+  state.refreshStationQuery = event.target.value;
+  filterRefreshStationOptions();
+});
+$("#refresh-station-options").addEventListener("change", event => {
+  const input = event.target.closest("input[data-refresh-station-id]");
+  if (!input) return;
+  if (input.checked) state.refreshStationIds.add(input.value);
+  else state.refreshStationIds.delete(input.value);
+  updateRefreshStationButton();
+});
+$("#refresh-station-select-all").addEventListener("click", () => {
+  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) {
+    if (input.disabled || input.closest("label").hidden) continue;
+    input.checked = true;
+    state.refreshStationIds.add(input.value);
+  }
+  updateRefreshStationButton();
+});
+$("#refresh-station-clear").addEventListener("click", () => {
+  state.refreshStationIds.clear();
+  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) input.checked = false;
+  updateRefreshStationButton();
+});
 $("#refresh-station").addEventListener("click", async event => {
+  if (state.refreshInProgress || state.preflightLoading) return;
+  const stationIds = selectedRefreshStationIds();
+  if (!stationIds.length) return;
   const button = event.currentTarget;
-  const station = (state.data?.stations || []).find(item => item.id === state.filters.stationId);
-  if (!station?.enabled) return;
   button.disabled = true;
   $("#refresh-all").disabled = true;
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>查询中</span>`;
   lastRefreshSummary = null;
   try {
-    const data = await callService("REFRESH_STATION", { stationId: station.id });
+    const data = await callService("REFRESH_STATION", { stationIds });
     lastRefreshSummary = data.refreshSummary;
     render(data);
-    if (!lastRefreshSummary?.total) toast("该站点没有可查询的数据");
-    else toast(`${station.name}：查询完成，${lastRefreshSummary.successCount} 成功，${lastRefreshSummary.errorCount} 失败`);
+    $("#refresh-station-menu").open = false;
+    if (!lastRefreshSummary?.total) toast("所选站点没有可查询的数据");
+    else toast(`指定站点查询完成，${lastRefreshSummary.successCount} 成功，${lastRefreshSummary.errorCount} 失败`);
   } catch (error) {
     toast(error.message);
   } finally {
     $("#refresh-all").disabled = false;
-    button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新当前站点</span>`;
+    button.innerHTML = `${icon("refresh-cw", { className: "icon" })}<span>刷新已选站点</span>`;
     updateRefreshStationButton();
   }
 });
@@ -889,13 +945,6 @@ $("#checkin-refresh").addEventListener("click", async event => {
   catch (error) { toast(error.message); }
   finally { button.disabled = false; }
 });
-$("#checkin-toggle").addEventListener("click", () => {
-  const toggle = $("#checkin-toggle");
-  const group = $("#checkin-group");
-  const open = group.hidden;
-  group.hidden = !open;
-  toggle.setAttribute("aria-expanded", String(open));
-});
 
 document.addEventListener("click", async event => {
   const installButton = event.target.closest("[data-checkin-action='install']");
@@ -937,7 +986,8 @@ document.addEventListener("change", async event => {
 
 hydrateIcons();
 const cards = initCardCollapse("dashboard");
-initTopMenu();
+initTopMenu("refresh-station-menu");
+initTopMenu("checkin-menu");
 // 设置抽屉：顶栏齿轮就地打开站点与设置，不再跳到独立的设置页
 const settingsLayer = $("#settings-layer");
 const settingsFrame = $("#settings-frame");

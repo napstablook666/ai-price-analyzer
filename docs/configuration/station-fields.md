@@ -53,7 +53,7 @@
 | `api-key` | `token` | `X-API-Key: <token>` |
 | `basic` | `username` + `password` | HTTP Basic 认证 |
 
-Token 存在扩展本地存储里，不进工作区文件、不进导出的 JSON。换设备要重填。
+Token 存在扩展本地存储里，不进导出的 JSON。换设备要重填。
 
 `page` 模式的站点不用填 token，用的是浏览器里的登录态。
 
@@ -95,4 +95,3 @@ Token 存在扩展本地存储里，不进工作区文件、不进导出的 JSON
 
 - [偏好与成本](./settings)
 - [模型匹配](./matching)
-- [工作区文件格式](./workspace)

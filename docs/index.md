@@ -37,5 +37,5 @@ features:
     details: 仓库根目录就是可加载的扩展，没有 bundler、没有运行时依赖。
   - icon: 🧪
     title: 有测试兜底
-    details: 核心、采集、匹配、工作区、插件生成物都有 node:test 用例，改完跑一遍。
+    details: 核心、采集、匹配、插件生成物都有 node:test 用例，改完跑一遍。
 ---

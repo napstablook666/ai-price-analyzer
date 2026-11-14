@@ -23,7 +23,6 @@ npm run docs:build    # 产物在 docs/.vitepress/dist
 - [成本与推荐](./guide/cost.md)
 - [官方参考价](./guide/official-prices.md)
 - [每日签到](./guide/checkin.md)
-- [工作区与备份](./guide/workspace.md)
 
 ## 配置
 
@@ -31,7 +30,6 @@ npm run docs:build    # 产物在 docs/.vitepress/dist
 - [站点配置字段](./configuration/station-fields.md)
 - [偏好与成本](./configuration/settings.md)
 - [模型匹配](./configuration/matching.md)
-- [工作区文件](./configuration/workspace.md)
 
 ## 参考
 

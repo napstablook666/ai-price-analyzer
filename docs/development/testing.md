@@ -16,7 +16,6 @@ npm test
 | `test/checkin.test.js` | 签到预设与结果归一 |
 | `test/refresh-preflight.test.js` | 刷新预检与确认签名 |
 | `test/site-plugins.test.js` | 插件生成物与 catalog 一致性 |
-| `test/workspace.test.js` | 工作区读写与导入校验 |
 | `test/plugin-build.test.js` | 构建脚本与漂移检测 |
 | `test/model-identity.test.js` | 规范模型归一行为 |
 | `test/model-api.test.js` | 模型接口连通性检查 |

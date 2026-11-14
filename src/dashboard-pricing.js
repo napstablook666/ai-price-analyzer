@@ -2,7 +2,7 @@ export function formatSourcePrice(value, currency = "UNKNOWN", precision = 4) {
   const number = Number(value);
   if (value === null || value === undefined || !Number.isFinite(number)) return "—";
   const code = String(currency || "UNKNOWN").toUpperCase();
-  const symbol = code === "USD" ? "$" : code === "CNY" ? "¥" : `${code} `;
+  const symbol = code === "USD" ? "$" : code === "CNY" ? "¥" : code === "CREDITS" ? "" : `${code} `;
   const rounded = Number(number.toFixed(precision));
   return `${symbol}${rounded}`;
 }

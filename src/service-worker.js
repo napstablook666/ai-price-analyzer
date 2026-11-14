@@ -18,7 +18,7 @@ import { normalizeProxyModelName } from "./core/matching.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { normalizeSettings, normalizeStation } from "./shared/schema.js";
-import { exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
+import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
 import { ASSIST_BATCH_SIZE, applyAssistResults, buildAssistEntries, buildAssistPrompt, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, selectPendingEntries, summarizeCache } from "./core/llm-matching.js";
@@ -555,16 +555,18 @@ async function refreshOfficialReferences(force = false) {
 }
 
 async function refreshAll(options = {}) {
+  const selection = Array.isArray(options.stationIds) ? options.stationIds : options.stationId ? [options.stationId] : null;
+  const stationKey = JSON.stringify(selection ? [...new Set(selection)].sort() : null);
   if (refreshAllTask) {
     const active = refreshAllTask;
-    const sameRequest = active.stationId === options.stationId
+    const sameRequest = active.stationKey === stationKey
       && active.sourceTabId === options.sourceTabId
       && active.forceReferences === Boolean(options.forceReferences);
     if (sameRequest) return active.promise;
     await active.promise.catch(() => {});
     return refreshAll(options);
   }
-  const task = { ...options, forceReferences: Boolean(options.forceReferences), promise: refreshAllInternal(options) };
+  const task = { ...options, stationKey, forceReferences: Boolean(options.forceReferences), promise: refreshAllInternal(options) };
   refreshAllTask = task;
   try {
     return await task.promise;
@@ -1377,29 +1379,16 @@ case "UNINSTALL_PLUGINS": return uninstallPlugins(message.ids);
       }
     }
     case "REFRESH_STATION": {
-      const stationId = String(message.stationId || "").trim();
-      const station = (await getPreparedStations()).find(item => item.id === stationId);
-      if (!station || station.enabled !== true) throw new Error("站点不存在或未启用");
-      const result = await refreshAll({ stationId, sourceTabId: message.sourceTabId });
+      const requestedIds = Array.isArray(message.stationIds) ? message.stationIds : [message.stationId];
+      const stationIds = [...new Set(requestedIds.map(id => String(id || "").trim()).filter(Boolean))];
+      if (!stationIds.length) throw new Error("请选择至少一个站点");
+      const enabledIds = new Set((await getPreparedStations()).filter(item => item.enabled === true).map(item => item.id));
+      if (stationIds.some(id => !enabledIds.has(id))) throw new Error("站点不存在或未启用");
+      const result = await refreshAll({ stationIds, sourceTabId: message.sourceTabId });
       return { ...(await dashboard()), refreshSummary: result.summary };
     }
     case "FETCH_REFERENCES": {
       await refreshOfficialReferences(true);
-      return dashboard();
-    }
-    case "EXPORT_STATE": return exportState();
-    case "IMPORT_STATE": {
-      const invalidation = invalidateRefreshPreflight();
-      const current = await getStations();
-      const imported = await importState(message.state);
-      const importedById = new Map(imported.stations.map(station => [station.id, station]));
-      for (const station of imported.stations) await removeStationCredential(station.id);
-      for (const previous of current) {
-        const next = importedById.get(previous.id);
-        if (!next || String(next.baseUrl || "") !== previous.baseUrl || String(next.auth?.type || "none") !== previous.auth?.type) await removeStationCredential(previous.id);
-      }
-      workspacePluginsSynced = false;
-      await invalidation;
       return dashboard();
     }
     case "TEST_STATION": {

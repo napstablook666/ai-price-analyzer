@@ -39,70 +39,9 @@ export function deltaTone(diffPercent) {
   return "fair";
 }
 
-// 混合单价柱：按规范模型分组，每站一根横柱，官方混合单价画参考线。
-// 只收付费站且有可算混合单价的 offer；同站同模型多档位取最低那档，避免同一模型出现重复柱。
-export function buildChartGroups(rows = [], { maxGroups = 12 } = {}) {
-  const limit = Math.max(1, Math.trunc(Number(maxGroups)) || 1);
-  const byModel = new Map();
-  for (const row of rows) {
-    if (row.stationCategory === "public" || row.pricingUnavailable) continue;
-    const price = Number(row.blendedUnitPrice);
-    if (!Number.isFinite(price) || price <= 0) continue;
-    const key = row.canonicalModel || row.modelName || "";
-    if (!key) continue;
-    let group = byModel.get(key);
-    if (!group) {
-      group = {
-        canonicalModel: key,
-        displayName: row.officialName || row.displayName || row.modelName || key,
-        provider: row.provider || "",
-        officialBlendedUnitPrice: null,
-        bars: new Map()
-      };
-      byModel.set(key, group);
-    } else if (!group.displayName && row.officialName) {
-      group.displayName = row.officialName;
-    }
-    const official = Number(row.officialBlendedUnitPrice);
-    if (group.officialBlendedUnitPrice === null && Number.isFinite(official) && official > 0) {
-      group.officialBlendedUnitPrice = official;
-    }
-    const existing = group.bars.get(row.stationId);
-    if (existing && existing.blendedUnitPrice <= price) continue;
-    group.bars.set(row.stationId, {
-      stationId: row.stationId,
-      stationName: row.stationName,
-      blendedUnitPrice: price,
-      diffPercent: Number.isFinite(Number(row.diffPercent)) ? Number(row.diffPercent) : null,
-      category: row.category || ""
-    });
-  }
-
-  const groups = [];
-  for (const group of byModel.values()) {
-    const bars = [...group.bars.values()].sort((left, right) => left.blendedUnitPrice - right.blendedUnitPrice);
-    if (!bars.length) continue;
-    const official = group.officialBlendedUnitPrice;
-    const baseline = Math.max(...bars.map(bar => bar.blendedUnitPrice));
-    for (const bar of bars) bar.widthPercent = baseline > 0 ? bar.blendedUnitPrice / baseline * 100 : 0;
-    const lowest = bars[0].blendedUnitPrice;
-    groups.push({
-      canonicalModel: group.canonicalModel,
-      displayName: group.displayName,
-      provider: group.provider,
-      officialBlendedUnitPrice: official,
-      // 官方价只在没有超过轨道满格时才有位置可画；超出说明全站都比官方便宜
-      officialLeftPercent: official > 0 && official <= baseline ? official / baseline * 100 : null,
-      savingRatio: official > 0 ? 1 - lowest / official : Number.NEGATIVE_INFINITY,
-      bars
-    });
-  }
-  groups.sort((left, right) => (right.savingRatio - left.savingRatio) || String(left.displayName).localeCompare(String(right.displayName)));
-  return { groups: groups.slice(0, limit), totalGroups: groups.length };
-}
 
 
-// 同一筛选结果共用一把月成本尺子，跨行可以直接比较，不做行内归一。
+// 月成本条长按同模型最高月成本归一，分页和排序不改变相对长度。
 export function monthlyCostBarWidth(value, baseline) {
   if (value === null || value === undefined || value === "") return null;
   const cost = Number(value);
@@ -111,25 +50,42 @@ export function monthlyCostBarWidth(value, baseline) {
   return Math.min(100, cost / max * 100);
 }
 
-// 月成本提供两种明确标尺：同模型相对比较，或跨模型全局绝对比较。
+// 月成本只在同一规范模型内排名，完整筛选结果排序后再截断，分页不影响名次。
 export function monthlyCostModelKey(row) {
   return row?.canonicalModel || row?.modelName || row?.displayName || "";
 }
 
-export function buildMonthlyCostScale(rows = []) {
+export function buildMonthlyCostRankings(rows = []) {
   const byModel = new Map();
-  let globalMax = 0;
   for (const row of rows) {
-    const cost = Number(row?.monthlyCost);
-    if (!Number.isFinite(cost) || cost <= 0) continue;
-    globalMax = Math.max(globalMax, cost);
+    if (row?.stationCategory === "public" || row?.pricingUnavailable) continue;
+    const rawMonthlyCost = row?.monthlyCost;
+    if (rawMonthlyCost === null || rawMonthlyCost === undefined || rawMonthlyCost === "") continue;
+    const monthlyCost = Number(rawMonthlyCost);
     const key = monthlyCostModelKey(row);
-    if (key) byModel.set(key, Math.max(byModel.get(key) || 0, cost));
+    if (!Number.isFinite(monthlyCost) || monthlyCost < 0 || !key) continue;
+    if (!byModel.has(key)) byModel.set(key, []);
+    byModel.get(key).push({ row, monthlyCost });
   }
-  return { globalMax, byModel };
+  for (const [key, entries] of byModel) {
+    entries.sort((left, right) => left.monthlyCost - right.monthlyCost);
+    let rank = 0;
+    byModel.set(key, entries.map((entry, index) => {
+      if (index === 0 || entry.monthlyCost !== entries[index - 1].monthlyCost) rank = index + 1;
+      return { ...entry, rank };
+    }));
+  }
+  return byModel;
 }
 
-export function monthlyCostBaselineFor(row, scale, mode = "model") {
-  if (mode === "global") return scale?.globalMax || 0;
-  return scale?.byModel?.get(monthlyCostModelKey(row)) || 0;
+export function monthlyCostRankingFor(row, rankings, { limit = 10 } = {}) {
+  const entries = rankings?.get(monthlyCostModelKey(row)) || [];
+  const topLimit = Math.max(1, Math.trunc(Number(limit)) || 10);
+  const current = entries.find(entry => entry.row === row);
+  return {
+    rank: current?.rank ?? null,
+    total: entries.length,
+    baseline: entries.at(-1)?.monthlyCost || 0,
+    top: entries.slice(0, topLimit)
+  };
 }

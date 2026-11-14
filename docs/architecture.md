@@ -43,11 +43,13 @@
 | `src/site-plugins/providers/` | 由 `../plugins/` 生成 | 否 |
 | `src/site-plugins/catalog.js` | 首页站点目录，生成物 | 否 |
 | `src/shared/plugin-order.js` | 站点排序，生成物 | 否 |
+| `src/shared/provider-logos.js` | 模型图标数据（models.dev + simple-icons），生成物 | 否 |
 | `src/core/canonical.js` | 规范模型归一逻辑 | 是 |
 | `src/core/canonical-table.js` | 规范模型表，生成物 | 否 |
 | `canonical/build.mjs` | 规范表生成器（靠齐 OpenRouter 列表，models.dev 补别名） | 是 |
 | `scripts/plugin-build.mjs` | 插件构建器 | 是 |
 | `scripts/model-lookup.mjs` | 查规范模型 id 的小工具 | 是 |
+| `scripts/provider-logos.mjs` | 品牌图标抓取生成器 | 是 |
 | `src/core/` | 采集、匹配、比价、存储、凭据 | 是 |
 | `test/` | 全部测试 | 是 |
 
@@ -66,6 +68,7 @@ npm test                                  # 全部扩展测试
 node scripts/plugin-build.mjs              # 改完 plugins/ 后重新生成
 node scripts/plugin-build.mjs --check      # 只校验漂移
 node scripts/model-lookup.mjs claude 4.6   # 查规范模型 id
+node scripts/provider-logos.mjs            # 重新抓品牌图标并生成 provider-logos.js
 node canonical/build.mjs --offline         # 用缓存重算规范表（联网可去掉 --offline）
 npm run version:patch                      # 扩展版本号同步
 ```

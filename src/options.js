@@ -1,116 +1,21 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
 import { callService, escapeHtml, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
+import { siteLogoUrl } from "./shared/site-icon.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
-import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pickWorkspace, readWorkspace, writeWorkspace } from "./shared/workspace.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
 const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "" };
-const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 const EMBEDDED = new URLSearchParams(location.search).get("embed") === "1";
 if (EMBEDDED) document.body.classList.add("is-embedded");
 
-
-function setWorkspaceStatus(message, error = false) {
-  const node = $("#workspace-status");
-  if (!node) return;
-  node.textContent = message;
-  node.dataset.error = error ? "true" : "false";
-}
-
-function updateWorkspaceControls(busy = false) {
-  const supported = isWorkspaceSupported();
-  const connected = Boolean(workspace.handle);
-  $("#workspace-connect").disabled = busy || !supported;
-  $("#workspace-load").disabled = busy || !connected;
-  $("#workspace-save").disabled = busy || !connected;
-  if (!supported) setWorkspaceStatus("当前浏览器不支持文件夹工作区，数据仅保存在本机");
-}
-
-async function refreshWorkspaceStatus() {
-  if (!isWorkspaceSupported()) {
-    updateWorkspaceControls();
-    return;
-  }
-  try {
-    workspace.handle = await getStoredWorkspace();
-    if (!workspace.handle) {
-      setWorkspaceStatus("尚未选择工作区");
-      updateWorkspaceControls();
-      return;
-    }
-    const data = await readWorkspace(workspace.handle);
-    setWorkspaceStatus(data ? `已连接：${workspace.handle.name}` : `已连接：${workspace.handle.name}，尚无工作区文件`);
-  } catch (error) {
-    setWorkspaceStatus(`工作区不可用：${error.message || String(error)}`, true);
-  }
-  updateWorkspaceControls();
-}
-
-async function connectWorkspace() {
-  const previous = workspace.handle;
-  let picked = false;
-  updateWorkspaceControls(true);
-  try {
-    workspace.handle = await pickWorkspace();
-    picked = true;
-    const data = await readWorkspace(workspace.handle);
-    setWorkspaceStatus(data ? `已连接：${workspace.handle.name}，可从工作区加载` : `已连接：${workspace.handle.name}，请保存当前数据`);
-  } catch (error) {
-    if (!picked) workspace.handle = previous;
-    if (error.name !== "AbortError") {
-      setWorkspaceStatus(error.message || String(error), true);
-      toast(error.message || String(error));
-    }
-  } finally {
-    updateWorkspaceControls();
-  }
-}
-
-async function loadWorkspaceState() {
-  const handle = workspace.handle;
-  if (!handle) return;
-  updateWorkspaceControls(true);
-  await enqueueWorkspaceOperation(async () => {
-    try {
-      const imported = await readWorkspace(handle);
-      if (!imported) throw new Error("工作区还没有数据文件，请先保存当前数据");
-      if (!window.confirm("将用工作区数据替换当前扩展数据，继续吗？")) return;
-      await callService("IMPORT_STATE", { state: imported });
-      await load();
-      setWorkspaceStatus(`已从工作区加载：${handle.name}`);
-      toast("工作区数据已加载；密钥需要重新填写");
-    } catch (error) {
-      setWorkspaceStatus(error.message || String(error), true);
-      toast(error.message || String(error));
-    } finally {
-      updateWorkspaceControls();
-    }
-  });
-}
-
-async function saveWorkspace({ notify = true } = {}) {
-  const handle = workspace.handle;
-  if (!handle) return;
-  await enqueueWorkspaceOperation(async () => {
-    try {
-      await writeWorkspace(handle, await callService("EXPORT_STATE"));
-      setWorkspaceStatus(`已保存到工作区：${handle.name}`);
-      if (notify) toast("数据已保存到本地工作区");
-    } catch (error) {
-      const message = error.message || String(error);
-      setWorkspaceStatus(message, true);
-      toast(message);
-    }
-  });
-}
 function selected(value, expected) { return value === expected ? " selected" : ""; }
 function checked(value) { return value ? " checked" : ""; }
 
 
-const SETTINGS_VIEWS = ["installed", "registry", "costs", "assistant", "workspace"];
+const SETTINGS_VIEWS = ["installed", "registry", "costs", "assistant"];
 const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益", benchmark: "基准" };
 const PLUGIN_MODE_LABELS = { direct: "直接接口", page: "页面模式" };
 
@@ -265,7 +170,7 @@ function pluginRow(plugin, actions = "", { stations = true, selectable = false }
   return `<section class="plugin-entry${expanded ? " is-expanded" : ""}">
     <div class="plugin-row" data-plugin-row="${escapeHtml(plugin.id)}">
       ${selectable ? `<input class="plugin-check" type="checkbox" data-installed-check="${escapeHtml(plugin.id)}"${checked ? " checked" : ""} aria-label="选择 ${escapeHtml(plugin.name || plugin.id)}">` : ""}
-      <span class="plugin-row-icon is-${source}" aria-hidden="true">${pluginInitial(plugin)}</span>
+      <span class="plugin-row-icon is-${source}" aria-hidden="true">${siteLogoUrl(plugin.id) ? `<img class="plugin-row-logo" src="${siteLogoUrl(plugin.id)}" alt="" width="20" height="20" loading="lazy">` : pluginInitial(plugin)}</span>
       <button class="plugin-row-toggle" type="button" data-plugin-toggle="${escapeHtml(plugin.id)}" aria-expanded="${expanded}" title="${escapeHtml(plugin.description || plugin.name || plugin.id)}">
         <span class="plugin-row-main">
           <span class="plugin-row-line1"><span class="plugin-row-name">${escapeHtml(plugin.name || plugin.id)}</span>${badges}</span>
@@ -714,7 +619,6 @@ async function addPluginSite(pluginId) {
     for (const station of result.stations || []) if (!existingIds.has(station.id)) state.stations.push(station);
     if (state.pluginWorkspace) applyPluginWorkspace({ ...state.pluginWorkspace, catalog: result.sitePlugins || state.sitePlugins });
     renderStations();
-    await saveWorkspace({ notify: false });
     toast(`已添加 ${result.added?.length || 0} 个站点`);
   } catch (error) {
     toast(error.message);
@@ -1091,7 +995,6 @@ async function saveStationConfig() {
       basePricePerMillion: collected.basePricePerMillion
     });
     await persistStations();
-    await saveWorkspace({ notify: false });
     renderStations();
     $("#station-config-dialog").close();
     toast("站点配置已保存");
@@ -1180,7 +1083,6 @@ async function refreshStation(stationId) {
     await persistStations();
     const data = await callService("REFRESH_STATION", { stationId: station.id, ...(sourceTabId === undefined ? {} : { sourceTabId }) });
     state.stations = data.stations || state.stations;
-    await saveWorkspace({ notify: false });
     const snapshot = (data.snapshots || []).find(row => row.stationId === station.id);
     if (!snapshot) throw new Error("未返回该站点的查询结果");
     const status = snapshot.status === "success" ? "success" : snapshot.status === "partial" ? "partial" : "error";
@@ -1641,7 +1543,6 @@ $("#save-all").addEventListener("click", async event => {
       settings: readSettings(),
     });
     renderSettings();
-    await saveWorkspace({ notify: false });
     toast("站点与设置已保存");
     if (EMBEDDED) window.parent.postMessage({ type: "MODEL_ATLAS_SETTINGS_SAVED" }, location.origin);
   } catch (error) { toast(error.message); }
@@ -1652,9 +1553,6 @@ $("#save-all").addEventListener("click", async event => {
   }
 });
 
-$("#workspace-connect").addEventListener("click", connectWorkspace);
-$("#workspace-load").addEventListener("click", loadWorkspaceState);
-$("#workspace-save").addEventListener("click", () => saveWorkspace());
 
 const [initialView, initialJump] = location.hash.slice(1).split(":");
 activateSettingsView(initialView);
@@ -1664,7 +1562,7 @@ const cards = initCardCollapse("options");
 onRefreshProgress(progress => {
   if (progress.phase === "station") updateStationQueryStatus(progress);
 });
-void load().then(refreshWorkspaceStatus);
+void load();
 
 const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "多次失败，已停手" };
 

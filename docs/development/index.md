@@ -6,8 +6,8 @@
 
 ```
 extension/            本仓库根：扩展源码、测试、构建脚本、文档站
-  src/core/           归一、匹配、定价、采集、签到、工作区
-  src/shared/         schema、db、workspace
+  src/core/           归一、匹配、定价、采集、签到
+  src/shared/         schema、db
   src/site-plugins/   生成物：providers/*、catalog.js
   test/               node --test 用例
 ../plugins/           插件源码（独立仓库的检出点）

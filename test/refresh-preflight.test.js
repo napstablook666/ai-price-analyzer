@@ -749,7 +749,7 @@ test("comparison mode changes invalidate a preflight token and empty groups neve
   });
 });
 
-test("single-station refresh remains independent from comparison mode", async () => {
+test("single and multiple station refresh remain independent from comparison mode", async () => {
   const stations = [
     { id: "paid-one", name: "Paid one", category: "paid", baseUrl: "https://paid-one.example/pricing", enabled: true, mode: "direct", adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "paid", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) } },
     { id: "public-one", name: "Public one", category: "public", baseUrl: "https://public-one.example/pricing", enabled: true, mode: "direct", adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "public", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) } }
@@ -758,6 +758,12 @@ test("single-station refresh remains independent from comparison mode", async ()
     const result = responseData(await worker.send("REFRESH_STATION", { stationId: "paid-one" }));
     assert.equal(result.refreshSummary.successCount, 1);
     assert.deepEqual([...stores.snapshots.values()].map(snapshot => snapshot.stationId), ["paid-one"]);
+
+    stores.snapshots.clear();
+    const multiple = responseData(await worker.send("REFRESH_STATION", { stationIds: ["public-one", "paid-one", "public-one"] }));
+    assert.equal(multiple.refreshSummary.total, 2);
+    assert.equal(multiple.refreshSummary.successCount, 2);
+    assert.deepEqual([...stores.snapshots.values()].map(snapshot => snapshot.stationId).sort(), ["paid-one", "public-one"]);
   });
 });
 

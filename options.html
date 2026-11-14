@@ -23,7 +23,6 @@
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-registry"><span data-icon="store" class="icon"></span><span>插件仓库</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="settings-panel"><span data-icon="calculator" class="icon"></span><span>成本估算</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="assistant-panel"><span data-icon="bot" class="icon"></span><span>AI 辅助</span></button>
-          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="data-panel"><span data-icon="database" class="icon"></span><span>数据管理</span></button>
           <div class="top-menu-sep" role="separator"></div>
           <button class="top-menu-item" role="menuitem" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
         </div>
@@ -61,12 +60,6 @@
                 <li><button type="button" class="settings-subnav-item" data-nav-jump="assistant-review"><span data-icon="list-checks" class="icon"></span><span class="settings-subnav-label">判定队列</span></button></li>
               </ul>
             </li>
-          </ul>
-        </div>
-        <div class="settings-nav-group" data-nav-group="workspace">
-          <button id="settings-tab-workspace" type="button" role="tab" aria-selected="false" aria-controls="settings-view-workspace" aria-expanded="false" data-settings-target="workspace" tabindex="-1"><span data-icon="database" class="icon"></span><span>数据管理</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
-          <ul class="settings-subnav" aria-label="数据管理" hidden>
-            <li><button type="button" class="settings-subnav-item" data-nav-jump="data-panel"><span data-icon="folder-open" class="icon"></span><span class="settings-subnav-label">本地工作区</span></button></li>
           </ul>
         </div>
       </nav>
@@ -145,11 +138,11 @@
             <div class="panel-heading"><div><h2>模型服务</h2></div><div class="panel-switch"><span>启用</span><label class="switch" title="启用模型服务"><input id="llm-enabled" type="checkbox"><span></span></label></div></div>
             <form id="llm-form" class="settings-form">
               <div class="settings-row"><div class="settings-row-label"><label for="llm-base-url">服务地址</label><small>OpenAI 兼容接口，未写路径时自动补 /v1</small></div><input id="llm-base-url" type="url" placeholder="https://api.openai.com/v1" autocomplete="off"></div>
-              <div class="settings-row"><div class="settings-row-label"><label for="llm-api-key">密钥</label><small>只存本机，不进导出文件与工作区</small></div><div class="settings-row-controls"><input id="llm-api-key" type="password" placeholder="已保存，留空则不修改" autocomplete="off"><button class="button button-quiet button-small" id="llm-key-toggle" type="button">显示</button></div></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="llm-api-key">密钥</label><small>只存本机，不进导出文件</small></div><div class="settings-row-controls"><input id="llm-api-key" type="password" placeholder="已保存，留空则不修改" autocomplete="off"><button class="button button-quiet button-small" id="llm-key-toggle" type="button">显示</button></div></div>
               <div class="settings-row"><div class="settings-row-label"><label for="llm-model">模型</label><small>必须手填，不会自动挑</small></div><div class="settings-row-controls"><input id="llm-model" type="text" list="llm-model-options" placeholder="gpt-4o-mini" autocomplete="off"><button class="button button-quiet button-small" id="llm-models-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>拉取列表</span></button><datalist id="llm-model-options"></datalist></div></div>
               <div class="settings-row"><div class="settings-row-label"><label for="llm-temperature">温度</label><small>建议 0 到 0.2，判定要稳定</small></div><input id="llm-temperature" type="number" min="0" max="2" step="0.1"></div>
             </form>
-            <div class="data-actions assistant-test-actions"><button class="button button-primary" id="llm-test" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试连接</span></button><p class="workspace-status" id="llm-status" role="status" aria-live="polite"></p></div>
+            <div class="data-actions assistant-test-actions"><button class="button button-primary" id="llm-test" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试连接</span></button><p class="assistant-status" id="llm-status" role="status" aria-live="polite"></p></div>
           </section>
           <section class="panel" id="assistant-review" data-nav-anchor="assistant-review" data-collapsible>
             <div class="panel-heading"><div><h2>判定队列</h2><p class="muted" id="llm-cache-summary">未匹配模型会按站点与写法去重后进入队列。</p></div></div>
@@ -167,13 +160,6 @@
               <button type="button" class="assistant-filter" data-filter="failed" aria-pressed="false">失败</button>
             </div>
             <div class="assistant-review-list" id="llm-review-list"></div>
-          </section>
-        </section>
-        <section class="settings-view" id="settings-view-workspace" role="tabpanel" aria-labelledby="settings-tab-workspace" data-settings-view="workspace" hidden>
-          <div class="view-heading"><div><h2>数据管理</h2><p>备份与还原配置，或连接本地工作区自动存取数据文件。</p></div></div>
-          <section class="panel data-panel" id="data-panel" data-nav-anchor="data-panel" data-collapsible>
-            <div class="data-panel-copy"><div><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
-            <div class="data-actions workspace-actions"><button class="button button-primary" id="workspace-connect" type="button"><span data-icon="folder-open" class="icon"></span><span>选择工作区</span></button><button class="button button-quiet" id="workspace-load" type="button" disabled><span data-icon="upload" class="icon"></span><span>从工作区加载</span></button><button class="button button-quiet" id="workspace-save" type="button" disabled><span data-icon="download" class="icon"></span><span>保存到工作区</span></button></div>
           </section>
         </section>
       </div>

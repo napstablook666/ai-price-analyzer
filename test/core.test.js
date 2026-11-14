@@ -5004,20 +5004,23 @@ test("keeps every section card collapsible behind the global toggles", () => {
       assert.ok(key, `collapsible card in ${page} needs an id or data-collapse-key: ${tag}`);
       assert.ok(!keys.has(key), `duplicate collapse key ${key} in ${page}`);
       keys.add(key);
-      assert.match(html.slice(match.index, match.index + 200), /class="(panel-heading|config-heading|toolbar-main|data-panel-copy)"/, `first child of ${key} must hold the collapse toggle`);
+      assert.match(html.slice(match.index, match.index + 200), /class="(panel-heading|config-heading|toolbar-main)"/, `first child of ${key} must hold the collapse toggle`);
     }
   }
   // 折叠卡片数量随面板增加而变，这里只保证每个页面都挂了全局按钮且键不冲突。
   assert.ok(cardCount >= 5);
 });
 
-test("refreshes only the selected dashboard station", () => {
+test("refreshes searchable multi-selected dashboard stations", () => {
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
   const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
-  assert.match(html, /id="refresh-station"[^>]*disabled/);
+  assert.match(html, /id="refresh-station-menu"[\s\S]*id="refresh-station-search"[\s\S]*id="refresh-station"[^>]*disabled/);
+  assert.match(html, /id="refresh-station-menu"[\s\S]*id="refresh-all"[\s\S]*id="collapse-toggle"[\s\S]*id="checkin-menu"/);
+  assert.doesNotMatch(html, /id="top-menu"/);
   assert.match(source, /\$\("#refresh-station"\)\.addEventListener/);
-  assert.match(source, /callService\("REFRESH_STATION", \{ stationId: station\.id \}\)/);
-  assert.match(source, /button\.disabled = !station\?\.enabled/);
+  assert.match(source, /callService\("REFRESH_STATION", \{ stationIds \}\)/);
+  assert.match(source, /data-refresh-station-id/);
+  assert.match(source, /refreshStationQuery/);
 });
 
 test("opens site and settings inside the dashboard topbar", () => {

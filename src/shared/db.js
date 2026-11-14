@@ -1,8 +1,6 @@
-import { normalizeSettings, normalizeStation } from "./schema.js";
 const DB_NAME = "ai-relay-price-comparison";
 const DB_VERSION = 1;
 
-const MAX_IMPORTED_SNAPSHOTS = 500;
 const MAX_IMPORTED_RECORD_BYTES = 2 * 1024 * 1024;
 let comparisonRevision = 0;
 
@@ -20,16 +18,6 @@ function isValidSnapshot(snapshot) {
   try { return JSON.stringify(snapshot).length <= MAX_IMPORTED_RECORD_BYTES; } catch { return false; }
 }
 
-function normalizeImportedStations(stations) {
-  try {
-    return stations.map(station => {
-      if (!isPlainObject(station) || typeof station.id !== "string" || !station.id.trim() || typeof station.baseUrl !== "string" || !station.baseUrl.trim()) throw new Error();
-      return redactStation(normalizeStation(station));
-    });
-  } catch {
-    throw new Error("导入站点格式不正确");
-  }
-}
 function requestToPromise(request) {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -196,54 +184,3 @@ export function redactStation(station = {}) {
   return { ...rest, auth: { type: auth.type || "none" } };
 }
 
-export async function exportState() {
-  return {
-    version: 1,
-    exportedAt: Date.now(),
-    settings: normalizeSettings(await getValue("settings", {})),
-    references: await getValue("references"),
-    stations: (await getStations()).map(redactStation),
-    snapshots: await getSnapshots({ limit: 500 })
-  };
-}
-
-export function validateImportedState(state) {
-  if (!state || !Array.isArray(state.stations) || state.stations.length > 100) throw new Error("导入文件格式不正确");
-  const stations = normalizeImportedStations(state.stations);
-  const snapshots = state.snapshots === undefined ? [] : state.snapshots;
-  if (!Array.isArray(snapshots) || snapshots.length > MAX_IMPORTED_SNAPSHOTS || snapshots.some(snapshot => !isValidSnapshot(snapshot))) throw new Error("导入快照格式不正确");
-  if (state.references !== undefined && state.references !== null && (!isPlainObject(state.references) || JSON.stringify(state.references).length > MAX_IMPORTED_RECORD_BYTES)) throw new Error("导入参考数据过大或格式不正确");
-  return { ...state, stations, snapshots };
-}
-
-export async function importState(state) {
-  const imported = validateImportedState(state);
-  const db = await openDatabase();
-  await new Promise((resolve, reject) => {
-    let transaction;
-    try {
-      transaction = db.transaction(["kv", "stations", "snapshots"], "readwrite");
-      const kv = transaction.objectStore("kv");
-      const stations = transaction.objectStore("stations");
-      const snapshots = transaction.objectStore("snapshots");
-      stations.clear();
-      snapshots.clear();
-      for (const station of imported.stations) stations.put(redactStation(station));
-      const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
-      for (const snapshot of imported.snapshots) {
-        if (Number(snapshot.collectedAt) >= cutoff) snapshots.put(snapshot);
-      }
-      if (imported.settings) kv.put(normalizeSettings(imported.settings), "settings");
-      if (imported.references) kv.put(imported.references, "references");
-    } catch (error) {
-      db.close();
-      reject(error);
-      return;
-    }
-    transaction.oncomplete = () => { db.close(); resolve(); };
-    transaction.onerror = () => { db.close(); reject(transaction.error || new Error("导入数据失败")); };
-    transaction.onabort = () => { db.close(); reject(transaction.error || new Error("导入数据失败")); };
-  });
-  comparisonRevision++;
-  return imported;
-}

@@ -58,12 +58,6 @@ export default defineConfig({
             { text: "每日签到 ✅", link: "/guide/checkin" },
           ],
         },
-        {
-          text: "数据",
-          items: [
-            { text: "工作区与备份 💾", link: "/guide/workspace" },
-          ],
-        },
       ],
 
       "/configuration/": [
@@ -74,7 +68,6 @@ export default defineConfig({
             { text: "站点配置字段 📝", link: "/configuration/station-fields" },
             { text: "偏好与成本 🧮", link: "/configuration/settings" },
             { text: "模型匹配 🔗", link: "/configuration/matching" },
-            { text: "工作区文件 📁", link: "/configuration/workspace" },
           ],
         },
         {
