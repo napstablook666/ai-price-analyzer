@@ -45,7 +45,6 @@ jobs:
           node --check src/options.js
           node --check src/content-bridge.js
           node --check src/page-bridge.js
-          node --check src/popup.js
           npm test
 
       - name: Prepare release assets
@@ -59,7 +58,7 @@ jobs:
           (
             cd dist/source
             zip -qr "../../dist/ai-relay-price-extension-${version}.zip" \
-              manifest.json dashboard.html options.html popup.html styles.css styles icons src
+              manifest.json dashboard.html options.html styles.css styles icons src
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
           sha256sum "dist/ai-relay-price-extension-${version}.zip" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
