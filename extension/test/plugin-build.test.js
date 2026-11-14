@@ -58,7 +58,7 @@ test("插件源码只能用 @app/ 前缀引用扩展核心", () => {
 
 test("每个插件目录都有可直接阅读的 manifest", () => {
   const dir = path.join(root, "plugins");
-  for (const id of fs.readdirSync(dir).filter(name => fs.statSync(path.join(dir, name)).isDirectory())) {
+  for (const id of fs.readdirSync(dir).filter(name => !name.startsWith(".") && fs.statSync(path.join(dir, name)).isDirectory())) {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, id, "manifest.json"), "utf8"));
     assert.equal(manifest.id, id);
     assert.ok(manifest.name && manifest.host);
