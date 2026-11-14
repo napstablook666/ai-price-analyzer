@@ -806,12 +806,18 @@ async function adaptStation(message) {
 const PLUGIN_REGISTRY_FETCH_TIMEOUT_MS = 15000;
 const PLUGIN_REGISTRY_MAX_BYTES = 512 * 1024;
 
+function registryHttpError(url, status) {
+  if (status === 404) return `插件仓库地址 404：${url} 上没有 plugins.json，确认仓库、分支与文件名；刚推送的清单可能还要等几分钟缓存`;
+  if (status === 403) return `插件仓库拒绝了请求（403）：${url} 可能是私有仓库或触发了限流`;
+  return `插件仓库返回 HTTP ${status}`;
+}
+
 async function fetchPluginRegistryIndex(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PLUGIN_REGISTRY_FETCH_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { signal: controller.signal, credentials: "omit", cache: "no-store", redirect: "follow" });
-    if (!response.ok) throw new Error(`插件仓库返回 HTTP ${response.status}`);
+    const response = await fetch(url, { signal: controller.signal, credentials: "omit", cache: "no-store", redirect: "follow", headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error(registryHttpError(url, response.status));
     const body = await response.text();
     if (body.length > PLUGIN_REGISTRY_MAX_BYTES) throw new Error("插件仓库索引超过 512KB");
     try {
