@@ -266,6 +266,26 @@ function sanitizeFiltersForRows(rows) {
   }
 }
 
+function modelMatchMarkup(row, currency) {
+  const candidates = Array.isArray(row.officialCandidates) ? row.officialCandidates : [];
+  const confidence = Math.max(0, Math.min(100, Math.round(Number(row.confidenceScore) || 0)));
+  const hasOfficial = Boolean(row.officialName);
+  const officialName = hasOfficial ? row.officialName : "没有对应的官方目录记录";
+  const provider = row.provider && row.provider !== "未匹配" ? row.provider : "未匹配";
+  const rule = row.matchRule || (hasOfficial ? "官方匹配" : "未匹配");
+  const detailTitle = hasOfficial ? `官方模型 ${officialName} · ${rule} · 置信度 ${confidence}%` : "未匹配官方目录";
+  const candidateItems = candidates.map(candidate => {
+    const name = candidate.name || "未命名候选";
+    const cost = Number.isFinite(candidate.monthlyCost) ? formatPrice(candidate.monthlyCost, currency, 2) : "—";
+    const delta = Number.isFinite(candidate.diffPercent)
+      ? `${candidate.diffPercent < 0 ? "低" : candidate.diffPercent > 0 ? "高" : "持平"} ${Math.abs(candidate.diffPercent).toFixed(1)}%`
+      : "—";
+    return `<div class="candidate-item"><span class="candidate-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span><span class="candidate-cost">${cost}</span><span class="candidate-delta">${delta}</span></div>`;
+  }).join("");
+  const candidatesMarkup = candidateItems ? `<div class="match-candidates"><div class="match-detail-heading">官方候选（${candidates.length}）</div><div class="candidate-list">${candidateItems}</div></div>` : "";
+  return `<details class="model-match-details"><summary class="confidence-tag" title="${escapeHtml(`${detailTitle}；悬停或点击查看详情`)}" aria-label="匹配置信度 ${confidence}%，查看官方匹配详情">${confidence}%</summary><div class="model-match-popover" aria-label="官方匹配详情"><div class="match-detail-primary"><span class="match-detail-label">官方模型</span><strong>${escapeHtml(officialName)}</strong></div><div class="match-detail-line"><span>供应商</span><span>${escapeHtml(provider)}</span></div><div class="match-detail-line"><span>匹配规则</span><span>${escapeHtml(rule)}</span></div><div class="match-detail-line"><span>置信度</span><span>${confidence}%</span></div>${candidatesMarkup}</div></details>`;
+}
+
 function renderRows() {
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
@@ -297,13 +317,7 @@ function renderRows() {
     const monthlyDifference = hasOfficialCost && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) ? row.officialMonthlyCost - row.monthlyCost : null;
     const officialQuotedPrices = row.officialQuotedPrices || null;
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
-    const candidateList = Array.isArray(row.officialCandidates) ? row.officialCandidates : [];
-    const candidateTag = candidateList.length > 1
-      ? `<details class="candidate-details"><summary class="candidate-tag" title="同一规范模型下的其他官方条目">+${candidateList.length - 1} 候选</summary><div class="candidate-list">${candidateList.map(candidate => `<div class="candidate-item"><span class="candidate-name">${escapeHtml(candidate.name)}</span><span class="candidate-cost">${Number.isFinite(candidate.monthlyCost) ? formatPrice(candidate.monthlyCost, currency, 2) : "—"}</span><span class="candidate-delta">${Number.isFinite(candidate.diffPercent) ? `${candidate.diffPercent < 0 ? "低" : "高"} ${Math.abs(candidate.diffPercent).toFixed(1)}%` : ""}</span></div>`).join("")}</div></details>`
-      : "";
-    const officialNote = row.officialName
-      ? `<span class="official-name" title="官方模型 ${escapeHtml(row.officialName)}">${escapeHtml(row.officialName)}</span><span class="confidence-tag" title="匹配置信度 ${row.confidenceScore}%">${row.confidenceScore}%</span>${candidateTag}`
-      : "";
+    const officialNote = !isPublic ? modelMatchMarkup(row, currency) : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>

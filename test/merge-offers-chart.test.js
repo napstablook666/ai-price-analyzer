@@ -139,3 +139,17 @@ test("dashboard drops the paid recommendation column and keeps one delta sort op
   assert.equal(script.includes('data-label="推荐"'), false);
   assert.match(script, /data-label="价差"/);
 });
+
+test("dashboard folds official matching into one confidence detail control", () => {
+  const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
+  assert.match(script, /function modelMatchMarkup\(row, currency\)/);
+  assert.match(script, /<details class="model-match-details">/);
+  assert.match(script, /<summary class="confidence-tag"/);
+  assert.match(script, /const officialNote = !isPublic \? modelMatchMarkup\(row, currency\) : ""/);
+  assert.match(script, /官方候选（\$\{candidates\.length\}）/);
+  assert.equal(script.includes('class="official-name"'), false);
+  assert.equal(script.includes('class="candidate-tag"'), false);
+  assert.match(css, /\.model-match-details:hover \.model-match-popover/);
+  assert.match(css, /\.model-match-details\[open\] \.model-match-popover/);
+});

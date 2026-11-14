@@ -118,7 +118,6 @@
 .model-head { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
 .model-name { color: var(--text); font-size: 12.5px; font-weight: 650; overflow-wrap: anywhere; }
 .model-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--text-3); font-size: 10.5px; line-height: 1.4; overflow-wrap: anywhere; }
-.official-name { color: var(--text-2); font-family: var(--font-mono); font-size: 10px; }
 .confidence-tag { padding: 0 5px; border-radius: var(--radius-pill); color: var(--text-3); background: var(--surface-2); font-size: 9.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .provider-tag, .group-tag, .status-tag, .delta-tag { display: inline-flex; align-items: center; gap: 3px; width: fit-content; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 10px; line-height: 1.35; }
 .station-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
@@ -287,13 +286,20 @@
 .cell-chart .chart-bar.is-muted { background: var(--text-3); }
 .cell-chart .chart-line { position: absolute; top: -3px; bottom: -3px; width: 1px; margin-left: -1px; border-left: 1px dashed var(--text); opacity: .65; }
 
-/* 官方候选展开 */
-.candidate-details { display: inline-block; position: relative; }
-.candidate-tag { cursor: pointer; padding: 0 6px; border-radius: 999px; background: var(--surface-2); color: var(--text-3); font-size: 11px; list-style: none; }
-.candidate-tag::-webkit-details-marker { display: none; }
-.candidate-details[open] .candidate-tag { background: var(--accent-soft); color: var(--accent); }
-.candidate-list { display: none; }
-.candidate-details[open] .candidate-list { display: grid; gap: 4px; position: absolute; z-index: 20; margin-top: 6px; min-width: 300px; padding: 8px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); }
-.candidate-item { display: grid; grid-template-columns: 1fr 80px 56px; gap: 8px; font-size: 11px; color: var(--text-3); }
+/* 模型匹配详情：表格里只保留置信度，其余信息悬停或点击展开 */
+.model-match-details { display: inline-block; position: relative; }
+.model-match-details > summary { cursor: pointer; list-style: none; }
+.model-match-details > summary::-webkit-details-marker { display: none; }
+.model-match-details[open] > summary, .model-match-details:hover > summary { background: var(--accent-soft); color: var(--accent); }
+.model-match-popover { display: none; position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: min(360px, calc(100vw - 32px)); max-height: 300px; padding: 10px 12px; gap: 7px; overflow-y: auto; color: var(--text-2); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); font-size: 11px; }
+.model-match-details:hover .model-match-popover, .model-match-details[open] .model-match-popover { display: grid; }
+.match-detail-primary { display: grid; gap: 3px; }
+.match-detail-label, .match-detail-heading { color: var(--text-3); font-size: 10px; }
+.match-detail-primary strong { color: var(--text); font-family: var(--font-mono); font-size: 11px; overflow-wrap: anywhere; }
+.match-detail-line { display: flex; justify-content: space-between; gap: 12px; }
+.match-detail-line > span:last-child { color: var(--text); text-align: right; }
+.match-candidates { display: grid; gap: 4px; padding-top: 5px; border-top: 1px solid var(--line); }
+.match-candidates .candidate-list { display: grid; gap: 4px; }
+.candidate-item { display: grid; grid-template-columns: minmax(0, 1fr) 80px 56px; gap: 8px; color: var(--text-3); }
 .candidate-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .candidate-cost, .candidate-delta { text-align: right; font-variant-numeric: tabular-nums; }
