@@ -277,6 +277,7 @@ function renderRows() {
   const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
   state.page = page.page;
   const visible = page.rows;
+  const chartFor = applyChartBars(filtered);
   const bandClasses = rowBandClasses(visible);
   const pagination = $("#comparison-pagination");
   pagination.hidden = filtered.length === 0;
@@ -313,7 +314,7 @@ function renderRows() {
       <td data-label="官方单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</td>
       <td data-label="月成本" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="cost-cell"><strong>${monthlyCost}<small>/月</small></strong>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方" class="paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
-      <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
+      <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong>${chartBarMarkup(row, chartFor(row))}</div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
       <td data-label="推荐" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}${statusMarkup(row)}</div></td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
@@ -324,8 +325,28 @@ function renderRows() {
   }
   $("#empty-state").hidden = visible.length > 0;
   $(".table-wrap").hidden = visible.length === 0;
-  renderChart(filtered);
   hydrateIcons($("#comparison-body"));
+}
+
+// 在当前筛选结果内建立行对象到柱数据的映射，表格仍只渲染分页后的行。
+function applyChartBars(rows) {
+  const barByRow = new Map();
+  const { groups } = buildChartGroups(rows, { maxGroups: Number.MAX_SAFE_INTEGER });
+  for (const group of groups) {
+    for (const bar of group.bars) {
+      const row = rows.find(item => (item.canonicalModel || item.modelName) === group.canonicalModel && item.stationId === bar.stationId && Number(item.blendedUnitPrice) === bar.blendedUnitPrice);
+      if (row) barByRow.set(row, { ...bar, baselineUnitPrice: Math.max(...group.bars.map(item => item.blendedUnitPrice)), officialLeftPercent: group.officialLeftPercent });
+    }
+  }
+  return row => barByRow.get(row) || null;
+}
+
+function chartBarMarkup(row, bar) {
+  if (!bar) return "";
+  const width = Number.isFinite(bar.widthPercent) ? bar.widthPercent : 0;
+  const title = `同模型最高混合单价 ${formatPrice(bar.baselineUnitPrice, row.costCurrency || "CNY", 4)}/M，当前占 ${width.toFixed(1)}%`;
+  const line = bar.officialLeftPercent === null ? "" : `<span class="chart-line" style="left:${bar.officialLeftPercent.toFixed(2)}%" title="官方混合单价"></span>`;
+  return `<div class="cell-chart"><span class="chart-track" title="${escapeHtml(title)}"><span class="chart-bar ${chartBarClass(row.category)}" style="width:${width.toFixed(2)}%"></span>${line}</span></div>`;
 }
 
 function chartBarClass(category) {
@@ -335,42 +356,6 @@ function chartBarClass(category) {
   return "is-muted";
 }
 
-function renderChart(rows) {
-  const panel = $("#price-chart");
-  const body = $("#price-chart-body");
-  if (!panel || !body) return;
-  if (state.comparisonMode === "public") {
-    panel.hidden = true;
-    return;
-  }
-  panel.hidden = false;
-  const currency = state.data?.settings?.defaultCurrency || "CNY";
-  const { groups, totalGroups } = buildChartGroups(rows, { maxGroups: 12 });
-  body.innerHTML = groups.map(group => {
-    const official = Number.isFinite(group.officialBlendedUnitPrice) ? group.officialBlendedUnitPrice : null;
-    const officialLine = group.officialLeftPercent === null ? "" : `<span class="chart-line" style="left:${Number(group.officialLeftPercent).toFixed(2)}%" aria-hidden="true"></span>`;
-    const officialLabel = official === null ? "" : `<span class="chart-official">官方 ${formatPrice(official, currency, 4)}/M</span>`;
-    return `<div class="chart-group">
-      <div class="chart-group-head"><span class="chart-model">${escapeHtml(group.displayName)}</span>${group.provider ? `<span class="provider-tag">${escapeHtml(group.provider)}</span>` : ""}${officialLabel}</div>
-      ${group.bars.map(bar => {
-        const delta = bar.diffPercent;
-        const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
-        const deltaLabel = delta === null ? "" : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(1))}%`;
-        return `<button class="chart-row" type="button" data-chart-station="${escapeHtml(bar.stationId)}" data-chart-model="${escapeHtml(group.displayName)}" title="按 ${escapeHtml(bar.stationName)} 与 ${escapeHtml(group.displayName)} 筛选">
-          <span class="chart-station">${escapeHtml(bar.stationName)}</span>
-          <span class="chart-track"><span class="chart-bar ${chartBarClass(bar.category)}" style="width:${bar.widthPercent.toFixed(2)}%"></span>${officialLine}</span>
-          <span class="chart-value">${formatPrice(bar.blendedUnitPrice, currency, 4)}<small>/M</small></span>
-          <span class="chart-delta ${deltaClass}">${deltaLabel}</span>
-        </button>`;
-      }).join("")}
-    </div>`;
-  }).join("");
-  $("#price-chart-empty").hidden = groups.length > 0;
-  const footnote = $("#price-chart-footnote");
-  footnote.textContent = totalGroups > groups.length ? `还有 ${totalGroups - groups.length} 个模型未展示，用模型对比缩小范围。` : "";
-  const meta = panel.querySelector(".chart-meta");
-  if (meta) meta.textContent = groups.length ? `${groups.length} 个模型 · 每站最低档` : "";
-}
 
 function renderReferenceStatus() {
   const ref = state.reference;
@@ -686,19 +671,6 @@ backToTop.addEventListener("click", () => {
   const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   pageShell.scrollTo({ top: 0, behavior });
   tableWrap.scrollTo({ top: 0, behavior });
-});
-$("#price-chart-body").addEventListener("click", event => {
-  const button = event.target.closest("[data-chart-station]");
-  if (!button) return;
-  state.filters.stationId = button.dataset.chartStation;
-  const model = button.dataset.chartModel || "";
-  if (model) {
-    state.filters.search = model;
-    $("#search").value = model;
-  }
-  renderStationFilter(state.rows);
-  renderRows();
-  document.querySelector(".table-wrap")?.scrollIntoView({ block: "start", behavior: "smooth" });
 });
 
 $("#comparison-body").addEventListener("click", async event => {

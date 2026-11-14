@@ -277,31 +277,15 @@
 }
 
 /* 价格分布图 */
-.price-chart-panel { padding: 0 20px 18px; }
-.price-chart-panel .panel-heading { padding: 16px 0 12px; border-bottom: 1px solid var(--line); }
-.chart-meta { color: var(--text-3); font-size: 12px; }
-.price-chart-body { display: grid; gap: 14px; padding-top: 12px; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
-.chart-group { display: grid; gap: 4px; }
-.chart-group-head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.chart-model { font-weight: 750; }
-.chart-official { margin-left: auto; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
-.chart-row { display: grid; grid-template-columns: minmax(96px, 150px) 1fr 108px 72px; align-items: center; gap: 10px; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: inherit; text-align: left; }
-.chart-row:hover { background: var(--surface-2); }
-.chart-station { font-size: 12px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chart-track { position: relative; height: 14px; border-radius: 7px; background: var(--surface-2); overflow: hidden; }
-.chart-bar { display: block; height: 100%; min-width: 2px; border-radius: 7px; background: var(--text-3); }
-.chart-bar.is-ok { background: var(--ok); }
-.chart-bar.is-warn { background: var(--warn); }
-.chart-bar.is-danger { background: var(--danger); }
-.chart-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--text); opacity: .55; }
-.chart-value { font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; text-align: right; }
-.chart-value small { color: var(--text-3); font-weight: 500; }
-.chart-delta { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
-.chart-delta.cheaper { color: var(--ok); }
-.chart-delta.expensive { color: var(--danger); }
-.chart-delta.neutral { color: var(--text-3); }
-.chart-footnote, .chart-empty { margin: 14px 0 0; color: var(--text-3); font-size: 12px; }
-.chart-footnote:empty, .chart-empty[hidden] { display: none; }
+/* 混合单价单元格内嵌价格柱：与报价同一行，不另占页面区域 */
+.cell-chart { width: 100%; min-width: 90px; max-width: 180px; margin-top: 3px; }
+.cell-chart .chart-track { position: relative; display: block; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: visible; }
+.cell-chart .chart-bar { display: block; height: 100%; min-width: 2px; border-radius: 3px; background: var(--text-3); }
+.cell-chart .chart-bar.is-ok { background: var(--ok); }
+.cell-chart .chart-bar.is-warn { background: var(--warn); }
+.cell-chart .chart-bar.is-danger { background: var(--danger); }
+.cell-chart .chart-bar.is-muted { background: var(--text-3); }
+.cell-chart .chart-line { position: absolute; top: -3px; bottom: -3px; width: 1px; margin-left: -1px; border-left: 1px dashed var(--text); opacity: .65; }
 
 /* 官方候选展开 */
 .candidate-details { display: inline-block; position: relative; }

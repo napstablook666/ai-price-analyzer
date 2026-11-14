@@ -59,12 +59,6 @@
     </section>
 
     <section class="summary-grid" id="summary" aria-label="统计摘要"></section>
-    <section class="panel price-chart-panel" id="price-chart" data-collapsible aria-labelledby="price-chart-title" hidden>
-      <div class="panel-heading"><div><h2 id="price-chart-title">价格分布</h2></div><span class="chart-meta"></span></div>
-      <div class="price-chart-body" id="price-chart-body"></div>
-      <p class="chart-footnote" id="price-chart-footnote"></p>
-      <p class="chart-empty" id="price-chart-empty" hidden>当前筛选下没有可画的价格数据。</p>
-    </section>
 
 <div class="dashboard-workspace">
       <aside class="dashboard-sidebar" aria-label="筛选与签到">
@@ -90,7 +84,7 @@
       <div class="panel-heading"><div><h2 id="comparison-title">价格明细</h2></div><div class="comparison-meta"><span class="result-count" id="result-count">0 条报价</span><span class="reference-status" id="reference-pill"><span class="status-dot" id="reference-dot"></span><span id="reference-status">官方价未加载</span><span class="reference-time" id="reference-note"></span></span></div></div>
       <div class="table-wrap" tabindex="0" role="region" aria-label="模型价格表，可滚动">
         <table class="comparison-table">
-          <thead><tr><th scope="col" data-sort-keys="model provider">模型</th><th scope="col" data-sort-keys="groupName">中转站</th><th scope="col">中转单价</th><th scope="col" class="paid-only-column">官方单价</th><th scope="col" class="paid-only-column" data-sort-keys="monthlyCost">月成本</th><th scope="col" class="paid-only-column" data-sort-keys="diffPercent">相对官方</th><th scope="col" class="paid-only-column" data-sort-keys="blendedUnitPrice">混合单价</th><th scope="col" class="paid-only-column" data-sort-keys="confidenceScore">推荐</th><th scope="col" class="public-only-column" hidden>状态</th></tr></thead>
+          <thead><tr><th scope="col" data-sort-keys="model provider">模型</th><th scope="col" data-sort-keys="groupName">中转站</th><th scope="col">中转单价</th><th scope="col" class="paid-only-column">官方单价</th><th scope="col" class="paid-only-column" data-sort-keys="monthlyCost">月成本</th><th scope="col" class="paid-only-column" data-sort-keys="diffPercent">相对官方</th><th scope="col" class="paid-only-column" data-sort-keys="blendedUnitPrice" title="柱子按同模型内最高混合单价归一；虚线是官方混合单价">混合单价</th><th scope="col" class="paid-only-column" data-sort-keys="confidenceScore">推荐</th><th scope="col" class="public-only-column" hidden>状态</th></tr></thead>
           <tbody id="comparison-body"></tbody>
         </table>
       </div>
