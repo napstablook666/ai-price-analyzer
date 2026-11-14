@@ -317,10 +317,18 @@ function hasHeader(headers, name) {
   return Object.keys(headers).some(current => current.toLowerCase() === name.toLowerCase());
 }
 
+function readStorageValue(storage, key) {
+  try {
+    return storage ? String(storage.getItem(key) || "") : "";
+  } catch {
+    return "";
+  }
+}
 function readStoredPageToken(pageAuth) {
   const storageKey = String(pageAuth?.storageKey || "");
   if (!storageKey) throw new Error("页面认证策略缺少存储键");
-  const raw = String(window.localStorage.getItem(storageKey) || "").trim();
+  // 部分站点在「不记住我」时把令牌落到 sessionStorage，两处都要读。
+  const raw = String(readStorageValue(window.localStorage, storageKey) || readStorageValue(window.sessionStorage, storageKey) || "").trim();
   if (!raw) return "";
   const paths = Array.isArray(pageAuth?.storagePaths) ? pageAuth.storagePaths : [];
   if (!paths.length) return raw;
@@ -410,7 +418,7 @@ async function refreshPageAuth(pageAuth) {
   const cookieOnly = refresh.cookieOnly === true;
   const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
   const refreshTokenPath = String(refresh.refreshTokenPath || "");
-  const refreshToken = cookieOnly ? "" : (refreshTokenPath ? readStoredPath(pageAuth.storageKey, refreshTokenPath) : String(window.localStorage.getItem(refreshTokenKey) || "").trim());
+  const refreshToken = cookieOnly ? "" : (refreshTokenPath ? readStoredPath(pageAuth.storageKey, refreshTokenPath) : String(readStorageValue(window.localStorage, refreshTokenKey) || readStorageValue(window.sessionStorage, refreshTokenKey) || "").trim());
   if (!cookieOnly && !refreshToken) return false;
   const headers = { Accept: "application/json", "Content-Type": "application/json" };
   const accessToken = readStoredPageToken(pageAuth);

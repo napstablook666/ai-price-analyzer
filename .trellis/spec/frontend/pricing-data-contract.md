@@ -151,10 +151,12 @@ The mode boundary must be applied before every derived dashboard projection.
 ### 3. Contracts
 
 - Request `GET /api/tenant/models` from the same-origin page with `credentials: "include"`; page auth reads only `localStorage.tenant_access_token` and injects `Authorization: Bearer <token>`. Extension station auth and user passwords must not cross the bridge.
+- The token is a flat JWT string, so the policy must not declare `storagePaths`. When the user signs in without "remember me" the site writes the same keys to `sessionStorage`; the page bridge therefore falls back to `sessionStorage` for both the access token and the refresh token.
 - The provider must skip the unauthenticated DOM/captured-response shortcut and make the authenticated page request. Missing token or HTTP 401/403 is a page-session failure; there is no anonymous fallback.
+- Tab resolution matches `pageUrl` first, then the active same-origin tab when the plugin declares `reuseAmbiguousOriginTab`. Several stale same-origin tabs (a leftover login page, a dashboard page) must not turn into the "not logged in" hint. Plugins without the flag keep rejecting ambiguous origins so multi-account stations never read another account's prices.
 - The explicit response envelope is `{ code: 0, data: { list: Model[] } }`; compatibility list wrappers are accepted only by `all-in-one-models`, never by generic auto detection.
 - `billing_mode: "token"` and tier values are already per-million prices; preserve them as provided. `billing_mode: "tiered"` emits one row per `pricing_tiers` item and preserves `min_tokens`, `max_tokens`, and tier labels. Cache read/write aliases map to the existing normalized cache fields.
-- Invalid or missing prices, malformed tier objects/bounds, and unsupported modes such as `per_request`, `per_second`, or `special` produce existing partial diagnostics and never fabricate zero or model-level fallback prices. Rows are `CREDITS`; recharge verification remains unconfirmed and comparison keeps the existing 1:1 fallback.
+- Invalid or missing prices, malformed tier objects/bounds produce existing partial diagnostics and never fabricate zero or model-level fallback prices. A tier without `tier_label` derives its name from `min_tokens`/`max_tokens` (`0-100K`, `100K 以上`) so sibling tiers never share a row label. `billing_mode: "per_request"` emits one row carrying `request_price` from `per_request_price` with `input_price`/`output_price` kept null. Modes with no mapping (`per_second`, `special`) land in `unsupportedBillingModes`. Rows are `CNY`: the tenant quotes in its `billing_currency` setting (CNY today), so `preservePriceCurrency` keeps the preset currency instead of the `CREDITS` fallback; recharge verification remains unconfirmed.
 
 ### 4. Validation & Error Matrix
 
@@ -165,7 +167,7 @@ The mode boundary must be applied before every derived dashboard projection.
 | Generic `{ data: { list: [...] } }` without explicit format | Not classified as all-in-one |
 | Invalid price or tier boundary | `invalidPricingValues` / `unpricedModels`; no fabricated row |
 | Unsupported billing mode | `unsupportedBillingModes`, partial result, no token row |
-| Valid model rows | `price_currency: "CREDITS"`, no inferred USD recharge conversion |
+| Valid model rows | `price_currency: "CNY"`, no inferred USD recharge conversion |
 
 ### 5. Good/Base/Bad Cases
 
@@ -177,7 +179,7 @@ The mode boundary must be applied before every derived dashboard projection.
 
 - Assert preset idempotence and unchanged empty-list registration, hash-route tab selection, exact endpoint, GET/include request, explicit response format, and absent extension authorization.
 - Assert page auth configuration uses `tenant_access_token` and Bearer scheme; assert the provider skips pre-auth capture and delegates missing-token failure to the page bridge policy.
-- Assert already-per-million token prices, cache aliases, multiple tier boundaries, malformed tiers, invalid prices, unsupported modes, explicit-format gating, CREDITS rows, and 1:1 recharge comparison.
+- Assert already-per-million token prices, cache aliases, multiple tier boundaries, malformed tiers, invalid prices, per-request rows, unsupported modes, explicit-format gating, CNY rows, and 1:1 recharge comparison.
 
 ### 7. Wrong vs Correct
 

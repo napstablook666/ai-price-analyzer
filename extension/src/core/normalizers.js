@@ -1110,6 +1110,12 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
     const invalid = (object, fields) => fields.some(field => own(object, field) && object[field] !== null && object[field] !== undefined && object[field] !== "" && finitePrice(object[field]) === null);
     const modelName = model => String(model?.model_id || model?.model_name || model?.id || "").trim();
     const displayName = model => String(model?.display_name || model?.model_name_display || model?.name || modelName(model)).trim();
+    // 站点只给 min_tokens/max_tokens 时用区间做档位名，避免同模型多档在表里同名。
+    const tokenRangeLabel = (min, max) => {
+      const unit = value => value >= 1000000 ? `${Number((value / 1000000).toFixed(2))}M` : value >= 1000 ? `${Number((value / 1000).toFixed(2))}K` : String(value);
+      if (min === null && max === null) return "";
+      return min === null ? `0-${unit(max)}` : max === null ? `${unit(min)} 以上` : `${unit(min)}-${unit(max)}`;
+    };
     const rowsFor = (model, tier, tierIndex, tiered) => {
       const key = `${modelName(model)}:${tiered ? `tier:${tierIndex}` : "default"}`;
       if (tiered && (!tier || typeof tier !== "object" || Array.isArray(tier))) {
@@ -1146,7 +1152,7 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
         cache_write_price: cacheWrite,
         cache_write_1h_price: cacheWrite1h,
         request_price: null,
-        price_currency: "CREDITS",
+        price_currency: "CNY",
         enable_groups: [],
         proxy_group_name: "",
         group_ratio: 1,
@@ -1155,7 +1161,7 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
       if (tiered) {
         if (Object.hasOwn(source, "min_tokens")) row.min_tokens = source.min_tokens;
         if (Object.hasOwn(source, "max_tokens")) row.max_tokens = source.max_tokens;
-        const tierName = String(source.tier_label || source.tier_name || source.name || "").trim();
+        const tierName = String(source.tier_label || source.tier_name || source.name || "").trim() || tokenRangeLabel(minTokens, maxTokens);
         if (tierName) row.tier_name = tierName;
       }
       data.push(row);
@@ -1165,6 +1171,32 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
       const name = modelName(model);
       if (!name) continue;
       const billingMode = String(model.billing_mode || "token").trim().toLowerCase();
+      if (billingMode === "per_request") {
+        // 图像类模型按次计价：列表里的 per_request_price 就是每次请求价。
+        const request = parsePrice(model.per_request_price);
+        if (request === null) {
+          unpricedModels.add(`${name}:request`);
+          continue;
+        }
+        data.push({
+          model_name: name,
+          model_display_name: displayName(model),
+          model_ratio: 0,
+          completion_ratio: 1,
+          input_price: null,
+          output_price: null,
+          cache_read_price: null,
+          cache_write_price: null,
+          cache_write_1h_price: null,
+          request_price: request,
+          price_currency: "CNY",
+          enable_groups: [],
+          proxy_group_name: "",
+          group_ratio: 1,
+          evidence: "exact"
+        });
+        continue;
+      }
       if (!["token", "tiered"].includes(billingMode)) {
         unsupportedBillingModes.add(billingMode || "unknown");
         continue;

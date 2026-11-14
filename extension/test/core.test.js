@@ -227,7 +227,7 @@ const allInOneFixture = {
           { tier_label: "100K+", min_tokens: 100001, max_tokens: null, input_price: 2, output_price: 6, cache_creation_price: 0.8 }
         ]
       },
-      { model_id: "all-per-request", billing_mode: "per_request", input_price: 0.000001 },
+      { model_id: "all-per-request", billing_mode: "per_request", per_request_price: 0.05 },
       { model_id: "all-missing", billing_mode: "token" }
     ]
   }
@@ -2826,14 +2826,24 @@ test("adapts all-in-one.icu page auth and token/tiered pricing", async () => {
   assert.equal(request.credentials, "include");
   assert.equal(request.headers.Authorization, undefined);
   assert.equal(request.pageAuth.source, "localStorage");
-  assert.equal(request.pageAuth.storageKey, "tenant_auth");
-  assert.deepEqual(request.pageAuth.storagePaths, ["state.token", "token", "state.accessToken", "accessToken"]);
+  assert.equal(request.pageAuth.storageKey, "tenant_access_token");
+  assert.equal(request.pageAuth.storagePaths, undefined);
+  assert.deepEqual(request.pageAuth.refresh, {
+    endpoint: "/api/tenant/auth/refresh",
+    credentials: "same-origin",
+    requestTokenKey: "refresh_token",
+    responsePath: "data",
+    accessTokenKey: "access_token",
+    refreshTokenStorageKey: "tenant_refresh_token",
+    refreshTokenKey: "refresh_token",
+    statuses: [401, 403]
+  });
   assert.equal(request.pageAuth.header, "Authorization");
   assert.equal(request.pageAuth.scheme, "Bearer");
   assert.deepEqual(request.pageAuth.sessionFailureStatuses, [401, 403]);
   assert.equal(snapshot.status, "partial");
   assert.equal(snapshot.normalized.sourceFormat, "all-in-one-models");
-  assert.equal(snapshot.normalized.data.every(row => row.price_currency === "CREDITS"), true);
+  assert.equal(snapshot.normalized.data.every(row => row.price_currency === "CNY"), true);
 
   const token = snapshot.normalized.data.find(row => row.model_name === "all-token-model");
   assert.equal(token.model_display_name, "All Token Model");
@@ -2844,7 +2854,11 @@ test("adapts all-in-one.icu page auth and token/tiered pricing", async () => {
     ["0-100K", 0, 100000, 1, 4], ["100K+", 100001, null, 2, 6]
   ]);
   assert.equal(Number(tiers[1].cache_write_price.toFixed(6)), 0.8);
-  assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["per_request"]);
+  const perRequest = snapshot.normalized.data.find(row => row.model_name === "all-per-request");
+  assert.equal(perRequest.request_price, 0.05);
+  assert.equal(perRequest.input_price, null);
+  assert.equal(perRequest.output_price, null);
+  assert.equal(snapshot.normalized.unsupportedBillingModes, undefined);
   assert.equal(snapshot.normalized.invalidPricingValues, undefined);
   assert.deepEqual(snapshot.normalized.unpricedModels, ["all-missing:default"]);
 });
@@ -4606,6 +4620,30 @@ test("page discovery requires the initiating tab when origins are ambiguous", ()
     { id: 22, url: "https://all-in-one.icu/#/tenant/models" }
   ];
   assert.equal(selectPageTab(hashTabs, "https://all-in-one.icu", 20, "https://all-in-one.icu/#/tenant/models"), hashTabs[1]);
+  const twinTabs = [
+    { id: 31, url: "https://all-in-one.icu/#/tenant/models" },
+    { id: 32, url: "https://all-in-one.icu/#/tenant/models", active: true }
+  ];
+  assert.equal(selectPageTab(twinTabs, "https://all-in-one.icu", 20, "https://all-in-one.icu/#/tenant/models"), twinTabs[1]);
+});
+test("falls back to the active same-origin tab when a declared collection page has drifted", async () => {
+  const tabs = {
+    query: async () => [
+      { id: 41, url: "https://all-in-one.icu/#/tenant/dashboard" },
+      { id: 42, url: "https://all-in-one.icu/#/tenant/login?redirect=/tenant/models", active: true }
+    ],
+    create: async () => assert.fail("should reuse the open tab"),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, {
+    id: "all-in-one",
+    baseUrl: "https://all-in-one.icu/#/tenant/models",
+    mode: "page",
+    adapter: { kind: "all-in-one-models", pageUrl: "https://all-in-one.icu/#/tenant/models" }
+  });
+  assert.equal(result.tab.id, 42);
+  assert.equal(result.temporary, false);
 });
 test("skips unauthenticated page capture for localStorage-authenticated stations", async () => {
   const requests = [];
@@ -4622,7 +4660,7 @@ test("skips unauthenticated page capture for localStorage-authenticated stations
   }, { pageFetch });
   assert.equal(requests.length, 1);
   assert.equal(requests[0].capture, undefined);
-  assert.equal(requests[0].pageAuth.storageKey, "tenant_auth");
+  assert.equal(requests[0].pageAuth.storageKey, "tenant_access_token");
   assert.equal(snapshot.normalized.sourceFormat, "all-in-one-models");
 });
 test("installs bridge scripts when an existing page has no bridge", async () => {

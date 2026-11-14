@@ -21,7 +21,7 @@ export function selectPageTab(tabs, origin, preferredTabId, preferredPath) {
         return tabUrl.pathname === preferredUrl.pathname && (!preferredUrl.hash || tabUrl.hash === preferredUrl.hash);
       } catch { return false; }
     });
-    if (pathMatches.length === 1) return pathMatches[0];
+    if (pathMatches.length) return pathMatches.find(tab => tab.active) || pathMatches[0];
   }
   return null;
 }
@@ -58,6 +58,10 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTe
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.toString());
   const provider = providerForStation(station, { forPrepare: true });
+  if (!tab && provider?.reuseAmbiguousOriginTab === true) {
+    const sameOrigin = candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`));
+    tab = sameOrigin.find(candidate => candidate.active) || sameOrigin[0] || null;
+  }
   if (tab) return { tab, temporary: false };
   if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`)).length > 1) return { tab: null, temporary: false };
   if (provider?.openTemporaryPage !== true) return { tab: null, temporary: false };
