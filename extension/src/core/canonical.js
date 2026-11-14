@@ -2,7 +2,7 @@ import CANONICAL_TABLE from "./canonical-table.js";
 
 // 规范模型层：把各家各站的不同写法收敛到同一个模型身份。
 //
-// 表由 canonical/build.mjs 从 models.dev + OpenRouter 生成，归一规则必须与生成器一致：
+// 表由 canonical/build.mjs 生成：入口集合直接靠齐 OpenRouter 的模型列表，models.dev 只补厂商原生写法别名。归一规则必须与生成器一致：
 //   1. 取 id 最后一段，丢掉 openrouter / fireworks/models / @cf/qwen 这类路径前缀
 //   2. 去掉装饰后缀 :free :thinking :batch @eu -v1 -YYYYMMDD
 //   3. 小写，空格 `.` `_` 一律当作 `-`

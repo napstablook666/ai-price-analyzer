@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// 规范模型表生成器：拉 models.dev 与 OpenRouter，收敛出统一模型身份。
+// 规范模型表生成器：直接靠齐 OpenRouter 的模型列表，models.dev 只补厂商原生写法别名。
 //
 // 用法：
 //   node canonical/build.mjs            在线拉取后生成
 //   node canonical/build.mjs --offline  只用 canonical/.cache/ 里的原始响应
 //
-// 产物：canonical/models.json
+// 产物：extension/src/core/canonical-table.js
 //
 // 归一规则（与 extension/src/core/canonical.js 必须保持一致）：
 //   1. 取 id 的最后一段，丢掉 openrouter / fireworks/models / @cf/qwen 这类路径前缀
 //   2. 去掉装饰后缀 :free :thinking :official @eu @default -v1 -YYYYMMDD
 //   3. 小写，`.` `_` 一律当作 `-`
 //   4. 不做任何版本数字合并，v4.1 与 v4 是两个模型
+//   5. 入口集合只收 OpenRouter 收录的身份；models.dev 独有的身份不进表，仅以别名并入相邻组
 
 import fs from "node:fs";
 import path from "node:path";
@@ -94,12 +95,13 @@ export function buildCanonicalTable(modelsDev, openRouter) {
   const groupOf = key => {
     let group = groups.get(key);
     if (!group) {
-      group = { spellings: new Map(), names: new Map(), vendors: new Map(), providers: new Set(), limits: [], modalities: new Map(), raw: new Map() };
+      group = { spellings: new Map(), names: new Map(), vendors: new Map(), providers: new Set(), limits: [], modalities: new Map(), raw: new Map(), openrouter: false, orName: "", orSpelling: "" };
       groups.set(key, group);
     }
     return group;
   };
 
+  // models.dev 补别名与佐证；它独有的身份在出口处统一丢弃。
   for (const [providerId, provider] of Object.entries(modelsDev || {})) {
     for (const model of Object.values(provider?.models || {})) {
       const rawId = String(model?.id || model?.name || "");
@@ -119,13 +121,17 @@ export function buildCanonicalTable(modelsDev, openRouter) {
     }
   }
 
-  // OpenRouter 负责价格与官方拼写：它的 id / canonical_slug / 短名都算别名。
+  // OpenRouter 定规范身份：入口集合只认它的模型列表，名称与拼写以它为准。
   for (const model of openRouter?.data || []) {
     const rawId = String(model?.id || "");
     if (!rawId) continue;
-    const group = groupOf(canonicalKey(model?.canonical_slug || rawId));
+    const slug = String(model?.canonical_slug || "");
+    const group = groupOf(canonicalKey(slug || rawId));
+    group.openrouter = true;
+    if (!group.orSpelling) group.orSpelling = bareSpelling(slug || rawId);
+    if (!group.orName) group.orName = String(model?.name || "").replace(/^[^:]+:\s*/, "");
     bump(group.spellings, bareSpelling(rawId));
-    bump(group.spellings, bareSpelling(model?.canonical_slug || rawId));
+    if (slug) bump(group.spellings, bareSpelling(slug));
     bump(group.raw, rawId);
     if (model?.name) bump(group.names, String(model.name).replace(/^[^:]+:\s*/, ""));
     const vendor = vendorOf(rawId);
@@ -136,7 +142,7 @@ export function buildCanonicalTable(modelsDev, openRouter) {
 
   const models = [];
   for (const [key, group] of groups) {
-    const spelling = pickWinner(group.spellings) || key;
+    const spelling = group.orSpelling || pickWinner(group.spellings) || key;
     const limits = group.limits.sort((left, right) => right.context - left.context)[0] || null;
     // 只留归一后仍然指向别的 key 的拼写：运行时会先归一，同归一结果的别名没有信息量。
     const aliases = [...group.spellings.keys(), ...group.raw.keys()]
@@ -147,9 +153,10 @@ export function buildCanonicalTable(modelsDev, openRouter) {
     models.push({
       id: key,
       spelling,
-      name: pickWinner(group.names) || spelling,
+      name: group.orName || pickWinner(group.names) || spelling,
       vendor: pickWinner(group.vendors) || "",
       providers: group.providers.size,
+      openrouter: group.openrouter,
       ...(limits?.context ? { limit: { context: limits.context, ...(limits.output ? { output: limits.output } : {}) } } : {}),
       ...(aliases.length ? { aliases } : {})
     });
@@ -164,7 +171,10 @@ export function buildCanonicalTable(modelsDev, openRouter) {
       if (!key || key === model.id) continue;
       const other = byId.get(key);
       if (!other || absorbed.has(other.id) || absorbed.has(model.id)) continue;
-      const [survivor, victim] = model.providers >= other.providers ? [model, other] : [other, model];
+      // 合并方向永远让 OpenRouter 收录的那个活下来。
+      const [survivor, victim] = model.openrouter === other.openrouter
+        ? (model.providers >= other.providers ? [model, other] : [other, model])
+        : (model.openrouter ? [model, other] : [other, model]);
       absorbed.set(victim.id, survivor.id);
       const merged = new Set([...(survivor.aliases || []), victim.id, ...(victim.aliases || [])]);
       merged.delete(survivor.id);
@@ -172,17 +182,20 @@ export function buildCanonicalTable(modelsDev, openRouter) {
       survivor.aliases = [...merged].sort().slice(0, 32);
     }
   }
-  const merged = models.filter(model => !absorbed.has(model.id));
+  // 入口集合只收 OpenRouter 收录的身份；models.dev 独有的组丢弃，其拼写只以别名形式留在被并入的组里。
+  const merged = models.filter(model => !absorbed.has(model.id) && model.openrouter);
+  const droppedCount = models.filter(model => !absorbed.has(model.id) && !model.openrouter).length;
+  for (const model of merged) delete model.openrouter;
   merged.sort((left, right) => right.providers - left.providers || left.id.localeCompare(right.id));
-  return { sourceRows, models: merged };
+  return { sourceRows, models: merged, droppedCount };
 }
 
 async function main() {
   const modelsDev = await readJson(MODELS_DEV_URL, "models.dev.json");
   const openRouter = await readJson(OPENROUTER_URL, "openrouter.json");
-  const { sourceRows, models } = buildCanonicalTable(modelsDev, openRouter);
+  const { sourceRows, models, droppedCount } = buildCanonicalTable(modelsDev, openRouter);
   const table = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     sources: {
       "models.dev": { url: MODELS_DEV_URL, providers: Object.keys(modelsDev || {}).length, rows: sourceRows },
@@ -192,7 +205,7 @@ async function main() {
   };
   fs.writeFileSync(OUT_FILE, `// 由 canonical/build.mjs 生成，不要手改。重新生成：node canonical/build.mjs\nconst CANONICAL_TABLE = ${JSON.stringify(table)};\n\nexport default CANONICAL_TABLE;\n`);
   const multi = models.filter(model => model.providers > 1).length;
-  console.log(`extension/src/core/canonical-table.js  ${models.length} 个模型，其中 ${multi} 个被 2 个以上来源提供，源数据 ${sourceRows} 行，${(fs.statSync(OUT_FILE).size / 1024).toFixed(0)} KB`);
+  console.log(`extension/src/core/canonical-table.js  ${models.length} 个模型（OpenRouter 收录），${multi} 个有 models.dev 佐证，丢弃 ${droppedCount} 个 models.dev 独有身份，源数据 ${sourceRows} 行，${(fs.statSync(OUT_FILE).size / 1024).toFixed(0)} KB`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

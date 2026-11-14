@@ -64,7 +64,7 @@ AI Price Analyzer 目前以无需构建的 Chromium MV3 浏览器扩展作为唯
 
 站点适配是独立插件，源码在 [`plugins/`](./plugins/)，一个站点一个目录；`extension/src/site-plugins/` 下的同名文件与 `catalog.js` 由 `node scripts/plugin-build.mjs` 生成，不要手改。
 
-同一模型在不同站的写法往往不同（`GLM-5.3`、`z-ai/glm-5.3`、`glm-5.3:thinking`），扩展按三层把它们收敛到同一个模型身份：规范模型表（由 models.dev 与 OpenRouter 生成）→ 插件自带的 `models.json` 别名 → 人工确认的覆盖。
+同一模型在不同站的写法往往不同（`GLM-5.3`、`z-ai/glm-5.3`、`glm-5.3:thinking`），扩展按三层把它们收敛到同一个模型身份：规范模型表（直接靠齐 OpenRouter 的模型列表，models.dev 只补写法别名）→ 插件自带的 `models.json` 别名 → 人工确认的覆盖。
 
 插件协议见 [docs/plugin-development.md](./docs/plugin-development.md)，数据流与两仓拆分路线见 [docs/architecture.md](./docs/architecture.md)。
 

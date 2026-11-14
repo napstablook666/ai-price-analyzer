@@ -7,8 +7,8 @@
 ## 背景与已定决策
 
 - 统一模型从来不由 LLM/JEV 负责。现有链路是 `OpenRouter 目录 + 别名索引 + 四条匹配规则 + modelMatchOverrides`，LLM/JEV 只做「页面结构推断适配」和「候选建议」，已在任务 `11-13-llm-jev-removal-agent-access` 中删除，链路未受影响。
-- 参照 Magpie 的做法：规范拼写来自外部权威注册表（models.dev），同一模型的所有历史拼写都解析到同一个规范 id（`CanonicalRef` 语义），匹配是纯查表，不依赖 AI。
-- **规范名来源**：models.dev 的拼写索引做规范名（`https://models.dev/api.json`），OpenRouter 继续做价格参考，两者合并成一张表。
+- 参照 Magpie 的做法：同一模型的所有历史拼写都解析到同一个规范 id（`CanonicalRef` 语义），匹配是纯查表，不依赖 AI。
+- **规范名来源（2026-11-14 更新）**：直接靠齐 OpenRouter 的模型列表（`https://openrouter.ai/api/v1/models`）——入口集合只收 OpenRouter 收录的模型，名称与拼写以 OpenRouter 为准；models.dev 降级为别名补充，它独有、OpenRouter 未收录的模型不进表（本来也匹配不到官方价格）。
 - **仓库拆分**：先落成两个自包含单元 `extension/`（扩展与核心）与 `plugins/`（站点插件）。`plugins/` 不引用扩展内部相对路径，只写 `@app/core/…` / `@app/shared/…`，由构建器改成扩展内路径，因此抽成独立仓库时不需要改代码。
 
 ## 实际落地（与初版计划的差异）
@@ -23,7 +23,7 @@
 
 ### R1 规范模型层（已完成）
 
-- [x] `canonical/build.mjs` 拉 models.dev + OpenRouter，合并生成规范表，带 `version` / `generatedAt` / `sources`，可重复生成可 diff。
+- [x] `canonical/build.mjs` 靠齐 OpenRouter 模型列表生成规范表（models.dev 只补别名），带 `version` / `generatedAt` / `sources`，可重复生成可 diff。
 - [x] 分组算法：取 id 最后一段、去装饰后缀（`:free` `:thinking` `@eu` `-v1` `-YYYYMMDD`）、小写、空格与 `.` `_` 等价 `-`，**不合并版本号数字**。
 - [x] 同组内被当成独立 id 收集过的模型（如 `deepseek-v4.1-flash-1017`）合并进来源更多的那个，另一个降为别名。
 - [x] `extension/src/core/canonical.js`：`canonicalKey` / `resolveCanonicalModel` / `buildCanonicalIndex` / `canonicalKeysForModel`，纯查表 O(1)，索引按需构建一次。
@@ -57,8 +57,8 @@
 
 ## Acceptance Criteria
 
-- [x] `node canonical/build.mjs --offline` 可重复生成规范表：2150 个模型，834 个多来源，348 KB。
-- [x] 全量测试 242 条全绿，新增 canonical、插件构建漂移、模型身份、插件别名链路测试。
+- [x] `node canonical/build.mjs --offline` 可重复生成规范表：372 个模型（OpenRouter 收录），340 个有 models.dev 佐证，60 KB。
+- [x] 全量测试 241 条全绿（canonical、插件构建漂移、模型身份、插件别名链路），`plugin-build --check` 无漂移。
 - [x] 任一插件目录靠 `manifest.json` + `plugin.js` + `models.json` 即可被识别与采集。
 - [x] `extension/src/site-plugins/providers/` 与 `catalog.js` 全部为生成物，`--check` 无漂移。
 - [x] 三份文档可直接指导 agent 新增一个站点插件并跑通测试。

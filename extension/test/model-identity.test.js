@@ -6,7 +6,7 @@ import { registerSiteProvider, resetProviderRegistry, modelAliasesForStation } f
 
 const official = [
   { id: "glm-5-3", name: "GLM-5.3", canonicalSlug: "glm-5-3" },
-  { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }
+  { id: "claude-4-5-sonnet", name: "Claude Sonnet 4.5" }
 ];
 
 test("不同站的不同写法归到同一个规范模型", () => {
@@ -22,9 +22,10 @@ test("不同站的不同写法归到同一个规范模型", () => {
 test("模型厂商前缀与版本别名不改变身份", () => {
   const index = buildModelMatchIndex(official);
   const results = matchModel("Anthropic: Claude Sonnet 4.5", official, undefined, index);
-  assert.equal(results[0].match.id, "claude-sonnet-4-5");
-  const aliased = matchModel("claude-4-5-sonnet", official, undefined, index);
-  assert.equal(aliased[0].match.id, "claude-sonnet-4-5");
+  assert.equal(results[0].match.id, "claude-4-5-sonnet");
+  const aliased = matchModel("claude-sonnet-4-5", official, undefined, index);
+  assert.equal(aliased[0].match.id, "claude-4-5-sonnet");
+  assert.equal(aliased[0].ruleId, "canonical");
 });
 
 test("认不出的模型不硬凑", () => {

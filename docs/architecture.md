@@ -26,7 +26,7 @@
 同一个模型在各站叫法不同（`GLM-5.3` / `z-ai/glm-5.3` / `glm-5.3:thinking`），靠三层收敛，不需要人工维护映射表：
 
 1. **规范模型层** `core/canonical.js` + `core/canonical-table.js`
-   表由 `models.dev` 与 `OpenRouter` 生成（`canonical/build.mjs`）：每个模型一个规范 id（`glm-5-3`），带上各家写法作为别名。查表时先归一：取 id 末段、去 `:free` `@eu` `-v1` `-日期` 这类装饰、小写、空格与 `.` `_` 统一成 `-`。
+   表由 `canonical/build.mjs` 生成，入口集合直接靠齐 OpenRouter 的模型列表：每个 OpenRouter 模型一个规范 id（`glm-5-3`），名称与拼写以 OpenRouter 为准，models.dev 的厂商原生写法并进来当别名；OpenRouter 没有的模型不进表（匹配不到官方价格，留着只会白占体积）。查表时先归一：取 id 末段、去 `:free` `@eu` `-v1` `-日期` 这类装饰、小写、空格与 `.` `_` 统一成 `-`。
    → `matchModel` 里作为最高优先级的 `canonical` 规则，把站内写法和官方模型对上。
 2. **插件别名** `plugins/<id>/models.json`
    自动归一还是认错时，插件自己声明 `"站内写法": "规范模型 id"`，只影响这个站。
@@ -45,7 +45,7 @@
 | `extension/src/shared/plugin-order.js` | 站点排序，生成物 | 否 |
 | `extension/src/core/canonical.js` | 规范模型归一逻辑 | 是 |
 | `extension/src/core/canonical-table.js` | 规范模型表，生成物 | 否 |
-| `canonical/build.mjs` | 规范表生成器（拉 models.dev + OpenRouter） | 是 |
+| `canonical/build.mjs` | 规范表生成器（靠齐 OpenRouter 列表，models.dev 补别名） | 是 |
 | `scripts/plugin-build.mjs` | 插件构建器 | 是 |
 | `scripts/model-lookup.mjs` | 查规范模型 id 的小工具 | 是 |
 | `extension/src/core/` | 采集、匹配、比价、存储、凭据 | 是 |

@@ -3795,7 +3795,7 @@ test("indexed model matcher preserves rule priority, suffixes, versions, fuzzy m
 test("canonical layer unifies relay spellings before the legacy rules", () => {
   const official = [
     { id: "z-ai/glm-5.3", name: "GLM-5.3" },
-    { id: "anthropic/claude-opus-4.8", name: "Claude Opus 4.8" }
+    { id: "anthropic/claude-opus-5.5", name: "Claude Opus 5.5" }
   ];
   const index = buildModelMatchIndex(official);
   const rules = [{ id: "exact", enabled: true }];
@@ -3803,9 +3803,9 @@ test("canonical layer unifies relay spellings before the legacy rules", () => {
     ["z-ai/glm-5.3:thinking", "z-ai/glm-5.3"],
     ["【限时】GLM-5.3", "z-ai/glm-5.3"],
     ["GLM-5-3", "z-ai/glm-5.3"],
-    ["claude-opus-4.8", "anthropic/claude-opus-4.8"],
-    ["Claude Opus 4.8", "anthropic/claude-opus-4.8"],
-    ["Anthropic: Claude Opus 4.8", "anthropic/claude-opus-4.8"]
+    ["claude-opus-5.5", "anthropic/claude-opus-5.5"],
+    ["Claude Opus 5.5", "anthropic/claude-opus-5.5"],
+    ["Anthropic: Claude Opus 5.5", "anthropic/claude-opus-5.5"]
   ];
   for (const [name, expected] of cases) {
     const [result] = matchModel(name, official, rules, index);
