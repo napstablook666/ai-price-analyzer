@@ -51,16 +51,12 @@
 | `extension/src/core/` | 采集、匹配、比价、存储、凭据 | 是 |
 | `extension/test/` | 全部测试 | 是 |
 
-## 拆成两个仓库的路线
+## 两个仓库（已落地）
+形态：**扩展仓库**（本仓库：核心、UI、构建脚本、文档）＋ **插件仓库**（`plugins/` 独立建仓，一个站点一个目录）。插件源码不引用扩展内部相对路径，只写 `@app/core/…`、`@app/shared/…`，构建时改写成真实路径，目录搬走后零改动。
 
-目标形态：**扩展空壳仓库**（核心、UI、构建脚本）＋ **插件仓库**（`plugins/` 整体搬走，一个站点一个目录）。目前同仓，但边界已经按这个形态划好：`plugins/` 不引用扩展内部的相对路径，只写 `@app/core/…`、`@app/shared/…`，构建时再改写成真实路径。
-
-拆分步骤（按顺序，每步都能单独跑通）：
-
-1. 把 `plugins/` 单独建仓，`manifest.json` / `plugin.js` / `models.json` 原样搬过去，保留 `@app/` 导入前缀。
-2. 插件仓库加同名构建器，或者由扩展侧在构建时把插件目录当作 submodule/vendored 副本拉进来。
-3. 扩展仓库删掉 `plugins/`，改成"从插件源读取并生成 `providers/`"；`plugin-build.mjs` 里的 `PLUGIN_DIR` 指向外部目录即可。
-4. 扩展仓库的 `site-plugins.test.js` 留在扩展侧，插件的契约测试（能否注册、别名格式）跟着插件仓库走。
+- 插件仓当前以嵌套独立仓形式签出在 `plugins/`（外层仓库已 gitignore 它）；也可以签出到任意路径，用 `PLUGIN_DIR` 指过去。
+- `PLUGIN_DIR=/path/to/plugins node scripts/plugin-build.mjs --check` 可校验任意外部插件源与扩展内生成物是否同步。
+- 扩展侧 `site-plugins.test.js` 继续盯生成物漂移；插件的目录契约（manifest / plugin.js / models.json、字段白名单）由 `plugin-build.mjs` 兜住。
 
 ## 常用命令
 

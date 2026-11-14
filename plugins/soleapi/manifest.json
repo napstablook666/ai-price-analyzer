@@ -1,9 +1,0 @@
-{
-  "id": "soleapi",
-  "name": "SoleAPI",
-  "host": "soleapi.com",
-  "mode": "direct",
-  "order": 12,
-  "addable": false,
-  "description": "按具体模型页地址添加"
-}

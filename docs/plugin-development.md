@@ -17,6 +17,8 @@ extension/src/shared/plugin-order.js  ← 生成物，勿手改
 
 生成物是签进仓库的，所以加载扩展不需要先跑构建；但改完 `plugins/` 必须重新生成，否则运行的是旧代码。`npm test` 里有一条 `插件产物与 plugins/ 源保持同步`，漏跑会直接报红。
 
+`plugins/` 是独立的 git 仓库，扩展仓库不跟踪它，构建器默认读嵌套签出的 `./plugins`；插件仓签出到别处时用 `PLUGIN_DIR` 指过去（`PLUGIN_DIR=/path/to/plugins node scripts/plugin-build.mjs --check`）。
+
 ## 命令
 
 ```bash

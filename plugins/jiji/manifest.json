@@ -1,9 +1,0 @@
-{
-  "id": "jiji",
-  "name": "吉吉模型市场",
-  "host": "jiji.cc",
-  "mode": "page",
-  "order": 22,
-  "addable": false,
-  "description": "带 token 的模型市场，按站点地址添加"
-}

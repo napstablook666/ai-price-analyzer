@@ -39,3 +39,6 @@ Thumbs.db
 
 # Downloaded model catalogs (rebuild with: node canonical/build.mjs)
 /canonical/.cache/
+
+# Site plugins are a standalone git repository (nested checkout, see docs/architecture.md)
+/plugins/

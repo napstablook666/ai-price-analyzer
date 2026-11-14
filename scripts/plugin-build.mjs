@@ -15,7 +15,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const PLUGIN_DIR = path.join(ROOT, "plugins");
+// 插件源目录：独立仓库默认嵌套签出在 ./plugins，签出到别处时用 PLUGIN_DIR 环境变量指向。
+const PLUGIN_DIR = path.resolve(process.env.PLUGIN_DIR || path.join(ROOT, "plugins"));
 const PROVIDER_DIR = path.join(ROOT, "extension", "src", "site-plugins", "providers");
 const CATALOG_FILE = path.join(ROOT, "extension", "src", "site-plugins", "catalog.js");
 const ORDER_FILE = path.join(ROOT, "extension", "src", "shared", "plugin-order.js");
