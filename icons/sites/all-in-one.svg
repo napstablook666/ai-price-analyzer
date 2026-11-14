@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" role="img" aria-label="Three-color orbit logo" shape-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="purple-arm" x1="315" y1="77" x2="201" y2="279" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f000da"/>
+      <stop offset="0.48" stop-color="#b800d1"/>
+      <stop offset="1" stop-color="#6d00a9"/>
+    </linearGradient>
+    <linearGradient id="green-arm" x1="315" y1="77" x2="201" y2="279" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00dc72"/>
+      <stop offset="0.48" stop-color="#00bd69"/>
+      <stop offset="1" stop-color="#008e4c"/>
+    </linearGradient>
+    <linearGradient id="orange-arm" x1="315" y1="77" x2="201" y2="279" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d90016"/>
+      <stop offset="0.48" stop-color="#ff7900"/>
+      <stop offset="1" stop-color="#f79a00"/>
+    </linearGradient>
+
+    <radialGradient id="purple-ball" cx="34%" cy="27%" r="72%">
+      <stop offset="0" stop-color="#ff25e8"/>
+      <stop offset="0.52" stop-color="#d500d2"/>
+      <stop offset="1" stop-color="#8700ad"/>
+    </radialGradient>
+    <radialGradient id="green-ball" cx="35%" cy="27%" r="73%">
+      <stop offset="0" stop-color="#22ed91"/>
+      <stop offset="0.52" stop-color="#00bd6b"/>
+      <stop offset="1" stop-color="#00834c"/>
+    </radialGradient>
+    <radialGradient id="orange-ball" cx="34%" cy="27%" r="73%">
+      <stop offset="0" stop-color="#ffdc00"/>
+      <stop offset="0.52" stop-color="#ff8b00"/>
+      <stop offset="1" stop-color="#d71712"/>
+    </radialGradient>
+    <radialGradient id="cyan-ball" cx="35%" cy="28%" r="73%">
+      <stop offset="0" stop-color="#17efff"/>
+      <stop offset="0.58" stop-color="#08d8ef"/>
+      <stop offset="1" stop-color="#19bdd5"/>
+    </radialGradient>
+
+    <path id="arm-shape" d="M219 286c-38-22-61-59-60-103 1-61 46-109 105-112 20-1 39 1 55 6l-5 21c-16-4-32-6-48-5-47 2-84 41-85 90-1 42 13 76 38 103z"/>
+    <circle id="endpoint-shape" cx="331" cy="82" r="26.56218506"/>
+  </defs>
+
+  <!-- One canonical arm is rotated by exactly 120 degrees for threefold symmetry. -->
+  <g transform="translate(250 244) rotate(10.20552699) scale(0.94118763) translate(-250 -244)">
+    <use href="#arm-shape" fill="url(#purple-arm)"/>
+    <use href="#endpoint-shape" fill="url(#purple-ball)"/>
+  </g>
+
+  <g transform="rotate(-120 250 244) translate(250 244) rotate(10.20552699) scale(0.94118763) translate(-250 -244)">
+    <use href="#arm-shape" fill="url(#green-arm)"/>
+    <use href="#endpoint-shape" fill="url(#green-ball)"/>
+  </g>
+
+  <g transform="rotate(120 250 244) translate(250 244) rotate(10.20552699) scale(0.94118763) translate(-250 -244)">
+    <use href="#arm-shape" fill="url(#orange-arm)"/>
+    <use href="#endpoint-shape" fill="url(#orange-ball)"/>
+  </g>
+
+  <circle cx="250" cy="244" r="37" fill="url(#cyan-ball)"/>
+</svg>

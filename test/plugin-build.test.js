@@ -9,6 +9,7 @@ const root = path.resolve(here, "..");
 const { build, checkOutputs, rewriteImports } = await import(pathToFileURL(path.join(root, "scripts", "plugin-build.mjs")).href);
 const { SITE_PLUGIN_CATALOG } = await import(pathToFileURL(path.join(here, "..", "src", "site-plugins", "catalog.js")).href);
 const { SITE_PLUGIN_ORDER } = await import(pathToFileURL(path.join(here, "..", "src", "shared", "plugin-order.js")).href);
+const { SITE_LOGOS, siteLogoFor } = await import(pathToFileURL(path.join(here, "..", "src", "shared", "site-logos.js")).href);
 
 test("插件产物与 plugins/ 源保持同步", () => {
   const drift = checkOutputs(build().files);
@@ -65,4 +66,18 @@ test("每个插件目录都有可直接阅读的 manifest", () => {
     assert.equal(manifest.id, id);
     assert.ok(manifest.name && manifest.host);
   }
+});
+
+test("每个插件都带站点图标，site-logos 映射与插件目录一致", () => {
+  const { plugins } = build();
+  for (const plugin of plugins) {
+    assert.ok(plugin.icon, `plugins/${plugin.id} 缺少 icon.svg 或 icon.png`);
+    const rel = `icons/sites/${plugin.id}.${plugin.icon.ext}`;
+    const file = path.join(root, "icons", "sites", `${plugin.id}.${plugin.icon.ext}`);
+    assert.ok(fs.existsSync(file), `${rel} 没有生成`);
+    assert.ok(fs.statSync(file).size > 0, `${rel} 是空文件`);
+    assert.equal(siteLogoFor(plugin.id), rel);
+  }
+  assert.deepEqual(Object.keys(SITE_LOGOS).sort(), plugins.map(plugin => plugin.id).sort());
+  assert.equal(siteLogoFor("no-such-plugin"), "");
 });

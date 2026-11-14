@@ -2,6 +2,7 @@
 //
 // 源：plugins/<id>/manifest.json + plugins/<id>/plugin.js + plugins/<id>/models.json
 // 产物：src/site-plugins/providers/<id>.js 与 src/site-plugins/catalog.js
+// 站点图标：plugins/<id>/icon.svg|png → icons/sites/<id>.<ext> + src/shared/site-logos.js
 //
 // 插件源码只写 `@app/...` 这类扩展核心导入，构建时改写成扩展内的相对路径，
 // 所以插件目录本身不依赖目录层级，单独抽成仓库后也能直接打包。
@@ -24,6 +25,10 @@ const GENERATED = "由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手�
 // 插件仓库索引：一份随扩展内置（离线也能看到商店），一份写进插件仓库用于线上分发。
 const REGISTRY_SNAPSHOT_FILE = path.join(ROOT, "src", "site-plugins", "registry-snapshot.js");
 const REGISTRY_JSON_FILE = path.join(PLUGIN_DIR, "plugins.json");
+// 站点图标随插件分发：插件目录放一份源，构建时复制进扩展并生成 id → 路径映射。
+const SITE_ICON_DIR = path.join(ROOT, "icons", "sites");
+const SITE_LOGOS_FILE = path.join(ROOT, "src", "shared", "site-logos.js");
+const SITE_ICON_PATTERN = /^icon\.(svg|png|webp|jpe?g|ico)$/i;
 const BUNDLED_VERSION = String(readJson(path.join(ROOT, "manifest.json")).version || "0.0.0");
 
 const MANIFEST_KEYS = ["id", "name", "version", "host", "hosts", "paths", "mode", "category", "kind", "addable", "description", "order"];
@@ -50,13 +55,30 @@ function loadPlugin(id) {
   if (manifest.kind === "checkin") {
     const checkinFile = path.join(dir, "checkin.json");
     if (!fs.existsSync(checkinFile)) throw new Error(`plugins/${id} 是签到插件，缺 checkin.json`);
-    return { id, dir, manifest, kind: "checkin", source: "", aliases: {}, checkin: readJson(checkinFile) };
+    return { id, dir, manifest, kind: "checkin", source: "", aliases: {}, checkin: readJson(checkinFile), icon: findSiteIcon(dir) };
   }
   if (!fs.existsSync(pluginFile)) throw new Error(`plugins/${id} 缺 plugin.js`);
   const modelsFile = path.join(dir, "models.json");
   const models = fs.existsSync(modelsFile) ? readJson(modelsFile) : { aliases: {} };
   const aliases = models?.aliases && typeof models.aliases === "object" ? models.aliases : {};
-  return { id, dir, manifest, kind: "price", source: fs.readFileSync(pluginFile, "utf8"), aliases };
+  return { id, dir, manifest, kind: "price", source: fs.readFileSync(pluginFile, "utf8"), aliases, icon: findSiteIcon(dir) };
+}
+
+// 插件目录里的图标源文件名固定，不额外加 manifest 字段。
+function findSiteIcon(dir) {
+  for (const name of fs.readdirSync(dir)) {
+    const match = name.match(SITE_ICON_PATTERN);
+    if (match) return { name, ext: match[1].toLowerCase().replace(/^jpeg$/, "jpg") };
+  }
+  return null;
+}
+
+function renderSiteLogos(plugins) {
+  const entries = plugins
+    .filter(plugin => plugin.icon)
+    .map(plugin => `  ${JSON.stringify(plugin.id)}: "icons/sites/${plugin.id}.${plugin.icon.ext}"`);
+  const body = entries.length ? `{\n${entries.join(",\n")}\n}` : "{}";
+  return `// ${GENERATED}\n\n// 站点图标映射：模型列旁边的站点标记、中转站筛选、供应商列表都用它。\nexport const SITE_LOGOS = ${body};\n\nexport function siteLogoFor(id) {\n  return SITE_LOGOS[String(id || "")] || "";\n}\n\nexport function siteInitial(name) {\n  const chars = String(name || "").trim();\n  return chars ? chars[0].toUpperCase() : "?";\n}\n`;
 }
 
 function rewriteImports(source) {
@@ -236,30 +258,51 @@ function build() {
   files.set(ORDER_FILE, renderOrder(plugins));
   files.set(REGISTRY_SNAPSHOT_FILE, renderRegistrySnapshot(plugins));
   files.set(REGISTRY_JSON_FILE, renderRegistryJson(plugins));
+  for (const plugin of plugins) {
+    if (!plugin.icon) continue;
+    files.set(path.join(SITE_ICON_DIR, `${plugin.id}.${plugin.icon.ext}`), fs.readFileSync(path.join(plugin.dir, plugin.icon.name)));
+  }
+  files.set(SITE_LOGOS_FILE, renderSiteLogos(plugins));
   return { plugins, files };
 }
 
 function writeOutputs(files) {
   fs.mkdirSync(PROVIDER_DIR, { recursive: true });
+  fs.mkdirSync(SITE_ICON_DIR, { recursive: true });
   const keep = new Set([...files.keys()]);
-  for (const entry of fs.readdirSync(PROVIDER_DIR)) {
-    const file = path.join(PROVIDER_DIR, entry);
-    if (entry.endsWith(".js") && !keep.has(file)) fs.rmSync(file);
+  for (const dir of [PROVIDER_DIR, SITE_ICON_DIR]) {
+    for (const entry of fs.readdirSync(dir)) {
+      const file = path.join(dir, entry);
+      if (entry.endsWith(".js") && dir === PROVIDER_DIR && !keep.has(file)) fs.rmSync(file);
+      if (dir === SITE_ICON_DIR && !keep.has(file)) fs.rmSync(file);
+    }
   }
   for (const [file, content] of files) fs.writeFileSync(file, content);
+}
+
+// 图标是二进制，文本比较会把它们全判成漂移。
+function sameContent(file, content) {
+  const actual = fs.readFileSync(file);
+  return Buffer.isBuffer(content) ? actual.equals(content) : actual.toString("utf8") === content;
 }
 
 function checkOutputs(files) {
   const drift = [];
   for (const [file, content] of files) {
     if (!fs.existsSync(file)) drift.push(`${path.relative(ROOT, file)} 缺失`);
-    else if (fs.readFileSync(file, "utf8") !== content) drift.push(`${path.relative(ROOT, file)} 与 plugins/ 不同步`);
+    else if (!sameContent(file, content)) drift.push(`${path.relative(ROOT, file)} 与 plugins/ 不同步`);
   }
   const known = new Set([...files.keys()]);
   if (fs.existsSync(PROVIDER_DIR)) {
     for (const entry of fs.readdirSync(PROVIDER_DIR)) {
       const file = path.join(PROVIDER_DIR, entry);
       if (entry.endsWith(".js") && !known.has(file)) drift.push(`${path.relative(ROOT, file)} 没有对应的 plugins/ 目录`);
+    }
+  }
+  if (fs.existsSync(SITE_ICON_DIR)) {
+    for (const entry of fs.readdirSync(SITE_ICON_DIR)) {
+      const file = path.join(SITE_ICON_DIR, entry);
+      if (!known.has(file)) drift.push(`${path.relative(ROOT, file)} 没有对应的 plugins/ 图标`);
     }
   }
   return drift;
@@ -278,8 +321,8 @@ if (isMain) {
     console.log(`插件产物与源同步：${plugins.length} 个插件`);
   } else {
     writeOutputs(files);
-    console.log(`已生成 ${plugins.length} 个插件产物：providers/*.js + catalog.js + registry-snapshot.js + plugins.json`);
+    console.log(`已生成 ${plugins.length} 个插件产物：providers/*.js + catalog.js + registry-snapshot.js + site-logos.js + icons/sites/* + plugins.json`);
   }
 }
 
-export { build, checkOutputs, renderCatalog, renderProvider, renderRegistryJson, renderRegistrySnapshot, rewriteImports };
+export { build, checkOutputs, renderCatalog, renderProvider, renderRegistryJson, renderRegistrySnapshot, renderSiteLogos, rewriteImports };

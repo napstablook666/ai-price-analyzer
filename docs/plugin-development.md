@@ -10,10 +10,21 @@ plugins/<id>/                  ← 唯一手写源，加站点只改这里
   plugin.js                    站点适配实现，export const sitePlugin
   models.json                  站内模型写法 → 规范模型 id 的别名表
   checkin.json                 签到适配（只有 kind: checkin 的插件才有）
+  icon.svg | icon.png          站点图标，首页站点列和筛选列表都用它
 src/site-plugins/
   providers/<id>.js            ← 生成物，勿手改
   catalog.js                   ← 生成物，勿手改
 src/shared/plugin-order.js  ← 生成物，勿手改
+src/shared/site-logos.js    ← 生成物，勿手改
+icons/sites/<id>.<ext>      ← 生成物，勿手改
+```
+
+站点图标放在插件目录里，文件名固定为 `icon.svg` 或 `icon.png`（≤ 64px，≤ 24KB），构建时复制到 `icons/sites/` 并生成 id → 路径映射。图标缺失时界面退回首字母色块，`npm test` 会报缺图标。抓一次站点图标：
+
+```bash
+npm run plugins:icons                       # 抓全部插件
+npm run plugins:icons -- --only=sevenai     # 只抓一个
+npm run plugins:icons -- --dry              # 只看选中了哪个图标，不落盘
 ```
 
 生成物是签进仓库的，所以加载扩展不需要先跑构建；但改完 `plugins/` 必须重新生成，否则运行的是旧代码。`npm test` 里有一条 `插件产物与 plugins/ 源保持同步`，漏跑会直接报红。
