@@ -44,6 +44,9 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # 仓库还没启用 Pages 时，由这一步创建站点，免去手动去 Settings 里点。
+          enablement: true
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
