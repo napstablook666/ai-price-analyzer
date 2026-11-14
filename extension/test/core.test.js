@@ -4991,7 +4991,7 @@ test("shows Linux.do deferred collection state in station settings", () => {
   const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
   const source = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
   assert.match(source, /Linux\.do Marketplace/);
-  assert.match(source, /adapter\.kind === "linux-do-marketplace"/);
+  assert.match(source, /adapter\??\.kind === "linux-do-marketplace"/);
   assert.match(source, /当前 Chrome 配置文件登录 Linux\.do/);
   assert.match(html, /id="stations-list"/);
 });
@@ -5079,15 +5079,15 @@ test("alternates model color bands while keeping offers of one model on the same
 });
 test("removes recharge-rate warnings while retaining option inputs and legacy fields", () => {
   const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
   const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   assert.doesNotMatch(options, /station-recharge-warning|充值折算未核实/);
   assert.doesNotMatch(dashboard, /recharge_unverified|充值比例待核验/);
-  assert.match(options, /data-field="rechargeAmount"/);
-  assert.match(options, /data-field="rechargeCurrency"/);
-  assert.match(options, /data-field="rechargeCredits"/);
-  assert.match(options, /data-field="rechargeRate" type="number"[^>]*readonly/);
-  assert.match(options, /const rechargeRateVerified = station\.rechargeRateVerified === true/);
-  assert.match(options, /rechargeRateVerified: card\.dataset\.rechargeRateVerified !== "false"/);
-  assert.match(options, /const rechargeRateNote = String\(station\.rechargeRateNote \|\| ""\)\.trim\(\)/);
-  assert.match(options, /rechargeRateNote: value\("rechargeRateNote"\)/);
+  assert.match(html, /id="config-recharge-amount"/);
+  assert.match(html, /id="config-recharge-currency"/);
+  assert.match(html, /id="config-recharge-credits"/);
+  assert.match(html, /id="config-recharge-rate" type="number" readonly/);
+  assert.match(options, /rechargeRateVerified: collected\.rechargeRmb > 0 && collected\.rechargeCredits > 0/);
+  assert.match(options, /rechargeRateVerified: station\.rechargeRateVerified !== false/);
+  assert.match(options, /rechargeRateNote: station\.rechargeRateNote \|\| ""/);
 });

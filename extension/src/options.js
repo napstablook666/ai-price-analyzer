@@ -5,7 +5,7 @@ import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pi
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, collapsedStationIds: new Set(), selectedPluginIds: new Set(), pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
+const state = { stations: [], sitePlugins: [], settings: null, selectedPluginIds: new Set(), selectedStationIds: new Set(), stationSourceTabIds: new Map(), configStationId: null, pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 
@@ -180,20 +180,12 @@ async function addSelectedPlugins() {
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>正在添加</span>`;
   try {
     const result = await callService("ADD_SITE_PLUGINS", { ids });
-    const list = $("#stations-list");
-    const existingIds = new Set([...list.querySelectorAll(".station-card")].map(card => card.dataset.stationId));
-    const newStations = (result.stations || []).filter(station => !existingIds.has(station.id));
-    if (newStations.length && !existingIds.size) list.innerHTML = "";
-    state.stations = readStations();
-    for (const station of newStations) {
-      state.stations.push(station);
-      list.insertAdjacentHTML("beforeend", stationCard(station, state.stations.length - 1));
-    }
+    const existingIds = new Set(state.stations.map(station => station.id));
+    for (const station of result.stations || []) if (!existingIds.has(station.id)) state.stations.push(station);
     state.sitePlugins = result.sitePlugins || state.sitePlugins;
     state.selectedPluginIds.clear();
     renderSitePlugins();
-    $("#station-count").textContent = String(state.stations.length);
-    hydrateIcons(list);
+    renderStations();
     await saveWorkspace({ notify: false });
     const skipped = result.alreadyAdded?.length || 0;
     toast(`已添加 ${result.added?.length || 0} 个站点${skipped ? `，${skipped} 个已在列表中` : ""}`);
@@ -204,17 +196,6 @@ async function addSelectedPlugins() {
     hydrateIcons(button);
     updatePluginSelection();
   }
-}
-function responseFormatOptions(value) {
-  return Object.entries(RESPONSE_FORMAT_DEFINITIONS)
-    .map(([format, definition]) => `<option value="${escapeHtml(format)}"${selected(value, format)}>${escapeHtml(definition.label)}</option>`)
-    .join("");
-}
-
-function stationCategoryOptions(value) {
-  return Object.entries(STATION_CATEGORY_LABELS)
-    .map(([category, label]) => `<option value="${category}"${selected(value, category)}>${escapeHtml(label)}</option>`)
-    .join("");
 }
 
 
@@ -247,104 +228,90 @@ function changeRechargeCurrency(amountInput, currencySelect) {
   currencySelect.dataset.previousCurrency = currencySelect.value;
 }
 
-function updateStationRechargeRate(card, verify = false) {
-  const amountInput = card.querySelector('[data-field="rechargeAmount"]');
-  const currencySelect = card.querySelector('[data-field="rechargeCurrency"]');
-  const creditsInput = card.querySelector('[data-field="rechargeCredits"]');
-  const rmb = convertRechargeAmount(amountInput.value, currencySelect.value, "CNY", currentExchangeRate()) ?? 0;
-  const credits = Number(creditsInput.value);
-  if (verify && rmb > 0 && credits > 0) card.dataset.rechargeRateVerified = "true";
+function configRechargeRate() {
+  const rmb = convertRechargeAmount($("#config-recharge-amount").value, $("#config-recharge-currency").value, "CNY", currentExchangeRate()) ?? 0;
+  const credits = Number($("#config-recharge-credits").value);
   const rate = derivedRechargeRate(rmb, credits);
-  card.querySelector('[data-field="rechargeRate"]').value = rate.toFixed(4);
-  card.querySelector("[data-recharge-rate-display]").textContent = `每 1 中转币成本 ¥${rate.toFixed(4)}`;
-  card.querySelector(".station-summary-meta").children[1].textContent = `${formatRechargeAmount(amountInput.value || 0)} ${currencySelect.value} : ${creditsInput.value || 0} 中转币`;
+  $("#config-recharge-rate").value = rate.toFixed(4);
+  $("#config-recharge-rate-display").textContent = `每 1 中转币成本 ¥${rate.toFixed(4)}`;
+}
+function stationHostName(baseUrl) {
+  try { return new URL(normalizeUrl(baseUrl)).hostname.replace(/^www\./i, ""); } catch { return ""; }
 }
 
-function stationCard(station, index) {
-  const adapter = station.adapter || {};
-  const auth = station.auth || {};
-  const rechargeRmb = nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1);
-  const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
-  const rechargeAmount = convertRechargeAmount(rechargeRmb, "CNY", rechargeCurrency, currentExchangeRate());
-  const rechargeRateVerified = station.rechargeRateVerified === true;
-  const rechargeRateNote = String(station.rechargeRateNote || "").trim();
-  const priceCurrency = "CREDITS";
-  const priceCurrencyVerified = station.priceCurrencyVerified !== false && priceCurrency !== "UNKNOWN";
-  const priceCurrencyNote = String(station.priceCurrencyNote || "").trim();
+function stationRechargeSummary(station) {
   const category = STATION_CATEGORY_LABELS[station.category] ? station.category : "paid";
-  const rechargeCredits = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
-  const origin = currentSiteOrigin(station.baseUrl);
-  const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
-  const isLinuxDoMarketplace = adapter.kind === "linux-do-marketplace";
-  const stationHint = isLinuxDoMarketplace
-    ? "页面模式：请先在当前 Chrome 配置文件登录 Linux.do，扩展只通过页面会话读取价格。"
-    : station.mode === "page"
-      ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
-      : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
-  return `<article class="station-card" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-plugin-id="${escapeHtml(station.pluginId || "")}" data-index="${index}" data-recharge-rate-verified="${rechargeRateVerified}">
-    <details class="station-disclosure"${state.collapsedStationIds.has(station.id) ? "" : " open"}>
-      <summary class="station-summary">
-        <div class="station-title"><span class="status-dot ${station.enabled ? "is-live" : ""}"></span><div><h3>${escapeHtml(station.name || "未命名站点")}</h3><span class="station-id">${escapeHtml(station.id)}</span></div></div>
-        <div class="station-summary-meta"><span>${station.enabled ? "已启用" : "已停用"}</span><span>${category === "public" ? "公益站：不计算汇率" : `${formatRechargeAmount(rechargeAmount)} ${rechargeCurrency} : ${rechargeCredits} 中转币`}</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></div>
-      </summary>
-      <div class="station-content">
-        <div class="station-actions"><button class="button button-primary button-small" data-save-station type="button">${icon("bookmark-plus", { className: "icon" })}<span>保存站点</span></button><button class="button button-quiet button-small" data-refresh-station type="button" title="查询模型">${icon("refresh-cw", { className: "icon" })}<span>查询模型</span></button><button class="button button-quiet button-small" data-autofill-station type="button" title="智能填充">${icon("wand-sparkles", { className: "icon" })}<span>智能填充</span></button><button class="button button-quiet button-small" data-test-station type="button" title="测试连接">${icon("plug-zap", { className: "icon" })}<span>测试连接</span></button><button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button></div>
-        <div class="station-query-status" data-query-status role="status" aria-live="polite" aria-atomic="true" hidden>
-          <progress max="1" value="0" aria-label="站点模型查询进度"></progress>
-          <span data-query-message></span>
+  if (category === "public") return "公益站：不计算汇率";
+  const rechargeRmb = nonNegativeNumber(station.rechargeRmb, 1);
+  const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
+  const amount = convertRechargeAmount(rechargeRmb, "CNY", rechargeCurrency, currentExchangeRate());
+  const credits = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
+  return `${formatRechargeAmount(amount)} ${rechargeCurrency} : ${credits} 中转币`;
+}
+
+function stationCard(station) {
+  const category = STATION_CATEGORY_LABELS[station.category] ? station.category : "paid";
+  const host = stationHostName(station.baseUrl);
+  const name = station.name || host || "未命名站点";
+  const verified = station.priceCurrencyVerified !== false;
+  const badges = [
+    `<span class="station-badge">${escapeHtml(STATION_CATEGORY_LABELS[category])}</span>`,
+    `<span class="station-badge">${station.mode === "page" ? "页面模式" : "直接接口"}</span>`,
+    verified ? "" : `<span class="station-badge is-warning">币种未核实</span>`
+  ].join("");
+  return `<article class="station-card${station.enabled ? "" : " is-disabled"}" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}">
+    <input type="checkbox" class="station-select" data-select-station aria-label="选择站点"${state.selectedStationIds.has(station.id) ? " checked" : ""}>
+    <div class="station-card-main">
+      <div class="station-card-head">
+        <strong class="station-name" title="${escapeHtml(name)}">${escapeHtml(name)}</strong>
+        <label class="switch" title="参与比价与批量查询"><input type="checkbox" data-field="enabled"${checked(station.enabled)}><span aria-hidden="true"></span></label>
+        <div class="station-card-actions">
+          <button class="icon-button" data-config-station type="button" title="配置站点" aria-label="配置站点">${icon("settings-2", { className: "icon" })}</button>
+          <button class="icon-button" data-refresh-station type="button" title="查询模型" aria-label="查询模型">${icon("refresh-cw", { className: "icon" })}</button>
+          <button class="icon-button danger-icon" data-remove-station type="button" title="删除站点" aria-label="删除站点">${icon("trash-2", { className: "icon" })}</button>
         </div>
-        <div class="station-grid">
-          <label><span>站点名称</span><input data-field="name" value="${escapeHtml(station.name)}" placeholder="例如：主用站"></label>
-          <label><span>采集模式</span><select data-field="mode"><option value="direct"${selected(station.mode, "direct")}>直接接口</option><option value="page"${selected(station.mode, "page")}>页面桥接</option></select></label>
-          <label><span>站点类型</span><select data-field="category">${stationCategoryOptions(category)}</select></label>
-          <label class="wide"><span>模型列表 / 站点地址</span><input data-field="baseUrl" type="url" value="${escapeHtml(station.baseUrl)}" placeholder="https://relay.example.com/v1/models" required></label>
-          <label><span>认证方式</span><select data-field="authType"><option value="none"${selected(auth.type, "none")}>无</option><option value="bearer"${selected(auth.type, "bearer")}>Bearer Token</option><option value="api-key"${selected(auth.type, "api-key")}>X-API-Key</option><option value="basic"${selected(auth.type, "basic")}>Basic</option></select></label>
-          <label><span>Token / 密钥</span><input data-field="token" type="password" value="${escapeHtml(auth.token || "")}" placeholder="留空则保留已有密钥"></label>
-          <label><span>用户名</span><input data-field="username" value="${escapeHtml(auth.username || "")}" autocomplete="off"></label>
-          <label><span>密码</span><input data-field="password" type="password" value="${escapeHtml(auth.password || "")}" autocomplete="off"></label>
-          <div class="station-money-field"><label for="station-recharge-amount-${index}">充值金额</label><div class="station-money-input"><input id="station-recharge-amount-${index}" data-field="rechargeAmount" type="number" min="0" step="any" value="${rechargeAmount}"><select data-field="rechargeCurrency" data-previous-currency="${rechargeCurrency}" aria-label="充值金额币种"><option value="CNY"${selected(rechargeCurrency, "CNY")}>人民币 CNY</option><option value="USD"${selected(rechargeCurrency, "USD")}>美元 USD</option></select></div></div>
-          <label><span>到账中转币</span><input data-field="rechargeCredits" type="number" min="0.000001" step="0.01" value="${rechargeCredits}"></label>
-          <label><span>充值比例（¥ / 币）</span><input data-field="rechargeRate" type="number" min="0" step="0.0001" value="${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}" readonly><small data-recharge-rate-display>每 1 中转币成本 ¥${derivedRechargeRate(rechargeRmb, rechargeCredits).toFixed(4)}</small></label>
-          <label><span>基础价 / 1M USD</span><input data-field="basePricePerMillion" type="number" min="0" step="0.0001" value="${nonNegativeNumber(station.basePricePerMillion, 2)}"></label>
-          <label><span>模型列表单位</span><input data-field="priceCurrency" value="CREDITS" readonly aria-readonly="true"></label>
-          <label class="check-label"><input data-field="priceCurrencyVerified" type="checkbox"${checked(priceCurrencyVerified)}><span>我已核实模型价格币种</span></label>
-          <label class="check-label"><input data-field="enabled" type="checkbox"${checked(station.enabled)}><span>参与比价与批量查询</span></label>
-        </div>
-        <details class="station-advanced">
-          <summary class="station-advanced-summary"><span class="station-advanced-title">高级适配设置</span><span class="station-advanced-hint">请求体、接口路径、响应格式、手动价格 JSON、核验备注</span><span data-icon="chevron-down" class="icon station-chevron" aria-hidden="true"></span></summary>
-          <div class="station-grid">
-            <label><span>接口路径（可选）</span><input data-field="endpoint" value="${escapeHtml(adapter.endpoint || "")}" placeholder="留空自动探测，例如 /api/pricing"></label>
-            <label><span>响应格式</span><select data-field="responseFormat">${responseFormatOptions(adapter.responseFormat)}</select></label>
-            <label><span>请求方式</span><select data-field="method"><option value="GET"${selected(adapter.method, "GET")}>GET</option><option value="POST"${selected(adapter.method, "POST")}>POST</option></select></label>
-            <label class="wide"><span>请求体 JSON（可选）</span><textarea data-field="body" rows="2" placeholder='{"model":"..."}'>${escapeHtml(adapter.body || "")}</textarea></label>
-            <label class="wide"><span>手动价格 JSON（可选）</span><textarea data-field="rawJson" rows="3" placeholder='{"data":[{"model":"gpt-4o","input":2,"output":8}]}'>${escapeHtml(adapter.rawJson || "")}</textarea></label>
-            <label class="wide"><span>模型单位核验备注</span><input data-field="priceCurrencyNote" value="${escapeHtml(priceCurrencyNote)}" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>
-            <input type="hidden" data-field="rechargeRateNote" value="${escapeHtml(rechargeRateNote)}">
-          </div>
-        </details>
-        <p class="station-hint"><span data-icon="${station.mode === "page" ? "panel-top" : "activity"}" class="icon"></span>${stationHint}</p>
-        ${isLinuxDoMarketplace ? `<p class="station-price-warning" role="alert">仅使用当前页面登录会话读取 Linux.do Marketplace；令牌不会写入站点配置或扩展存储。站点积分仅按 1:1 作为展示基准，不代表人民币成本。</p>` : priceCurrencyVerified ? "" : `<p class="station-price-warning" role="alert">模型价格映射未核实：${escapeHtml(priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。")}</p>`}
       </div>
-    </details>
+      <div class="station-card-meta">
+        ${host && host !== name ? `<span class="station-host">${escapeHtml(host)}</span>` : ""}
+        ${badges}
+      </div>
+      <div class="station-recharge" data-station-recharge>${escapeHtml(stationRechargeSummary(station))}</div>
+      <div class="station-query-status" data-query-status role="status" aria-live="polite" aria-atomic="true" hidden>
+        <progress max="1" value="0" aria-label="站点模型查询进度"></progress>
+        <span data-query-message></span>
+      </div>
+    </div>
   </article>`;
 }
 
+function updateStationBatchBar() {
+  const total = state.stations.length;
+  const selected = state.selectedStationIds.size;
+  $("#station-selected-count").textContent = `已选 ${selected} / ${total}`;
+  const selectAll = $("#station-select-all");
+  selectAll.checked = total > 0 && selected === total;
+  selectAll.indeterminate = selected > 0 && selected < total;
+  for (const button of document.querySelectorAll("[data-station-batch]")) button.disabled = selected === 0;
+}
+
 function renderStations() {
+  const activeIds = new Set(state.stations.map(station => station.id));
+  for (const id of state.selectedStationIds) if (!activeIds.has(id)) state.selectedStationIds.delete(id);
   const list = $("#stations-list");
   list.innerHTML = state.stations.length
     ? state.stations.map(stationCard).join("")
     : `<div class="station-empty"><span data-icon="database" class="icon empty-icon"></span><strong>还没有站点</strong><span>添加后开始跨站点比较。</span></div>`;
   $("#station-count").textContent = String(state.stations.length);
+  updateStationBatchBar();
   hydrateIcons(list);
 }
-
 function updateStationQueryStatus(progress) {
   const card = document.getElementById(`station-card-${progress.stationId}`);
   const status = card?.querySelector("[data-query-status]");
   if (!status) return;
   const bar = status.querySelector("progress");
   const message = status.querySelector("[data-query-message]");
-  const stationName = progress.stationName || card.querySelector(".station-title h3").textContent;
+  const stationName = progress.stationName || card.querySelector(".station-name")?.textContent || "站点";
   status.hidden = false;
   status.dataset.status = progress.status || "";
   if (progress.status === "running") {
@@ -415,36 +382,36 @@ function renderSettings() {
 }
 
 function readStations() {
-  return [...document.querySelectorAll(".station-card")].map(card => {
-    const value = field => card.querySelector(`[data-field="${field}"]`)?.value || "";
-    const rechargeCurrency = value("rechargeCurrency") === "USD" ? "USD" : "CNY";
-    const priceCurrency = "CREDITS";
-    const rechargeRmb = convertRechargeAmount(value("rechargeAmount"), rechargeCurrency, "CNY", currentExchangeRate()) ?? 0;
+  return state.stations.map(station => {
+    const rechargeRmb = nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1);
+    const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
+    const rechargeCredits = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
+    const adapter = station.adapter || {};
+    const auth = station.auth || {};
     return {
-      id: card.dataset.stationId || crypto.randomUUID(),
-      pluginId: card.dataset.pluginId || undefined,
-      name: value("name"),
-      baseUrl: value("baseUrl"),
-      mode: value("mode"),
-      category: value("category"),
-      enabled: card.querySelector('[data-field="enabled"]')?.checked ?? true,
+      id: station.id || crypto.randomUUID(),
+      pluginId: station.pluginId || undefined,
+      name: station.name || "",
+      baseUrl: station.baseUrl || "",
+      mode: station.mode === "page" ? "page" : "direct",
+      category: STATION_CATEGORY_LABELS[station.category] ? station.category : "paid",
+      enabled: station.enabled !== false,
       rechargeRmb,
       rechargeCurrency,
-      rechargeCredits: Number(value("rechargeCredits")) > 0 ? Number(value("rechargeCredits")) : 1,
-      rechargeRate: derivedRechargeRate(rechargeRmb, Number(value("rechargeCredits")) || 0),
-      rechargeRateVerified: card.dataset.rechargeRateVerified !== "false",
-      rechargeRateNote: value("rechargeRateNote"),
-      priceCurrency,
-      priceCurrencyVerified: card.querySelector('[data-field="priceCurrencyVerified"]')?.checked ?? true,
-      priceCurrencyNote: value("priceCurrencyNote"),
-      basePricePerMillion: nonNegativeNumber(value("basePricePerMillion"), 2),
-      auth: { type: value("authType"), token: value("token"), username: value("username"), password: value("password") },
-      adapter: { kind: "custom", endpoint: value("endpoint"), body: value("body"), rawJson: value("rawJson"), method: value("method"), responseFormat: value("responseFormat") },
+      rechargeCredits,
+      rechargeRate: derivedRechargeRate(rechargeRmb, rechargeCredits),
+      rechargeRateVerified: station.rechargeRateVerified !== false,
+      rechargeRateNote: station.rechargeRateNote || "",
+      priceCurrency: "CREDITS",
+      priceCurrencyVerified: station.priceCurrencyVerified !== false,
+      priceCurrencyNote: station.priceCurrencyNote || "",
+      basePricePerMillion: nonNegativeNumber(station.basePricePerMillion, 2),
+      auth: { type: auth.type || "none", token: auth.token || "", username: auth.username || "", password: auth.password || "" },
+      adapter: { kind: "custom", endpoint: adapter.endpoint || "", body: adapter.body || "", rawJson: adapter.rawJson || "", method: adapter.method === "POST" ? "POST" : "GET", responseFormat: isSupportedResponseFormat(adapter.responseFormat) ? adapter.responseFormat : "auto" },
       tags: []
     };
   });
 }
-
 function readSettings() {
   return normalizeSettings({
     ...state.settings,
@@ -457,42 +424,167 @@ function readSettings() {
   });
 }
 
-function applySuggestion(card, suggestion) {
-  const set = (field, value, replace = false) => {
-    const input = card.querySelector(`[data-field="${field}"]`);
-    if (!input || !value) return;
-    if (replace || !input.value || input.value === "/api/ai/pricing" || input.value === "auto" || input.value === "none") input.value = value;
-  };
-  set("name", suggestion.name);
-  set("baseUrl", suggestion.baseUrl);
-  set("mode", suggestion.mode, true);
-  set("endpoint", suggestion.endpoint);
-  set("body", suggestion.body);
-  set("responseFormat", suggestion.responseFormat);
-  set("method", suggestion.method);
-  set("authType", suggestion.authType);
+function mergeStationSuggestion(station, suggestion) {
+  if (!suggestion) return;
+  if (suggestion.name) station.name = suggestion.name;
+  if (suggestion.baseUrl) station.baseUrl = suggestion.baseUrl;
+  if (suggestion.mode === "page" || suggestion.mode === "direct") station.mode = suggestion.mode;
+  const adapter = { ...(station.adapter || {}) };
+  if (suggestion.endpoint) adapter.endpoint = suggestion.endpoint;
+  if (suggestion.body) adapter.body = suggestion.body;
+  if (isSupportedResponseFormat(suggestion.responseFormat)) adapter.responseFormat = suggestion.responseFormat;
+  if (["GET", "POST"].includes(suggestion.method)) adapter.method = suggestion.method;
+  station.adapter = adapter;
+  if (suggestion.authType) station.auth = { ...(station.auth || {}), type: suggestion.authType };
 }
 
-async function adaptStation(card, preservePageMode = false, sourceTabId) {
-  const button = card.querySelector("[data-autofill-station]");
-  const station = readStations().find(item => item.id === card.dataset.stationId);
+function currentConfigStation() {
+  return state.stations.find(station => station.id === state.configStationId);
+}
+
+function collectConfigStation() {
+  const station = currentConfigStation();
+  if (!station) return null;
+  const normalized = readStations().find(item => item.id === station.id);
+  if (!normalized) return null;
+  const rechargeCurrency = $("#config-recharge-currency").value === "USD" ? "USD" : "CNY";
+  return {
+    ...normalized,
+    name: $("#config-station-name").value.trim() || station.name,
+    auth: { ...(station.auth || {}), token: $("#config-station-token").value, username: $("#config-station-username").value, password: $("#config-station-password").value },
+    rechargeRmb: convertRechargeAmount($("#config-recharge-amount").value, rechargeCurrency, "CNY", currentExchangeRate()) ?? 0,
+    rechargeCurrency,
+    rechargeCredits: Number($("#config-recharge-credits").value) || 1,
+    priceCurrencyVerified: $("#config-price-currency-verified").checked,
+    priceCurrencyNote: $("#config-price-currency-note").value.trim(),
+    basePricePerMillion: nonNegativeNumber($("#config-base-price").value, 2)
+  };
+}
+
+function fillStationConfigDialog(station) {
+  $("#station-config-title").textContent = `站点配置 · ${station.name || stationHostName(station.baseUrl) || "未命名站点"}`;
+  $("#config-station-host").textContent = station.baseUrl || "";
+  $("#config-station-name").value = station.name || "";
+  const auth = station.auth || {};
+  $("#config-station-token").value = auth.token || "";
+  $("#config-station-username").value = auth.username || "";
+  $("#config-station-password").value = auth.password || "";
+  const rechargeCurrency = station.rechargeCurrency === "USD" ? "USD" : "CNY";
+  $("#config-recharge-amount").value = convertRechargeAmount(nonNegativeNumber(station.rechargeRmb, 1), "CNY", rechargeCurrency, currentExchangeRate());
+  const currencySelect = $("#config-recharge-currency");
+  currencySelect.value = rechargeCurrency;
+  currencySelect.dataset.previousCurrency = rechargeCurrency;
+  $("#config-recharge-credits").value = Number(station.rechargeCredits) > 0 ? Number(station.rechargeCredits) : 1;
+  $("#config-price-currency-verified").checked = station.priceCurrencyVerified !== false;
+  $("#config-price-currency-note").value = station.priceCurrencyNote || "";
+  $("#config-base-price").value = nonNegativeNumber(station.basePricePerMillion, 2);
+  configRechargeRate();
+  const origin = currentSiteOrigin(station.baseUrl);
+  const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
+  const isLinuxDoMarketplace = station.adapter?.kind === "linux-do-marketplace";
+  $("#config-station-hint").textContent = isLinuxDoMarketplace
+    ? "页面模式：请先在当前 Chrome 配置文件登录 Linux.do，扩展只通过页面会话读取价格。"
+    : station.mode === "page"
+      ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
+      : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
+  const warning = isLinuxDoMarketplace
+    ? "仅使用当前页面登录会话读取 Linux.do Marketplace；令牌不会写入站点配置或扩展存储。站点积分仅按 1:1 作为展示基准，不代表人民币成本。"
+    : station.priceCurrencyVerified !== false ? "" : `模型价格映射未核实：${station.priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。"}`;
+  const warningNode = $("#config-station-warning");
+  warningNode.hidden = !warning;
+  warningNode.textContent = warning;
+}
+
+function openStationConfig(stationId) {
+  const station = state.stations.find(item => item.id === stationId);
   if (!station) return;
+  state.configStationId = stationId;
+  fillStationConfigDialog(station);
+  $("#station-config-dialog").showModal();
+  $("#config-station-name").focus();
+}
+
+async function saveStationConfig() {
+  const station = currentConfigStation();
+  const collected = collectConfigStation();
+  if (!station || !collected) return;
+  if (!$("#config-station-name").reportValidity() || !$("#config-recharge-amount").reportValidity() || !$("#config-recharge-credits").reportValidity()) return;
+  const button = $("#config-save");
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>保存中</span>`;
+  try {
+    Object.assign(station, {
+      name: collected.name,
+      auth: collected.auth,
+      rechargeRmb: collected.rechargeRmb,
+      rechargeCurrency: collected.rechargeCurrency,
+      rechargeCredits: collected.rechargeCredits,
+      rechargeRate: derivedRechargeRate(collected.rechargeRmb, collected.rechargeCredits),
+      rechargeRateVerified: collected.rechargeRmb > 0 && collected.rechargeCredits > 0,
+      priceCurrencyVerified: collected.priceCurrencyVerified,
+      priceCurrencyNote: collected.priceCurrencyNote,
+      basePricePerMillion: collected.basePricePerMillion
+    });
+    await persistStations();
+    await saveWorkspace({ notify: false });
+    renderStations();
+    $("#station-config-dialog").close();
+    toast("站点配置已保存");
+  } catch (error) {
+    toast(error.message || String(error));
+  } finally {
+    button.disabled = false;
+    button.innerHTML = original;
+    hydrateIcons(button);
+  }
+}
+
+async function autofillConfigStation() {
+  const collected = collectConfigStation();
+  if (!collected) return;
+  const button = $("#config-autofill");
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
   button.dataset.label = button.innerHTML;
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>分析中</span>`;
   try {
-    const result = await callService("ADAPT_STATION", { station, ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
-    applySuggestion(card, { ...result.suggestion, ...(preservePageMode ? { mode: "page" } : {}) });
-    const source = "本地规则";
+    const sourceTabId = state.stationSourceTabIds.get(collected.id);
+    const result = await callService("ADAPT_STATION", { station: collected, ...(Number.isInteger(sourceTabId) ? { sourceTabId } : {}) });
+    mergeStationSuggestion(collected, { ...result.suggestion, ...(collected.mode === "page" ? { mode: "page" } : {}) });
+    const station = currentConfigStation();
+    if (station) Object.assign(station, { name: collected.name, baseUrl: collected.baseUrl, mode: collected.mode, adapter: collected.adapter, auth: collected.auth });
+    fillStationConfigDialog(station || collected);
     const detail = result.discovery ? `，已探测 ${result.discovery.modelCount || 0} 个模型` : "";
-    toast(`${result.warning ? `${result.warning}；` : ""}已用 ${source}填充采集字段${detail}，请点击当前站点的“保存站点”`);
-  } catch (error) { toast(error.message); }
-  finally {
+    toast(`${result.warning ? `${result.warning}；` : ""}已按本地规则填充采集字段${detail}，点击“保存配置”生效`);
+  } catch (error) {
+    toast(error.message);
+  } finally {
     button.disabled = false;
     button.removeAttribute("aria-busy");
     button.innerHTML = button.dataset.label;
     hydrateIcons(button);
+  }
+}
+
+async function testConfigStation() {
+  const collected = collectConfigStation();
+  if (!collected) return;
+  const button = $("#config-test");
+  const startedAt = Date.now();
+  button.disabled = true;
+  updateStationQueryStatus({ stationId: collected.id, stationName: collected.name, status: "running", current: 1, total: 1 });
+  try {
+    const result = await callService("TEST_STATION", { station: collected });
+    const snapshot = result.snapshot;
+    if (!["success", "partial"].includes(snapshot.status)) throw new Error(snapshot.error || "连接失败");
+    updateStationQueryStatus({ stationId: collected.id, stationName: collected.name, status: snapshot.status, modelCount: snapshot.normalized?.data?.length || 0, durationMs: Date.now() - startedAt, error: snapshot.status === "partial" ? partialSnapshotMessage(snapshot) : "" });
+    toast(snapshot.status === "partial" ? `连接成功，但${partialSnapshotMessage(snapshot)}` : `连接成功：${snapshot.normalized.data.length} 个模型`);
+  } catch (error) {
+    updateStationQueryStatus({ stationId: collected.id, stationName: collected.name, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
+    toast(error.message || String(error));
+  } finally {
+    button.disabled = false;
   }
 }
 async function persistStations() {
@@ -502,37 +594,23 @@ async function persistStations() {
   return state.stations;
 }
 
-async function saveStation(card) {
-  const button = card.querySelector("[data-save-station]");
-  const original = button.innerHTML;
-  button.disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>保存中</span>`;
-  try {
-    await persistStations();
-    await saveWorkspace({ notify: false });
-    renderStations();
-    toast("站点配置已保存");
-  } finally {
-    button.disabled = false;
-    button.innerHTML = original;
-    hydrateIcons(button);
-  }
-}
-
 function partialSnapshotMessage(snapshot) {
   return getPartialDiagnostics(snapshot?.normalized).message;
 }
 
-async function refreshStation(card) {
-  const button = card.querySelector("[data-refresh-station]");
-  const station = readStations().find(item => item.id === card.dataset.stationId);
+async function refreshStation(stationId) {
+  const card = document.getElementById(`station-card-${stationId}`);
+  const button = card?.querySelector("[data-refresh-station]");
+  const station = state.stations.find(item => item.id === stationId);
   if (!station?.baseUrl) throw new Error("请先填写站点地址");
   if (!station.enabled) throw new Error("请先启用站点再查询模型");
-  const sourceTabId = /^\d+$/.test(card.dataset.sourceTabId || "") ? Number(card.dataset.sourceTabId) : undefined;
+  const sourceTabId = state.stationSourceTabIds.get(stationId);
   const startedAt = Date.now();
-  const original = button.innerHTML;
-  button.disabled = true;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>查询中</span>`;
+  const original = button?.innerHTML || "";
+  if (button) {
+    button.disabled = true;
+    button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}`;
+  }
   updateStationQueryStatus({ stationId: station.id, stationName: station.name, status: "running", current: 1, total: 1 });
   try {
     await persistStations();
@@ -549,12 +627,13 @@ async function refreshStation(card) {
     updateStationQueryStatus({ stationId: station.id, stationName: station.name, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
     toast(error.message || String(error));
   } finally {
-    button.disabled = false;
-    button.innerHTML = original;
-    hydrateIcons(button);
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = original;
+      hydrateIcons(button);
+    }
   }
 }
-
 
 
 async function load() {
@@ -563,7 +642,6 @@ async function load() {
     state.stations = data.stations || [];
     state.sitePlugins = data.sitePlugins || [];
     state.selectedPluginIds.clear();
-    state.collapsedStationIds = new Set(state.stations.map(station => station.id));
     state.settings = data.settings;
     renderSettings();
     renderSitePlugins();
@@ -635,10 +713,10 @@ function updatePreviewRechargeRate() {
 }
 
 function refreshRechargeDisplays() {
-  for (const card of $("#stations-list").querySelectorAll(".station-card")) updateStationRechargeRate(card);
+  renderStations();
   updatePreviewRechargeRate();
+  if ($("#station-config-dialog").open) configRechargeRate();
 }
-
 async function analyzeStation(siteUrl, sourceTabId) {
   const input = $("#new-station-url");
   const siteOrigin = currentSiteOrigin(siteUrl);
@@ -651,9 +729,6 @@ async function analyzeStation(siteUrl, sourceTabId) {
   const existing = state.stations.find(station => currentSiteOrigin(station.baseUrl) === siteOrigin);
   if (existing && !window.confirm("该站点已有配置。仍要添加一份独立配置吗？")) {
     const card = [...$("#stations-list").querySelectorAll(".station-card")].find(item => item.dataset.stationId === existing.id);
-    state.collapsedStationIds.delete(existing.id);
-    const disclosure = card?.querySelector(".station-disclosure");
-    if (disclosure) disclosure.open = true;
     card?.scrollIntoView({ behavior: "smooth", block: "center" });
     toast("已保留现有站点配置");
     return;
@@ -736,11 +811,10 @@ function commitStationPreview() {
       responseFormat: isSupportedResponseFormat(suggestion.responseFormat) ? suggestion.responseFormat : pending.station.adapter.responseFormat
     }
   };
-  state.collapsedStationIds.delete(station.id);
   state.stations.push(station);
+  if (Number.isInteger(pending.sourceTabId)) state.stationSourceTabIds.set(station.id, pending.sourceTabId);
   renderStations();
   const card = document.querySelector(`[data-station-id="${station.id}"]`);
-  if (Number.isInteger(pending.sourceTabId) && card) card.dataset.sourceTabId = String(pending.sourceTabId);
   card?.scrollIntoView({ behavior: "smooth", block: "center" });
   $("#add-station-dialog").close();
   toast("站点已添加，请点击“保存站点”使配置生效");
@@ -807,79 +881,78 @@ $("#add-station-form").addEventListener("submit", event => {
   void analyzeStation(input.value);
 });
 
-$("#stations-list").addEventListener("toggle", event => {
-  const details = event.target;
-  if (!details.matches(".station-disclosure")) return;
-  const stationId = details.closest(".station-card")?.dataset.stationId;
-  if (!stationId) return;
-  details.open ? state.collapsedStationIds.delete(stationId) : state.collapsedStationIds.add(stationId);
-}, true);
 $("#stations-list").addEventListener("click", async event => {
   const card = event.target.closest(".station-card");
   if (!card) return;
+  const stationId = card.dataset.stationId;
   if (event.target.closest("[data-remove-station]")) {
-    state.collapsedStationIds.delete(card.dataset.stationId);
-    state.stations = readStations().filter(station => station.id !== card.dataset.stationId);
+    state.selectedStationIds.delete(stationId);
+    state.stationSourceTabIds.delete(stationId);
+    state.stations = state.stations.filter(station => station.id !== stationId);
     renderStations();
     return;
   }
-  if (event.target.closest("[data-save-station]")) {
-    await saveStation(card).catch(error => toast(error.message));
+  if (event.target.closest("[data-config-station]")) {
+    openStationConfig(stationId);
     return;
   }
   if (event.target.closest("[data-refresh-station]")) {
-    await refreshStation(card).catch(error => {
-      updateStationQueryStatus({ stationId: card.dataset.stationId, status: "error", error: error.message || String(error) });
+    await refreshStation(stationId).catch(error => {
+      updateStationQueryStatus({ stationId, status: "error", error: error.message || String(error) });
       toast(error.message || String(error));
     });
     return;
   }
-  if (event.target.closest("[data-autofill-station]")) {
-    await adaptStation(card);
-    return;
-  }
-  if (event.target.closest("[data-test-station]")) {
-    const button = event.target.closest("[data-test-station]");
-    const station = readStations().find(item => item.id === card.dataset.stationId);
-    const startedAt = Date.now();
-    button.disabled = true;
-    updateStationQueryStatus({ stationId: card.dataset.stationId, status: "running", current: 1, total: 1 });
-    try {
-      const result = await callService("TEST_STATION", { station });
-      const snapshot = result.snapshot;
-      if (!["success", "partial"].includes(snapshot.status)) throw new Error(snapshot.error || "连接失败");
-      updateStationQueryStatus({ stationId: card.dataset.stationId, status: snapshot.status, modelCount: snapshot.normalized?.data?.length || 0, durationMs: Date.now() - startedAt, error: snapshot.status === "partial" ? partialSnapshotMessage(snapshot) : "" });
-      toast(snapshot.status === "partial" ? `连接成功，但${partialSnapshotMessage(snapshot)}` : `连接成功：${snapshot.normalized.data.length} 个模型`);
-    } catch (error) {
-      updateStationQueryStatus({ stationId: card.dataset.stationId, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
-      toast(error.message || String(error));
-    } finally {
-      button.disabled = false;
-    }
-  }
-});
-$("#stations-list").addEventListener("input", event => {
-  const card = event.target.closest(".station-card");
-  if (!card) return;
-  const summary = card.querySelector(".station-summary-meta");
-  if (event.target.matches('[data-field="name"]')) {
-    card.querySelector(".station-title h3").textContent = event.target.value || "未命名站点";
-    return;
-  }
-  if (event.target.matches('[data-field="enabled"]')) {
-    summary.children[0].textContent = event.target.checked ? "已启用" : "已停用";
-    card.querySelector(".status-dot").classList.toggle("is-live", event.target.checked);
-    return;
-  }
-  if (!event.target.matches('[data-field="rechargeAmount"], [data-field="rechargeCredits"]')) return;
-  updateStationRechargeRate(card, true);
 });
 $("#stations-list").addEventListener("change", event => {
-  if (!event.target.matches('[data-field="rechargeCurrency"]')) return;
   const card = event.target.closest(".station-card");
-  if (!card) return;
-  changeRechargeCurrency(card.querySelector('[data-field="rechargeAmount"]'), event.target);
-  updateStationRechargeRate(card, true);
+  if (event.target.matches("[data-select-station]")) {
+    const stationId = card?.dataset.stationId;
+    if (!stationId) return;
+    event.target.checked ? state.selectedStationIds.add(stationId) : state.selectedStationIds.delete(stationId);
+    updateStationBatchBar();
+    return;
+  }
+  if (!event.target.matches('[data-field="enabled"]') || !card) return;
+  const station = state.stations.find(item => item.id === card.dataset.stationId);
+  if (!station) return;
+  station.enabled = event.target.checked;
+  card.classList.toggle("is-disabled", !station.enabled);
+});
+$("#station-select-all").addEventListener("click", event => {
+  state.selectedStationIds = event.target.checked ? new Set(state.stations.map(station => station.id)) : new Set();
+  renderStations();
+});
+for (const button of document.querySelectorAll("[data-station-batch]")) {
+  button.addEventListener("click", () => {
+    const selected = new Set(state.selectedStationIds);
+    if (button.dataset.stationBatch === "remove") {
+      if (!selected.size || !window.confirm(`确定删除选中的 ${selected.size} 个站点？`)) return;
+      state.stations = state.stations.filter(station => !selected.has(station.id));
+      for (const id of selected) state.stationSourceTabIds.delete(id);
+      state.selectedStationIds.clear();
+      renderStations();
+      toast(`已移除 ${selected.size} 个站点，点击“保存全部”生效`);
+      return;
+    }
+    const enabled = button.dataset.stationBatch === "enable";
+    for (const station of state.stations) if (selected.has(station.id)) station.enabled = enabled;
+    renderStations();
+    toast(`已${enabled ? "启用" : "停用"} ${selected.size} 个站点，点击“保存全部”生效`);
+  });
+}
+$("#station-config-form").addEventListener("submit", event => {
+  event.preventDefault();
+  void saveStationConfig();
+});
+$("#config-cancel").addEventListener("click", () => $("#station-config-dialog").close());
+$("#config-autofill").addEventListener("click", () => void autofillConfigStation());
+$("#config-test").addEventListener("click", () => void testConfigStation());
+$("#config-recharge-amount").addEventListener("input", configRechargeRate);
+$("#config-recharge-credits").addEventListener("input", configRechargeRate);
+$("#config-recharge-currency").addEventListener("change", () => {
+  changeRechargeCurrency($("#config-recharge-amount"), $("#config-recharge-currency"));
+  configRechargeRate();
 });
 
 
@@ -948,10 +1021,7 @@ $("#import-file").addEventListener("change", async event => {
 activateSettingsView(location.hash.slice(1));
 hydrateIcons();
 const cards = initCollapsibleCards("options");
-const setAllSections = collapsed => {
-  cards.setAll(collapsed);
-  for (const details of $("#stations-list").querySelectorAll(".station-disclosure")) details.open = !collapsed;
-};
+const setAllSections = collapsed => cards.setAll(collapsed);
 $("#expand-all").addEventListener("click", () => setAllSections(false));
 $("#collapse-all").addEventListener("click", () => setAllSections(true));
 onRefreshProgress(progress => {
