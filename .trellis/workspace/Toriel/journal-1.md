@@ -230,3 +230,21 @@ Mode A 全仓库扫描(34 个 JS 模块 + 测试 + 未提交 diff):健康度高�
 - `core.test.js` 166 行改动：56 处包装调用走 `addProviderStationPresets(stations, [providerById(id)])`，9 处注册表调用传 `PROVIDER_REGISTRY`，`addXxx([]).length === 0` 断言按现状改成 `=== 1`。
 - 踩坑记录：`options.html` 与 `options.js` 有另一条任务在同时改写，按钮 id 中途从 `add-station` 变成 `add-station-top`，按磁盘现状对齐后用静态 id 比对脚本验证（61 个 id、38 个引用，缺 0）。`git diff` 的 486 行变更里只有 166 行属于本次，用改前快照逐行差分才分得清。
 - 验证：241/241 测试、`plugin-build.mjs --check` 22 个插件同步、`sync-version.mjs --check` 0.2.1、工作区干净。commit ffd7a30。
+
+## 2026-11-14 站点卡片网格与批量管理
+
+- 用户两轮反馈集中在「已添加站点」：展开占太高、没有色块分行、一行一个太占位置、配置项暴露插件内置字段。第二轮直接按 magpie 插件页风格重做。
+- `stationCard()` 定型为三行：名称独占首行（右侧开关 + 配置/查询/删除），徽章行（付费/公益、采集模式、币种未核实），充值比例行，查询进度/错误单独一行。host 仅在昵称与 host 不同时显示，不再挤占名称宽度。
+- 新增 `.station-batch-bar`：全选、已选计数、批量启用/停用/删除，删除一次确认；`state.selectedStationIds` 在 `renderStations()` 里清理失效项。
+- 站点配置弹层只留用户自定义项：名称、Token、用户名、密码、充值金额/币种、到账中转币、只读充值比例、基础价、币种核实与备注。插件内置的地址、接口路径、请求体、响应格式、采集模式全部从 UI 移除，数据层保留 `adapter` / `baseUrl`，导入导出兼容。
+- 踩坑：`replace` 的 `text` 首行会丢前导缩进，多行替换时把需要缩进的行排到第二行再用 `replace_match` 补，或者把首行并到上一行末尾。
+- 验证：241/241 测试、`plugin-build.mjs --check` 无漂移、`node --check` 通过；卡片网格与配置弹层用 headless Chromium 截图核对，临时目录 `.preview/` 已删。commit 9b0f771。
+
+## 2026-11-14 规范模型表靠齐 OpenRouter
+
+- 用户拍板：规范名不再拿 models.dev 当权威，直接靠齐 OpenRouter 的模型列表。`canonical/build.mjs` 入口集合只收 OpenRouter 收录的模型，名称/拼写以 OpenRouter 为准，models.dev 降级为别名补充；吸收合并方向强制 OpenRouter 侧存活，防止 models.dev 独有条目反向吃掉官方条目。
+- 表从 2150 模型/348 KB 瘦到 372 模型/60 KB（340 个有 models.dev 佐证，丢弃 1778 个）。丢弃无损失：官方价格参考本来就是 OpenRouter，无对应物的条目在 matching 层是死重；未匹配行按原始站内写法分行，不走规范表分组。
+- `matching.js`/`canonical.js` 零改动；22 个插件 models.json 别名目标全为空，无迁移。比价表 canonicalModel 现在显示 OpenRouter 显示名（「GLM 5.3」）。
+- 测试改造两条：原用的 `claude-opus-4.8`/`claude-sonnet-4-5` 在 OpenRouter 现役列表无独立身份（现役 opus-5.5，老代次词序是 `claude-4-5-sonnet`），改用表里真实存在的身份，测试意图不变。总数 242→241：逐文件数静态 test() 注册（8+186+4+6+25+6+6=241）确认 PRD 旧数是误记。
+- 踩坑：`build.mjs` 的 `models.push` 新对象没复制 `openrouter` 组标记，出口过滤把全表清成 0 模型；组标记必须显式带进生成对象，出口处再 delete。
+- 验证：241/241 测试、`plugin-build.mjs --check` 22 个插件同步、`model-lookup` 对 glm-5.3 与 "claude sonnet" 命中 OpenRouter 名称。
