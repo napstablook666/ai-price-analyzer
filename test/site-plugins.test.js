@@ -98,6 +98,16 @@ test("keeps every static script selector and local page asset connected", () => 
   }
 });
 
+test("opens settings from the popup in a tab instead of replacing the popup", () => {
+  const html = readFileSync(new URL("../popup.html", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../src/popup.js", import.meta.url), "utf8");
+  assert.doesNotMatch(html, /<a\b[^>]*href="[^"]*\.html/, "popup 内指向扩展页面的链接会顶掉弹窗，必须走 chrome.tabs.create");
+  for (const id of ["open-settings", "manage-stations"]) {
+    assert.ok(html.includes(`id="${id}"`), `popup.html is missing #${id}`);
+    assert.ok(source.includes(`querySelector("#${id}").addEventListener("click", () => openPage("options.html#stations"))`), `popup.js must open #${id} in a tab`);
+  }
+});
+
 test("keeps dialogs as siblings instead of nesting them", () => {
   for (const page of ["dashboard", "options", "popup"]) {
     const html = readFileSync(new URL(`../${page}.html`, import.meta.url), "utf8");
