@@ -35,8 +35,30 @@ export const DEFAULT_MONTHLY_USAGE = {
   images: 0,
   cacheWrite1h: 0,
 };
+
+// 近 30 天实测：pi session 2026-10-15 至 2026-11-14 汇总（magpie 网关日志 2026-11-03 才启用，覆盖不足 30 天）。
+const RECENT_30D_MONTHLY_VOLUME = {
+  requests: 54378,
+  input: 326.81 * TOKENS_PER_MILLION,
+  cacheRead: 4434.31 * TOKENS_PER_MILLION,
+  output: 28.98 * TOKENS_PER_MILLION,
+  cacheWrite: 1.91 * TOKENS_PER_MILLION,
+  cacheWrite1h: 0,
+};
+
+// 近 7 天实测：magpie 网关 2026-11-07 14:27 至 2026-11-14 14:27 汇总，按 30/7 折算为月用量。
+const RECENT_7D_MONTHLY_VOLUME = {
+  requests: 32567,
+  input: 196.25 * TOKENS_PER_MILLION,
+  cacheRead: 2077.49 * TOKENS_PER_MILLION,
+  output: 20.03 * TOKENS_PER_MILLION,
+  cacheWrite: 0.79 * TOKENS_PER_MILLION,
+  cacheWrite1h: 0,
+};
 export const USAGE_PRESETS = [
   { id: "measured", label: "实测月用量", usage: MEASURED_MONTHLY_VOLUME },
+  { id: "recent30d", label: "magpie-30天", usage: RECENT_30D_MONTHLY_VOLUME },
+  { id: "recent7d", label: "magpie-7天", usage: RECENT_7D_MONTHLY_VOLUME },
   {
     id: "baseline",
     label: "基础估算（3000 万输入 / 600 万输出）",
@@ -85,6 +107,14 @@ export const DEFAULT_MATCHING_RULES = [
 ];
 
 
+export const DEFAULT_MODEL_ASSISTANT = {
+  enabled: false,
+  provider: "openai-compatible",
+  baseUrl: "",
+  model: "",
+  temperature: 0.1
+};
+
 const DEFAULT_SETTINGS = {
   defaultCurrency: "CNY",
   exchangeRate: DEFAULT_EXCHANGE_RATE,
@@ -92,6 +122,7 @@ const DEFAULT_SETTINGS = {
   usage: { ...DEFAULT_MONTHLY_USAGE },
   matchingRules: DEFAULT_MATCHING_RULES,
   modelMatchOverrides: [],
+  modelAssistant: DEFAULT_MODEL_ASSISTANT,
   showUnmatched: true,
   showStale: true,
   comparisonMode: "paid",
@@ -138,6 +169,20 @@ export function cloneDefaultStation() {
   return structuredClone(DEFAULT_STATION);
 }
 
+function normalizeModelAssistant(input = {}) {
+  const raw = input && typeof input === "object" ? input : {};
+  const { apiKey: _apiKey, hasApiKey: _hasApiKey, ...rest } = raw;
+  const config = { ...DEFAULT_MODEL_ASSISTANT, ...rest };
+  config.enabled = Boolean(config.enabled);
+  config.provider = "openai-compatible";
+  config.baseUrl = String(config.baseUrl || "").trim();
+  if (config.baseUrl && !isSecureRemoteUrl(config.baseUrl)) config.baseUrl = "";
+  config.model = String(config.model || "").trim();
+  const temperature = Number(config.temperature);
+  config.temperature = Math.min(1, Math.max(0, Number.isFinite(temperature) ? temperature : DEFAULT_MODEL_ASSISTANT.temperature));
+  return config;
+}
+
 function normalizeModelMatchOverrides(input) {
   const overrides = new Map();
   for (const raw of Array.isArray(input) ? input : []) {
@@ -164,6 +209,7 @@ export function normalizeSettings(input = {}) {
     usage,
     matchingRules: Array.isArray(input.matchingRules) ? input.matchingRules.map((rule) => ({ ...rule })) : base.matchingRules.map((rule) => ({ ...rule })),
     modelMatchOverrides: normalizeModelMatchOverrides(input.modelMatchOverrides),
+    modelAssistant: normalizeModelAssistant(input.modelAssistant),
     recommendationProfile: ["balanced", "price", "reliability"].includes(input.recommendationProfile) ? input.recommendationProfile : "price",
     devMode: input.devMode === true,
     localPlugins: normalizeLocalPlugins(input.localPlugins).specs,

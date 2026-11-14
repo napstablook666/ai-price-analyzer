@@ -969,6 +969,17 @@ test("uses the measured monthly workload as the default usage", () => {
   assert.equal(settings.usage.cacheWrite1h, 0);
   assert.equal(USAGE_PRESETS.find(preset => preset.id === "measured").usage.requests, 45494);
 });
+test("ships recent 7-day and 30-day measured usage presets", () => {
+  const recent7d = USAGE_PRESETS.find(preset => preset.id === "recent7d").usage;
+  const recent30d = USAGE_PRESETS.find(preset => preset.id === "recent30d").usage;
+  assert.equal(recent7d.requests, 32567);
+  assert.equal(recent7d.cacheRead, 2077.49 * TOKENS_PER_MILLION);
+  assert.equal(recent30d.requests, 54378);
+  assert.equal(recent30d.cacheRead, 4434.31 * TOKENS_PER_MILLION);
+  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...recent7d }), "recent7d");
+  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...recent30d }), "recent30d");
+});
+
 test("migrates old usage presets to the measured monthly workload", () => {
   const legacyUsages = [
     { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.5 },
