@@ -1,7 +1,7 @@
 import { flattenComparisonRows } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { createDashboardIndex, createModelBands, matchesModelQueries, paginateRows } from "./dashboard-index.js";
+import { createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
 
@@ -246,14 +246,14 @@ function renderRows() {
   const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
   state.page = page.page;
   const visible = page.rows;
-  const modelBands = createModelBands(visible);
+  const bandClasses = rowBandClasses(visible);
   const pagination = $("#comparison-pagination");
   pagination.hidden = filtered.length === 0;
   $("#comparison-page").textContent = page.pageCount ? `第 ${page.page + 1} / ${page.pageCount} 页` : "";
   $("#comparison-previous").disabled = page.page === 0;
   $("#comparison-next").disabled = page.page + 1 >= page.pageCount;
   $("#result-count").textContent = `${filtered.length} 条报价`;
-  $("#comparison-body").innerHTML = visible.map(row => {
+  $("#comparison-body").innerHTML = visible.map((row, index) => {
     const station = stationFor(row);
     const delta = row.pricingUnavailable || !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
@@ -272,7 +272,7 @@ function renderRows() {
     const matchNote = row.officialName
       ? `匹配 ${row.officialName} · ${row.matchRule || "官方目录"} · 置信 ${row.confidenceScore}%`
       : "没有对应的官方目录记录";
-    const rowClasses = [`model-band-${modelBands.get(row.canonicalModel) === 1 ? "odd" : "even"}`, categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
+    const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head"><span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div><span class="model-meta">${escapeHtml(isPublic ? "公益站模型 · 仅在公益站模式比较" : matchNote)}</span></div></td>
       <td data-label="中转站 / 分组"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span><span>${escapeHtml(row.stationName)}</span></button><span class="group-tag">${escapeHtml(STATION_CATEGORY_LABELS[row.stationCategory] || "付费中转站")}</span><span class="group-tag">${escapeHtml(row.groupName || "未分组")}</span><span class="station-meta">${escapeHtml(row.tierName || "标准")} · 倍率 ×${escapeHtml(row.groupRatio)}</span></div></td>

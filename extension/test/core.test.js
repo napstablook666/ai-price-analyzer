@@ -10,7 +10,7 @@ import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEY
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationScores, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, getTierShares, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
-import { createDashboardIndex, createModelBands, matchesModelQueries, paginateRows } from "../src/dashboard-index.js";
+import { createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
@@ -5110,10 +5110,16 @@ test("filters quotes by any entered model across all stations", () => {
 });
 
 
-test("alternates model color bands while keeping offers of one model on the same band", () => {
-  const rows = ["gpt-a", "gpt-a", "gpt-b", "gpt-b", "gpt-c"].map(canonicalModel => ({ canonicalModel }));
-  const bands = createModelBands(rows);
-  assert.deepEqual(rows.map(row => bands.get(row.canonicalModel)), [0, 0, 1, 1, 0]);
+test("stripes every quote row and marks where a model band starts", () => {
+  const rows = ["gpt-a", "gpt-a", "gpt-b", "gpt-c", "gpt-c"].map(canonicalModel => ({ canonicalModel }));
+  assert.deepEqual(rowBandClasses(rows), [
+    "row-even model-band-start",
+    "row-odd",
+    "row-even model-band-start",
+    "row-odd model-band-start",
+    "row-even"
+  ]);
+  assert.deepEqual(rowBandClasses([]), []);
 });
 test("removes recharge-rate warnings while retaining option inputs and legacy fields", () => {
   const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");

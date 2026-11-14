@@ -89,8 +89,9 @@
 .comparison-table thead th { position: sticky; top: 0; z-index: 3; height: 38px; color: var(--text-2); background: var(--surface); font-size: 10px; font-weight: 600; white-space: nowrap; }
 .comparison-table thead th > span:not(#model-column-heading) { display: block; margin-top: 2px; color: var(--text-3); font-size: 8px; font-weight: 400; }
 .comparison-table tbody tr:last-child td { border-bottom: 0; }
-.comparison-table tbody tr.model-band-even td { background: var(--surface); }
-.comparison-table tbody tr.model-band-odd td { background: var(--surface-2); }
+.comparison-table tbody tr.row-even td { background: var(--surface); }
+.comparison-table tbody tr.row-odd td { background: var(--row-tint); }
+.comparison-table tbody tr.model-band-start td { border-top: 1px solid var(--line-strong); }
 .comparison-table tbody tr:hover td { background: var(--accent-soft); }
 .comparison-table [hidden] { display: none !important; }
 .model-cell { display: grid; gap: 4px; min-width: 0; }

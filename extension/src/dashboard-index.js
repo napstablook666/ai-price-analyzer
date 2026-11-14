@@ -24,10 +24,9 @@ export function paginateRows(rows, page, pageSize) {
   return { page: currentPage, pageCount, rows: rows.slice(currentPage * size, (currentPage + 1) * size) };
 }
 
-export function createModelBands(rows) {
-  const bands = new Map();
-  for (const row of rows) {
-    if (!bands.has(row.canonicalModel)) bands.set(row.canonicalModel, bands.size % 2);
-  }
-  return bands;
+export function rowBandClasses(rows) {
+  return rows.map((row, index) => {
+    const bandStart = index === 0 || rows[index - 1].canonicalModel !== row.canonicalModel;
+    return `row-${index % 2 === 0 ? "even" : "odd"}${bandStart ? " model-band-start" : ""}`;
+  });
 }
