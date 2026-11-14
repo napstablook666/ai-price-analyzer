@@ -85,8 +85,8 @@ test("gates the recommendation badge on the evidence threshold instead of a weig
   const comparisons = [{
     comparisonGroup: "paid",
     offers: [
-      { pricingUnavailable: false, stale: false, matchRuleId: "exact", officialMonthlyCost: 10, monthlyCost: 3, confidenceScore: 40 },
-      { pricingUnavailable: false, stale: false, matchRuleId: "exact", officialMonthlyCost: 10, monthlyCost: 8, confidenceScore: 90 }
+      { pricingUnavailable: false, matchRuleId: "exact", officialMonthlyCost: 10, monthlyCost: 3, confidenceScore: 40 },
+      { pricingUnavailable: false, matchRuleId: "exact", officialMonthlyCost: 10, monthlyCost: 8, confidenceScore: 90 }
     ]
   }];
   addRecommendationStatus(comparisons, { evidenceThreshold: 60 });

@@ -125,7 +125,6 @@ const DEFAULT_SETTINGS = {
   modelMatchOverrides: [],
   modelAssistant: DEFAULT_MODEL_ASSISTANT,
   showUnmatched: true,
-  showStale: true,
   comparisonMode: "paid",
   devMode: false,
   pluginInstallMigrated: false,
@@ -232,7 +231,6 @@ export function normalizeSettings(input = {}) {
   settings.defaultCurrency = settings.defaultCurrency === "USD" ? "USD" : "CNY";
   settings.exchangeRate = Number.isFinite(Number(settings.exchangeRate)) && Number(settings.exchangeRate) > 0 ? Number(settings.exchangeRate) : DEFAULT_EXCHANGE_RATE;
   settings.showUnmatched = Boolean(settings.showUnmatched);
-  settings.showStale = Boolean(settings.showStale);
   settings.comparisonMode = settings.comparisonMode === "public" ? "public" : "paid";
   return settings;
 }
