@@ -95,7 +95,7 @@ function renderSummary(rows) {
     ["首选方案", String(recommended), "同模型推荐"],
     ["需核验", String(needsReview), reviewNote]
   ];
-  $("#summary").innerHTML = cards.map(([label, value, note]) => `<article class="summary-card"><span class="summary-label">${label}</span><strong class="summary-value">${escapeHtml(value)}</strong><span class="summary-note">${escapeHtml(note)}</span></article>`).join("");
+  $("#summary").innerHTML = cards.map(([label, value, note], index) => `<article class="summary-card${index === 0 ? " is-primary" : ""}"><span class="summary-label">${label}</span><strong class="summary-value">${escapeHtml(value)}</strong><span class="summary-note">${escapeHtml(note)}</span></article>`).join("");
 }
 function renderStationFilter(rows) {
   const current = state.filters.stationId;
@@ -257,8 +257,6 @@ function priceGridMarkup(row, currency, officialQuotedPrices) {
   };
   collect(relayLines, "relay");
   collect(officialLines, "official");
-  const hasOfficial = officialLines.length > 0;
-  const hasRelay = relayLines.length > 0;
   const officialFormat = officialQuotedPrices
     ? cell => formatSourcePrice(cell.value, row.officialCurrency || "CREDITS", cell.precise ? 6 : 4)
     : cell => formatPrice(cell.value, currency, cell.precise ? 6 : 4);
@@ -266,15 +264,12 @@ function priceGridMarkup(row, currency, officialQuotedPrices) {
   const cellMarkup = (cell, format) => cell
     ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}"${cell.estimated ? ' title="估算值"' : ""}>${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
     : `<span class="price-value price-value-missing">—</span>`;
-  const headRow = `<div class="price-grid-row"><span class="price-grid-head" aria-hidden="true"></span>${hasOfficial ? `<span class="price-grid-head">官方</span>` : ""}${hasRelay ? `<span class="price-grid-head">中转</span>` : ""}</div>`;
   const bodyRows = [...grid.values()].map((entry, index) => {
     const primary = index < 2 ? " price-line-primary" : "";
-    const officialCell = hasOfficial ? cellMarkup(entry.official, officialFormat) : "";
-    const relayCell = hasRelay ? cellMarkup(entry.relay, relayFormat) : "";
-    return `<div class="price-grid-row${primary}"><span class="price-key">${escapeHtml(entry.base)}</span>${officialCell}${relayCell}</div>`;
+    return `<div class="price-grid-row${primary}"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${cellMarkup(entry.relay, relayFormat)}</div>`;
   }).join("");
   const notes = [officialNote, relayNote].filter(Boolean).map(note => `<span class="price-grid-note">${note}</span>`).join("");
-  return `<div class="price-grid">${headRow}${bodyRows}</div>${notes ? `<div class="price-grid-notes">${notes}</div>` : ""}`;
+  return `<div class="price-grid">${bodyRows}</div>${notes ? `<div class="price-grid-notes">${notes}</div>` : ""}`;
 }
 
 
@@ -300,6 +295,7 @@ function renderStationErrors() {
 
 function renderComparisonMode() {
   const isPublic = state.comparisonMode === "public";
+  document.body.classList.toggle("comparison-is-public", isPublic);
   document.querySelector(".comparison-table")?.classList.toggle("is-public", isPublic);
   for (const button of document.querySelectorAll("[data-comparison-mode]")) {
     const active = button.dataset.comparisonMode === state.comparisonMode;
@@ -315,6 +311,7 @@ function renderComparisonMode() {
   $("#sort-by").value = state.filters.sortBy;
   $("#sort-secondary").value = state.filters.sortSecondary;
   renderStationErrors();
+  renderReferenceStatus();
 }
 
 function sanitizeFiltersForRows(rows) {
@@ -399,9 +396,11 @@ function renderRows() {
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
-      <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}"><span class="status-dot ${station.enabled ? "is-live" : ""}" aria-hidden="true"></span>${siteIconMarkup(station.pluginId, row.stationName, { size: 16 })}<span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
-      <td colspan="3" data-label="报价与月成本" class="merged-price-cell paid-only-column"${isPublic ? " hidden" : ""}><div class="merged-price-content"><div class="merged-price-columns"><div class="merged-price-unit">${priceGridMarkup(row, currency, officialQuotedPrices)}</div><div class="merged-price-unit"><span class="merged-price-label">月成本</span>${monthlyCostSummaryMarkup(row, currency)}</div></div>${monthlyCostDetailsMarkup(row, currency, monthlyCostRankingFor(row, monthlyCostRankings))}</div></td>
-      <td colspan="2" data-label="价差 / 混合单价" class="merged-comparison-cell paid-only-column"${isPublic ? " hidden" : ""}><div class="merged-comparison-columns"><div class="merged-comparison-unit"><span class="merged-price-label">价差</span><span class="delta-tag ${deltaClass}">${deltaLabel}</span></div><div class="merged-comparison-unit"><span class="merged-price-label">混合单价</span>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</div></div></td>
+      <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}">${siteIconMarkup(station.pluginId, row.stationName, { size: 16 })}<span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
+      <td colspan="3" data-label="单价 / 每 M tokens" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceGridMarkup(row, currency, officialQuotedPrices)}</td>
+      <td data-label="月成本" class="monthly-cost-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}><div class="monthly-cost-content">${monthlyCostSummaryMarkup(row, currency)}${monthlyCostDetailsMarkup(row, currency, monthlyCostRankingFor(row, monthlyCostRankings))}</div></td>
+      <td data-label="价差" class="delta-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
+      <td data-label="混合单价" class="blended-cell paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cost"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");
@@ -446,19 +445,32 @@ function monthlyCostDetailsMarkup(row, currency, ranking) {
 
 function renderReferenceStatus() {
   const ref = state.reference;
-  if (!ref) return;
+  const pill = $("#reference-pill");
+  if (!ref || !pill) return;
   if (state.comparisonMode === "public") {
-    $("#reference-status").textContent = "公益站独立比较";
-    $("#reference-note").textContent = "";
-    $("#reference-dot").classList.remove("is-live");
-    $("#reference-pill").title = "公益站之间比较，不使用官方价格";
+    pill.hidden = true;
+    $("#freshness-sep").hidden = true;
     return;
   }
   const count = ref.models?.length || 0;
+  const fetched = ref.fetchedAt ? new Date(ref.fetchedAt) : null;
   $("#reference-status").textContent = count ? `官方价 ${count}` : "官方价未加载";
-  $("#reference-note").textContent = ref.fetchedAt ? new Date(ref.fetchedAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+  $("#reference-note").textContent = fetched ? fetched.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
   $("#reference-dot").classList.toggle("is-live", count > 0);
-  $("#reference-pill").title = ref.warnings?.length ? ref.warnings.join("；") : "官方目录每日缓存 · USD credit 1:1 · 人民币按设置汇率";
+  const warnings = ref.warnings?.length ? ref.warnings.join("；") : "";
+  const cacheNote = "官方目录每日缓存 · USD credit 1:1 · 人民币按设置汇率";
+  pill.title = fetched ? `${cacheNote}${warnings ? `；${warnings}` : ""}` : warnings || cacheNote;
+  pill.hidden = false;
+  $("#freshness-sep").hidden = false;
+}
+// 顶栏合并读数：中转站快照时间 · 官方价缓存时间，两边齐全就折叠成一行。
+function renderFreshness() {
+  const collectedAt = (state.data?.snapshots || [])
+    .map(snapshot => snapshot?.collectedAt)
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)[0];
+  $("#last-updated").textContent = collectedAt ? `更新于 ${new Date(collectedAt).toLocaleTimeString("zh-CN", { hour12: false })}` : "尚未刷新";
+  $("#connection-dot").classList.toggle("is-live", state.rows.length > 0);
 }
 function renderCheckin(data) {
   const list = $("#checkin-list");
@@ -570,8 +582,7 @@ function render(data) {
   $("#empty-state-action-label").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
   renderCheckin(data);
-  $("#last-updated").textContent = data.snapshots?.[0]?.collectedAt ? `更新于 ${new Date(data.snapshots[0].collectedAt).toLocaleTimeString("zh-CN", { hour12: false })}` : "尚未刷新";
-  $("#connection-dot").classList.toggle("is-live", state.rows.length > 0);
+  renderFreshness();
   hydrateIcons();
 }
 
@@ -988,7 +999,8 @@ document.addEventListener("change", async event => {
 });
 
 hydrateIcons();
-const cards = initCardCollapse("dashboard");
+// 价格明细表的标题行已移除，只剩筛选面板参与折叠。
+initCardCollapse("dashboard");
 initTopMenu("refresh-station-menu");
 initTopMenu("checkin-menu");
 // 设置抽屉：顶栏齿轮就地打开站点与设置，不再跳到独立的设置页

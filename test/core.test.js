@@ -5011,7 +5011,8 @@ test("keeps every section card collapsible behind the global toggles", () => {
     }
   }
   // 折叠卡片数量随面板增加而变，这里只保证每个页面都挂了全局按钮且键不冲突。
-  assert.ok(cardCount >= 5);
+  // 价格明细表的标题行已删除，dashboard 只剩 toolbar-panel 一张可折叠卡，总数下限相应从 5 降到 4。
+  assert.ok(cardCount >= 4);
 });
 
 test("refreshes searchable multi-selected dashboard stations", () => {
@@ -5144,14 +5145,14 @@ test("filters quotes by any entered model across all stations", () => {
 });
 
 
-test("stripes every quote row and marks where a model band starts", () => {
+test("keeps quote rows neutral and marks where a model band starts", () => {
   const rows = ["gpt-a", "gpt-a", "gpt-b", "gpt-c", "gpt-c"].map(canonicalModel => ({ canonicalModel }));
   assert.deepEqual(rowBandClasses(rows), [
-    "row-even model-band-start",
-    "row-odd",
-    "row-even model-band-start",
-    "row-odd model-band-start",
-    "row-even"
+    "model-band-start",
+    "",
+    "model-band-start",
+    "model-band-start",
+    ""
   ]);
   assert.deepEqual(rowBandClasses([]), []);
 });

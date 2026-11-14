@@ -91,11 +91,13 @@ test("dashboard drops the paid recommendation column and keeps one delta sort op
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const header = html.match(/<thead>[\s\S]*?<\/thead>/)?.[0] || "";
   assert.equal(header.includes(">推荐</th>"), false);
-  assert.match(header, /data-sort-keys="diffPercent blendedUnitPrice">价差 \/ 混合单价<\/th>/);
+  assert.match(header, /data-sort-keys="diffPercent">价差<\/th>/);
+  assert.match(header, /data-sort-keys="blendedUnitPrice">混合单价<\/th>/);
   const secondary = html.match(/<select id="sort-secondary">[\s\S]*?<\/select>/)?.[0] || "";
   assert.equal((secondary.match(/value="diffPercent"/g) || []).length, 1);
   assert.equal(script.includes('data-label="推荐"'), false);
-  assert.match(script, /data-label="价差 \/ 混合单价"/);
+  assert.match(script, /data-label="价差"/);
+  assert.match(script, /data-label="混合单价"/);
 });
 
 test("dashboard folds official matching into one confidence detail control", () => {
@@ -165,17 +167,21 @@ test("monthly cost rankings use every filtered offer and keep the cheapest ten",
   assert.equal(monthlyCostBarWidth(20, 100), 20);
 });
 
-test("dashboard merges comparison columns and exposes same-model monthly cost rankings", () => {
+test("dashboard aligns price matrices and exposes same-model monthly cost rankings", () => {
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
-  assert.match(html, /data-sort-keys="monthlyCost"><span class="th-label">报价与月成本<\/span><details class="unit-hint">/);
+  assert.match(html, /class="paid-only-column price-group-heading is-section-start">.*单价/);
+  assert.match(html, /data-sort-keys="monthlyCost">月成本<\/th>/);
   assert.match(html, /class="unit-hint-popover".*中转币/);
-  assert.match(html, /<th scope="col" colspan="2" class="paid-only-column" data-sort-keys="diffPercent blendedUnitPrice">价差 \/ 混合单价<\/th>/);
+  assert.match(html, /<th scope="col" rowspan="2" class="paid-only-column is-section-start" data-sort-keys="diffPercent">价差<\/th>/);
   assert.equal(html.includes("data-monthly-cost-scale"), false);
   assert.equal(html.includes("monthly-cost-ruler"), false);
-  assert.match(script, /<td colspan="3" data-label="报价与月成本" class="merged-price-cell/);
-  assert.match(script, /<td colspan="2" data-label="价差 \/ 混合单价" class="merged-comparison-cell paid-only-column"/);
+  assert.match(script, /<td colspan="3" data-label="单价 \/ 每 M tokens" class="price-cell is-section-start paid-only-column"/);
+  assert.match(script, /class="price-grid-row\$\{primary\}"><span class="price-key">/);
+  assert.match(script, /<td data-label="月成本" class="monthly-cost-cell is-section-start paid-only-column"/);
+  assert.match(script, /<td data-label="价差" class="delta-cell is-section-start paid-only-column"/);
+  assert.match(script, /<td data-label="混合单价" class="blended-cell paid-only-column"/);
   assert.equal(script.includes('<td data-label="中转单价">'), false);
   assert.equal(script.includes("is-blended-unit-price"), false);
   assert.equal(script.includes("chart-line"), false);
@@ -191,11 +197,21 @@ test("dashboard merges comparison columns and exposes same-model monthly cost ra
   assert.match(script, /closeMonthlyCostDetails\(event\.target\.closest\("\.monthly-cost-details"\)\)/);
   assert.match(script, /document\.addEventListener\("mouseover", event =>/);
   assert.match(script, /details\.dataset\.hoverOpen = "true"/);
-  assert.match(css, /\.merged-comparison-columns/);
+  assert.match(css, /\.summary-card\.is-primary/);
+  assert.match(css, /\.dashboard-workspace:has\(\.dashboard-sidebar > \[data-collapsed="true"\]/);
   assert.match(css, /\.monthly-cost-ranking-list/);
   assert.match(css, /\.monthly-cost-details\[open\] > \.monthly-cost-popover/);
-  assert.match(css, /\.comparison-table td\.merged-comparison-cell/);
+  assert.match(css, /\.cell-chart\.is-monthly-cost/);
   assert.equal(css.includes("monthly-cost-scale-switch"), false);
   assert.equal(css.includes("chart-line"), false);
-  assert.equal(css.includes(".merged-price-unit + .merged-price-unit"), false);
+  assert.equal(css.includes(".merged-price-unit"), false);
+});
+
+test("keeps reference status selectors aligned with the topbar markup", () => {
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  assert.match(html, /id="reference-pill"[^>]*>[\s\S]*?id="reference-status"[\s\S]*?id="reference-note"/);
+  assert.match(script, /\$\("#reference-status"\)\.textContent/);
+  assert.match(script, /\$\("#reference-note"\)\.textContent/);
+  assert.doesNotMatch(script, /pill\.querySelector\("\[data-reference-(?:status|note)\]"\)/);
 });

@@ -27,7 +27,7 @@ export function paginateRows(rows, page, pageSize) {
 export function rowBandClasses(rows) {
   return rows.map((row, index) => {
     const bandStart = index === 0 || rows[index - 1].canonicalModel !== row.canonicalModel;
-    return `row-${index % 2 === 0 ? "even" : "odd"}${bandStart ? " model-band-start" : ""}`;
+    return bandStart ? "model-band-start" : "";
   });
 }
 export function deltaTone(diffPercent) {
