@@ -280,8 +280,8 @@
 .price-chart-panel { padding: 0 20px 18px; }
 .price-chart-panel .panel-heading { padding: 16px 0 12px; border-bottom: 1px solid var(--line); }
 .chart-meta { color: var(--text-3); font-size: 12px; }
-.price-chart-body { display: grid; gap: 20px; padding-top: 16px; }
-.chart-group { display: grid; gap: 6px; }
+.price-chart-body { display: grid; gap: 14px; padding-top: 12px; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+.chart-group { display: grid; gap: 4px; }
 .chart-group-head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .chart-model { font-weight: 750; }
 .chart-official { margin-left: auto; color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
