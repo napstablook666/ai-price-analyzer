@@ -97,3 +97,20 @@ test("keeps every static script selector and local page asset connected", () => 
     }
   }
 });
+
+test("keeps dialogs as siblings instead of nesting them", () => {
+  for (const page of ["dashboard", "options", "popup"]) {
+    const html = readFileSync(new URL(`../${page}.html`, import.meta.url), "utf8");
+    const stack = [];
+    for (const match of html.matchAll(/<\/?dialog\b[^>]*>/g)) {
+      if (match[0].startsWith("</")) {
+        const top = stack.pop();
+        assert.ok(top, `${page} closes an unopened dialog`);
+      } else if (!match[0].endsWith("/>")) {
+        assert.equal(stack.length, 0, `${page} nests <dialog ${match[0].slice(7, 60)} inside another dialog`);
+        stack.push(match[0]);
+      }
+    }
+    assert.equal(stack.length, 0, `${page} leaves a dialog unclosed`);
+  }
+});

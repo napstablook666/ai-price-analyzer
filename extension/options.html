@@ -88,6 +88,7 @@
       <section id="station-url-step"><div><h2 id="add-station-title">添加中转站</h2></div><label for="new-station-url">站点网址</label><input id="new-station-url" type="url" autocomplete="url" placeholder="https://example.com/pricing" required autofocus><div class="station-dialog-actions"><button class="button button-quiet" id="cancel-add-station" type="button">取消</button><button class="button button-primary" id="analyze-station" type="submit"><span data-icon="scan-line" class="icon"></span><span>分析站点</span></button></div></section>
       <section id="station-preview" hidden aria-labelledby="station-preview-title"><div><h2 id="station-preview-title">确认站点配置</h2></div><p class="station-preview-status" id="station-preview-status" role="status" aria-live="polite"></p><dl class="station-preview-list"><div><dt>站点名称</dt><dd data-preview-field="name"></dd></div><div><dt>站点地址</dt><dd data-preview-field="baseUrl"></dd></div><div><dt>采集模式</dt><dd data-preview-field="mode"></dd></div><div><dt>接口路径</dt><dd data-preview-field="endpoint"></dd></div><div><dt>请求方式 / 响应格式</dt><dd data-preview-field="format"></dd></div><div><dt>认证方式</dt><dd data-preview-field="authType"></dd></div><div><dt>请求体</dt><dd data-preview-field="body"></dd></div></dl><fieldset class="station-rate-preview"><legend>确认充值比例</legend><div class="station-ratio-fields"><div class="station-money-field"><label for="preview-recharge-amount">充值金额</label><div class="station-money-input"><input id="preview-recharge-amount" type="number" min="0.000001" step="any" value="1" required><select id="preview-recharge-currency" data-previous-currency="CNY" aria-label="充值金额币种"><option value="CNY" selected>人民币 CNY</option><option value="USD">美元 USD</option></select></div></div><span aria-hidden="true">兑换</span><label for="preview-recharge-credits"><span>到账中转币</span><input id="preview-recharge-credits" type="number" min="0.000001" step="any" value="1" required></label></div><output id="preview-recharge-rate">每 1 中转币成本 ¥1.0000</output></fieldset><div class="station-dialog-actions"><button class="button button-quiet" id="cancel-preview-station" type="button">取消</button><button class="button button-quiet" id="back-to-station-url" type="button">返回修改</button><button class="button button-primary" id="confirm-add-station" type="button"><span data-icon="check" class="icon"></span><span>确认并添加</span></button></div></section>
     </form>
+  </dialog>
   <dialog id="station-config-dialog" class="station-dialog" aria-labelledby="station-config-title">
     <form id="station-config-form" novalidate>
       <div><h2 id="station-config-title">站点配置</h2><p class="station-config-host" id="config-station-host"></p></div>
@@ -97,7 +98,7 @@
         <label><span>用户名</span><input id="config-station-username" type="text" autocomplete="off"></label>
         <label><span>密码</span><input id="config-station-password" type="password" autocomplete="off"></label>
         <div class="station-money-field"><label for="config-recharge-amount">充值金额</label><div class="station-money-input"><input id="config-recharge-amount" type="number" min="0" step="any" value="1" required><select id="config-recharge-currency" data-previous-currency="CNY" aria-label="充值金额币种"><option value="CNY" selected>人民币 CNY</option><option value="USD">美元 USD</option></select></div></div>
-        <label><span>到账中转币</span><input id="config-recharge-credits" type="number" min="0.000001" step="0.01" value="1" required></label>
+        <label><span>到账中转币</span><input id="config-recharge-credits" type="number" min="0.000001" step="any" value="1" required></label>
         <label><span>充值比例（¥ / 币）</span><input id="config-recharge-rate" type="number" readonly aria-readonly="true"><small id="config-recharge-rate-display">每 1 中转币成本 ¥1.0000</small></label>
         <label><span>基础价 / 1M USD</span><input id="config-base-price" type="number" min="0" step="0.0001" value="2"></label>
         <label class="check-label wide"><input id="config-price-currency-verified" type="checkbox" checked><span>我已核实模型价格币种</span></label>
@@ -107,7 +108,6 @@
       <p class="station-price-warning" id="config-station-warning" role="alert" hidden></p>
       <div class="station-dialog-actions"><button class="button button-quiet" id="config-autofill" type="button"><span data-icon="wand-sparkles" class="icon"></span><span>智能填充</span></button><button class="button button-quiet" id="config-test" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试连接</span></button><button class="button button-quiet" id="config-cancel" type="button">取消</button><button class="button button-primary" id="config-save" type="submit"><span data-icon="check" class="icon"></span><span>保存配置</span></button></div>
     </form>
-  </dialog>
   </dialog>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
   <script type="module" src="src/options.js"></script>
