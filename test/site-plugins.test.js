@@ -92,6 +92,9 @@ test("keeps every static script selector and local page asset connected", () => 
     for (const match of source.matchAll(/\$\("#([A-Za-z0-9_-]+)"\)/g)) {
       assert.ok(available.has(match[1]), `${page}.js queries missing #${match[1]}`);
     }
+    for (const match of source.matchAll(/querySelector(?:All)?\("([a-z][a-z0-9]*[ >][^"]*)"\)/g)) {
+      assert.fail(`${page}.js 用了依赖标签层级的后代选择器 "${match[1]}"，页面标签一改就取到 null，改用 id 或 data-* 锚点`);
+    }
     for (const match of html.matchAll(/(?:src|href)="((?:src|styles|icons)\/[^"]+)"/g)) {
       assert.ok(existsSync(new URL(`../${match[1]}`, import.meta.url)), `${page} references missing ${match[1]}`);
     }

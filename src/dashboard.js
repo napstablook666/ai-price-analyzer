@@ -419,7 +419,7 @@ function render(data) {
   const publicEmpty = state.comparisonMode === "public";
   emptyState.querySelector("h3").textContent = publicEmpty ? (hasStations ? "暂无公益站报价" : "还没有公益站") : (hasStations ? "站点已保存，尚未采集报价" : "还没有可比较的报价");
   emptyState.querySelector("p").textContent = publicEmpty ? (hasStations ? "启用 Linux.do Marketplace 或 WindHub 后刷新。" : "启用公益站后刷新。") : (hasStations ? "点右上角刷新开始采集。" : "添加中转站并刷新即可。");
-  emptyState.querySelector("a span:last-child").textContent = hasStations ? "管理站点" : "添加第一个站点";
+  $("#empty-state-action-label").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
   renderCheckin(data);
   $("#last-updated").textContent = data.snapshots?.[0]?.collectedAt ? `更新于 ${new Date(data.snapshots[0].collectedAt).toLocaleTimeString("zh-CN", { hour12: false })}` : "尚未刷新";
@@ -446,6 +446,7 @@ document.querySelectorAll("[data-comparison-mode]").forEach(button => {
       render(await callService("SAVE_COMPARISON_MODE", { mode }));
     } catch (error) {
       state.comparisonMode = previousMode;
+      renderComparisonMode();
       renderRefreshPreflight();
       toast(error.message);
     } finally {
