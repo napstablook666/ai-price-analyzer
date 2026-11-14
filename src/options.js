@@ -1,13 +1,16 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
-import { callService, downloadJson, readJsonFile, escapeHtml, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
+import { callService, escapeHtml, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
+import { initTopMenu } from "./shared/menu.js";
 import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pickWorkspace, readWorkspace, writeWorkspace } from "./shared/workspace.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, pluginTab: "installed", selectedPluginIds: new Set(), selectedStationIds: new Set(), stationSourceTabIds: new Map(), configStationId: null, pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
+const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, pluginTab: "installed", selectedPluginIds: new Set(), selectedStationIds: new Set(), stationSourceTabIds: new Map(), configStationId: null, pluginCategory: "all", pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), expandedRegistryId: "", expandedInstalledId: "" };
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
+const EMBEDDED = new URLSearchParams(location.search).get("embed") === "1";
+if (EMBEDDED) document.body.classList.add("is-embedded");
 
 
 function setWorkspaceStatus(message, error = false) {
@@ -23,7 +26,7 @@ function updateWorkspaceControls(busy = false) {
   $("#workspace-connect").disabled = busy || !supported;
   $("#workspace-load").disabled = busy || !connected;
   $("#workspace-save").disabled = busy || !connected;
-  if (!supported) setWorkspaceStatus("当前浏览器不支持文件夹工作区，可使用 JSON 备份");
+  if (!supported) setWorkspaceStatus("当前浏览器不支持文件夹工作区，数据仅保存在本机");
 }
 
 async function refreshWorkspaceStatus() {
@@ -107,8 +110,9 @@ function selected(value, expected) { return value === expected ? " selected" : "
 function checked(value) { return value ? " checked" : ""; }
 
 
-const SETTINGS_VIEWS = ["stations", "costs", "workspace"];
-const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益" };
+const SETTINGS_VIEWS = ["stations", "costs", "assistant", "workspace"];
+const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益", benchmark: "基准" };
+const PLUGIN_MODE_LABELS = { direct: "直接接口", page: "页面模式" };
 
 function activateSettingsView(requested, { focus = false, updateHash = true } = {}) {
   const view = SETTINGS_VIEWS.includes(requested) ? requested : "stations";
@@ -121,7 +125,112 @@ function activateSettingsView(requested, { focus = false, updateHash = true } = 
     panel.hidden = !active;
     if (active && focus) tab.focus();
   }
+  syncNavGroup(view);
   if (updateHash && location.hash !== `#${view}`) history.replaceState(null, "", `${location.pathname}${location.search}#${view}`);
+navPinnedKey = "";
+  const firstAnchor = $(`#settings-view-${view}`)?.querySelector("[data-nav-anchor]");
+  setNavActiveKey(firstAnchor ? firstAnchor.dataset.navAnchor : "");
+  scheduleNavActive();
+}
+
+const NAV_ACTIVE_OFFSET = 16;
+let navScrollFrame = 0;
+const NAV_PIN_MS = 1400;
+let navPinnedKey = "";
+let navPinnedAt = 0;
+
+function syncNavGroup(view) {
+  for (const group of document.querySelectorAll(".settings-nav-group")) {
+    const expanded = group.dataset.navGroup === view;
+    group.querySelector(":scope > button")?.setAttribute("aria-expanded", String(expanded));
+    const subnav = group.querySelector(":scope > .settings-subnav");
+    if (subnav) subnav.hidden = !expanded;
+  }
+}
+
+function navTarget(key) {
+  if (!key) return null;
+  return document.querySelector(`[data-nav-anchor="${key}"]`) || document.getElementById(key);
+}
+
+function navJumpItem(key) {
+  return [...document.querySelectorAll("[data-nav-jump]")].find(button => button.dataset.navJump === key) || null;
+}
+
+function jumpToNavTarget(key) {
+  const target = navTarget(key);
+  const item = navJumpItem(key);
+  if (!target || !item) return;
+  const view = item.closest(".settings-nav-group")?.dataset.navGroup;
+  if (view) activateSettingsView(view);
+  if (item.dataset.navPluginTab) syncPluginTab(item.dataset.navPluginTab);
+navPinnedKey = key;
+  navPinnedAt = performance.now();
+  setNavActiveKey(key);
+  const collapsed = target.closest('[data-collapsible][data-collapsed="true"]');
+  collapsed?.querySelector("[data-collapse-toggle]")?.click();
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    scheduleNavActive();
+  });
+}
+
+function scheduleNavActive() {
+  if (navScrollFrame) return;
+  navScrollFrame = requestAnimationFrame(() => {
+    navScrollFrame = 0;
+    updateNavActive();
+  });
+}
+
+function setNavActiveKey(key) {
+  for (const item of document.querySelectorAll("[data-nav-jump]")) {
+    if (key && item.dataset.navJump === key) item.setAttribute("aria-current", "true");
+    else item.removeAttribute("aria-current");
+  }
+}
+
+function updateNavActive() {
+  const container = $(".settings-content");
+  const panel = $(".settings-view:not([hidden])");
+  if (!container || !panel) return;
+  if (navPinnedKey && performance.now() - navPinnedAt < NAV_PIN_MS) {
+    setNavActiveKey(navPinnedKey);
+    return;
+  }
+navPinnedKey = "";
+  // 内容不足一屏时没有滚动信息可用，保持点击设定的高亮。
+  if (container.scrollHeight - container.clientHeight <= 2) return;
+  const threshold = container.getBoundingClientRect().top + NAV_ACTIVE_OFFSET;
+  const anchors = [...panel.querySelectorAll("[data-nav-anchor]")].filter(node => node.getClientRects().length);
+  if (!anchors.length) {
+    setNavActiveKey("");
+    return;
+  }
+let activeKey = anchors[0].dataset.navAnchor;
+  let bestDelta = Infinity;
+  for (const node of anchors) {
+    const delta = Math.abs(node.getBoundingClientRect().top - threshold);
+    if (delta >= bestDelta) continue;
+    bestDelta = delta;
+    activeKey = node.dataset.navAnchor;
+  }
+  setNavActiveKey(activeKey);
+}
+
+function setNavCount(key, value) {
+  const text = String(value);
+  for (const node of document.querySelectorAll(`[data-nav-count="${key}"]`)) node.textContent = text;
+}
+
+function renderNavStations() {
+  const list = $("#nav-station-children");
+  if (!list) return;
+  list.innerHTML = state.stations.map(station => {
+    const label = station.name || stationHostName(station.baseUrl) || "未命名站点";
+    return `<li><button type="button" class="settings-subnav-item" data-nav-jump="station-card-${escapeHtml(station.id)}" title="${escapeHtml(label)}"><span data-icon="globe" class="icon"></span><span class="settings-subnav-label">${escapeHtml(label)}</span></button></li>`;
+  }).join("");
+  hydrateIcons(list);
 }
 
 function filteredSitePlugins() {
@@ -167,7 +276,7 @@ function renderSitePlugins() {
         <span class="site-plugin-badges">${badges}</span>
       </span>
     </label>`;
-  }).join("") : `<p class="site-plugin-empty">没有匹配的站点插件。</p>`;
+  }).join("") : `<p class="site-plugin-empty">${(state.pluginWorkspace?.repositoryPlugins?.length || state.pluginWorkspace?.localPlugins?.length) ? "没有匹配的站点插件。" : "还没装插件，先到「插件仓库」装一个。"}</p>`;
   updatePluginSelection();
 }
 
@@ -197,13 +306,15 @@ async function addSelectedPlugins() {
     updatePluginSelection();
   }
 }
-const PLUGIN_SOURCE_LABELS = { bundled: "内置", registry: "仓库安装", local: "本地插件" };
-const PLUGIN_SOURCE_ORDER = ["bundled", "registry", "local"];
-const PLUGIN_GROUP_TITLES = { bundled: "内置插件", registry: "仓库安装", local: "本地插件" };
+const PLUGIN_SOURCE_LABELS = { bundled: "随扩展", registry: "仓库安装", local: "本地插件" };
+const PLUGIN_SOURCE_ORDER = ["registry", "local"];
+const PLUGIN_GROUP_TITLES = { registry: "仓库安装", local: "本地插件" };
 
 function pluginSourceKey(plugin) {
-  const source = String(plugin?.source || "bundled");
-  return PLUGIN_SOURCE_LABELS[source] ? source : "bundled";
+  const source = String(plugin?.source || "registry");
+  // 代码随扩展打包的插件，用户仍是按仓库安装来管理的，界面上归到「仓库安装」。
+  if (source === "bundled") return "registry";
+  return PLUGIN_SOURCE_LABELS[source] ? source : "registry";
 }
 
 function pluginSourceBadge(plugin) {
@@ -216,24 +327,55 @@ function pluginInitial(plugin) {
   return escapeHtml(text.slice(0, 1).toUpperCase() || "?");
 }
 
+function pluginDetailGrid(rows) {
+  const items = rows.filter(([, value]) => value && String(value).trim()).map(([label, value]) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`).join("");
+  return items ? `<dl class="plugin-detail-grid">${items}</dl>` : "";
+}
+
+function pluginDetailBlocks({ description, rows, note = "" }) {
+  return `<div class="plugin-entry-detail">
+    <p class="plugin-detail-description">${escapeHtml(description || "没有填写介绍。")}</p>
+    ${pluginDetailGrid(rows)}
+    ${note ? `<p class="plugin-detail-note">${note}</p>` : ""}
+  </div>`;
+}
+
+// 一行放完：图标、名称、徽标、域名、站点数、操作，介绍收进展开区。
 function pluginRow(plugin, actions = "") {
   const source = pluginSourceKey(plugin);
   const count = Number(plugin.stationCount) || 0;
+  const expanded = state.expandedInstalledId === String(plugin.id);
   const badges = [
     pluginSourceBadge(plugin),
-    plugin.version ? `<span class="plugin-version">v${escapeHtml(plugin.version)}</span>` : "",
-    `<span class="station-badge">${plugin.mode === "page" ? "页面模式" : "直接接口"}</span>`
+    plugin.version ? `<span class="plugin-version">v${escapeHtml(plugin.version)}</span>` : ""
   ].filter(Boolean).join("");
-  return `<article class="plugin-row" data-plugin-row="${escapeHtml(plugin.id)}">
-    <span class="plugin-row-icon is-${source}" aria-hidden="true">${pluginInitial(plugin)}</span>
-    <div class="plugin-row-main">
-      <div class="plugin-row-title"><strong>${escapeHtml(plugin.name || plugin.id)}</strong><span class="plugin-row-badges">${badges}</span></div>
-      <span class="plugin-row-host">${escapeHtml(plugin.host || "")}</span>
-      <span class="plugin-row-description">${escapeHtml(plugin.description || "")}</span>
+  const hosts = (plugin.hosts?.length ? plugin.hosts : [plugin.host]).filter(Boolean);
+  return `<section class="plugin-entry${expanded ? " is-expanded" : ""}">
+    <div class="plugin-row" data-plugin-row="${escapeHtml(plugin.id)}">
+      <span class="plugin-row-icon is-${source}" aria-hidden="true">${pluginInitial(plugin)}</span>
+      <button class="plugin-row-toggle" type="button" data-plugin-toggle="${escapeHtml(plugin.id)}" aria-expanded="${expanded}" title="${escapeHtml(plugin.description || plugin.name || plugin.id)}">
+        <span class="plugin-row-name">${escapeHtml(plugin.name || plugin.id)}</span>
+        <span class="plugin-row-badges">${badges}</span>
+        <span class="plugin-row-host">${escapeHtml(hosts.join(" / "))}</span>
+      </button>
+      <span class="plugin-row-count">${count ? `${count} 个站点` : "未添加站点"}</span>
+      <div class="plugin-row-actions">${actions}</div>
+      ${icon("chevron-right", { className: "icon plugin-row-caret" })}
     </div>
-    <span class="plugin-row-count">${count ? `${count} 个站点` : "未添加站点"}</span>
-    <div class="plugin-row-actions">${actions}</div>
-  </article>`;
+    ${expanded ? pluginDetailBlocks({
+      description: plugin.description,
+      rows: [
+        ["插件 id", plugin.id],
+        ["版本", plugin.version ? `v${plugin.version}` : ""],
+        ["域名", hosts.join(" / ")],
+        ["采集方式", PLUGIN_MODE_LABELS[plugin.mode] || ""],
+        ["认证", plugin.authLabel || ""],
+        ["分类", PLUGIN_CATEGORY_LABELS[plugin.category] || plugin.category || ""],
+        ["页面路径", (plugin.paths || []).join(" / ")],
+        ["站点数", count ? `${count} 个` : "未添加站点"]
+      ]
+    }) : ""}
+  </section>`;
 }
 
 function pluginInstalledActions(plugin) {
@@ -266,12 +408,12 @@ function renderPluginInstalled() {
   const list = $("#plugin-installed-list");
   if (!list) return;
   const plugins = installedPluginEntries();
+  setNavCount("plugin-installed", plugins.length);
   if (!plugins.length) {
     list.innerHTML = `<p class="plugin-empty">还没有可用插件。</p>`;
     return;
   }
   const groups = new Map(PLUGIN_SOURCE_ORDER.map(key => [key, []]));
-  for (const plugin of plugins) groups.get(pluginSourceKey(plugin)).push(plugin);
   for (const plugin of plugins) groups.get(pluginSourceKey(plugin)).push(plugin);
   list.innerHTML = PLUGIN_SOURCE_ORDER.filter(key => groups.get(key).length).map(key => `<section class="plugin-group">
     <div class="plugin-group-heading"><h4>${PLUGIN_GROUP_TITLES[key]}</h4><span>${groups.get(key).length}</span></div>
@@ -289,20 +431,146 @@ function formatPluginTime(timestamp) {
 function registryEntryBadges(entry) {
   return [
     entry.version ? `<span class="plugin-version">v${escapeHtml(entry.version)}</span>` : "",
-    entry.builtin ? `<span class="station-badge">内置已提供</span>` : "",
-    entry.needsCode ? `<span class="station-badge is-warning">需随扩展发布</span>` : "",
+    entry.kind === "checkin" ? `<span class="station-badge">签到插件</span>` : "",
+    entry.needsCode && !entry.builtin ? `<span class="station-badge is-warning">需更新扩展</span>` : "",
     entry.installed ? `<span class="plugin-source-badge is-registry">已安装</span>` : "",
     entry.updateAvailable ? `<span class="station-badge is-warning">有更新</span>` : ""
   ].filter(Boolean).join("");
 }
 
+function registryEntryInstallable(entry) {
+  // 代码随扩展打进去的条目（builtin）能直接装；仓库里全新的条目要等扩展带上采集代码。
+  return !(entry.needsCode && !entry.builtin);
+}
+
+function registryEntrySelectable(entry) {
+  return registryEntryInstallable(entry) && (!entry.installed || entry.updateAvailable);
+}
+
 function registryEntryActions(entry) {
-  if (entry.builtin || entry.needsCode) return "";
+  if (!registryEntryInstallable(entry)) return "";
   if (!entry.installed) return `<button class="button button-primary button-small" data-plugin-install="${escapeHtml(entry.id)}" type="button">安装</button>`;
   const parts = [];
   if (entry.updateAvailable) parts.push(`<button class="button button-quiet button-small" data-plugin-install="${escapeHtml(entry.id)}" type="button">更新</button>`);
   parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(entry.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
   return parts.join("");
+}
+
+function registryRow(entry) {
+  const selectable = registryEntrySelectable(entry);
+  const expanded = state.expandedRegistryId === entry.id;
+  return `<section class="plugin-entry${expanded ? " is-expanded" : ""}">
+    <div class="plugin-row" data-registry-row="${escapeHtml(entry.id)}">
+      <input class="plugin-check" type="checkbox" data-registry-check="${escapeHtml(entry.id)}"${state.registrySelected.has(entry.id) ? " checked" : ""}${selectable ? "" : " disabled"} aria-label="选择 ${escapeHtml(entry.name || entry.id)}">
+      <span class="plugin-row-icon is-registry" aria-hidden="true">${pluginInitial(entry)}</span>
+      <button class="plugin-row-toggle" type="button" data-registry-toggle="${escapeHtml(entry.id)}" aria-expanded="${expanded}" title="${escapeHtml(entry.description || entry.name || entry.id)}">
+        <span class="plugin-row-name">${escapeHtml(entry.name || entry.id)}</span>
+        <span class="plugin-row-badges">${registryEntryBadges(entry)}</span>
+        <span class="plugin-row-host">${escapeHtml((entry.hosts || []).join(" / "))}</span>
+      </button>
+      <span class="plugin-row-actions">${registryEntryActions(entry)}</span>
+      ${icon("chevron-right", { className: "icon plugin-row-caret" })}
+    </div>
+    ${expanded ? registryDetail(entry) : ""}
+  </section>`;
+}
+
+function registryDetail(entry) {
+  const details = entry.details || {};
+  const note = entry.needsCode
+    ? (entry.builtin
+      ? "采集代码随扩展打包，当前扩展版本已内置，装上就能用。"
+      : "这个插件的采集代码还没随扩展发布，暂时装不了；等扩展内置这个插件后再装。")
+    : entry.kind === "checkin"
+      ? "签到插件只带接口规格，装上后在顶栏菜单里出入签到卡片，不参与价格采集。"
+      : "";
+  if (entry.kind === "checkin") {
+    const checkin = details.checkin || {};
+    return pluginDetailBlocks({
+      description: entry.description,
+      rows: [
+        ["插件 id", entry.id],
+        ["版本", entry.installed ? `${entry.version}（已装 v${entry.installedVersion || entry.version}）` : entry.version],
+        ["域名", (entry.hosts || []).join(" / ")],
+        ["状态端点", checkin.statusPath || ""],
+        ["签到端点", `${checkin.claimMethod || "POST"} ${checkin.claimPath || ""}`.trim()],
+        ["登录态", [checkin.tokenStorageKey ? `localStorage:${checkin.tokenStorageKey}` : "", checkin.tokenCookieName ? `Cookie:${checkin.tokenCookieName}` : ""].filter(Boolean).join(" · ")],
+        ["签到冷却", checkin.cooldownHours ? `${checkin.cooldownHours} 小时` : ""],
+        ["安装时间", entry.installed && details.installedAt ? formatPluginTime(details.installedAt) : ""]
+      ],
+      note
+    });
+  }
+  return pluginDetailBlocks({
+    description: entry.description,
+    rows: [
+      ["插件 id", entry.id],
+      ["版本", entry.installed ? `${entry.version}（已装 v${entry.installedVersion || entry.version}）` : entry.version],
+      ["域名", (entry.hosts || []).join(" / ")],
+      ["采集方式", PLUGIN_MODE_LABELS[details.mode] || ""],
+      ["认证", details.authLabel || ""],
+      ["分类", PLUGIN_CATEGORY_LABELS[details.category] || details.category || ""],
+      ["采集端点", details.endpoint || ""],
+      ["页面路径", (details.paths || []).join(" / ")],
+      ["响应格式", details.responseFormat || ""],
+      ["安装时间", entry.installed && details.installedAt ? formatPluginTime(details.installedAt) : ""]
+    ],
+    note
+  });
+}
+
+function registryQuery() {
+  return ($("#plugin-registry-search")?.value || "").trim().toLowerCase();
+}
+
+function registryMatchesQuery(entry, query) {
+  if (!query) return true;
+  return [entry.name, entry.id, entry.description, ...(entry.hosts || [])].some(value => String(value || "").toLowerCase().includes(query));
+}
+
+function registryMatchesFilter(entry, filter = state.registryFilter) {
+  if (filter === "available") return !entry.installed;
+  if (filter === "installed") return Boolean(entry.installed);
+  if (filter === "update") return Boolean(entry.updateAvailable);
+  return true;
+}
+
+function filteredRegistryEntries(entries) {
+  const query = registryQuery();
+  return entries.filter(entry => registryMatchesQuery(entry, query) && registryMatchesFilter(entry));
+}
+
+function updateRegistrySelection() {
+  const entries = state.pluginWorkspace?.registry?.entries || [];
+  for (const id of [...state.registrySelected]) {
+    const entry = entries.find(item => item.id === id);
+    if (!entry || !registryEntrySelectable(entry)) state.registrySelected.delete(id);
+  }
+  const count = state.registrySelected.size;
+  const counter = $("#registry-selected-count");
+  if (counter) counter.textContent = `已选 ${count} 项`;
+  const button = $("#install-selected-plugins");
+  if (button) {
+    button.disabled = count === 0;
+    const label = button.querySelector("span:last-child");
+    if (label) label.textContent = count ? `安装所选 ${count} 个` : "安装所选";
+  }
+  const visible = filteredRegistryEntries(entries);
+  const selectAll = $("#registry-select-all");
+  if (selectAll) {
+    const selectable = visible.filter(entry => registryEntrySelectable(entry));
+    const chosen = selectable.filter(entry => state.registrySelected.has(entry.id)).length;
+    selectAll.disabled = selectable.length === 0;
+    selectAll.checked = selectable.length > 0 && chosen === selectable.length;
+    selectAll.indeterminate = chosen > 0 && chosen < selectable.length;
+  }
+  const query = registryQuery();
+  for (const item of document.querySelectorAll("[data-registry-filter]")) {
+    const filter = item.dataset.registryFilter;
+    item.setAttribute("aria-pressed", String(filter === state.registryFilter));
+    const total = entries.filter(entry => registryMatchesQuery(entry, query) && registryMatchesFilter(entry, filter)).length;
+    item.dataset.count = String(total);
+  }
 }
 
 function renderPluginRegistry() {
@@ -323,17 +591,12 @@ function renderPluginRegistry() {
   const list = $("#plugin-registry-list");
   if (!list) return;
   const entries = registry?.entries || [];
-  list.innerHTML = entries.length ? entries.map(entry => `<article class="plugin-row" data-registry-row="${escapeHtml(entry.id)}">
-    <span class="plugin-row-icon is-registry" aria-hidden="true">${pluginInitial(entry)}</span>
-    <div class="plugin-row-main">
-      <div class="plugin-row-title"><strong>${escapeHtml(entry.name || entry.id)}</strong><span class="plugin-row-badges">${registryEntryBadges(entry)}</span></div>
-      <span class="plugin-row-host">${escapeHtml(entry.id)}${entry.hosts?.length ? ` · ${escapeHtml(entry.hosts.join(" / "))}` : ""}</span>
-      <span class="plugin-row-description">${escapeHtml(entry.description || "")}</span>
-    </div>
-    <div class="plugin-row-actions">${registryEntryActions(entry)}</div>
-  </article>`).join("") : `<p class="plugin-empty">仓库里还没有条目，填好仓库地址后点「刷新仓库」。</p>`;
+  const visible = filteredRegistryEntries(entries);
+  list.innerHTML = visible.length ? visible.map(registryRow).join("") : `<p class="plugin-empty">${entries.length ? "没有匹配的插件，换个关键词或筛选试试。" : "仓库里还没有条目，填好仓库地址后点「刷新仓库」。"}</p>`;
   hydrateIcons(list);
+  updateRegistrySelection();
 }
+
 
 function renderLocalPlugins() {
   const workspace = state.pluginWorkspace;
@@ -412,10 +675,39 @@ async function installPluginVersion(pluginId) {
     toast(error.message);
   }
 }
+// 批量安装：一次提交所有选中项，结果按成功/跳过/失败汇总成一句提示。
+async function installSelectedPlugins() {
+  const entries = state.pluginWorkspace?.registry?.entries || [];
+  const ids = [...state.registrySelected].filter(id => {
+    const entry = entries.find(item => item.id === id);
+    return entry && registryEntrySelectable(entry);
+  });
+  if (!ids.length) return;
+  const button = $("#install-selected-plugins");
+  const original = button.innerHTML;
+  button.disabled = true;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>正在安装 ${ids.length} 个</span>`;
+  try {
+    const result = await callService("INSTALL_PLUGINS", { ids });
+    applyPluginWorkspace(result.workspace);
+    state.registrySelected.clear();
+    const installed = result.installed?.length || 0;
+    const skipped = result.skipped?.length || 0;
+    const failed = result.failed || [];
+    if (failed.length) toast(`已安装 ${installed} 个，失败 ${failed.length} 个：${failed.map(item => item.id).join("、")}`);
+    else toast(`已安装 ${installed} 个插件${skipped ? `，${skipped} 个已经装过` : ""}`);
+  } catch (error) {
+    toast(error.message || String(error));
+  } finally {
+    button.innerHTML = original;
+    hydrateIcons(button);
+    updateRegistrySelection();
+  }
+}
 
 async function uninstallPluginVersion(pluginId) {
   const plugin = (state.pluginWorkspace?.catalog || []).find(item => item.id === pluginId);
-  if (!window.confirm(`移除插件「${plugin?.name || pluginId}」？已添加的站点会保留，重新安装插件后继续可用。`)) return;
+  if (!window.confirm(`移除插件「${plugin?.name || pluginId}」？它下面已添加的站点会一起删掉，需要时重新装插件再加回来。`)) return;
   try {
     const workspace = await callService("UNINSTALL_PLUGIN", { id: pluginId });
     applyPluginWorkspace(workspace);
@@ -546,7 +838,7 @@ function stationCard(station) {
     pluginDescriptor ? `<span class="plugin-source-badge is-${pluginSourceKey(pluginDescriptor)}">${PLUGIN_SOURCE_LABELS[pluginSourceKey(pluginDescriptor)]} · ${escapeHtml(pluginDescriptor.name)}</span>` : "",
     verified ? "" : `<span class="station-badge is-warning">币种未核实</span>`
   ].join("");
-  return `<article class="station-card${station.enabled ? "" : " is-disabled"}" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}">
+  return `<article class="station-card${station.enabled ? "" : " is-disabled"}" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}" data-nav-anchor="station-card-${escapeHtml(station.id)}">
     <input type="checkbox" class="station-select" data-select-station aria-label="选择站点"${state.selectedStationIds.has(station.id) ? " checked" : ""}>
     <div class="station-card-main">
       <div class="station-card-head">
@@ -589,8 +881,10 @@ function renderStations() {
     ? state.stations.map(stationCard).join("")
     : `<div class="station-empty"><span data-icon="database" class="icon empty-icon"></span><strong>还没有站点</strong><span>添加后开始跨站点比较。</span></div>`;
   $("#station-count").textContent = String(state.stations.length);
+  setNavCount("stations", state.stations.length);
   updateStationBatchBar();
   hydrateIcons(list);
+  renderNavStations();
 }
 function updateStationQueryStatus(progress) {
   const card = document.getElementById(`station-card-${progress.stationId}`);
@@ -657,7 +951,7 @@ function renderSettings() {
   const settings = state.settings;
   $("#currency").value = settings.defaultCurrency;
   $("#exchange-rate").value = Number(settings.exchangeRate || DEFAULT_EXCHANGE_RATE).toFixed(4);
-  $("#recommendation-profile").value = settings.recommendationProfile || "price";
+  $("#evidence-threshold").value = Number.isFinite(Number(settings.evidenceThreshold)) ? String(Number(settings.evidenceThreshold)) : "60";
   writeUsageInputs(settings.usage);
   syncUsagePreset();
   $("#show-unmatched").checked = settings.showUnmatched;
@@ -666,6 +960,13 @@ function renderSettings() {
     const input = document.querySelector(`[data-matching-rule="${rule.id}"]`);
     if (input) input.checked = Boolean(rule.enabled);
   }
+  const assistant = settings.modelAssistant || {};
+  $("#llm-enabled").checked = Boolean(assistant.enabled);
+  $("#llm-base-url").value = assistant.baseUrl || "";
+  $("#llm-model").value = assistant.model || "";
+  $("#llm-temperature").value = Number.isFinite(Number(assistant.temperature)) ? String(Number(assistant.temperature)) : "0.1";
+  $("#llm-api-key").value = "";
+  $("#llm-api-key").placeholder = settings.hasModelAssistantKey ? "已保存，留空则不修改" : "sk-...";
 }
 
 function readStations() {
@@ -699,16 +1000,31 @@ function readStations() {
     };
   });
 }
+function readAssistantSettings() {
+  const current = state.settings?.modelAssistant || {};
+  return {
+    ...current,
+    enabled: $("#llm-enabled").checked,
+    baseUrl: $("#llm-base-url").value.trim(),
+    model: $("#llm-model").value.trim(),
+    temperature: Math.min(2, Math.max(0, Number($("#llm-temperature").value) || 0.1))
+  };
+}
 function readSettings() {
-  return normalizeSettings({
+  const settings = normalizeSettings({
     ...state.settings,
     defaultCurrency: $("#currency").value,
-    recommendationProfile: $("#recommendation-profile").value,
+evidenceThreshold: Math.max(0, Math.min(100, Math.round(Number($("#evidence-threshold").value) || 0))),
     exchangeRate: Math.max(0.0001, Number($("#exchange-rate").value) || DEFAULT_EXCHANGE_RATE),
     matchingRules: [...document.querySelectorAll("[data-matching-rule]")].map(input => ({ id: input.dataset.matchingRule, name: input.parentElement.textContent.trim(), enabled: input.checked })),
     usage: readUsageInputs(),
     showUnmatched: $("#show-unmatched").checked,
+    modelAssistant: readAssistantSettings(),
   });
+  // 密钥不参与设置归一，写进本机密钥区，不进导出文件。
+  const assistantKey = $("#llm-api-key").value.trim();
+  if (assistantKey) settings.modelAssistantKey = assistantKey;
+  return settings;
 }
 
 function mergeStationSuggestion(station, suggestion) {
@@ -1115,7 +1431,23 @@ function closeStationDialog() {
 for (const view of SETTINGS_VIEWS) {
   $(`[data-settings-target="${view}"]`).addEventListener("click", () => activateSettingsView(view));
 }
+$(".settings-nav").addEventListener("click", event => {
+  const item = event.target.closest("[data-nav-jump]");
+  if (item) jumpToNavTarget(item.dataset.navJump);
+});
+initTopMenu();
+$("#top-menu")?.addEventListener("click", event => {
+  const item = event.target.closest("[data-menu-jump]");
+  if (item) jumpToNavTarget(item.dataset.menuJump);
+});
+const settingsContent = $(".settings-content");
+settingsContent.addEventListener("scroll", scheduleNavActive, { passive: true });
+for (const type of ["wheel", "touchstart", "pointerdown"]) {
+  settingsContent.addEventListener(type, () => { navPinnedKey = ""; }, { passive: true });
+}
+window.addEventListener("resize", scheduleNavActive);
 $(".settings-nav").addEventListener("keydown", event => {
+  if (!event.target.matches("[data-settings-target]")) return;
   if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
   event.preventDefault();
   const current = SETTINGS_VIEWS.findIndex(view => $(`[data-settings-target="${view}"]`).getAttribute("aria-selected") === "true");
@@ -1172,7 +1504,22 @@ $("#dev-plugin-file").addEventListener("change", async event => {
     event.target.value = "";
   }
 });
+function togglePluginEntry(kind, id) {
+  if (kind === "registry") {
+    state.expandedRegistryId = state.expandedRegistryId === id ? "" : id;
+    renderPluginRegistry();
+    return;
+  }
+  state.expandedInstalledId = state.expandedInstalledId === id ? "" : id;
+  renderPluginInstalled();
+}
+
 $("#plugin-installed-list").addEventListener("click", event => {
+  const toggle = event.target.closest("[data-plugin-toggle]");
+  if (toggle) {
+    togglePluginEntry("installed", toggle.dataset.pluginToggle);
+    return;
+  }
   const addButton = event.target.closest("[data-plugin-add]");
   if (addButton) {
     addPluginSite(addButton.dataset.pluginAdd);
@@ -1182,6 +1529,11 @@ $("#plugin-installed-list").addEventListener("click", event => {
   if (removeButton) uninstallPluginVersion(removeButton.dataset.pluginUninstall);
 });
 $("#plugin-registry-list").addEventListener("click", event => {
+  const toggle = event.target.closest("[data-registry-toggle]");
+  if (toggle) {
+    togglePluginEntry("registry", toggle.dataset.registryToggle);
+    return;
+  }
   const installButton = event.target.closest("[data-plugin-install]");
   if (installButton) {
     installPluginVersion(installButton.dataset.pluginInstall);
@@ -1190,6 +1542,30 @@ $("#plugin-registry-list").addEventListener("click", event => {
   const removeButton = event.target.closest("[data-plugin-uninstall]");
   if (removeButton) uninstallPluginVersion(removeButton.dataset.pluginUninstall);
 });
+$("#plugin-registry-list").addEventListener("change", event => {
+  const check = event.target.closest("[data-registry-check]");
+  if (!check) return;
+  if (check.checked) state.registrySelected.add(check.dataset.registryCheck);
+  else state.registrySelected.delete(check.dataset.registryCheck);
+  updateRegistrySelection();
+});
+$("#plugin-registry-search").addEventListener("input", renderPluginRegistry);
+for (const button of document.querySelectorAll("[data-registry-filter]")) {
+  button.addEventListener("click", () => {
+    state.registryFilter = button.dataset.registryFilter;
+    renderPluginRegistry();
+  });
+}
+$("#registry-select-all").addEventListener("change", event => {
+  const entries = filteredRegistryEntries(state.pluginWorkspace?.registry?.entries || []);
+  for (const entry of entries) {
+    if (!registryEntrySelectable(entry)) continue;
+    if (event.currentTarget.checked) state.registrySelected.add(entry.id);
+    else state.registrySelected.delete(entry.id);
+  }
+  renderPluginRegistry();
+});
+$("#install-selected-plugins").addEventListener("click", installSelectedPlugins);
 $("#local-plugin-list").addEventListener("click", event => {
   const removeButton = event.target.closest("[data-plugin-remove]");
   if (removeButton) removeLocalPluginEntry(removeButton.dataset.pluginRemove);
@@ -1330,6 +1706,7 @@ $("#save-all").addEventListener("click", async event => {
     renderSettings();
     await saveWorkspace({ notify: false });
     toast("站点与设置已保存");
+    if (EMBEDDED) window.parent.postMessage({ type: "MODEL_ATLAS_SETTINGS_SAVED" }, location.origin);
   } catch (error) { toast(error.message); }
   finally {
     button.disabled = false;
@@ -1341,23 +1718,10 @@ $("#save-all").addEventListener("click", async event => {
 $("#workspace-connect").addEventListener("click", connectWorkspace);
 $("#workspace-load").addEventListener("click", loadWorkspaceState);
 $("#workspace-save").addEventListener("click", () => saveWorkspace());
-$("#export-state").addEventListener("click", async () => {
-  try { await downloadJson(`ai-relay-price-${new Date().toISOString().slice(0, 10)}.json`, await callService("EXPORT_STATE")); }
-  catch (error) { toast(error.message); }
-});
 
-$("#import-file").addEventListener("change", async event => {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  try {
-    await callService("IMPORT_STATE", { state: await readJsonFile(file) });
-    await load();
-    toast("数据已导入；密钥需要重新填写");
-  } catch (error) { toast(error.message); }
-  finally { event.target.value = ""; }
-});
-
-activateSettingsView(location.hash.slice(1));
+const [initialView, initialJump] = location.hash.slice(1).split(":");
+activateSettingsView(initialView);
+if (initialJump) requestAnimationFrame(() => jumpToNavTarget(initialJump));
 hydrateIcons();
 const cards = initCollapsibleCards("options");
 const setAllSections = collapsed => cards.setAll(collapsed);
@@ -1367,3 +1731,158 @@ onRefreshProgress(progress => {
   if (progress.phase === "station") updateStationQueryStatus(progress);
 });
 void load().then(refreshWorkspaceStatus);
+
+const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "多次失败，已停手" };
+
+function setAssistantStatus(message, error = false) {
+  const node = $("#llm-status");
+  if (!node) return;
+  node.textContent = message;
+  node.dataset.error = error ? "true" : "false";
+}
+
+function renderAssistantQueue(data) {
+  const list = $("#llm-review-list");
+  if (!list) return;
+  state.assistantRows = data.rows || [];
+  state.assistantState = data;
+  const counts = data.summary || {};
+  $("#llm-cache-summary").textContent = data.configured
+    ? `已接受 ${counts.accepted || 0} · 判为没有 ${counts.none || 0} · 无效 ${counts.invalid || 0} · 失败 ${counts.failed || 0} · 无候选 ${data.noCandidates || 0}`
+    : "先在模型服务里填好地址、密钥与模型，再打开启用开关。";
+  const filter = state.assistantFilter || "all";
+  const rows = state.assistantRows.filter(row => row.status !== "no-candidates" && (filter === "all" || row.status === filter));
+  if (!rows.length) {
+    list.innerHTML = `<p class="assistant-review-empty">${filter === "all" ? "当前没有待识别的模型，采集之后再来看。" : "这个状态下没有条目。"}</p>`;
+    return;
+  }
+  list.innerHTML = rows.map(row => `
+    <div class="assistant-review-row">
+      <span class="assistant-review-model">${escapeHtml(row.modelName)}</span>
+      <span class="assistant-review-target">${row.targetId ? escapeHtml(row.targetId) : "—"}</span>
+      <span class="assistant-review-station">${escapeHtml(row.stationName || row.stationId)} · ${row.count} 条报价</span>
+      <span class="assistant-review-badge" data-status="${escapeHtml(row.status)}">${escapeHtml(ASSIST_STATUS_LABELS[row.status] || row.status)}</span>
+    </div>`).join("");
+  hydrateIcons(list);
+}
+
+async function refreshAssistantState() {
+  try {
+    renderAssistantQueue(await callService("GET_MODEL_ASSIST_STATE"));
+  } catch (error) {
+    console.debug("[AI比价] 读取判定队列失败", error);
+  }
+}
+
+function assistantConfigFromForm() {
+  const config = readAssistantSettings();
+  const apiKey = $("#llm-api-key").value.trim();
+  return apiKey ? { ...config, apiKey } : config;
+}
+
+$("#llm-key-toggle").addEventListener("click", event => {
+  const input = $("#llm-api-key");
+  const show = input.type === "password";
+  input.type = show ? "text" : "password";
+  event.currentTarget.textContent = show ? "隐藏" : "显示";
+});
+
+$("#llm-test").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  setAssistantStatus("连接中…");
+  try {
+    const result = await callService("TEST_MODEL_CONNECTION", { config: assistantConfigFromForm() });
+    setAssistantStatus(`连上了：${result.model || "模型可用"}`);
+  } catch (error) {
+    setAssistantStatus(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#llm-models-refresh").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  setAssistantStatus("拉取模型列表中…");
+  try {
+    const data = await callService("FETCH_MODEL_CATALOG", { config: assistantConfigFromForm() });
+    const ids = (data.models || []).map(model => model.id).filter(Boolean);
+    $("#llm-model-options").innerHTML = ids.map(id => `<option value="${escapeHtml(id)}"></option>`).join("");
+    setAssistantStatus(ids.length ? `拿到 ${ids.length} 个模型，点模型输入框挑选` : "接口没返回模型列表");
+  } catch (error) {
+    setAssistantStatus(error.message, true);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function runAssistant(button, force) {
+  button.disabled = true;
+  const label = button.innerHTML;
+  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>识别中</span>`;
+  try {
+    const result = await callService("RUN_MODEL_ASSIST", { force });
+    if (!result.pending) {
+      toast(result.reused ? `没有新模型要问，复用 ${result.reused} 条旧结论` : "队列是空的");
+    } else {
+      toast(`问了 ${result.ranBatches} 批：接受 ${result.accepted}，判为没有 ${result.none}，无效 ${result.invalidAnswers}，失败 ${result.errors}`);
+    }
+    await refreshAssistantState();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+    button.innerHTML = label;
+    hydrateIcons(button);
+  }
+}
+
+$("#llm-run").addEventListener("click", event => runAssistant(event.currentTarget, false));
+$("#llm-run-force").addEventListener("click", event => runAssistant(event.currentTarget, true));
+
+$("#llm-clear").addEventListener("click", async event => {
+  if (!confirm("清空全部 AI 判定缓存？下次识别会把所有模型重新问一遍。")) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    await callService("CLEAR_MODEL_ASSIST_CACHE");
+    toast("缓存已清空");
+    await refreshAssistantState();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#llm-apply").addEventListener("click", async event => {
+  const accepted = (state.assistantRows || []).filter(row => row.status === "accepted");
+  if (!accepted.length) {
+    toast("没有可转成人工确认的条目");
+    return;
+  }
+  if (!confirm(`把 ${accepted.length} 条 AI 判定写成人工确认？写完之后优先级最高，模型再判也不会改它。`)) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const result = await callService("APPLY_MODEL_ASSIST_OVERRIDES", { keys: accepted.map(row => row.key) });
+    toast(`写入 ${result.added || 0} 条，更新 ${result.updated || 0} 条`);
+    state.settings = await callService("GET_SETTINGS");
+    await refreshAssistantState();
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+void refreshAssistantState();
+
+for (const button of document.querySelectorAll(".assistant-filter")) {
+  button.addEventListener("click", () => {
+    state.assistantFilter = button.dataset.filter;
+    for (const item of document.querySelectorAll(".assistant-filter")) item.setAttribute("aria-pressed", String(item === button));
+    if (state.assistantState) renderAssistantQueue(state.assistantState);
+  });
+}

@@ -12,6 +12,39 @@ export function currencyToRmb(currency, rechargeRate = 1) {
   return Number.isFinite(rate) ? rate : 1;
 }
 
+export const MIX_KEYS = ["cacheRead", "input", "cacheWrite", "cacheWrite1h", "output", "image"];
+
+// 混合单价统一口径：requests / images 不计入 token 总量，按次、按张成本只在月成本里体现。
+export function tokenTotalOf(usage = {}) {
+  return (Number(usage.input) || 0) + (Number(usage.cacheRead) || 0) + (Number(usage.cacheWrite) || 0) +
+    (Number(usage.cacheWrite1h) || 0) + (Number(usage.output) || 0) +
+    (Number(usage.imageInputTokens) || 0) + (Number(usage.imageOutputTokens ?? usage.imageTokens) || 0);
+}
+
+export function blendedUnitPrice(cost, usage = {}) {
+  const total = tokenTotalOf(usage);
+  if (!Number.isFinite(cost) || total <= 0) return null;
+  return cost / total * 1_000_000;
+}
+
+export function blendedMixOf(usage = {}) {
+  const total = tokenTotalOf(usage);
+  if (total <= 0) return null;
+  const mix = {};
+  for (const key of MIX_KEYS) {
+    const raw = key === "image"
+      ? (Number(usage.imageInputTokens) || 0) + (Number(usage.imageOutputTokens ?? usage.imageTokens) || 0)
+      : (Number(usage[key]) || 0);
+    mix[key] = raw / total;
+  }
+  return mix;
+}
+
+export function mixLabel(mix) {
+  if (!mix) return "";
+  const parts = ["cacheRead", "input", "output"].map(key => Math.round((mix[key] || 0) * 100));
+  return parts.every(value => value === 0) ? "" : parts.join(":");
+}
 function buildProxyPrices(item = {}, groupRatio = 1, factor = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M) {
   const explicit = value => value === null || value === undefined || value === "" ? null : (Number.isFinite(Number(value)) ? Number(value) * factor : null);
   const billing = item.billing || {};
@@ -34,7 +67,8 @@ function buildProxyPrices(item = {}, groupRatio = 1, factor = 1, basePrice = SYS
   };
 }
 
-function hasNumericPrice(prices = {}) {
+// 任意一档报价都算有价：核心价（input/output）、缓存、按次、图像都各算一档。
+function hasAnyPrice(prices = {}) {
   return STANDARD_PRICE_FIELDS.some(field => Number.isFinite(prices[field]));
 }
 
@@ -45,7 +79,7 @@ export function getProxyPriceQuote(item = {}, groupRatio = 1, rechargeRate = 1, 
   if (factor === null || priceCurrencyVerified === false) unavailableReasons.push("currency_unverified");
   const sourceCurrency = String(item.price_currency ?? "").trim().toUpperCase() || "UNKNOWN";
   const quotedPrices = buildProxyPrices(item, groupRatio, 1, basePrice);
-  if (!hasNumericPrice(quotedPrices)) unavailableReasons.push("price_missing");
+  if (!hasAnyPrice(quotedPrices)) unavailableReasons.push("price_missing");
   return {
     quotedPrices,
     costPrices: unavailableReasons.length ? null : buildProxyPrices(item, groupRatio, factor, basePrice),
@@ -156,49 +190,30 @@ function classifyOffer(offer) {
   return "fair";
 }
 
-export function addRecommendationScores(comparisons, profile = "price") {
-  const weights = { balanced: [0.8, 0.2], price: [0.9, 0.1], reliability: [0.7, 0.3] }[profile] || [0.9, 0.1];
+export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } = {}) {
+  const threshold = Math.max(0, Math.min(100, Number(evidenceThreshold) || 0));
   for (const comparison of comparisons) {
-    if (comparison.comparisonGroup === "public") {
-      for (const offer of comparison.offers) {
-        offer.recommendationScore = null;
-        offer.recommendationEligible = false;
-        offer.costScore = null;
-        offer.confidenceScoreNormalized = null;
-        offer.category = "";
-        offer.recommended = false;
-        offer.recommendationLabel = "";
-      }
-      continue;
-    }
-    const candidates = comparison.offers.filter(offer => !offer.pricingUnavailable && !offer.incomplete && Number.isFinite(offer.monthlyCost));
-    const eligible = candidates.filter(offer => comparison.comparisonGroup === "public" || (offer.matchRuleId === "exact" && Number(offer.officialMonthlyCost) > 0));
-    const minCost = candidates.length ? Math.min(...candidates.map(offer => offer.monthlyCost)) : null;
-    const maxCost = candidates.length ? Math.max(...candidates.map(offer => offer.monthlyCost)) : null;
+    const eligible = comparison.comparisonGroup === "public" ? [] : comparison.offers.filter(offer =>
+      !offer.pricingUnavailable && !offer.stale && offer.matchRuleId === "exact" &&
+      Number(offer.officialMonthlyCost) > 0 && Number(offer.confidenceScore) >= threshold);
+    const recommended = eligible.reduce((current, offer) => !current || offer.monthlyCost < current.monthlyCost ? offer : current, null);
     for (const offer of comparison.offers) {
-      const costScore = minCost === null || !Number.isFinite(offer.monthlyCost) ? 0 : maxCost === minCost ? 100 : Math.max(0, Math.min(100, Math.round((maxCost - offer.monthlyCost) / (maxCost - minCost) * 100)));
-      const confidence = offer.confidenceScore;
-      const score = Math.round(costScore * weights[0] + confidence * weights[1]);
-      offer.recommendationScore = score;
+      offer.category = comparison.comparisonGroup === "public" ? "" : classifyOffer(offer);
       offer.recommendationEligible = eligible.includes(offer);
-      offer.costScore = costScore;
-      offer.confidenceScoreNormalized = confidence;
-      offer.category = classifyOffer(offer);
-    }
-    const best = eligible.reduce((current, offer) => !current || offer.recommendationScore > current.recommendationScore ? offer : current, null);
-    for (const offer of comparison.offers) {
-      offer.recommended = offer === best;
-      offer.recommendationLabel = !offer.recommendationEligible ? "需核验" : offer.recommended ? "推荐" : offer.recommendationScore >= 75 ? "推荐" : offer.recommendationScore >= 55 ? "可选" : "谨慎";
+      offer.recommended = offer === recommended;
+      offer.recommendationLabel = comparison.comparisonGroup === "public" ? "" :
+        !offer.recommendationEligible ? "需核验" :
+          offer.recommended ? "推荐" : "可选";
     }
   }
   return comparisons;
 }
 
-export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, modelMatchOverrides = [], modelAliases = {}, showUnmatched = true, recommendationProfile = "price" } = {}) {
+export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, modelMatchOverrides = [], modelAliases = {}, llmMatches = {}, showUnmatched = true, evidenceThreshold = 60 } = {}) {
   const stationMap = new Map(stations.map(station => [station.id, station]));
   const referenceList = Array.isArray(references.models) ? references.models : [];
   const latestByStation = new Map();
-  const matchingIndex = buildModelMatchIndex(referenceList, modelMatchOverrides, { modelAliases });
+  const matchingIndex = buildModelMatchIndex(referenceList, modelMatchOverrides, { modelAliases, llmMatches });
   for (const snapshot of snapshots) {
     const previous = latestByStation.get(snapshot.stationId);
     if (!previous || snapshot.collectedAt > previous.collectedAt) latestByStation.set(snapshot.stationId, snapshot);
@@ -264,6 +279,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             pricingUnavailable: false,
             pricingUnavailableReasons: new Set(),
             cacheWriteEstimated: false,
+            estimatedFields: new Set(),
             monthlyCost: 0,
             officialMonthlyCost: 0,
             stationId: station.id,
@@ -306,8 +322,14 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
           const officialPrices = stationCategory === "public" ? null : referencePrices(official, references.openRouterRechargeRate || references.exchangeRate || 1);
           if (officialQuotedPrices) addWeighted(row.officialQuotedPrices, officialQuotedPrices, share);
           if (officialPrices) addWeighted(row.officialPrices, officialPrices, share);
-          if (quotedPrices.cacheRead === null) row.cacheReadEstimated = true;
-          if (quotedPrices.cacheWrite === null) row.cacheWriteEstimated = true;
+          if (quotedPrices.cacheRead === null) {
+            row.cacheReadEstimated = true;
+            row.estimatedFields.add("cacheRead");
+          }
+          if (quotedPrices.cacheWrite === null) {
+            row.cacheWriteEstimated = true;
+            row.estimatedFields.add("cacheWrite");
+          }
           if (!isPublic && costPrices) row.monthlyCost += workloadCost(costPrices, usage) * share;
           row.officialMonthlyCost += officialPrices ? workloadCost(officialPrices, usage) * share : 0;
           if (item.tier_name) row.tierNames.add(`${item.tier_name} ${Math.round(share * 100)}%`);
@@ -319,8 +341,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
 
   const comparisons = new Map();
   for (const row of grouped.values()) {
-    const quotedUnit = hasNumericPrice(row.proxyPrices) ? row.proxyPrices : null;
-    const costUnit = hasNumericPrice(row.costPrices) ? row.costPrices : null;
+    const quotedUnit = hasAnyPrice(row.proxyPrices) ? row.proxyPrices : null;
+    const costUnit = hasAnyPrice(row.costPrices) ? row.costPrices : null;
     const officialQuotedUnit = Object.keys(row.officialQuotedPrices).length ? row.officialQuotedPrices : null;
     const officialUnit = Object.keys(row.officialPrices).length ? row.officialPrices : null;
     const offer = {
@@ -350,6 +372,9 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       costCurrency: row.stationCategory === "public" ? row.sourceCurrency : null,
       officialMonthlyCost: row.stationCategory === "public" ? null : row.official ? row.officialMonthlyCost : null,
       diffPercent: row.stationCategory !== "public" && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) && row.official && row.officialMonthlyCost > 0 ? ((row.monthlyCost - row.officialMonthlyCost) / row.officialMonthlyCost) * 100 : null,
+      blendedUnitPrice: row.stationCategory === "public" || row.pricingUnavailable ? null : blendedUnitPrice(row.monthlyCost, usage),
+      blendedMix: row.stationCategory === "public" || row.pricingUnavailable ? null : blendedMixOf(usage),
+      officialBlendedUnitPrice: row.stationCategory === "public" || !row.official ? null : blendedUnitPrice(row.officialMonthlyCost, usage),
       evidence: row.evidence,
       pricingUnavailable: row.pricingUnavailable,
       pricingUnavailableReasons: [...row.pricingUnavailableReasons].sort(),
@@ -359,6 +384,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       unpricedModels: row.unpricedModels,
       cacheReadEstimated: row.cacheReadEstimated,
       cacheWriteEstimated: row.cacheWriteEstimated,
+      estimatedFields: [...row.estimatedFields].sort(),
       stale: row.stale,
       collectedAt: row.collectedAt,
       sourceFormat: row.sourceFormat
@@ -376,7 +402,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     comparisons.get(comparisonKey).offers.push(offer);
   }
   const result = [...comparisons.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
-  addRecommendationScores(result, recommendationProfile);
+  addRecommendationStatus(result, { evidenceThreshold });
   return result;
 }
 
@@ -387,6 +413,32 @@ export function filterComparisonsByMode(comparisons = [], mode = "paid") {
 
 export function flattenComparisonRows(comparisons) {
   return comparisons.flatMap(comparison => comparison.offers.map(offer => ({ ...offer, canonicalModel: comparison.canonicalModel })));
+}
+// 站点指数：本站混合单价 / 官方混合单价的逐模型中位数。样本少于 3 的站不输出。
+export function buildStationIndexes(comparisons = []) {
+  const ratiosByStation = new Map();
+  for (const offer of flattenComparisonRows(comparisons)) {
+    if (offer.stationCategory === "public" || offer.pricingUnavailable || offer.stale || offer.incomplete) continue;
+    const ratio = Number(offer.blendedUnitPrice) / Number(offer.officialBlendedUnitPrice);
+    if (!Number.isFinite(ratio) || ratio <= 0) continue;
+    if (!ratiosByStation.has(offer.stationId)) ratiosByStation.set(offer.stationId, { stationName: offer.stationName, ratios: [] });
+    ratiosByStation.get(offer.stationId).ratios.push(ratio);
+  }
+  const rows = [];
+  for (const [stationId, entry] of ratiosByStation) {
+    if (entry.ratios.length < 3) continue;
+    const sorted = [...entry.ratios].sort((a, b) => a - b);
+    const pick = fraction => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(fraction * (sorted.length - 1))))];
+    rows.push({
+      stationId,
+      stationName: entry.stationName,
+      median: pick(0.5),
+      p25: pick(0.25),
+      p75: pick(0.75),
+      sampleSize: sorted.length
+    });
+  }
+  return rows.sort((a, b) => a.median - b.median);
 }
 
 export function summarizeComparisons(comparisons) {

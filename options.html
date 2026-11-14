@@ -7,49 +7,115 @@
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/options.css">
+  <script src="src/theme-boot.js"></script>
 </head>
 <body class="options-page">
   <header class="topbar settings-topbar">
     <a class="brand-lockup" href="dashboard.html" aria-label="Model Atlas 首页"><span class="brand-mark"><img class="brand-image" src="icons/icon.svg" alt=""></span><span class="brand-copy"><span class="brand-overline">MODEL ATLAS</span><strong>站点与设置</strong></span></a>
     <nav class="top-actions" aria-label="页面操作">
-      <a class="button button-quiet" href="dashboard.html"><span data-icon="chevron-right" class="icon icon-flip"></span><span>返回对比</span></a>
-      <button class="button button-quiet" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
-      <button class="button button-quiet" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
       <button class="button button-primary" id="save-all" type="button"><span data-icon="check" class="icon"></span><span>保存全部</span></button>
+      <details class="top-menu" id="top-menu">
+        <summary class="button button-quiet" aria-label="打开菜单" aria-expanded="false"><span data-icon="menu" class="icon"></span><span>菜单</span></summary>
+        <div class="top-menu-body" role="menu" aria-label="快速跳转">
+          <a class="top-menu-item" role="menuitem" href="dashboard.html"><span data-icon="chevron-right" class="icon icon-flip"></span><span>返回价格对比</span></a>
+          <div class="top-menu-sep" role="separator"></div>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-manager"><span data-icon="puzzle" class="icon"></span><span>插件管理</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-browser"><span data-icon="compass" class="icon"></span><span>可选站点</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="stations-heading"><span data-icon="server" class="icon"></span><span>已添加站点</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="settings-panel"><span data-icon="calculator" class="icon"></span><span>成本估算</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="assistant-panel"><span data-icon="bot" class="icon"></span><span>AI 辅助</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="data-panel"><span data-icon="database" class="icon"></span><span>数据管理</span></button>
+          <div class="top-menu-sep" role="separator"></div>
+          <button class="top-menu-item" role="menuitem" id="expand-all" type="button" title="展开全部卡片" aria-label="展开全部卡片"><span data-icon="chevrons-down-up" class="icon"></span><span>展开全部</span></button>
+          <button class="top-menu-item" role="menuitem" id="collapse-all" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span>折叠全部</span></button>
+        </div>
+      </details>
+      <button class="theme-toggle" id="theme-toggle" type="button" data-theme-toggle aria-label="切换到夜晚主题" title="切换到夜晚"><span data-icon="moon" class="icon theme-icon-moon"></span><span data-icon="sun" class="icon theme-icon-sun"></span></button>
     </nav>
   </header>
 
   <main class="page-shell settings-shell">
-    <section class="settings-intro"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>站点与设置</h1><p>管理站点插件与成本口径。密钥只保存在扩展会话存储，不进入导出文件。</p></div></section>
+    <section class="settings-intro"><div><p class="eyebrow">WORKSPACE SETTINGS</p><h1>站点与设置</h1><p>插件与成本口径。密钥只在会话存储，不进导出文件。</p></div></section>
     <div class="settings-layout">
-      <nav class="settings-nav" role="tablist" aria-label="设置分区">
-        <button id="settings-tab-stations" type="button" role="tab" aria-selected="true" aria-controls="settings-view-stations" data-settings-target="stations"><span data-icon="layers-3" class="icon"></span><span>站点与插件</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
-        <button id="settings-tab-costs" type="button" role="tab" aria-selected="false" aria-controls="settings-view-costs" data-settings-target="costs" tabindex="-1"><span data-icon="coins" class="icon"></span><span>偏好与成本</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
-        <button id="settings-tab-workspace" type="button" role="tab" aria-selected="false" aria-controls="settings-view-workspace" data-settings-target="workspace" tabindex="-1"><span data-icon="database" class="icon"></span><span>数据与工作区</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
+      <nav class="settings-nav" role="navigation" aria-label="设置分区">
+        <div class="settings-nav-group" data-nav-group="stations">
+          <button id="settings-tab-stations" type="button" role="tab" aria-selected="true" aria-controls="settings-view-stations" aria-expanded="true" data-settings-target="stations"><span data-icon="layers-3" class="icon"></span><span>站点与插件</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
+          <ul class="settings-subnav" aria-label="站点与插件">
+            <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="plugin-manager"><span data-icon="puzzle" class="icon"></span><span class="settings-subnav-label">插件管理</span></button>
+              <ul class="settings-subnav is-third">
+                <li><button type="button" class="settings-subnav-item" data-nav-jump="plugin-installed" data-nav-plugin-tab="installed"><span data-icon="package" class="icon"></span><span class="settings-subnav-label">已安装</span><span class="settings-subnav-count" data-nav-count="plugin-installed">0</span></button></li>
+                <li><button type="button" class="settings-subnav-item" data-nav-jump="plugin-registry" data-nav-plugin-tab="registry"><span data-icon="store" class="icon"></span><span class="settings-subnav-label">插件仓库</span></button></li>
+              </ul>
+            </li>
+            <li><button type="button" class="settings-subnav-item" data-nav-jump="plugin-browser"><span data-icon="compass" class="icon"></span><span class="settings-subnav-label">可选站点</span></button></li>
+            <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="stations-heading"><span data-icon="server" class="icon"></span><span class="settings-subnav-label">已添加站点</span><span class="settings-subnav-count" data-nav-count="stations">0</span></button>
+              <ul class="settings-subnav is-third" id="nav-station-children"></ul>
+            </li>
+          </ul>
+        </div>
+        <div class="settings-nav-group" data-nav-group="costs">
+          <button id="settings-tab-costs" type="button" role="tab" aria-selected="false" aria-controls="settings-view-costs" aria-expanded="false" data-settings-target="costs" tabindex="-1"><span data-icon="coins" class="icon"></span><span>偏好与成本</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
+          <ul class="settings-subnav" aria-label="偏好与成本" hidden>
+            <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="settings-panel"><span data-icon="calculator" class="icon"></span><span class="settings-subnav-label">成本估算设置</span></button>
+              <ul class="settings-subnav is-third">
+                <li><button type="button" class="settings-subnav-item" data-nav-jump="usage-fieldset"><span data-icon="chart-column" class="icon"></span><span class="settings-subnav-label">估算月用量</span></button></li>
+                <li><button type="button" class="settings-subnav-item" data-nav-jump="matching-fieldset"><span data-icon="git-branch" class="icon"></span><span class="settings-subnav-label">模型匹配规则</span></button></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="settings-nav-group" data-nav-group="assistant">
+          <button id="settings-tab-assistant" type="button" role="tab" aria-selected="false" aria-controls="settings-view-assistant" aria-expanded="false" data-settings-target="assistant" tabindex="-1"><span data-icon="sparkles" class="icon"></span><span>AI 辅助</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
+          <ul class="settings-subnav" aria-label="AI 辅助" hidden>
+            <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="assistant-panel"><span data-icon="bot" class="icon"></span><span class="settings-subnav-label">模型服务</span></button>
+              <ul class="settings-subnav is-third">
+                <li><button type="button" class="settings-subnav-item" data-nav-jump="assistant-review"><span data-icon="list-checks" class="icon"></span><span class="settings-subnav-label">判定队列</span></button></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        <div class="settings-nav-group" data-nav-group="workspace">
+          <button id="settings-tab-workspace" type="button" role="tab" aria-selected="false" aria-controls="settings-view-workspace" aria-expanded="false" data-settings-target="workspace" tabindex="-1"><span data-icon="database" class="icon"></span><span>数据管理</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
+          <ul class="settings-subnav" aria-label="数据管理" hidden>
+            <li><button type="button" class="settings-subnav-item" data-nav-jump="data-panel"><span data-icon="folder-open" class="icon"></span><span class="settings-subnav-label">本地工作区</span></button></li>
+          </ul>
+        </div>
       </nav>
 
       <div class="settings-content">
         <section class="settings-view" id="settings-view-stations" role="tabpanel" aria-labelledby="settings-tab-stations" data-settings-view="stations">
-          <div class="view-heading"><div><h2>站点插件</h2><p>插件保存在扩展内，添加后才加载对应采集适配器。</p></div><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div>
-          <section class="plugin-manager" aria-labelledby="plugin-manager-title">
+          <div class="view-heading"><div><h2>站点插件</h2><p>默认不装任何插件；装好后才能从插件里挑站点添加，没装的插件不参与匹配与采集。</p></div><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div>
+          <section class="plugin-manager" id="plugin-manager" data-nav-anchor="plugin-manager" aria-labelledby="plugin-manager-title">
             <div class="plugin-manager-head">
-              <div><h3 id="plugin-manager-title">插件</h3><p>内置插件随扩展发布，仓库插件从线上插件仓库安装，本地插件只在开发模式下加载，各自标注来源。</p></div>
-              <div class="plugin-source-legend" aria-hidden="true"><span class="plugin-source-badge is-bundled">内置</span><span class="plugin-source-badge is-registry">仓库</span><span class="plugin-source-badge is-local">本地插件</span></div>
+              <div><h3 id="plugin-manager-title">插件</h3><p>默认不装任何插件：需要哪个就从线上插件仓库装哪个，本地插件只在开发模式下加载，各自标注来源。</p></div>
+              <div class="plugin-source-legend" aria-hidden="true"><span class="plugin-source-badge is-registry">仓库安装</span><span class="plugin-source-badge is-local">本地插件</span></div>
             </div>
             <div class="plugin-manager-tabs" role="tablist" aria-label="插件管理">
               <button id="plugin-tab-installed" type="button" role="tab" aria-selected="true" aria-controls="plugin-panel-installed" data-plugin-tab="installed">已安装</button>
               <button id="plugin-tab-registry" type="button" role="tab" aria-selected="false" aria-controls="plugin-panel-registry" data-plugin-tab="registry" tabindex="-1">插件仓库</button>
             </div>
-            <div class="plugin-panel" id="plugin-panel-installed" role="tabpanel" aria-labelledby="plugin-tab-installed" data-plugin-panel="installed">
+            <div class="plugin-panel" id="plugin-panel-installed" data-nav-anchor="plugin-installed" role="tabpanel" aria-labelledby="plugin-tab-installed" data-plugin-panel="installed">
               <div id="plugin-installed-list" class="plugin-list" aria-live="polite"></div>
             </div>
-            <div class="plugin-panel" id="plugin-panel-registry" role="tabpanel" aria-labelledby="plugin-tab-registry" data-plugin-panel="registry" hidden>
+            <div class="plugin-panel" id="plugin-panel-registry" data-nav-anchor="plugin-registry" role="tabpanel" aria-labelledby="plugin-tab-registry" data-plugin-panel="registry" hidden>
               <div class="registry-toolbar">
                 <label class="plugin-search registry-url-field"><span data-icon="link" class="icon"></span><span class="sr-only">插件仓库地址</span><input id="plugin-registry-url" type="url" placeholder="https://raw.githubusercontent.com/…/plugins.json" autocomplete="off"></label>
                 <button class="button button-quiet button-small" id="plugin-registry-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新仓库</span></button>
                 <label class="check-label dev-mode-toggle"><input id="dev-mode" type="checkbox"><span>开发模式</span></label>
               </div>
               <p class="registry-status" id="plugin-registry-status" role="status" aria-live="polite">尚未拉取插件仓库</p>
+              <div class="plugin-toolbar registry-actions">
+                <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索插件仓库</span><input id="plugin-registry-search" type="search" placeholder="搜索插件、域名" autocomplete="off"></label>
+                <div class="plugin-filters" role="group" aria-label="仓库筛选">
+                  <button type="button" data-registry-filter="all" aria-pressed="true">全部</button>
+                  <button type="button" data-registry-filter="available" aria-pressed="false">未安装</button>
+                  <button type="button" data-registry-filter="installed" aria-pressed="false">已安装</button>
+                  <button type="button" data-registry-filter="update" aria-pressed="false">有更新</button>
+                </div>
+                <label class="check-label"><input id="registry-select-all" type="checkbox"><span>全选</span></label>
+                <span id="registry-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
+                <button class="button button-primary button-small" id="install-selected-plugins" type="button" disabled><span data-icon="package" class="icon"></span><span>安装所选</span></button>
+              </div>
               <div id="plugin-registry-list" class="plugin-list" aria-live="polite"></div>
               <section class="dev-plugin-panel" id="dev-plugin-panel" hidden aria-labelledby="dev-plugin-title">
                 <div class="dev-plugin-heading"><div><h4 id="dev-plugin-title">本地插件</h4><p>只加载到本机，关闭开发模式会一并卸载。</p></div><label class="button button-quiet button-small file-button"><span data-icon="upload" class="icon"></span><span>选择 JSON 文件</span><input id="dev-plugin-file" type="file" accept="application/json,.json"></label></div>
@@ -59,7 +125,7 @@
               </section>
             </div>
           </section>
-          <section class="plugin-browser" aria-labelledby="plugin-browser-title">
+          <section class="plugin-browser" id="plugin-browser" data-nav-anchor="plugin-browser" aria-labelledby="plugin-browser-title">
             <div class="plugin-browser-heading"><div><h3 id="plugin-browser-title">可选站点</h3><p>从已安装的插件里挑选站点，一次添加到工作区。</p></div><span id="plugin-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span></div>
             <div class="plugin-toolbar">
               <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索站点插件</span><input id="plugin-search" type="search" placeholder="搜索站点或域名" autocomplete="off"></label>
@@ -69,7 +135,7 @@
             </div>
             <div id="site-plugin-list" class="site-plugin-list" role="group" aria-label="可选择站点插件"></div>
           </section>
-          <div class="station-list-heading"><div><h2>已添加站点</h2><span id="station-count" class="station-count">0</span></div><p>开关与批量操作后点击顶部“保存全部”；配置项在弹层内单独保存。</p></div>
+          <div class="station-list-heading" id="stations-heading" data-nav-anchor="stations-heading"><div><h2>已添加站点</h2><span id="station-count" class="station-count">0</span></div><p>开关与批量操作后点击顶部“保存全部”；配置项在弹层内单独保存。</p></div>
           <div class="station-batch-bar">
             <label class="check-label"><input id="station-select-all" type="checkbox"><span>全选</span></label>
             <span id="station-selected-count" class="station-selected-count" aria-live="polite">已选 0 / 0</span>
@@ -85,26 +151,55 @@
 
         <section class="settings-view" id="settings-view-costs" role="tabpanel" aria-labelledby="settings-tab-costs" data-settings-view="costs" hidden>
           <div class="view-heading"><div><h2>偏好与成本</h2><p>设置月用量、汇率、推荐口径和模型匹配规则。</p></div></div>
-          <section class="panel settings-panel" id="settings-panel" data-collapsible>
+          <section class="panel settings-panel" id="settings-panel" data-nav-anchor="settings-panel" data-collapsible>
             <div class="panel-heading"><div><h2>成本估算设置</h2></div></div>
             <form id="settings-form" class="settings-form">
               <div class="settings-row"><div class="settings-row-label"><label for="usage-preset">成本口径预设</label><small>决定月用量的取值来源，选自定义时使用下方字段</small></div><select id="usage-preset"><option value="measured">实测月用量</option><option value="recent30d">magpie-30天</option><option value="recent7d">magpie-7天</option><option value="baseline">基础估算（3000 万输入 / 600 万输出）</option><option value="custom">自定义</option></select></div>
               <div class="settings-row"><div class="settings-row-label"><label for="currency">货币</label></div><select id="currency"><option value="CNY">人民币（CNY）</option><option value="USD">美元（USD）</option></select></div>
               <div class="settings-row"><div class="settings-row-label"><label for="exchange-rate">官方美元兑人民币汇率</label></div><div class="settings-row-controls"><input id="exchange-rate" type="number" min="0.0001" step="0.0001" required><button class="button button-quiet button-small" id="refresh-exchange-rate" type="button"><span data-icon="refresh-cw" class="icon"></span><span>从中国银行刷新</span></button></div></div>
-              <div class="settings-row"><div class="settings-row-label"><label for="recommendation-profile">推荐口径</label><small>成本与证据在推荐排序中的权重</small></div><select id="recommendation-profile"><option value="balanced">均衡推荐（成本 80% / 证据 20%）</option><option value="price">价格优先（成本 90% / 证据 10%）</option><option value="reliability">稳定优先（成本 70% / 证据 30%）</option></select></div>
-              <fieldset><legend>估算月用量</legend><div class="usage-grid"><label><span>输入（M tokens）</span><input id="usage-input" type="number" min="0" step="0.01"></label><label><span>缓存读取（M tokens）</span><input id="usage-cache-read" type="number" min="0" step="0.01"></label><label><span>缓存写入（M tokens）</span><input id="usage-cache-write" type="number" min="0" step="0.01"></label><label><span>缓存写入（1h，M tokens）</span><input id="usage-cache-write-1h" type="number" min="0" step="0.01"></label><label><span>输出（M tokens）</span><input id="usage-output" type="number" min="0" step="0.01"></label><label><span>请求次数</span><input id="usage-requests" type="number" min="0" step="1"></label><label><span>高峰占比（%）</span><input id="usage-peak-share" type="number" min="0" max="100" step="1"></label><label><span>图像输入（M tokens）</span><input id="usage-image-input-tokens" type="number" min="0" step="0.01"></label><label><span>图像输出（M tokens）</span><input id="usage-image-output-tokens" type="number" min="0" step="0.01"></label><label><span>图像请求数</span><input id="usage-images" type="number" min="0" step="1"></label></div></fieldset>
+              <div class="settings-row"><div class="settings-row-label"><label for="evidence-threshold">推荐门槛</label><small>匹配置信度低于该值的报价标「需核验」，不参与推荐</small></div><input id="evidence-threshold" type="number" min="0" max="100" step="5"></div>
+              <fieldset id="usage-fieldset" data-nav-anchor="usage-fieldset"><legend>估算月用量</legend><div class="usage-grid"><label><span>输入（M tokens）</span><input id="usage-input" type="number" min="0" step="0.01"></label><label><span>缓存读取（M tokens）</span><input id="usage-cache-read" type="number" min="0" step="0.01"></label><label><span>缓存写入（M tokens）</span><input id="usage-cache-write" type="number" min="0" step="0.01"></label><label><span>缓存写入（1h，M tokens）</span><input id="usage-cache-write-1h" type="number" min="0" step="0.01"></label><label><span>输出（M tokens）</span><input id="usage-output" type="number" min="0" step="0.01"></label><label><span>请求次数</span><input id="usage-requests" type="number" min="0" step="1"></label><label><span>高峰占比（%）</span><input id="usage-peak-share" type="number" min="0" max="100" step="1"></label><label><span>图像输入（M tokens）</span><input id="usage-image-input-tokens" type="number" min="0" step="0.01"></label><label><span>图像输出（M tokens）</span><input id="usage-image-output-tokens" type="number" min="0" step="0.01"></label><label><span>图像请求数</span><input id="usage-images" type="number" min="0" step="1"></label></div></fieldset>
               <div class="settings-row"><div class="settings-row-label"><label for="show-unmatched">默认显示未匹配模型</label><small>未匹配官方价的模型也进入报价表</small></div><label class="check-label"><input id="show-unmatched" type="checkbox"><span>启用</span></label></div>
-              <fieldset><legend>模型匹配规则</legend><div class="matching-rules"><label class="check-label"><input data-matching-rule="exact" type="checkbox"><span>精确名称</span></label><label class="check-label"><input data-matching-rule="suffix" type="checkbox"><span>后缀 / 供应商</span></label><label class="check-label"><input data-matching-rule="ignore_version" type="checkbox"><span>忽略版本号</span></label><label class="check-label"><input data-matching-rule="fuzzy" type="checkbox"><span>模糊匹配</span></label></div></fieldset>
+              <fieldset id="matching-fieldset" data-nav-anchor="matching-fieldset"><legend>模型匹配规则</legend><div class="matching-rules"><label class="check-label"><input data-matching-rule="exact" type="checkbox"><span>精确名称</span></label><label class="check-label"><input data-matching-rule="suffix" type="checkbox"><span>后缀 / 供应商</span></label><label class="check-label"><input data-matching-rule="ignore_version" type="checkbox"><span>忽略版本号</span></label><label class="check-label"><input data-matching-rule="fuzzy" type="checkbox"><span>模糊匹配</span></label></div></fieldset>
             </form>
           </section>
         </section>
 
+        <section class="settings-view" id="settings-view-assistant" role="tabpanel" aria-labelledby="settings-tab-assistant" data-settings-view="assistant" hidden>
+          <div class="view-heading"><div><h2>AI 辅助识别</h2><p>用你自己的模型服务判断站点里的陌生模型名。判定只补规则猜不到的写法，不会覆盖人工确认与插件声明，判过的结论会缓存，不会重复请求。</p></div></div>
+          <section class="panel settings-panel" id="assistant-panel" data-nav-anchor="assistant-panel" data-collapsible>
+            <div class="panel-heading"><div><h2>模型服务</h2></div><div class="panel-switch"><span>启用</span><label class="switch" title="启用模型服务"><input id="llm-enabled" type="checkbox"><span></span></label></div></div>
+            <form id="llm-form" class="settings-form">
+              <div class="settings-row"><div class="settings-row-label"><label for="llm-base-url">服务地址</label><small>OpenAI 兼容接口，未写路径时自动补 /v1</small></div><input id="llm-base-url" type="url" placeholder="https://api.openai.com/v1" autocomplete="off"></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="llm-api-key">密钥</label><small>只存本机，不进导出文件与工作区</small></div><div class="settings-row-controls"><input id="llm-api-key" type="password" placeholder="已保存，留空则不修改" autocomplete="off"><button class="button button-quiet button-small" id="llm-key-toggle" type="button">显示</button></div></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="llm-model">模型</label><small>必须手填，不会自动挑</small></div><div class="settings-row-controls"><input id="llm-model" type="text" list="llm-model-options" placeholder="gpt-4o-mini" autocomplete="off"><button class="button button-quiet button-small" id="llm-models-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>拉取列表</span></button><datalist id="llm-model-options"></datalist></div></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="llm-temperature">温度</label><small>建议 0 到 0.2，判定要稳定</small></div><input id="llm-temperature" type="number" min="0" max="2" step="0.1"></div>
+            </form>
+            <div class="data-actions assistant-test-actions"><button class="button button-primary" id="llm-test" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试连接</span></button><p class="workspace-status" id="llm-status" role="status" aria-live="polite"></p></div>
+          </section>
+          <section class="panel" id="assistant-review" data-nav-anchor="assistant-review" data-collapsible>
+            <div class="panel-heading"><div><h2>判定队列</h2><p class="muted" id="llm-cache-summary">未匹配模型会按站点与写法去重后进入队列。</p></div></div>
+            <div class="data-actions assistant-review-actions">
+              <button class="button button-primary" id="llm-run" type="button"><span data-icon="sparkles" class="icon"></span><span>识别当前未匹配</span></button>
+              <button class="button button-quiet" id="llm-run-force" type="button"><span data-icon="refresh-cw" class="icon"></span><span>全部重算</span></button>
+              <button class="button button-quiet" id="llm-apply" type="button"><span data-icon="check" class="icon"></span><span>接受的写成人工确认</span></button>
+              <button class="button button-quiet" id="llm-clear" type="button"><span data-icon="trash-2" class="icon"></span><span>清空缓存</span></button>
+            </div>
+            <div class="assistant-review-filters" id="llm-filters" role="group" aria-label="按状态筛选">
+              <button type="button" class="assistant-filter" data-filter="all" aria-pressed="true">全部</button>
+              <button type="button" class="assistant-filter" data-filter="accepted" aria-pressed="false">已接受</button>
+              <button type="button" class="assistant-filter" data-filter="none" aria-pressed="false">判为没有</button>
+              <button type="button" class="assistant-filter" data-filter="invalid" aria-pressed="false">无效</button>
+              <button type="button" class="assistant-filter" data-filter="failed" aria-pressed="false">失败</button>
+            </div>
+            <div class="assistant-review-list" id="llm-review-list"></div>
+          </section>
+        </section>
         <section class="settings-view" id="settings-view-workspace" role="tabpanel" aria-labelledby="settings-tab-workspace" data-settings-view="workspace" hidden>
-          <div class="view-heading"><div><h2>数据与工作区</h2><p>连接本地工作区，或导入导出 JSON 备份。</p></div></div>
-          <section class="panel data-panel" id="data-panel" data-collapsible>
+          <div class="view-heading"><div><h2>数据管理</h2><p>备份与还原配置，或连接本地工作区自动存取数据文件。</p></div></div>
+          <section class="panel data-panel" id="data-panel" data-nav-anchor="data-panel" data-collapsible>
             <div class="data-panel-copy"><div><h2>本地工作区</h2><p class="muted">站点配置、设置、参考数据和快照写入本地文件。站点密钥与 API Key 不写入文件。</p><p class="workspace-status" id="workspace-status" role="status" aria-live="polite">尚未选择工作区</p></div></div>
             <div class="data-actions workspace-actions"><button class="button button-primary" id="workspace-connect" type="button"><span data-icon="folder-open" class="icon"></span><span>选择工作区</span></button><button class="button button-quiet" id="workspace-load" type="button" disabled><span data-icon="upload" class="icon"></span><span>从工作区加载</span></button><button class="button button-quiet" id="workspace-save" type="button" disabled><span data-icon="download" class="icon"></span><span>保存到工作区</span></button></div>
-            <div class="data-panel-backup"><span class="data-backup-label">JSON 备份</span><div class="data-actions"><button class="button button-quiet" id="export-state" type="button"><span data-icon="download" class="icon"></span><span>导出 JSON</span></button><label class="button button-quiet file-button"><span data-icon="upload" class="icon"></span><span>导入 JSON</span><input id="import-file" type="file" accept="application/json,.json,.json.gz,application/gzip"></label></div></div>
           </section>
         </section>
       </div>

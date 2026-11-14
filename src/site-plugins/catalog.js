@@ -84,7 +84,9 @@ export function sitePluginForStation(station = {}) {
 
 export function sitePluginCatalogForStations(stations = [], options = {}) {
   const addedIds = new Set(stations.map(sitePluginForStation).filter(Boolean).map(plugin => plugin.id));
-  return SITE_PLUGIN_CATALOG.map(({ load, paths, hosts, ...plugin }) => ({
+  // 出货时不带任何插件，只有装过的才会出现在列表里；installedIds 缺省表示不过滤。
+  const installedIds = options.installedIds instanceof Set ? options.installedIds : null;
+  return (installedIds ? SITE_PLUGIN_CATALOG.filter(plugin => installedIds.has(plugin.id)) : SITE_PLUGIN_CATALOG).map(({ load, paths, hosts, ...plugin }) => ({
     ...plugin,
     version: options.bundledVersion || "",
     added: addedIds.has(plugin.id),

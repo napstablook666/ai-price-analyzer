@@ -61,3 +61,28 @@ export async function removeStationCredential(stationId, chromeApi = globalThis.
 
 
 export { KEY as CREDENTIAL_STORAGE_KEY };
+const MODEL_ASSISTANT_KEY = "ai-price-analyzer:model-assistant-key";
+
+export async function setModelAssistantKey(apiKey, chromeApi = globalThis.chrome) {
+  const area = writeArea(chromeApi);
+  if (!area) return;
+  const value = String(apiKey || "").trim();
+  if (value) await area.set({ [MODEL_ASSISTANT_KEY]: value });
+  else await area.remove(MODEL_ASSISTANT_KEY);
+  await clearSessionValue(chromeApi, MODEL_ASSISTANT_KEY, area);
+}
+
+export async function getModelAssistantKey(chromeApi = globalThis.chrome) {
+  for (const area of storageAreas(chromeApi)) {
+    const values = await area.get(MODEL_ASSISTANT_KEY);
+    const value = values?.[MODEL_ASSISTANT_KEY];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+export async function removeModelAssistantKey(chromeApi = globalThis.chrome) {
+  return setModelAssistantKey("", chromeApi);
+}
+
+export { MODEL_ASSISTANT_KEY as MODEL_ASSISTANT_STORAGE_KEY };

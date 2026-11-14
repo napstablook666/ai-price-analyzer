@@ -1,18 +1,22 @@
-import { flattenComparisonRows } from "./core/pricing.js";
+import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
 import { createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "./dashboard-index.js";
 import { initCollapsibleCards } from "./shared/collapse.js";
+import { initTopMenu } from "./shared/menu.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
 
 const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
 const PAGE_SIZE = 20;
-const state = { data: null, comparisonMode: "paid", rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "monthlyCost", sortSecondary: "recommendationScore", sortDirection: "asc" } };
+const state = { data: null, comparisonMode: "paid", rows: [], page: 0, searchTextByRow: new WeakMap(), modelTextByRow: new WeakMap(), stationById: new Map(), reference: null, refreshInProgress: false, refreshPreflight: null, preflightLoading: false, filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
+  stationIndexes: new Map()
+};
 const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();
 const RATING_LABELS = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
+const ESTIMATED_FIELD_LABELS = { cacheRead: "缓存读", cacheWrite: "缓存写" };
 const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
 
@@ -84,13 +88,13 @@ function renderSummary(rows) {
   const matchRate = rows.length ? Math.round(matched.length / rows.length * 100) : 0;
   const cards = isPublic ? [
     ["公益模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个公益站`],
-    ["公益站点", String(stationCount), "只比较公益站内价格"],
-    ["价格单位", "站点积分/额度", "首版展示比例 1:1"],
+    ["公益站点", String(stationCount), "仅公益站"],
+    ["价格单位", "站点积分/额度", "比例 1:1"],
     ["数据状态", String(needsReview), reviewNote]
   ] : [
     ["覆盖模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
     ["官方匹配", String(matched.length), `${matchRate}% 有官方参考价`],
-    ["首选方案", String(recommended), "同一模型内的推荐报价"],
+    ["首选方案", String(recommended), "同模型推荐"],
     ["需核验", String(needsReview), reviewNote]
   ];
   $("#summary").innerHTML = cards.map(([label, value, note]) => `<article class="summary-card"><span class="summary-label">${label}</span><strong class="summary-value">${escapeHtml(value)}</strong><span class="summary-note">${escapeHtml(note)}</span></article>`).join("");
@@ -102,7 +106,7 @@ function renderStationFilter(rows) {
   const stations = [...stationsById.entries()];
   const selectedName = stations.find(([id]) => id === current)?.[1];
   $("#station-filter-label").textContent = selectedName || "全部中转站";
-  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}><span>${escapeHtml(name)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
+  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}><span>${escapeHtml(name)}</span>${state.stationIndexes.get(id) ? `<span class="facet-metric" title="本站混合单价 / 官方混合单价的中位数（样本 ${state.stationIndexes.get(id).sampleSize} 个模型）">×${(state.stationIndexes.get(id).median).toFixed(2)}</span>` : ""}</label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
   updateRefreshStationButton();
   filterFacetOptions("station");
 }
@@ -218,8 +222,8 @@ function renderComparisonMode() {
   $("#provider-filters").closest("details").hidden = isPublic;
   for (const element of document.querySelectorAll(".paid-only-control, .paid-only-column, [data-paid-only='true']")) element.hidden = isPublic;
   for (const element of document.querySelectorAll(".public-only-column")) element.hidden = !isPublic;
-  if (isPublic && ["provider", "monthlyCost", "diffPercent", "recommendationScore"].includes(state.filters.sortBy)) state.filters.sortBy = "model";
-  if (isPublic && ["monthlyCost", "diffPercent", "recommendationScore"].includes(state.filters.sortSecondary)) state.filters.sortSecondary = "none";
+  if (isPublic && ["provider", "monthlyCost", "blendedUnitPrice", "diffPercent"].includes(state.filters.sortBy)) state.filters.sortBy = "model";
+  if (isPublic && ["monthlyCost", "blendedUnitPrice", "diffPercent"].includes(state.filters.sortSecondary)) state.filters.sortSecondary = "none";
   $("#sort-by").value = state.filters.sortBy;
   $("#sort-secondary").value = state.filters.sortSecondary;
   $("#model-column-heading").textContent = isPublic ? "模型" : "模型 / 官方匹配";
@@ -258,7 +262,6 @@ function renderRows() {
     const delta = row.pricingUnavailable || !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
     const deltaLabel = delta === null ? (row.pricingUnavailable ? pricingUnavailableLabel(row) : row.stationCategory === "public" ? "仅公益站比较" : "无官方价") : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
-    const score = Number.isFinite(row.recommendationScore) ? `${row.recommendationScore}分` : "暂无评分";
     const isPublic = state.comparisonMode === "public";
     const rating = RATING_LABELS[row.category] || "";
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
@@ -266,7 +269,8 @@ function renderRows() {
     const monthlyCost = formatPrice(row.monthlyCost, monthlyCostCurrency);
     const hasOfficialCost = Number.isFinite(row.officialMonthlyCost);
     const monthlyDifference = hasOfficialCost && !row.pricingUnavailable && Number.isFinite(row.monthlyCost) ? row.officialMonthlyCost - row.monthlyCost : null;
-    const costMeta = row.stationCategory === "public" ? "仅公益站之间比较" : `官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}`;
+    const blendedText = Number.isFinite(row.blendedUnitPrice) ? `混合 ${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}/M` : "";
+    const costMeta = row.stationCategory === "public" ? "仅公益站之间比较" : `官方 ${hasOfficialCost ? `${formatPrice(row.officialMonthlyCost, currency)} / 月` : "暂无参考"}${blendedText ? ` · ${blendedText}` : ""}`;
     const officialQuotedPrices = row.officialQuotedPrices || null;
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
     const matchNote = row.officialName
@@ -280,7 +284,8 @@ function renderRows() {
       <td data-label="官方单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</td>
       <td data-label="月成本" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="cost-cell"><strong>${monthlyCost}<small> / 月</small></strong><span class="cost-meta">${costMeta}</span>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
       <td data-label="相对官方" class="paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
-      <td data-label="推荐与状态" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${score} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}</div></td>
+      <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell"><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small> / M</small></strong><span class="cost-meta">${row.blendedMix ? `按 ${mixLabel(row.blendedMix)} 混合` : ""}${Number.isFinite(row.officialBlendedUnitPrice) ? ` · 官方 ${formatPrice(row.officialBlendedUnitPrice, currency, 4)}` : ""}</span></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
+      <td data-label="推荐与状态" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}<span class="model-meta">${row.estimatedFields?.length ? `含推导：${row.estimatedFields.map(key => ESTIMATED_FIELD_LABELS[key] || key).join("/")}` : "价格齐全"} · 置信${row.confidenceScore}%</span>${statusMarkup(row)}</div></td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");
@@ -301,31 +306,45 @@ function renderReferenceStatus() {
     $("#reference-note").textContent = "不使用官方价格；金额仅表示站点积分/额度，首版展示比例 1:1。";
     return;
   }
-  $("#reference-status").textContent = ref.models?.length ? `官方参考价已加载 · ${ref.models.length} 个模型` : "官方参考价未加载";
-  $("#reference-note").textContent = ref.fetchedAt ? `最近更新 ${new Date(ref.fetchedAt).toLocaleString("zh-CN", { hour12: false })}；${ref.warnings?.length ? ref.warnings.join("；") : "官方模型目录；官方 USD credit 按 1:1 映射中转币，人民币成本按设置汇率"}` : "官方模型目录和中转币基准会每日缓存，可在上方手动更新。";
+  $("#reference-status").textContent = ref.models?.length ? `官方参考价 · ${ref.models.length} 个模型` : "官方参考价未加载";
+  $("#reference-note").textContent = ref.fetchedAt ? `更新 ${new Date(ref.fetchedAt).toLocaleString("zh-CN", { hour12: false })}；${ref.warnings?.length ? ref.warnings.join("；") : "官方目录 · USD credit 1:1 · 人民币按设置汇率"}` : "官方目录每日缓存，可手动更新。";
 }
 function renderCheckin(data) {
-  const panel = $("#checkin-panel");
   const list = $("#checkin-list");
+  const group = $("#checkin-group");
+  const sep = $("#checkin-sep");
+  if (!list || !group) return;
   const stations = data.checkinStations || [];
-  const state = data.checkinState || {};
-  if (!stations.length) {
-    panel.hidden = false;
-    list.innerHTML = `<div class="checkin-empty"><span class="checkin-empty-text">暂无可签到的站点 —— 添加 <strong>vyceai.com</strong> 中转站后，这里会自动出现每日签到入口。</span><a class="button button-quiet" href="options.html#stations"><span data-icon="plus" class="icon"></span><span>去添加站点</span></a></div>`;
+  // 签到能力由插件仓库的签到插件提供，扩展里不再内置站点适配
+  const installed = data.checkinPluginInstalled === true || stations.length > 0;
+  group.hidden = false;
+  if (sep) sep.hidden = false;
+  if (!installed) {
+    list.innerHTML = `
+      <div class="checkin-empty">
+        <span class="checkin-empty-text">签到来自插件仓库的「站点签到插件」，装好这里就出现站点卡片。</span>
+        <button class="button button-quiet" type="button" data-checkin-action="install"><span data-icon="puzzle" class="icon"></span><span>去插件仓库</span></button>
+      </div>`;
     hydrateIcons(list);
     return;
   }
-  panel.hidden = false;
+  const state = data.checkinState || {};
+  if (!stations.length) {
+    list.innerHTML = `<div class="checkin-empty"><span class="checkin-empty-text">已装签到插件，但没有匹配到已启用的站点。先添加或启用对应站点。</span></div>`;
+    hydrateIcons(list);
+    return;
+  }
   list.innerHTML = stations.map(station => {
     const record = state[station.id] || {};
     const claimedToday = record.lastStatus === "ok" && !record.lastResult?.includes("可签到");
     const statusText = record.lastStatus === "error" ? record.lastResult || "查询失败" : record.lastResult || "尚未查询";
     const statusClass = record.lastStatus === "error" ? "checkin-status-error" : claimedToday ? "checkin-status-ok" : "checkin-status-idle";
+    const host = (station.hosts || [])[0];
     return `
       <div class="checkin-item" data-station-id="${escapeHtml(station.id)}">
         <div class="checkin-info">
           <strong>${escapeHtml(station.name)}</strong>
-          <span class="checkin-meta">连续签到 ${Number(record.streak) || 0} 天 · ${escapeHtml(statusText)}</span>
+          <span class="checkin-meta">${host ? `${escapeHtml(host)} · ` : ""}连续签到 ${Number(record.streak) || 0} 天 · <span class="${statusClass}">${escapeHtml(statusText)}</span></span>
         </div>
         <div class="checkin-actions">
           <label class="check-label"><input type="checkbox" data-checkin-action="auto" data-station-id="${escapeHtml(station.id)}" ${station.autoEnabled ? "checked" : ""}><span>自动签到</span></label>
@@ -335,7 +354,6 @@ function renderCheckin(data) {
   }).join("");
   hydrateIcons(list);
 }
-
 const REFRESH_PREFLIGHT_LABELS = { ready: "已登录", needsLogin: "需要登录", uncertain: "需人工确认", noLoginRequired: "无需登录" };
 function renderRefreshPreflight(preflight = state.refreshPreflight) {
   const panel = $("#refresh-preflight-panel");
@@ -376,6 +394,7 @@ function render(data) {
   state.page = 0;
   pageFilterKey = null;
   state.rows = flattenComparisonRows(data.comparisons || []);
+  state.stationIndexes = new Map(buildStationIndexes(data.comparisons || []).map(item => [item.stationId, item]));
   sanitizeFiltersForRows(state.rows);
   const index = createDashboardIndex(state.rows, data.stations || []);
   state.searchTextByRow = index.searchTextByRow;
@@ -399,7 +418,7 @@ function render(data) {
   const emptyState = $("#empty-state");
   const publicEmpty = state.comparisonMode === "public";
   emptyState.querySelector("h3").textContent = publicEmpty ? (hasStations ? "暂无公益站报价" : "还没有公益站") : (hasStations ? "站点已保存，尚未采集报价" : "还没有可比较的报价");
-  emptyState.querySelector("p").textContent = publicEmpty ? (hasStations ? "启用 Linux.do Marketplace 或 WindHub 后刷新公益站数据。" : "先在站点设置中启用一个公益站，再刷新采集价格。") : (hasStations ? "点击上方“刷新全部”开始采集价格。" : "先添加一个中转站，再刷新采集价格。");
+  emptyState.querySelector("p").textContent = publicEmpty ? (hasStations ? "启用 Linux.do Marketplace 或 WindHub 后刷新。" : "启用公益站后刷新。") : (hasStations ? "点右上角刷新开始采集。" : "添加中转站并刷新即可。");
   emptyState.querySelector("a span:last-child").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
   renderCheckin(data);
@@ -480,13 +499,13 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "monthlyCost", sortSecondary: "recommendationScore", sortDirection: "asc" };
+  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, showStale: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
   $("#search").value = "";
   renderModelFilter();
   renderStationFilter(state.rows);
   for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
-  $("#sort-by").value = "monthlyCost";
-  $("#sort-secondary").value = "recommendationScore";
+  $("#sort-by").value = "blendedUnitPrice";
+  $("#sort-secondary").value = "diffPercent";
   $("#sort-direction").value = "asc";
   $("#show-unmatched").checked = true;
   $("#show-stale").checked = true;
@@ -674,6 +693,11 @@ $("#checkin-refresh").addEventListener("click", async event => {
 });
 
 document.addEventListener("click", async event => {
+  const installButton = event.target.closest("[data-checkin-action='install']");
+  if (installButton) {
+    openSettingsView("stations");
+    return;
+  }
   const claimButton = event.target.closest("[data-checkin-action='claim']");
   if (!claimButton) return;
   const stationId = claimButton.dataset.stationId;
@@ -709,12 +733,53 @@ document.addEventListener("change", async event => {
 hydrateIcons();
 const cards = initCollapsibleCards("dashboard");
 $("#expand-all").addEventListener("click", () => cards.setAll(false));
+initTopMenu();
+// 设置抽屉：顶栏齿轮就地打开站点与设置，不再跳到独立的设置页
+const settingsLayer = $("#settings-layer");
+const settingsFrame = $("#settings-frame");
+const settingsTrigger = $("#open-settings");
+let settingsReloadToken = 0;
+let settingsDirty = false;
+function openSettingsView(view = "stations") {
+  if (!settingsLayer || !settingsFrame) return;
+  const src = `options.html?embed=1${settingsDirty ? `&r=${++settingsReloadToken}` : ""}#${view}`;
+  if (settingsFrame.getAttribute("src") !== src) settingsFrame.setAttribute("src", src);
+  settingsLayer.hidden = false;
+  settingsTrigger?.setAttribute("aria-expanded", "true");
+  $("#close-settings")?.focus();
+}
+function closeSettingsView() {
+  if (!settingsLayer || settingsLayer.hidden) return;
+  settingsLayer.hidden = true;
+  settingsTrigger?.setAttribute("aria-expanded", "false");
+  settingsTrigger?.focus();
+}
+settingsTrigger?.addEventListener("click", () => {
+  if (settingsLayer && !settingsLayer.hidden) closeSettingsView();
+  else openSettingsView();
+});
+for (const trigger of document.querySelectorAll("[data-open-settings]")) {
+  trigger.addEventListener("click", () => openSettingsView(trigger.dataset.openSettings || "stations"));
+}
+settingsLayer?.addEventListener("click", event => {
+  if (event.target.closest("[data-close-settings]")) closeSettingsView();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && settingsLayer && !settingsLayer.hidden) closeSettingsView();
+});
+// 抽屉里保存过设置就重新拉一遍仪表盘，下次打开抽屉也重新加载设置页
+window.addEventListener("message", event => {
+  if (event.origin !== location.origin || event.data?.type !== "MODEL_ATLAS_SETTINGS_SAVED") return;
+  settingsDirty = true;
+  load();
+});
 $("#collapse-all").addEventListener("click", () => cards.setAll(true));
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
 });
 onRefreshProgress(renderRefreshProgress);
 load();
+
 
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) load();

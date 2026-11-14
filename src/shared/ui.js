@@ -36,7 +36,19 @@ const ICON_PATHS = {
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   activity: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
   "panel-top": '<rect width="18" height="15" x="3" y="3" rx="2"/><path d="M3 8h18"/><path d="M8 3v5"/>',
-  "sparkles": '<path d="m12 3-1.5 5.5L5 10l5.5 1.5L12 17l1.5-5.5L19 10l-5.5-1.5Z"/><path d="m19 16-.7 2.3L16 19l2.3.7L19 22l.7-2.3L22 19l-2.3-.7Z"/>'
+  "sparkles": '<path d="m12 3-1.5 5.5L5 10l5.5 1.5L12 17l1.5-5.5L19 10l-5.5-1.5Z"/><path d="m19 16-.7 2.3L16 19l2.3.7L19 22l.7-2.3L22 19l-2.3-.7Z"/>',
+  puzzle: '<path d="M14 5V3.5a2 2 0 1 0-4 0V5H6.5A1.5 1.5 0 0 0 5 6.5V10H3.5a2 2 0 1 0 0 4H5v3.5A1.5 1.5 0 0 0 6.5 19H10v1.5a2 2 0 1 0 4 0V19h3.5a1.5 1.5 0 0 0 1.5-1.5V14h1.5a2 2 0 1 0 0-4H19V6.5A1.5 1.5 0 0 0 17.5 5H14Z"/>',
+  compass: '<circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/>',
+  server: '<rect width="16" height="7" x="4" y="3" rx="2"/><rect width="16" height="7" x="4" y="14" rx="2"/><path d="M8 6.5h.01"/><path d="M8 17.5h.01"/>',
+  package: '<path d="m12 3 8 4.5v9L12 21 4 16.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5"/><path d="M12 12v9"/>',
+  store: '<path d="M3 9 4.5 4h15L21 9"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M3 9h18"/><path d="M9 21v-6h6v6"/>',
+  "chart-column": '<path d="M3 21h18"/><rect width="4" height="9" x="6" y="12"/><rect width="4" height="5" x="14" y="16"/>',
+  "git-branch": '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>',
+  "list-checks": '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.9 4.9 1.4 1.4"/><path d="m17.7 17.7 1.4 1.4"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.3 17.7-1.4 1.4"/><path d="m19.1 4.9-1.4 1.4"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+menu: '<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>',
 };
 
 export function callService(type, payload = {}) {
@@ -95,21 +107,6 @@ export function toast(message) {
   node.hidden = false;
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
-}
-export async function downloadJson(filename, value) {
-  const text = JSON.stringify(value);
-  let blob = new Blob([text], { type: "application/json" });
-  if (typeof CompressionStream === "function" && typeof Blob.prototype.stream === "function") {
-    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
-    blob = await new Response(stream).blob();
-    if (!filename.endsWith(".gz")) filename += ".gz";
-  }
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export async function readJsonFile(file) {

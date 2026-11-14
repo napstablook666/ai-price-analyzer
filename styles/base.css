@@ -33,11 +33,60 @@
   --shadow: 0 1px 2px rgba(24, 24, 27, .05);
   --shadow-card: 0 1px 2px rgba(24, 24, 27, .05);
   --shadow-pop: 0 12px 32px rgba(24, 24, 27, .14);
+  --on-accent: #ffffff;
+  --topbar-bg: rgba(255, 255, 255, .86);
+  --overlay: rgba(24, 24, 27, .4);
+  --ok-line: #bbf7d0;
+  --warn-line: #fcd34d;
+  --toast-bg: #27272a;
+  --toast-text: #fafafa;
+  --switch-shadow: 0 1px 3px rgba(24, 24, 27, .2);
+  color-scheme: light;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+/* 夜晚主题：只覆盖同一批 token，页面级 CSS 不需要任何改动 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #17171a;
+  --surface: #1f1f23;
+  --surface-2: #26262b;
+  --row-tint: #1d2534;
+  --line: #2e2e34;
+  --line-strong: #3c3c43;
+  --text: #ededf0;
+  --text-2: #a9a9b2;
+  --text-3: #8b8b95;
+  --accent: #f4f4f5;
+  --accent-strong: #ffffff;
+  --accent-soft: #2a2a30;
+  --accent-line: #4a4a53;
+  --on-accent: #17171a;
+  --ring: rgba(244, 244, 245, .22);
+  --ok: #4ade80;
+  --ok-soft: #13261a;
+  --ok-line: #1f5134;
+  --warn: #fbbf24;
+  --warn-soft: #2a2110;
+  --warn-line: #6b5217;
+  --danger: #f87171;
+  --danger-strong: #fca5a5;
+  --danger-soft: #2c1517;
+  --cat-excellent: #22c55e;
+  --cat-good: #60a5fa;
+  --cat-fair: #f59e0b;
+  --cat-bad: #f87171;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, .55);
+  --topbar-bg: rgba(23, 23, 26, .86);
+  --overlay: rgba(0, 0, 0, .62);
+  --toast-bg: #ededf0;
+  --toast-text: #17171a;
+  --switch-shadow: 0 1px 3px rgba(0, 0, 0, .5);
 }
 
 * { box-sizing: border-box; }
@@ -66,7 +115,7 @@ select { appearance: none; padding-right: 32px; background-image: linear-gradien
 .muted { color: var(--text-2); }
 
 /* 顶栏 */
-.topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 56px; padding: 10px clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .86); backdrop-filter: blur(12px); }
+.topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 56px; padding: 10px clamp(16px, 3vw, 32px); border-bottom: 1px solid var(--line); background: var(--topbar-bg); backdrop-filter: blur(12px); }
 .brand-lockup { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
 .brand-mark { display: grid; place-items: center; width: 32px; height: 32px; color: var(--surface); background: var(--text); border-radius: var(--radius-control); overflow: hidden; }
 .brand-image { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -79,7 +128,7 @@ select { appearance: none; padding-right: 32px; background-image: linear-gradien
 
 /* 按钮 */
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 34px; padding: 0 12px; border-radius: var(--radius-control); font-size: 12px; font-weight: 600; transition: background .15s ease, color .15s ease, border-color .15s ease; }
-.button-primary { color: #fff; background: var(--accent); }
+.button-primary { color: var(--on-accent); background: var(--accent); }
 .button-primary:hover { background: var(--accent-strong); }
 .button-quiet { color: var(--text); border: 1px solid var(--line); background: var(--surface); }
 .button-quiet:hover { border-color: var(--line-strong); background: var(--surface-2); }
@@ -87,6 +136,25 @@ select { appearance: none; padding-right: 32px; background-image: linear-gradien
 .icon-button { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: 6px; color: var(--text-2); background: transparent; }
 .icon-button:hover { border-color: var(--line); color: var(--danger); background: var(--surface-2); }
 .danger-icon { color: var(--danger); }
+/* 主题切换：一个按钮里放太阳和月亮，由当前主题决定露哪一个 */
+.theme-toggle { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--text-2); background: var(--surface); }
+.theme-toggle:hover { border-color: var(--line-strong); color: var(--text); background: var(--surface-2); }
+.theme-toggle .icon { width: 16px; height: 16px; }
+.theme-icon-sun { display: none; }
+:root[data-theme="dark"] .theme-icon-sun { display: inline; }
+:root[data-theme="dark"] .theme-icon-moon { display: none; }
+
+/* 顶栏菜单：details 自带开合，点外面或按 Esc 收起 */
+.top-menu { position: relative; }
+.top-menu > summary { list-style: none; cursor: pointer; }
+.top-menu > summary::-webkit-details-marker { display: none; }
+.top-menu[open] > summary { border-color: var(--line-strong); background: var(--surface-2); }
+.top-menu-body { position: absolute; top: calc(100% + 8px); right: 0; z-index: 45; display: grid; gap: 2px; min-width: 200px; padding: 6px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-pop); }
+.top-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px; border: 0; border-radius: 6px; color: var(--text); background: transparent; font: inherit; font-size: 12px; font-weight: 500; line-height: 1.2; text-align: left; text-decoration: none; cursor: pointer; }
+.top-menu-item:hover, .top-menu-item:focus-visible { background: var(--surface-2); }
+.top-menu-item .icon { width: 15px; height: 15px; color: var(--text-2); }
+.top-menu-item[aria-checked="true"] { background: var(--accent-soft); font-weight: 600; }
+.top-menu-sep { height: 1px; margin: 4px 6px; background: var(--line); }
 
 /* 复选与开关 */
 .check-label { display: inline-flex; align-items: center; gap: 7px; min-height: 26px; color: var(--text-2); font-size: 12px; cursor: pointer; }
@@ -94,7 +162,7 @@ select { appearance: none; padding-right: 32px; background-image: linear-gradien
 .switch { position: relative; display: inline-flex; align-items: center; width: 40px; height: 22px; cursor: pointer; }
 .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .switch span { display: block; width: 40px; height: 22px; border-radius: var(--radius-pill); background: var(--line-strong); transition: background .15s ease; }
-.switch span::after { content: ""; display: block; width: 16px; height: 16px; margin: 3px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(24, 24, 27, .2); transition: transform .15s ease; }
+.switch span::after { content: ""; display: block; width: 16px; height: 16px; margin: 3px; border-radius: 50%; background: var(--surface); box-shadow: var(--switch-shadow); transition: transform .15s ease; }
 .switch input:checked + span { background: var(--accent); }
 .switch input:checked + span::after { transform: translateX(18px); }
 
@@ -103,12 +171,16 @@ select { appearance: none; padding-right: 32px; background-image: linear-gradien
 .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px 12px; }
 .panel-heading h2, .section-heading h2 { margin: 0; font-size: 15px; font-weight: 600; line-height: 1.3; }
 .collapse-toggle { flex: 0 0 auto; margin-left: auto; }
+/* 标题右侧的整体开关：文字 + 滑块，整组靠右，折叠按钮紧跟其后 */
+.panel-heading > .panel-switch { margin-left: auto; }
+.panel-switch { display: inline-flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12px; }
+.panel-heading > .panel-switch + .collapse-toggle { margin-left: 0; }
 [data-collapsed="true"] > *:not(:first-child) { display: none; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 14px; }
 .result-count { color: var(--text-2); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
 
 /* 轻提示 */
-.toast { position: fixed; z-index: 40; right: 20px; bottom: 20px; max-width: min(400px, calc(100vw - 40px)); padding: 11px 14px; color: #fafafa; background: #27272a; border-radius: var(--radius-card); box-shadow: var(--shadow-pop); font-size: 12px; line-height: 1.5; }
+.toast { position: fixed; z-index: 40; right: 20px; bottom: 20px; max-width: min(400px, calc(100vw - 40px)); padding: 11px 14px; color: var(--toast-text); background: var(--toast-bg); border-radius: var(--radius-card); box-shadow: var(--shadow-pop); font-size: 12px; line-height: 1.5; }
 
 @media (max-width: 720px) {
   .topbar { align-items: flex-start; padding: 12px 14px; }

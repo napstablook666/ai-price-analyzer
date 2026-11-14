@@ -66,6 +66,7 @@
 .facet-menu-actions { display: flex; gap: 6px; margin-bottom: 5px; }
 .facet-menu-actions button { min-height: 28px; padding: 0 7px; border-radius: 5px; color: var(--text-2); background: var(--surface-2); font-size: 10px; }
 .facet-empty { padding: 10px 5px; color: var(--text-3); font-size: 10px; }
+.facet-metric { margin-left: auto; padding-left: 6px; color: var(--text-3); font-size: 10px; font-variant-numeric: tabular-nums; }
 .compare-row > summary { justify-content: space-between; width: 100%; min-height: 32px; }
 .compare-row > .facet-menu-body { gap: 0; max-height: none; padding: 8px 0 0; border: 0; border-radius: 0; background: transparent; overflow: visible; }
 .model-filter-inputs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -80,14 +81,15 @@
 .reference-readout strong { font-size: 10px; font-weight: 600; }
 .reference-readout span { color: var(--text-3); font-size: 9px; }
 .table-wrap { position: relative; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; border-top: 1px solid var(--line); }
-.comparison-table { width: 100%; min-width: 1040px; table-layout: fixed; border-collapse: separate; border-spacing: 0; color: var(--text-2); font-size: 11px; }
+.comparison-table { width: 100%; min-width: 1120px; table-layout: fixed; border-collapse: separate; border-spacing: 0; color: var(--text-2); font-size: 11px; }
 .comparison-table th, .comparison-table td { padding: 9px 11px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
-.comparison-table th:nth-child(1) { width: 20%; }
-.comparison-table th:nth-child(2) { width: 15%; }
-.comparison-table th:nth-child(3), .comparison-table th:nth-child(4) { width: 13%; }
+.comparison-table th:nth-child(1) { width: 18%; }
+.comparison-table th:nth-child(2) { width: 14%; }
+.comparison-table th:nth-child(3), .comparison-table th:nth-child(4) { width: 12%; }
 .comparison-table th:nth-child(5) { width: 11%; }
-.comparison-table th:nth-child(6) { width: 9%; }
-.comparison-table th:nth-child(7) { width: 19%; }
+.comparison-table th:nth-child(6) { width: 8%; }
+.comparison-table th:nth-child(7) { width: 11%; }
+.comparison-table th:nth-child(8) { width: 14%; }
 .comparison-table thead th { position: sticky; top: 0; z-index: 3; height: 38px; color: var(--text-2); background: var(--surface); font-size: 10px; font-weight: 600; white-space: nowrap; }
 .comparison-table thead th > span:not(#model-column-heading) { display: block; margin-top: 2px; color: var(--text-3); font-size: 8px; font-weight: 400; }
 .comparison-table tbody tr:last-child td { border-bottom: 0; }
@@ -119,14 +121,14 @@
 .cost-gap.is-saving, .delta-tag.is-saving { color: var(--ok); }
 .cost-gap.is-extra, .delta-tag.is-extra { color: var(--danger); }
 .recommendation-cell { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; min-width: 0; }
-.recommendation-tag.is-best { color: var(--ok); border-color: #bbf7d0; background: var(--ok-soft); }
+.recommendation-tag.is-best { color: var(--ok); border-color: var(--ok-line); background: var(--ok-soft); }
 .rating-excellent { color: var(--cat-excellent); }
 .rating-good { color: var(--cat-good); }
 .rating-fair { color: var(--cat-fair); }
 .rating-bad { color: var(--cat-bad); }
 .status-cluster { display: flex; flex-wrap: wrap; gap: 3px; }
 .status-tag .icon { width: 10px; height: 10px; }
-.status-tag.warning { color: var(--warn); border-color: #fcd34d; background: var(--warn-soft); }
+.status-tag.warning { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
 .status-tag.muted { color: var(--text-3); }
 
 .comparison-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; flex: 0 0 auto; min-height: 42px; padding: 6px 10px; border-top: 1px solid var(--line); }
@@ -139,9 +141,11 @@
 .empty-state h3 { margin: 0; font-size: 13px; }
 .empty-state p { margin: 6px 0 12px; color: var(--text-2); font-size: 10px; }
 
-.checkin-panel { flex: 0 0 auto; max-height: 168px; padding: 0 12px 10px; overflow-y: auto; }
-.checkin-panel .panel-heading { padding-inline: 0; }
+.top-menu-checkin { display: grid; gap: 6px; width: 288px; max-height: 300px; padding: 2px; overflow-y: auto; }
+.top-menu-checkin-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; color: var(--text-2); font-size: 11px; font-weight: 600; }
 .checkin-list { display: grid; gap: 6px; }
+.top-menu-checkin .checkin-item { flex-direction: column; align-items: stretch; gap: 7px; }
+.top-menu-checkin .checkin-actions { justify-content: space-between; }
 .checkin-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 9px; border-radius: 6px; background: var(--surface-2); }
 .checkin-info { display: grid; gap: 2px; min-width: 0; }
 .checkin-info strong { font-size: 11px; }
@@ -151,6 +155,20 @@
 .checkin-empty-text { line-height: 1.5; }
 .back-to-top { position: fixed; right: 18px; bottom: 18px; z-index: 20; display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 9px; color: var(--text-2); background: var(--surface); box-shadow: var(--shadow-pop); }
 
+/* 顶栏模式开关：付费站和公益站随手切换 */
+.dashboard-topbar .comparison-mode-button { min-height: 30px; padding: 0 10px; }
+
+/* 设置抽屉：顶栏齿轮就地打开站点与设置，盖在仪表盘上而不是另开页面 */
+.settings-layer { position: fixed; inset: 0; z-index: 70; display: grid; justify-items: end; }
+.settings-scrim { position: absolute; inset: 0; background: rgb(15 15 14 / .3); }
+.settings-sheet { position: relative; display: flex; flex-direction: column; width: min(1120px, 100%); height: 100%; border-left: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-pop); }
+.settings-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.settings-sheet-head h2 { margin: 0; font-size: 15px; font-weight: 650; }
+.settings-frame { flex: 1; width: 100%; min-height: 0; border: 0; background: var(--surface); }
+
+@media (max-width: 640px) {
+  .settings-sheet { width: 100%; }
+}
 @media (min-width: 1101px) {
   .dashboard-sidebar .toolbar-main,
   .dashboard-sidebar .toolbar-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
@@ -164,8 +182,8 @@
   .dashboard-sidebar .toolbar-main > .button > span { white-space: normal; }
   .dashboard-sidebar .comparison-mode-note,
   .dashboard-sidebar .station-errors { grid-column: 1 / -1; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
-  .dashboard-sidebar .checkin-item, .dashboard-sidebar .checkin-empty { align-items: flex-start; flex-direction: column; gap: 7px; }
-  .dashboard-sidebar .checkin-actions { width: 100%; justify-content: space-between; }
+  .top-menu-checkin .checkin-item, .top-menu-checkin .checkin-empty { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .top-menu-checkin .checkin-actions { width: 100%; justify-content: space-between; }
 .dashboard-sidebar .model-filter-inputs { grid-template-columns: 1fr; }
 }
 
@@ -196,7 +214,7 @@
   .comparison-table td::before { content: attr(data-label); color: var(--text-3); font-size: 9px; }
   .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站 / 分组"], .comparison-table td[data-label="推荐与状态"], .comparison-table td[data-label="状态"] { grid-column: 1 / -1; }
   .comparison-table tbody tr:hover td { background: transparent; }
-  .checkin-panel { max-height: none; }
+  .top-menu-checkin { width: min(88vw, 320px); max-height: none; }
 }
 @media (max-width: 640px) {
   .dashboard-topbar { min-height: 60px; padding: 9px 12px; }

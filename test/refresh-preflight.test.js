@@ -223,7 +223,8 @@ async function waitFor(predicate) {
 
 test("adds selected local plugins in one idempotent batch without eager loading", async () => {
   resetSitePluginLoader();
-  await withWorker({ stations: [], values: { settings: { comparisonMode: "paid", exchangeRate: 7.2 } } }, {}, async (worker, stores) => {
+  const installed = { centos: { version: "1.0.0", installedAt: 1 }, "linux-do-marketplace": { version: "1.0.0", installedAt: 1 } };
+  await withWorker({ stations: [], values: { settings: { comparisonMode: "paid", exchangeRate: 7.2, pluginRegistry: { url: "", fetchedAt: 0, error: "", entries: [], installed } } } }, {}, async (worker, stores) => {
     responseData(await worker.send("GET_DASHBOARD"));
     assert.deepEqual(loadedSitePluginIds(), []);
 
@@ -242,7 +243,7 @@ test("adds selected local plugins in one idempotent batch without eager loading"
 
     const rejected = await worker.send("ADD_SITE_PLUGINS", { ids: ["not-a-plugin"] });
     assert.equal(rejected.ok, false);
-    assert.match(rejected.error, /至少选择一个可添加的站点插件/);
+    assert.match(rejected.error, /请至少选择一个已安装插件里的站点/);
   });
 });
 

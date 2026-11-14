@@ -1,8 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "../src/core/checkin.js";
+import { checkinPresetFromSpec, checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, performCheckin } from "../src/core/checkin.js";
+import { normalizePluginSpec } from "../src/core/declarative-plugin.js";
+import { PLUGIN_REGISTRY_SNAPSHOT } from "../src/site-plugins/registry-snapshot.js";
 
 const vyceaiStation = { id: "s1", name: "Vyce AI", baseUrl: "https://vyceai.com/dashboard-v2" };
+// 签到适配来自插件仓库里的签到插件，测试直接吃随扩展发布的那份 JSON 规格
+const CHECKIN_SPEC = normalizePluginSpec(PLUGIN_REGISTRY_SNAPSHOT.plugins.find(entry => entry.kind === "checkin"));
+const CHECKIN_PRESETS = checkinPresetsFromSpecs([CHECKIN_SPEC]);
+const PRESET = CHECKIN_PRESETS[0];
 
 const jsonResponse = body => ({
   ok: true,
@@ -12,13 +18,13 @@ const jsonResponse = body => ({
 });
 
 test("matches check-in presets by host", () => {
-  assert.equal(matchCheckinPreset(vyceaiStation)?.id, "vyceai");
-  assert.equal(matchCheckinPreset({ baseUrl: "https://www.vyceai.com/" })?.id, "vyceai");
-  assert.equal(matchCheckinPreset({ baseUrl: "https://api.vyceai.com/x" })?.id, "vyceai");
-  assert.equal(matchCheckinPreset({ baseUrl: "https://vyceai.com.evil.example/" }), null);
-  assert.equal(matchCheckinPreset({ baseUrl: "https://example.com/" }), null);
-  assert.equal(matchCheckinPreset({}), null);
-  assert.equal(matchCheckinPreset({ baseUrl: "not-a-url" }), null);
+  assert.equal(matchCheckinPreset(vyceaiStation, CHECKIN_PRESETS)?.id, "site-checkin");
+  assert.equal(matchCheckinPreset({ baseUrl: "https://www.vyceai.com/" }, CHECKIN_PRESETS)?.id, "site-checkin");
+  assert.equal(matchCheckinPreset({ baseUrl: "https://api.vyceai.com/x" }, CHECKIN_PRESETS)?.id, "site-checkin");
+  assert.equal(matchCheckinPreset({ baseUrl: "https://vyceai.com.evil.example/" }, CHECKIN_PRESETS), null);
+  assert.equal(matchCheckinPreset({ baseUrl: "https://example.com/" }, CHECKIN_PRESETS), null);
+  assert.equal(matchCheckinPreset({}, CHECKIN_PRESETS), null);
+  assert.equal(matchCheckinPreset({ baseUrl: "not-a-url" }, CHECKIN_PRESETS), null);
 });
 
 test("normalizes check-in records", () => {
@@ -49,7 +55,7 @@ test("performs check-in when the API reports canClaim", async () => {
     return jsonResponse({ error: { message: "unexpected" } });
   };
   try {
-    const result = await performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" });
+    const result = await performCheckin({ station: vyceaiStation, preset: PRESET, claim: true, token: "tok-1" });
     assert.equal(result.ok, true);
     assert.equal(result.claimed, true);
     assert.equal(result.canClaim, false);
@@ -75,7 +81,7 @@ test("rejects business-level claim failures returned with HTTP 200", async () =>
   };
   try {
     await assert.rejects(
-      () => performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" }),
+      () => performCheckin({ station: vyceaiStation, preset: PRESET, claim: true, token: "tok-1" }),
       error => error.code === "CHECKIN_REJECTED" && error.message === "Already claimed today"
     );
   } finally {
@@ -91,7 +97,7 @@ test("rejects when the claim is not reflected by the status endpoint", async () 
   };
   try {
     await assert.rejects(
-      () => performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" }),
+      () => performCheckin({ station: vyceaiStation, preset: PRESET, claim: true, token: "tok-1" }),
       error => error.code === "CHECKIN_NOT_CONFIRMED" && error.message.includes("未确认到账")
     );
   } finally {
@@ -107,7 +113,7 @@ test("skips claim when already claimed and reports status", async () => {
     return jsonResponse({ canClaim: false, streak: 2, rewardAmount: 0.2 });
   };
   try {
-    const result = await performCheckin({ station: vyceaiStation, claim: true, token: "tok-1" });
+    const result = await performCheckin({ station: vyceaiStation, preset: PRESET, claim: true, token: "tok-1" });
     assert.equal(result.claimed, false);
     assert.equal(result.canClaim, false);
     assert.equal(result.streak, 2);
@@ -128,7 +134,7 @@ test("surfaces API errors with status", async () => {
   });
   try {
     await assert.rejects(
-      () => performCheckin({ station: vyceaiStation, claim: false, token: "tok-1" }),
+      () => performCheckin({ station: vyceaiStation, preset: PRESET, claim: false, token: "tok-1" }),
       error => error.status === 401 && error.message.includes("未登录")
     );
   } finally {
@@ -136,11 +142,21 @@ test("surfaces API errors with status", async () => {
   }
 });
 
-test("presets carry status and claim endpoints", () => {
-  const [vyceai] = CHECKIN_PRESETS;
-  assert.equal(vyceai.statusPath, "/user/daily-reward");
-  assert.equal(vyceai.claimPath, "/user/daily-reward/claim");
-  assert.equal(vyceai.claimMethod, "POST");
-  assert.equal(vyceai.tokenStorageKey, "vyce_session");
-  assert.equal(vyceai.tokenCookieName, "session");
+test("check-in plugin JSON carries the endpoint spec", () => {
+  assert.equal(CHECKIN_SPEC.kind, "checkin");
+  assert.equal(CHECKIN_SPEC.id, "site-checkin");
+  assert.deepEqual(PRESET.matchHosts, ["vyceai.com"]);
+  assert.equal(PRESET.statusPath, "/user/daily-reward");
+  assert.equal(PRESET.claimPath, "/user/daily-reward/claim");
+  assert.equal(PRESET.claimMethod, "POST");
+  assert.equal(typeof PRESET.tokenStorageKey, "string");
+  assert.ok(PRESET.tokenStorageKey.length > 0);
+  assert.equal(PRESET.tokenCookieName, "session");
+  assert.equal(PRESET.cooldownHours, 24);
+  assert.equal(checkinPresetFromSpec({ id: "plain", version: "1.0.0" }), null);
+});
+
+test("check-in plugins stay out of the price plugin pipeline", () => {
+  assert.equal(CHECKIN_SPEC.request, null);
+  assert.equal(CHECKIN_SPEC.addable, false);
 });

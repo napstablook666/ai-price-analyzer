@@ -33,7 +33,7 @@ export async function getStoredWorkspace() {
 }
 
 export async function pickWorkspace() {
-  if (!isWorkspaceSupported()) throw new Error("当前浏览器不支持本地工作区，请使用 JSON 导入导出");
+  if (!isWorkspaceSupported()) throw new Error("当前浏览器不支持本地工作区");
   const handle = await window.showDirectoryPicker({ mode: "readwrite" });
   if (!(await hasPermission(handle, true))) throw new Error("没有获得工作区读写权限");
   await setValue(WORKSPACE_HANDLE_KEY, handle);

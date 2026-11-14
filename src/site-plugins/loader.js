@@ -1,6 +1,7 @@
 import { providerById, providerForStation, registerSiteProvider, resetProviderRegistry, retainSiteProviders, unregisterSiteProvider } from "../core/provider-registry.js";
 import { providerFromSpec } from "../core/declarative-plugin.js";
-import { SITE_PLUGIN_CATALOG, sitePluginById, sitePluginForStation } from "./catalog.js";
+import { SITE_PLUGIN_CATALOG, sitePluginById } from "./catalog.js";
+import { activeSitePluginForStation } from "./activation.js";
 
 export async function loadSitePlugin(id) {
   const registered = providerById(id);
@@ -17,12 +18,12 @@ export async function loadSitePlugins(ids) {
 }
 
 export async function loadSitePluginForStation(station) {
-  const descriptor = sitePluginForStation(station);
+  const descriptor = activeSitePluginForStation(station);
   return descriptor ? loadSitePlugin(descriptor.id) : null;
 }
 
 export async function syncSitePlugins(stations = []) {
-  const ids = [...new Set(stations.map(sitePluginForStation).filter(Boolean).map(plugin => plugin.id))];
+  const ids = [...new Set(stations.map(activeSitePluginForStation).filter(Boolean).map(plugin => plugin.id))];
   await loadSitePlugins(ids);
   return ids.map(providerById).filter(Boolean);
 }

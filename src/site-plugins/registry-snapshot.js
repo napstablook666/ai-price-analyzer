@@ -224,6 +224,33 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "jiji.cc"
       ],
       "needsCode": true
+    },
+    {
+      "id": "site-checkin",
+      "name": "站点签到插件",
+      "version": "1.0.0",
+      "description": "用浏览器登录态给站点每日签到，只发签到请求，不采集价格。",
+      "hosts": [
+        "vyceai.com"
+      ],
+      "kind": "checkin",
+      "needsCode": false,
+      "checkin": {
+        "statusPath": "/user/daily-reward",
+        "claimPath": "/user/daily-reward/claim",
+        "claimMethod": "POST",
+        "tokenStorageKey": "vyce_session",
+        "tokenCookieName": "session",
+        "fields": {
+          "canClaim": "canClaim",
+          "streak": "streak",
+          "rewardAmount": "rewardAmount",
+          "bonusPercent": "streakBonusPercent",
+          "totalClaimed": "totalClaimed",
+          "lastClaim": "lastClaim"
+        },
+        "cooldownHours": 24
+      }
     }
   ]
 };

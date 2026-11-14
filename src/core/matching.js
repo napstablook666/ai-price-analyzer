@@ -49,7 +49,7 @@ function modelsForIndexes(indexes, index) {
   return [...indexes].sort((left, right) => left - right).map(modelIndex => index.models[modelIndex]);
 }
 
-export function buildModelMatchIndex(officialList = [], overrides = [], { canonicalIndex = getCanonicalIndex(), modelAliases = {} } = {}) {
+export function buildModelMatchIndex(officialList = [], overrides = [], { canonicalIndex = getCanonicalIndex(), modelAliases = {}, llmMatches = {} } = {}) {
   const index = {
     models: officialList,
     namesByModel: [],
@@ -59,7 +59,8 @@ export function buildModelMatchIndex(officialList = [], overrides = [], { canoni
     canonicalIndex,
     modelById: new Map(),
     overridesByStation: new Map(),
-    aliasesByStation: new Map()
+    aliasesByStation: new Map(),
+    llmByStation: new Map()
   };
   officialList.forEach((model, modelIndex) => {
     const names = getOfficialNames(model);
@@ -82,6 +83,15 @@ export function buildModelMatchIndex(officialList = [], overrides = [], { canoni
       if (alias && target && !normalized.has(alias)) normalized.set(alias, target);
     }
     if (normalized.size) index.aliasesByStation.set(stationId, normalized);
+  }
+  for (const [stationId, matches] of Object.entries(llmMatches || {})) {
+    const normalized = new Map();
+    for (const [name, target] of Object.entries(matches || {})) {
+      const alias = normalizeProxyModelName(name);
+      const value = String(target || "").trim();
+      if (alias && value && !normalized.has(alias)) normalized.set(alias, value);
+    }
+    if (normalized.size) index.llmByStation.set(stationId, normalized);
   }
   for (const override of overrides) {
     let stationOverrides = index.overridesByStation.get(override.stationId);
@@ -142,19 +152,25 @@ export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHIN
   return [];
 }
 
-export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules, index, canonicalIndex } = {}) {
-  const matchingIndex = index || buildModelMatchIndex(officialList, overrides, { canonicalIndex });
+export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules, index, canonicalIndex, llmMatches = {} } = {}) {
+  const matchingIndex = index || buildModelMatchIndex(officialList, overrides, { canonicalIndex, llmMatches });
   const normalized = normalizeProxyModelName(proxyName);
   const overrideId = matchingIndex.overridesByStation.get(stationId)?.get(normalized);
   const match = overrideId && matchingIndex.modelById.get(overrideId);
   if (match) return [{ match, rule: "人工确认", ruleId: "manual", confidence: 1 }];
-  // 插件声明的拼写直接改写成规范 id，再走统一查表。
+// 插件声明的拼写直接改写成规范 id，再走统一查表。
   const pluginTarget = matchingIndex.aliasesByStation.get(stationId)?.get(normalized);
   if (pluginTarget) {
     const aliased = matchModel(pluginTarget, officialList, rules, matchingIndex);
     if (aliased.length) return aliased.map(result => ({ ...result, rule: "插件拼写", ruleId: "plugin-alias", confidence: 0.95 }));
     const direct = matchingIndex.modelById.get(pluginTarget);
     if (direct) return [{ match: direct, rule: "插件拼写", ruleId: "plugin-alias", confidence: 0.95 }];
+  }
+  // AI 判定排在规则链之前：只有规则猜不中的写法才进 AI 池，命中了就不让模糊规则再改判。
+  const llmTarget = matchingIndex.llmByStation.get(stationId)?.get(normalized);
+  if (llmTarget) {
+    const llmMatch = matchingIndex.modelById.get(llmTarget);
+    if (llmMatch) return [{ match: llmMatch, rule: "AI 判定", ruleId: "llm", confidence: 0.8 }];
   }
   return matchModel(proxyName, officialList, rules, matchingIndex);
 }

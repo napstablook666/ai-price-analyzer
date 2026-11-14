@@ -26,7 +26,7 @@ const REGISTRY_SNAPSHOT_FILE = path.join(ROOT, "src", "site-plugins", "registry-
 const REGISTRY_JSON_FILE = path.join(PLUGIN_DIR, "plugins.json");
 const BUNDLED_VERSION = String(readJson(path.join(ROOT, "manifest.json")).version || "0.0.0");
 
-const MANIFEST_KEYS = ["id", "name", "version", "host", "hosts", "paths", "mode", "category", "addable", "description", "order"];
+const MANIFEST_KEYS = ["id", "name", "version", "host", "hosts", "paths", "mode", "category", "kind", "addable", "description", "order"];
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -44,13 +44,19 @@ function loadPlugin(id) {
   const manifestFile = path.join(dir, "manifest.json");
   const pluginFile = path.join(dir, "plugin.js");
   if (!fs.existsSync(manifestFile)) throw new Error(`plugins/${id} 缺 manifest.json`);
-  if (!fs.existsSync(pluginFile)) throw new Error(`plugins/${id} 缺 plugin.js`);
   const manifest = readJson(manifestFile);
   if (manifest.id !== id) throw new Error(`plugins/${id}/manifest.json 的 id 是 ${manifest.id}，必须与目录名一致`);
+  // 签到插件只有 JSON 规格，没有采集代码，也不参与价格采集
+  if (manifest.kind === "checkin") {
+    const checkinFile = path.join(dir, "checkin.json");
+    if (!fs.existsSync(checkinFile)) throw new Error(`plugins/${id} 是签到插件，缺 checkin.json`);
+    return { id, dir, manifest, kind: "checkin", source: "", aliases: {}, checkin: readJson(checkinFile) };
+  }
+  if (!fs.existsSync(pluginFile)) throw new Error(`plugins/${id} 缺 plugin.js`);
   const modelsFile = path.join(dir, "models.json");
   const models = fs.existsSync(modelsFile) ? readJson(modelsFile) : { aliases: {} };
   const aliases = models?.aliases && typeof models.aliases === "object" ? models.aliases : {};
-  return { id, dir, manifest, source: fs.readFileSync(pluginFile, "utf8"), aliases };
+  return { id, dir, manifest, kind: "price", source: fs.readFileSync(pluginFile, "utf8"), aliases };
 }
 
 function rewriteImports(source) {
@@ -81,7 +87,7 @@ function orderedPlugins(plugins) {
 }
 
 function renderOrder(plugins) {
-  const ids = orderedPlugins(plugins).map(plugin => plugin.id);
+  const ids = orderedPlugins(plugins.filter(plugin => plugin.kind !== "checkin")).map(plugin => plugin.id);
   return `// ${GENERATED}
 export const SITE_PLUGIN_ORDER = ${JSON.stringify(ids, null, 2)};
 `;
@@ -90,12 +96,26 @@ export const SITE_PLUGIN_ORDER = ${JSON.stringify(ids, null, 2)};
 function registryEntries(plugins) {
   return orderedPlugins(plugins).map(plugin => {
     const manifest = plugin.manifest;
+    const hosts = Array.isArray(manifest.hosts) && manifest.hosts.length ? manifest.hosts : [manifest.host];
+    if (plugin.kind === "checkin") {
+      // 签到插件是纯 JSON 规格，装的时候不需要下载代码
+      return {
+        id: manifest.id,
+        name: manifest.name || manifest.id,
+        version: String(manifest.version || BUNDLED_VERSION),
+        description: manifest.description || "",
+        hosts,
+        kind: "checkin",
+        needsCode: false,
+        checkin: plugin.checkin
+      };
+    }
     return {
       id: manifest.id,
       name: manifest.name || manifest.id,
       version: String(manifest.version || BUNDLED_VERSION),
       description: manifest.description || "",
-      hosts: Array.isArray(manifest.hosts) && manifest.hosts.length ? manifest.hosts : [manifest.host],
+      hosts,
       needsCode: true
     };
   });
@@ -111,7 +131,7 @@ function renderRegistryJson(plugins) {
   return `${JSON.stringify({ schemaVersion: 1, plugins: registryEntries(plugins) }, null, 2)}\n`;
 }
 function renderCatalog(plugins) {
-  const imports = orderedPlugins(plugins).map(plugin => ({
+  const imports = orderedPlugins(plugins.filter(plugin => plugin.kind !== "checkin")).map(plugin => ({
     plugin,
     local: `${plugin.id.replace(/[^a-zA-Z0-9]+(.)?/g, (_, chr) => (chr ? chr.toUpperCase() : ""))}Plugin`
   }));
@@ -170,7 +190,9 @@ export function sitePluginForStation(station = {}) {
 
 export function sitePluginCatalogForStations(stations = [], options = {}) {
   const addedIds = new Set(stations.map(sitePluginForStation).filter(Boolean).map(plugin => plugin.id));
-  return SITE_PLUGIN_CATALOG.map(({ load, paths, hosts, ...plugin }) => ({
+  // 出货时不带任何插件，只有装过的才会出现在列表里；installedIds 缺省表示不过滤。
+  const installedIds = options.installedIds instanceof Set ? options.installedIds : null;
+  return (installedIds ? SITE_PLUGIN_CATALOG.filter(plugin => installedIds.has(plugin.id)) : SITE_PLUGIN_CATALOG).map(({ load, paths, hosts, ...plugin }) => ({
     ...plugin,
     version: options.bundledVersion || "",
     added: addedIds.has(plugin.id),
@@ -186,6 +208,8 @@ function build() {
   const seen = new Set();
   for (const plugin of plugins) {
     if (!/^[a-z0-9][a-z0-9-]*$/.test(plugin.id)) throw new Error(`插件 id 只能用 a-z 0-9 与连字符：${plugin.id}`);
+    // 签到插件不参与站点唯一性与 paths 校验，它只借宿主的登录态打签到接口
+    if (plugin.kind === "checkin") continue;
     if (plugin.manifest.version !== undefined && !/^\d+\.\d+\.\d+$/.test(String(plugin.manifest.version))) {
       throw new Error(`plugins/${plugin.id}/manifest.json 的 version 必须是 x.y.z：${plugin.manifest.version}`);
     }
@@ -204,7 +228,10 @@ function build() {
     seen.add(plugin.manifest.host);
   }
   const files = new Map();
-  for (const plugin of plugins) files.set(path.join(PROVIDER_DIR, `${plugin.id}.js`), renderProvider(plugin));
+  for (const plugin of plugins) {
+    if (plugin.kind === "checkin") continue;
+    files.set(path.join(PROVIDER_DIR, `${plugin.id}.js`), renderProvider(plugin));
+  }
   files.set(CATALOG_FILE, renderCatalog(plugins));
   files.set(ORDER_FILE, renderOrder(plugins));
   files.set(REGISTRY_SNAPSHOT_FILE, renderRegistrySnapshot(plugins));

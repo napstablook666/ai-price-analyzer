@@ -1,30 +1,24 @@
 // 站点签到模块：按域名匹配预设，复用浏览器登录态（Cookie / Bearer）直接调用签到 API。
-// 新增站点适配：在 CHECKIN_PRESETS 里加一条即可，无需改其他代码。
+// 站点适配由插件仓库的签到插件（JSON 规格）提供，这里只保留通用请求与校验逻辑。
 
 import { stationContext } from "./provider-registry.js";
-export const CHECKIN_PRESETS = [
-  {
-    id: "vyceai",
-    matchHosts: ["vyceai.com"],
-    name: "Vyce AI",
-    // 状态与签到接口（bt="" 时为当前 origin 相对路径）
-    statusPath: "/user/daily-reward",
-    claimPath: "/user/daily-reward/claim",
-    claimMethod: "POST",
-    // 鉴权：请求同时携带 Authorization: Bearer <token> 与 Cookie（session=<token>）
-    tokenStorageKey: "vyce_session",
-    tokenCookieName: "session",
-    // 响应字段映射（GET status 返回）：canClaim / streak / streakBonusPercent / rewardAmount / totalClaimed / tier
-    // POST claim 返回：amount / streak
-    fields: { canClaim: "canClaim", streak: "streak", rewardAmount: "rewardAmount", bonusPercent: "streakBonusPercent", totalClaimed: "totalClaimed", lastClaim: "lastClaim" },
-    // 签到冷却周期（小时）：超过该周期且 canClaim 时可自动签到
-    cooldownHours: 24
-  }
-];
+// 签到引擎：站点适配来自插件（仓库分发的 JSON 规格），这里只放通用请求与校验逻辑。
+export function checkinPresetFromSpec(spec = {}) {
+  const checkin = spec.checkin;
+  if (!checkin || typeof checkin !== "object") return null;
+  const hosts = Array.isArray(spec.hosts) ? spec.hosts.filter(Boolean).map(host => String(host).trim().toLowerCase()) : [];
+  if (!hosts.length) return null;
+  return { ...checkin, id: String(spec.id || ""), name: spec.name || spec.id, matchHosts: hosts };
+}
 
-export function matchCheckinPreset(station = {}) {
+export function checkinPresetsFromSpecs(specs = []) {
+  return (Array.isArray(specs) ? specs : []).map(checkinPresetFromSpec).filter(preset => preset && preset.id);
+}
+
+export function matchCheckinPreset(station = {}, presets = []) {
   const hostname = stationContext(station).hostname;
-  return CHECKIN_PRESETS.find(preset => preset.matchHosts.some(host => hostname === host || hostname.endsWith(`.${host}`))) || null;
+  if (!hostname) return null;
+  return (Array.isArray(presets) ? presets : []).find(preset => (preset.matchHosts || []).some(host => hostname === host || hostname.endsWith(`.${host}`))) || null;
 }
 
 function extractData(payload) {
@@ -135,7 +129,7 @@ export function normalizeCheckinRecord(raw = {}) {
 
 // 执行一次签到（或仅查状态）。返回签到结果 + 最新状态。
 export async function performCheckin({ station, claim = true, preset = null, token = "", fetchImpl = fetch } = {}) {
-  const sitePreset = preset || matchCheckinPreset(station);
+  const sitePreset = preset || null;
   if (!sitePreset) throw new Error("该站点暂无签到适配");
   const origin = new URL(station.baseUrl).origin;
   const resolvedToken = token || await resolveToken(sitePreset, station);

@@ -119,6 +119,7 @@ const DEFAULT_SETTINGS = {
   defaultCurrency: "CNY",
   exchangeRate: DEFAULT_EXCHANGE_RATE,
   recommendationProfile: "price",
+  evidenceThreshold: 60,
   usage: { ...DEFAULT_MONTHLY_USAGE },
   matchingRules: DEFAULT_MATCHING_RULES,
   modelMatchOverrides: [],
@@ -127,6 +128,7 @@ const DEFAULT_SETTINGS = {
   showStale: true,
   comparisonMode: "paid",
   devMode: false,
+  pluginInstallMigrated: false,
   localPlugins: [],
   pluginRegistry: { url: DEFAULT_PLUGIN_REGISTRY_URL, fetchedAt: 0, error: "", entries: [], installed: {} },
 };
@@ -210,8 +212,11 @@ export function normalizeSettings(input = {}) {
     matchingRules: Array.isArray(input.matchingRules) ? input.matchingRules.map((rule) => ({ ...rule })) : base.matchingRules.map((rule) => ({ ...rule })),
     modelMatchOverrides: normalizeModelMatchOverrides(input.modelMatchOverrides),
     modelAssistant: normalizeModelAssistant(input.modelAssistant),
+// recommendationProfile 已废弃，仅保留旧值校验以便清理历史设置。
     recommendationProfile: ["balanced", "price", "reliability"].includes(input.recommendationProfile) ? input.recommendationProfile : "price",
-    devMode: input.devMode === true,
+    evidenceThreshold: Number.isFinite(Number(input.evidenceThreshold)) ? Math.max(0, Math.min(100, Math.round(Number(input.evidenceThreshold)))) : 60,
+  devMode: input.devMode === true,
+    pluginInstallMigrated: input.pluginInstallMigrated === true,
     localPlugins: normalizeLocalPlugins(input.localPlugins).specs,
     pluginRegistry: normalizeRegistryState(input.pluginRegistry),
   };

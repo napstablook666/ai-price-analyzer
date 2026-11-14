@@ -6,19 +6,23 @@ import { inferStationAdapter } from "./core/adapters.js";
 import { addProviderStationPresets } from "./core/station-presets.js";
 import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins, syncSpecSitePlugins, unloadSpecSitePlugin } from "./site-plugins/loader.js";
 import { sitePluginById, sitePluginCatalogForStations, sitePluginForStation } from "./site-plugins/catalog.js";
+import { activeCatalogForStations, activePluginIds, activeSitePluginForStation, installedPluginIds, setActivePluginIds } from "./site-plugins/activation.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "./site-plugins/registry-snapshot.js";
-import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedPluginSpecs, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState } from "./core/declarative-plugin.js";
+import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpecs, installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState } from "./core/declarative-plugin.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
 import { fetchReferences } from "./core/openrouter.js";
-import { buildComparisonRows, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
+import { buildComparisonRows, buildStationIndexes, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
+import { normalizeProxyModelName } from "./core/matching.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { exportState, getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, importState, putSnapshot, putStations, setValue } from "./shared/db.js";
-import { getStationCredential, removeStationCredential, setStationCredential } from "./shared/credentials.js";
-import { matchCheckinPreset, normalizeCheckinRecord, performCheckin, CHECKIN_PRESETS } from "./core/checkin.js";
+import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
+import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
+import { ASSIST_BATCH_SIZE, applyAssistResults, buildAssistEntries, buildAssistPrompt, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, selectPendingEntries, summarizeCache } from "./core/llm-matching.js";
+import { checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, performCheckin } from "./core/checkin.js";
 
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
 const CHECKIN_ALARM_NAME = "checkin-stations";
@@ -39,7 +43,8 @@ async function getSettings() {
 }
 
 async function settingsForUi() {
-  return await getSettings();
+  const settings = await getSettings();
+  return { ...settings, hasModelAssistantKey: Boolean(await getModelAssistantKey()) };
 }
 
 function bundledPluginVersion() {
@@ -51,11 +56,33 @@ function bundledPluginVersion() {
 }
 let workspacePluginsSynced = false;
 
+// 出厂不带插件：老工作区里已经加过站点，就把站点对应的插件补记成已安装，只写一次。
+async function adoptStationPlugins(stations, settings) {
+  const registry = normalizeRegistryState(settings.pluginRegistry);
+  const installed = { ...registry.installed };
+  let changed = false;
+  for (const station of stations) {
+    const plugin = sitePluginForStation(station);
+    if (!plugin || !sitePluginById(plugin.id) || installed[plugin.id]) continue;
+    installed[plugin.id] = { version: bundledPluginVersion(), installedAt: Date.now() };
+    changed = true;
+  }
+  if (!changed) return settings;
+  const next = normalizeSettings({
+    ...settings,
+    pluginInstallMigrated: true,
+    pluginRegistry: { ...settings.pluginRegistry, installed }
+  });
+  await persistSettings(next);
+  return next;
+}
+
 // 仓库安装与本地开发的声明式插件只在内存注册表里，service worker 重启后要重新拼一次。
 async function ensureWorkspacePlugins({ force = false } = {}) {
   if (workspacePluginsSynced && !force) return;
   try {
     const settings = await getSettings();
+    setActivePluginIds(installedPluginIds(settings));
     syncSpecSitePlugins(installedPluginSpecs(settings));
     workspacePluginsSynced = true;
   } catch (error) {
@@ -163,11 +190,14 @@ function notifyReferencesRefresh(active) {
 
 function prepareComparisonStation(station) {
   const prepared = normalizeStation(prepareStationInput(station));
-  return { ...prepared, pluginId: sitePluginForStation(prepared)?.id || prepared.pluginId || "" };
+  // 没装的插件不参与匹配，站点退回手动适配器。
+  return { ...prepared, pluginId: activeSitePluginForStation(prepared)?.id || "" };
 }
 
 async function getPreparedStations() {
   const stations = await getStations();
+  const settings = await adoptStationPlugins(stations, await getSettings());
+  setActivePluginIds(installedPluginIds(settings));
   await syncSitePlugins(stations);
   return stations.map(prepareComparisonStation);
 }
@@ -570,9 +600,11 @@ async function dashboard() {
   unpricedModels: snapshot.normalized?.unpricedModels || snapshot.rawMeta?.unpricedModels || []
   }));
   const effectiveReferences = { ...references, exchangeRate: savedSettings.exchangeRate || references.exchangeRate, openRouterRechargeRate: savedSettings.exchangeRate || references.openRouterRechargeRate || references.exchangeRate };
+  const llmCache = await getValue("llmMatchCache", {});
+  const llmMatches = llmMatchesFromCache(llmCache);
   const revision = getComparisonRevision();
   const cacheable = revisionAtStart === revision;
-  const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => [snapshot.id, snapshot.stale])]);
+  const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => [snapshot.id, snapshot.stale]), llmMatches]);
   let comparisonResult = cacheable && comparisonCache?.key === comparisonKey ? comparisonCache : null;
   if (!comparisonResult) {
     const comparisons = buildComparisonRows({
@@ -583,15 +615,25 @@ async function dashboard() {
       rules: savedSettings.matchingRules,
       modelMatchOverrides: savedSettings.modelMatchOverrides,
       modelAliases: modelAliasesForStations(comparisonStations),
+      llmMatches,
       showUnmatched: savedSettings.showUnmatched,
-      recommendationProfile: savedSettings.recommendationProfile
+      evidenceThreshold: savedSettings.evidenceThreshold
     });
     comparisonResult = { key: comparisonKey, comparisons, summary: summarizeComparisons(comparisons) };
     if (cacheable) comparisonCache = comparisonResult;
   }
-  const checkinStations = CHECKIN_PRESETS.map(preset => {
-    const linked = stations.find(station => station.enabled && matchCheckinPreset(station)?.id === preset.id);
-    return { id: preset.id, name: preset.name, linkedStationId: linked ? linked.id : null, autoEnabled: Boolean(linked?.checkin?.autoEnabled) };
+  const checkinPresets = await resolveCheckinPresets(savedSettings);
+  const checkinRecords = await getCheckinState();
+  const checkinStations = checkinPresets.map(preset => {
+    const linked = stations.find(station => station.enabled && matchCheckinPreset(station, checkinPresets)?.id === preset.id);
+    return {
+      id: preset.id,
+      name: preset.name,
+      hosts: preset.matchHosts,
+      linkedStationId: linked ? linked.id : null,
+      autoEnabled: Boolean(linked?.checkin?.autoEnabled || checkinRecords[preset.id]?.autoEnabled),
+      presetAutoEnabled: Boolean(checkinRecords[preset.id]?.autoEnabled)
+    };
   });
   const refreshPreflight = activeRefreshPreflight?.stationSignature === refreshStationSignature(refresh.stations, refresh.comparisonMode)
     && activeRefreshPreflight.comparisonMode === refresh.comparisonMode
@@ -602,13 +644,18 @@ async function dashboard() {
     .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
-  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
+  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), stationIndexes: buildStationIndexes(selectedComparisons), checkinState: await getCheckinState(), checkinStations, checkinPluginInstalled: checkinPresets.length > 0, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
 }
 
 async function scheduleCheckinAlarm() {
   await chrome.alarms.clear(LEGACY_REFRESH_ALARM_NAME);
   await chrome.alarms.clear(CHECKIN_ALARM_NAME);
   chrome.alarms.create(CHECKIN_ALARM_NAME, { periodInMinutes: 240 });
+}
+
+async function resolveCheckinPresets(settings = null) {
+  const source = settings || await getSettings();
+  return checkinPresetsFromSpecs(installedCheckinSpecs(source));
 }
 
 async function getCheckinState() {
@@ -622,8 +669,8 @@ async function updateCheckinRecord(stationId, updater) {
   return record;
 }
 
-async function runCheckinForStation(station, { claim = true, autoOnly = false } = {}) {
-  const preset = matchCheckinPreset(station);
+async function runCheckinForStation(station, { claim = true, autoOnly = false, presets = [] } = {}) {
+  const preset = matchCheckinPreset(station, presets);
   if (!preset) return null;
   const record = (await getCheckinState())[preset.id] || {};
   if (autoOnly && !record.autoEnabled) return null;
@@ -658,13 +705,15 @@ async function runCheckinForStation(station, { claim = true, autoOnly = false } 
 }
 
 async function checkinAll({ stationId, stationOrigin, claim = true, autoOnly = false } = {}) {
+  const presets = await resolveCheckinPresets();
+  if (!presets.length) return { results: [], state: await getCheckinState(), presets: [] };
   let origin = "";
   if (stationOrigin) {
     try { origin = new URL(stationOrigin).origin; } catch { origin = String(stationOrigin || "").trim(); }
   }
   let stations = (await getStations()).filter(station => {
     if (!station.enabled) return false;
-    if (stationId) { const preset = CHECKIN_PRESETS.find(item => item.id === String(stationId)); return station.id === stationId || (preset ? matchCheckinPreset(station)?.id === preset.id : false); }
+    if (stationId) { const preset = presets.find(item => item.id === String(stationId)); return station.id === stationId || (preset ? matchCheckinPreset(station, presets)?.id === preset.id : false); }
     if (origin) {
       try { return new URL(station.baseUrl).origin === origin; } catch { return false; }
     }
@@ -672,17 +721,17 @@ async function checkinAll({ stationId, stationOrigin, claim = true, autoOnly = f
   });
   // 预设兜底：指定预设 id 但没有已保存站点，或自动签到遍历时，构造签到专用伪站点（record 按预设 id 统一存储，无需手动添加站点）
   if (!stations.length && stationId) {
-    const preset = CHECKIN_PRESETS.find(item => item.id === String(stationId));
+    const preset = presets.find(item => item.id === String(stationId));
     if (preset) stations = [{ id: preset.id, name: preset.name, baseUrl: `https://${preset.matchHosts[0]}`, enabled: true }];
   } else if (!stationOrigin && !stationId) {
-    const linkedIds = new Set((await getStations()).map(item => matchCheckinPreset(item)?.id).filter(Boolean));
-    for (const preset of CHECKIN_PRESETS) {
+    const linkedIds = new Set((await getStations()).map(item => matchCheckinPreset(item, presets)?.id).filter(Boolean));
+    for (const preset of presets) {
       if (!linkedIds.has(preset.id)) stations.push({ id: preset.id, name: preset.name, baseUrl: `https://${preset.matchHosts[0]}`, enabled: true });
     }
   }
   const results = [];
   for (const station of stations) {
-    const result = await runCheckinForStation(station, { claim, autoOnly });
+    const result = await runCheckinForStation(station, { claim, autoOnly, presets });
     if (result) results.push(result);
   }
   return { results, state: await getCheckinState() };
@@ -690,10 +739,11 @@ async function checkinAll({ stationId, stationOrigin, claim = true, autoOnly = f
 
 async function saveCheckinConfig({ stationId, autoEnabled } = {}) {
   const stations = await getStations();
+  const presets = await resolveCheckinPresets();
   const station = stations.find(item => item.id === String(stationId || ""));
   if (!station) {
     // 预设 id（未保存站点）：签到开关存到 checkinState，无需手动添加站点
-    if (!CHECKIN_PRESETS.some(item => item.id === String(stationId || ""))) throw new Error("站点不存在");
+    if (!presets.some(item => item.id === String(stationId || ""))) throw new Error("站点不存在");
     await updateCheckinRecord(String(stationId), prev => ({ ...prev, autoEnabled: Boolean(autoEnabled) }));
     return checkinAll({ stationId: String(stationId), claim: false, autoOnly: false });
   }
@@ -702,29 +752,31 @@ async function saveCheckinConfig({ stationId, autoEnabled } = {}) {
   return checkinAll({ stationId: station.id, claim: false, autoOnly: false });
 }
 async function addSitePlugins(ids) {
+  await ensureWorkspacePlugins();
   const requested = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id || "").trim()))]
-    .filter(id => sitePluginById(id)?.addable);
-  if (!requested.length) throw new Error("请至少选择一个可添加的站点插件");
+    .filter(id => sitePluginById(id)?.addable && [...activePluginIds()].includes(id));
+  if (!requested.length) throw new Error("请至少选择一个已安装插件里的站点");
   return withKeyedLock("site-plugins:add", async () => {
     const providers = await loadSitePlugins(requested);
     const current = await getStations();
     const settings = await getSettings();
     const next = addProviderStationPresets(current, providers, { exchangeRate: settings.exchangeRate });
     const addedStations = next.slice(current.length).map(prepareComparisonStation);
-    const added = addedStations.map(station => sitePluginForStation(station)?.id).filter(Boolean);
+    const added = addedStations.map(station => activeSitePluginForStation(station)?.id).filter(Boolean);
     if (addedStations.length) await putStations([...current, ...addedStations]);
-    pruneSitePlugins([...current, ...addedStations], installedPluginSpecs(settings).map(spec => spec.id));
+    pruneSitePlugins([...current, ...addedStations], [...installedPluginIds(settings)]);
     return {
       stations: [...current, ...addedStations],
       added,
       alreadyAdded: requested.filter(id => !added.includes(id)),
-      sitePlugins: sitePluginCatalogForStations([...current, ...addedStations])
+      sitePlugins: activeCatalogForStations([...current, ...addedStations])
     };
   });
 }
 
 async function saveStations(input) {
   const invalidation = invalidateRefreshPreflight();
+  await ensureWorkspacePlugins();
   await syncSitePlugins(input);
   const current = await getStations();
   const currentById = new Map(current.map(station => [station.id, station]));
@@ -749,7 +801,8 @@ async function saveStations(input) {
   }
   await putStations(stations);
   const pluginSettings = await getSettings();
-  pruneSitePlugins(stations, installedPluginSpecs(pluginSettings).map(spec => spec.id));
+  setActivePluginIds(installedPluginIds(pluginSettings));
+  pruneSitePlugins(stations, [...installedPluginIds(pluginSettings)]);
   await invalidation;
   return stations;
 }
@@ -763,12 +816,15 @@ async function saveComparisonMode(mode) {
   return dashboard();
 }
 
-async function saveSettings(input = {}) {
+async function saveSettings(rawInput = {}) {
+  const { modelAssistantKey, ...input } = rawInput && typeof rawInput === "object" ? rawInput : {};
+  if (modelAssistantKey !== undefined) await setModelAssistantKey(modelAssistantKey);
   const current = await getSettings();
   const next = normalizeSettings({
     ...input,
     // 插件来源只走插件管理接口，普通设置保存不能把它们清掉。
     devMode: current.devMode,
+    pluginInstallMigrated: current.pluginInstallMigrated,
     localPlugins: current.localPlugins,
     pluginRegistry: current.pluginRegistry
   });
@@ -776,6 +832,188 @@ async function saveSettings(input = {}) {
   await setValue("settings", next);
   await invalidation;
   return settingsForUi();
+}
+
+// 测试与拉列表都要用「界面上当前填的值」，不能只读已保存的设置。
+async function modelAssistantTarget(override = {}) {
+  const settings = await getSettings();
+  const config = settings.modelAssistant || {};
+  const baseUrl = String(override.baseUrl ?? config.baseUrl ?? "").trim();
+  const model = String(override.model ?? config.model ?? "").trim();
+  const apiKey = String(override.apiKey ?? "").trim() || await getModelAssistantKey();
+  return { baseUrl, model, apiKey, temperature: Number(override.temperature ?? config.temperature ?? 0.1) };
+}
+
+async function testModelAssistant(override = {}) {
+  const target = await modelAssistantTarget(override);
+  const result = await testModelConnection({ baseUrl: target.baseUrl, apiKey: target.apiKey, model: target.model });
+  return { model: result.model, usage: result.usage };
+}
+
+async function fetchModelAssistantCatalog(override = {}) {
+  const target = await modelAssistantTarget(override);
+  return fetchModelCatalog({ baseUrl: target.baseUrl, apiKey: target.apiKey });
+}
+let modelAssistTask = null;
+
+function chunkList(items, size) {
+  const chunks = [];
+  for (let index = 0; index < items.length; index += size) chunks.push(items.slice(index, index + size));
+  return chunks;
+}
+
+async function assistContext() {
+  const [cache, data] = await Promise.all([getValue("llmMatchCache", {}), dashboard()]);
+  const references = data.references || {};
+  const officialList = Array.isArray(references.models) ? references.models : [];
+  const unmatched = collectUnmatchedModels(flattenComparisonRows(data.comparisons));
+  const entries = buildAssistEntries({ unmatched, officialList, referencesFetchedAt: Number(references.fetchedAt) || 0 });
+  return {
+    cache,
+    entries,
+    entryByKey: new Map(entries.map(entry => [entry.key, entry])),
+    unmatched,
+    referencesFetchedAt: Number(references.fetchedAt) || 0
+  };
+}
+
+async function modelAssistState() {
+  const { cache, entries, entryByKey, unmatched, referencesFetchedAt } = await assistContext();
+  const rows = unmatched.map(entry => {
+    const assigned = entryByKey.get(entry.key);
+    const cached = cache[entry.key] || null;
+    return {
+      key: entry.key,
+      stationId: entry.stationId,
+      stationName: entry.stationName,
+      modelName: entry.modelName,
+      displayName: entry.displayName,
+      count: entry.count,
+      candidates: assigned?.candidates?.length || 0,
+      // 规则层给不出候选的写法，只能等官方清单更新，不进判定队列。
+      status: assigned ? (cached?.status || "pending") : "no-candidates",
+      targetId: cached?.targetId || "",
+      attempts: Number(cached?.attempts) || 0,
+      at: Number(cached?.at) || 0
+    };
+  });
+  return {
+    configured: await getModelAssistantEnabled(),
+    referencesFetchedAt,
+    assigned: entries.length,
+    noCandidates: unmatched.length - entries.length,
+    summary: summarizeCache(cache),
+    rows
+  };
+}
+
+async function getModelAssistantEnabled() {
+  const settings = await getSettings();
+  const config = settings.modelAssistant || {};
+  return Boolean(config.enabled && String(config.baseUrl || "").trim() && String(config.model || "").trim()) && Boolean(await getModelAssistantKey());
+}
+
+async function runModelAssist({ force = false } = {}) {
+  if (modelAssistTask) throw new Error("模型识别正在运行，请等这一轮结束");
+  modelAssistTask = (async () => {
+    const settings = await getSettings();
+    const config = settings.modelAssistant || {};
+    if (!config.enabled) throw new Error("先到设置里启用模型识别");
+    if (!String(config.baseUrl || "").trim() || !String(config.model || "").trim()) throw new Error("先填好模型服务地址与模型");
+    const apiKey = await getModelAssistantKey();
+    if (!apiKey) throw new Error("先填好模型服务密钥");
+
+    const { cache, entries, referencesFetchedAt } = await assistContext();
+    if (!entries.length) return { ...summarizeCache(cache), ranBatches: 0, pending: 0, reused: 0, invalidAnswers: 0, errors: 0 };
+
+    const { pending, reused } = selectPendingEntries({ cache, entries, referencesFetchedAt, force });
+    if (!pending.length) return { ...summarizeCache(cache), ranBatches: 0, pending: 0, reused: reused.length, invalidAnswers: 0, errors: 0 };
+
+    const results = [];
+    const notAsked = [];
+    const fingerprintByKey = {};
+    let ranBatches = 0;
+    let errors = 0;
+
+    for (const batch of chunkList(pending, ASSIST_BATCH_SIZE)) {
+      for (const entry of batch) fingerprintByKey[entry.key] = entry.fingerprint;
+      let parsed;
+      try {
+        const { content } = await completeChat({
+          baseUrl: config.baseUrl,
+          apiKey,
+          model: config.model,
+          temperature: config.temperature,
+          messages: [
+            { role: "system", content: "你只输出「序号 => id」的行，不要任何解释。" },
+            { role: "user", content: buildAssistPrompt(batch) }
+          ]
+        });
+        parsed = parseAssistResponse(content, { entries: batch });
+      } catch (error) {
+        console.debug("[AI比价] 模型识别批次失败", error);
+        errors += 1;
+        notAsked.push(...batch);
+        continue;
+      }
+      results.push(...parsed.accepted, ...parsed.invalid);
+      const answered = new Set([...parsed.accepted, ...parsed.invalid].map(item => item.key));
+      notAsked.push(...batch.filter(entry => !answered.has(entry.key)));
+      ranBatches += 1;
+    }
+
+    const nextCache = applyAssistResults(cache, results, { fingerprintByKey, notAsked });
+    await setValue("llmMatchCache", nextCache);
+    // 缓存不进 comparisonRevision，这里手动让下一次 dashboard 重算。
+    comparisonCache = null;
+    return {
+      ...summarizeCache(nextCache),
+      ranBatches,
+      pending: pending.length,
+      reused: reused.length,
+      invalidAnswers: results.filter(item => item.status === "invalid").length,
+      errors
+    };
+  })();
+  try {
+    return await modelAssistTask;
+  } finally {
+    modelAssistTask = null;
+  }
+}
+
+async function clearModelAssistCache() {
+  await setValue("llmMatchCache", {});
+  comparisonCache = null;
+  return modelAssistState();
+}
+
+async function applyModelAssistOverrides(keys = []) {
+  const settings = await getSettings();
+  const cache = await getValue("llmMatchCache", {});
+  const keyOf = item => `${item.stationId}\u0000${normalizeProxyModelName(item.modelName)}`;
+  const overrides = settings.modelMatchOverrides.map(item => ({ ...item }));
+  const indexByKey = new Map(overrides.map((item, index) => [keyOf(item), index]));
+  let added = 0;
+  let updated = 0;
+  for (const key of Array.isArray(keys) ? keys : []) {
+    const override = overrideFromAssist(cache[key]);
+    if (!override) continue;
+    const index = indexByKey.get(keyOf(override));
+    if (index === undefined) {
+      indexByKey.set(keyOf(override), overrides.length);
+      overrides.push(override);
+      added += 1;
+    } else {
+      overrides[index] = override;
+      updated += 1;
+    }
+  }
+  if (added || updated) {
+    await persistSettings({ ...settings, modelMatchOverrides: overrides });
+    comparisonCache = null;
+  }
+  return { added, updated, total: overrides.length };
 }
 
 function discoveryFromSnapshot(snapshot) {
@@ -841,17 +1079,33 @@ function pluginRegistryView(registry) {
     entries: registry.entries.map(entry => {
       const record = registry.installed[entry.id];
       const builtin = sitePluginById(entry.id);
+      const descriptor = builtin && builtin.source === "bundled" ? builtin : null;
+      const spec = entry.spec || null;
+      const mode = spec?.mode || descriptor?.mode || "";
       return {
         id: entry.id,
         name: entry.name,
         version: entry.version,
         description: entry.description,
         hosts: entry.hosts,
+        kind: spec?.kind || "price",
         needsCode: entry.needsCode,
         installed: Boolean(record),
         installedVersion: record?.version || "",
         updateAvailable: Boolean(record) && comparePluginVersions(record.version, entry.version) < 0,
-        builtin: Boolean(builtin && builtin.source === "bundled")
+        builtin: Boolean(descriptor),
+        // 界面展开详情用：仓库条目本身没有采集方式这些字段，从内置描述符或声明式规格补齐。
+        details: {
+          mode,
+          category: spec?.category || descriptor?.category || "",
+          authLabel: descriptor?.authLabel || (mode === "page" ? "使用当前浏览器登录态" : mode === "direct" ? "公开接口，无需登录" : ""),
+          paths: spec?.paths || descriptor?.paths || [],
+          endpoint: spec?.request?.endpoint || "",
+          responseFormat: spec?.responseFormat || "",
+          addable: spec ? spec.addable !== false : descriptor ? descriptor.addable !== false : true,
+          installedAt: record?.installedAt || 0,
+          checkin: spec?.kind === "checkin" ? spec.checkin : null
+        }
       };
     })
   };
@@ -863,20 +1117,39 @@ function seededRegistry(registry) {
   if (current.entries.length) return current;
   return normalizeRegistryState({ ...current, entries: PLUGIN_REGISTRY_SNAPSHOT.plugins });
 }
+function describePlugin(id, { registry, record, local }) {
+  const entry = registry.entries.find(item => item.id === id) || null;
+  const descriptor = sitePluginById(id);
+  const spec = local || entry?.spec || null;
+  return {
+    id,
+    name: spec?.name || entry?.name || descriptor?.name || id,
+    version: record?.version || spec?.version || entry?.version || descriptor?.version || "",
+    hosts: spec?.hosts || entry?.hosts || descriptor?.hosts || [],
+    mode: spec?.mode || descriptor?.mode || "",
+    kind: spec?.kind || "price",
+    description: spec?.description || entry?.description || descriptor?.description || "",
+    needsCode: Boolean(!entry?.spec && descriptor)
+  };
+}
+
 async function pluginWorkspaceState() {
+  await ensureWorkspacePlugins();
   const [settings, stations] = await Promise.all([getSettings(), getStations()]);
   const manifest = chrome.runtime.getManifest?.() || {};
-  const localSpecs = settings.devMode === true
-    ? installedPluginSpecs({ ...settings, pluginRegistry: { ...settings.pluginRegistry, entries: [], installed: {} } })
-    : [];
-  const repositorySpecs = installedPluginSpecs({ devMode: false, localPlugins: [], pluginRegistry: settings.pluginRegistry });
+  const registry = normalizeRegistryState(settings.pluginRegistry);
+  const activeIds = installedPluginIds(settings);
+  const localPlugins = normalizeLocalPlugins(settings.devMode === true ? settings.localPlugins : []).specs;
+  const localIds = new Set(localPlugins.map(spec => spec.id));
   const describe = spec => ({ id: spec.id, name: spec.name, version: spec.version, hosts: spec.hosts, mode: spec.mode, description: spec.description });
   return {
-    catalog: sitePluginCatalogForStations(stations, { bundledVersion: manifest.version || "" }),
+    catalog: activeCatalogForStations(stations, { bundledVersion: manifest.version || "" }),
     registry: pluginRegistryView(seededRegistry(settings.pluginRegistry)),
     devMode: settings.devMode === true,
-    localPlugins: localSpecs.map(describe),
-    repositoryPlugins: repositorySpecs.map(describe),
+    localPlugins: localPlugins.map(describe),
+    repositoryPlugins: [...activeIds]
+      .filter(id => !localIds.has(id))
+      .map(id => describePlugin(id, { registry, record: registry.installed[id] })),
     extension: { id: manifest.id || "", version: manifest.version || "", updateUrl: manifest.update_url || "" }
   };
 }
@@ -906,29 +1179,76 @@ async function refreshPluginRegistry(message = {}) {
 }
 
 async function installPlugin(id) {
+  const { workspace, results } = await installPlugins([id]);
+  const failure = results.find(item => !item.ok && !item.skipped);
+  if (failure) throw new Error(failure.error);
+  return workspace;
+}
+
+// 批量安装：一次加锁、一次落库、一次重算工作区，返回逐项结果，界面据此提示跳过与失败。
+async function installPlugins(ids) {
+  const wanted = [...new Set((Array.isArray(ids) ? ids : []).map(id => String(id || "").trim()).filter(Boolean))];
+  if (!wanted.length) throw new Error("没有选中要安装的插件");
   return withKeyedLock("plugin-install", async () => {
     const settings = await getSettings();
     const registry = normalizeRegistryState(settings.pluginRegistry);
-    const entry = registry.entries.find(item => item.id === String(id || ""));
-    if (!entry) throw new Error("插件仓库里没有这个插件，先刷新插件仓库");
-    if (entry.needsCode || !entry.spec) throw new Error("该插件需要随扩展发布的采集代码，无法从仓库安装");
-    const installed = { ...registry.installed, [entry.id]: { version: entry.version, installedAt: Date.now() } };
-    await persistSettings({ ...settings, pluginRegistry: { ...registry, installed } });
-    return pluginWorkspaceState();
+    const installed = { ...registry.installed };
+    const results = [];
+    for (const id of wanted) {
+      const entry = registry.entries.find(item => item.id === id);
+      if (!entry) {
+        results.push({ id, ok: false, skipped: false, error: "插件仓库里没有这个插件，先刷新插件仓库" });
+        continue;
+      }
+      const hasBundledCode = Boolean(sitePluginById(entry.id));
+      if (!entry.spec && !hasBundledCode) {
+        results.push({ id, ok: false, skipped: false, error: `这个插件需要更新版本的扩展（仓库版本 ${entry.version}）` });
+        continue;
+      }
+      const record = installed[id];
+      if (record && comparePluginVersions(record.version, entry.version) >= 0) {
+        results.push({ id, ok: false, skipped: true, version: record.version, error: "已经装过了" });
+        continue;
+      }
+      installed[id] = { version: entry.version, installedAt: Date.now() };
+      results.push({ id, ok: true, skipped: false, version: entry.version });
+    }
+    if (results.some(item => item.ok)) {
+      await persistSettings({ ...settings, pluginRegistry: { ...registry, installed } });
+      workspacePluginsSynced = false;
+      await ensureWorkspacePlugins({ force: true });
+    }
+    const workspace = await pluginWorkspaceState();
+    return {
+      workspace,
+      results,
+      installed: results.filter(item => item.ok).map(item => item.id),
+      skipped: results.filter(item => item.skipped).map(item => item.id),
+      failed: results.filter(item => !item.ok && !item.skipped).map(({ id, error }) => ({ id, error }))
+    };
   });
 }
 
 async function uninstallPlugin(id) {
   const pluginId = String(id || "").trim();
-  const descriptor = sitePluginById(pluginId);
-  if (!pluginId || (descriptor && descriptor.source === "bundled")) throw new Error("内置插件不能卸载");
+  if (!pluginId) throw new Error("插件不存在");
   const settings = await getSettings();
   const registry = normalizeRegistryState(settings.pluginRegistry);
   const installed = { ...registry.installed };
   delete installed[pluginId];
   const localPlugins = settings.localPlugins.filter(spec => spec.id !== pluginId);
   unloadSpecSitePlugin(pluginId);
+  // 移除插件等于把这个插件的采集能力一起带走，挂在它下面的站点也删掉。
+  const stations = await getStations();
+  const kept = stations.filter(station => sitePluginForStation(station)?.id !== pluginId);
+  for (const station of stations) {
+    if (!kept.includes(station)) await removeStationCredential(station.id);
+  }
+  if (kept.length !== stations.length) await putStations(kept);
   await persistSettings({ ...settings, pluginRegistry: { ...registry, installed }, localPlugins });
+  workspacePluginsSynced = false;
+  await ensureWorkspacePlugins({ force: true });
+  pruneSitePlugins(kept, [...installedPluginIds(await getSettings())]);
   return pluginWorkspaceState();
 }
 
@@ -937,6 +1257,8 @@ async function saveDevMode(enabled) {
   const nextEnabled = Boolean(enabled);
   if (!nextEnabled) for (const spec of settings.localPlugins) unloadSpecSitePlugin(spec.id);
   await persistSettings({ ...settings, devMode: nextEnabled });
+  workspacePluginsSynced = false;
+  await ensureWorkspacePlugins({ force: true });
   return pluginWorkspaceState();
 }
 
@@ -944,9 +1266,11 @@ async function addLocalPlugin(rawSpec) {
   const settings = await getSettings();
   if (settings.devMode !== true) throw new Error("先打开开发模式才能加载本地插件");
   const spec = { ...normalizePluginSpec(rawSpec), source: "local" };
-  if (sitePluginById(spec.id)?.source === "bundled") throw new Error(`插件 id ${spec.id} 与内置插件冲突`);
+  if (sitePluginById(spec.id)) throw new Error(`插件 id ${spec.id} 与仓库里的插件冲突，换个 id 再试`);
   const localPlugins = [...settings.localPlugins.filter(item => item.id !== spec.id), spec];
   await persistSettings({ ...settings, localPlugins });
+  workspacePluginsSynced = false;
+  await ensureWorkspacePlugins({ force: true });
   return pluginWorkspaceState();
 }
 
@@ -976,11 +1300,18 @@ async function handle(message, sender) {
     case "SAVE_COMPARISON_MODE": return saveComparisonMode(message.mode);
     case "GET_SETTINGS": return settingsForUi();
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
+    case "TEST_MODEL_CONNECTION": return testModelAssistant(message.config || {});
+    case "FETCH_MODEL_CATALOG": return fetchModelAssistantCatalog(message.config || {});
+    case "GET_MODEL_ASSIST_STATE": return modelAssistState();
+    case "RUN_MODEL_ASSIST": return runModelAssist(message);
+    case "CLEAR_MODEL_ASSIST_CACHE": return clearModelAssistCache();
+    case "APPLY_MODEL_ASSIST_OVERRIDES": return applyModelAssistOverrides(message.keys);
     case "SAVE_STATIONS": return saveStations(message.stations);
     case "ADD_SITE_PLUGINS": return addSitePlugins(message.ids);
     case "GET_PLUGIN_WORKSPACE": return pluginWorkspaceState();
     case "REFRESH_PLUGIN_REGISTRY": return refreshPluginRegistry(message);
     case "INSTALL_PLUGIN": return installPlugin(message.id);
+    case "INSTALL_PLUGINS": return installPlugins(message.ids);
     case "UNINSTALL_PLUGIN": return uninstallPlugin(message.id);
     case "SAVE_DEV_MODE": return saveDevMode(message.enabled);
     case "ADD_LOCAL_PLUGIN": return addLocalPlugin(message.spec);
