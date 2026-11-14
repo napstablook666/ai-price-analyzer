@@ -280,10 +280,15 @@ function writeOutputs(files) {
   for (const [file, content] of files) fs.writeFileSync(file, content);
 }
 
-// 图标是二进制，文本比较会把它们全判成漂移。
+// 图标是二进制，文本比较会把它们全判成漂移；svg 是文本，行尾差异（CRLF 克隆）不算漂移。
+function normalizeEol(text) {
+  return text.split(String.fromCharCode(13, 10)).join(String.fromCharCode(10));
+}
+
 function sameContent(file, content) {
   const actual = fs.readFileSync(file);
-  return Buffer.isBuffer(content) ? actual.equals(content) : actual.toString("utf8") === content;
+  if (Buffer.isBuffer(content) && !file.toLowerCase().endsWith(".svg")) return actual.equals(content);
+  return normalizeEol(actual.toString("utf8")) === normalizeEol(content.toString("utf8"));
 }
 
 function checkOutputs(files) {
