@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
-import { buildChartGroups } from "../src/dashboard-index.js";
+import { buildChartGroups, deltaTone } from "../src/dashboard-index.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
 
@@ -112,4 +113,29 @@ test("buildChartGroups groups by canonical model, normalizes bars and excludes p
   const truncated = buildChartGroups(rows, { maxGroups: 1 });
   assert.equal(truncated.groups.length, 1);
   assert.equal(truncated.totalGroups, 2);
+});
+
+test("deltaTone maps price difference percentages to readable color levels", () => {
+  assert.equal(deltaTone(null), "neutral");
+  assert.equal(deltaTone(0), "neutral");
+  assert.equal(deltaTone(-0.004), "neutral");
+  assert.equal(deltaTone(-94.12), "excellent");
+  assert.equal(deltaTone(-40), "good");
+  assert.equal(deltaTone(-10), "good");
+  assert.equal(deltaTone(-2), "fair");
+  assert.equal(deltaTone(20), "fair");
+  assert.equal(deltaTone(50), "fair");
+  assert.equal(deltaTone(50.01), "bad");
+});
+
+test("dashboard drops the paid recommendation column and keeps one delta sort option", () => {
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const header = html.match(/<thead>[\s\S]*?<\/thead>/)?.[0] || "";
+  assert.equal(header.includes(">推荐</th>"), false);
+  assert.match(header, /data-sort-keys="diffPercent">价差<\/th>/);
+  const secondary = html.match(/<select id="sort-secondary">[\s\S]*?<\/select>/)?.[0] || "";
+  assert.equal((secondary.match(/value="diffPercent"/g) || []).length, 1);
+  assert.equal(script.includes('data-label="推荐"'), false);
+  assert.match(script, /data-label="价差"/);
 });

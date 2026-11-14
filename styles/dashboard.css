@@ -120,7 +120,7 @@
 .model-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--text-3); font-size: 10.5px; line-height: 1.4; overflow-wrap: anywhere; }
 .official-name { color: var(--text-2); font-family: var(--font-mono); font-size: 10px; }
 .confidence-tag { padding: 0 5px; border-radius: var(--radius-pill); color: var(--text-3); background: var(--surface-2); font-size: 9.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.provider-tag, .group-tag, .rating-tag, .status-tag, .recommendation-tag, .delta-tag { display: inline-flex; align-items: center; gap: 3px; width: fit-content; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 10px; line-height: 1.35; }
+.provider-tag, .group-tag, .status-tag, .delta-tag { display: inline-flex; align-items: center; gap: 3px; width: fit-content; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 10px; line-height: 1.35; }
 .station-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
 .station-filter-link { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 0; color: var(--text); background: transparent; font-size: 12px; font-weight: 600; text-align: left; }
 .station-filter-link > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -136,14 +136,14 @@
 .cost-cell > strong { color: var(--text); font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .cost-cell small, .cost-meta { color: var(--text-3); font-size: 10.5px; font-weight: 400; }
 .cost-gap { font-size: 10.5px; }
-.cost-gap.is-saving, .delta-tag.is-saving { color: var(--ok); }
-.cost-gap.is-extra, .delta-tag.is-extra { color: var(--danger); }
+.cost-gap.is-saving { color: var(--ok); }
+.cost-gap.is-extra { color: var(--danger); }
+.delta-tag.delta-excellent { color: var(--cat-excellent); border-color: var(--ok-line); background: var(--ok-soft); }
+.delta-tag.delta-good { color: var(--cat-good); border-color: color-mix(in srgb, var(--cat-good) 28%, var(--line)); background: color-mix(in srgb, var(--cat-good) 8%, var(--surface)); }
+.delta-tag.delta-fair { color: var(--cat-fair); border-color: var(--warn-line); background: var(--warn-soft); }
+.delta-tag.delta-bad { color: var(--cat-bad); border-color: color-mix(in srgb, var(--cat-bad) 30%, var(--line)); background: var(--danger-soft); }
+.delta-tag.neutral { color: var(--text-3); background: var(--surface-2); }
 .recommendation-cell { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; min-width: 0; }
-.recommendation-tag.is-best { color: var(--ok); border-color: var(--ok-line); background: var(--ok-soft); }
-.rating-excellent { color: var(--cat-excellent); }
-.rating-good { color: var(--cat-good); }
-.rating-fair { color: var(--cat-fair); }
-.rating-bad { color: var(--cat-bad); }
 .status-cluster { display: flex; flex-wrap: wrap; gap: 3px; }
 .status-tag .icon { width: 10px; height: 10px; }
 .status-tag.warning { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
@@ -232,7 +232,7 @@
   .comparison-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 9px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; }
   .comparison-table td { display: grid; gap: 4px; min-width: 0; padding: 0; border: 0; }
   .comparison-table td::before { content: attr(data-label); color: var(--text-3); font-size: 9px; }
-  .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="推荐"], .comparison-table td[data-label="状态"] { grid-column: 1 / -1; }
+  .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="状态"] { grid-column: 1 / -1; }
   .comparison-table tbody tr:hover td { background: transparent; }
   .top-menu-checkin { width: min(88vw, 320px); max-height: none; }
 }
@@ -276,7 +276,7 @@
   .preflight-result { grid-template-columns: 1fr; }
 }
 
-/* 价格分布图 */
+/* 混合单价柱 */
 /* 混合单价单元格内嵌价格柱：与报价同一行，不另占页面区域 */
 .cell-chart { width: 100%; min-width: 90px; max-width: 180px; margin-top: 3px; }
 .cell-chart .chart-track { position: relative; display: block; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: visible; }

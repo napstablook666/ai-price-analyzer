@@ -30,7 +30,16 @@ export function rowBandClasses(rows) {
     return `row-${index % 2 === 0 ? "even" : "odd"}${bandStart ? " model-band-start" : ""}`;
   });
 }
-// 价格分布图：按规范模型分组，每站一根横柱，官方混合单价画参考线。
+export function deltaTone(diffPercent) {
+  const value = Number(diffPercent);
+  if (!Number.isFinite(value) || Math.abs(value) < 0.005) return "neutral";
+  if (value < -40) return "excellent";
+  if (value < -2) return "good";
+  if (value > 50) return "bad";
+  return "fair";
+}
+
+// 混合单价柱：按规范模型分组，每站一根横柱，官方混合单价画参考线。
 // 只收付费站且有可算混合单价的 offer；同站同模型多档位取最低那档，避免同一模型出现重复柱。
 export function buildChartGroups(rows = [], { maxGroups = 12 } = {}) {
   const limit = Math.max(1, Math.trunc(Number(maxGroups)) || 1);

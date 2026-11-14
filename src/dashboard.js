@@ -1,7 +1,7 @@
 import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { buildChartGroups, createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "./dashboard-index.js";
+import { buildChartGroups, createDashboardIndex, deltaTone, matchesModelQueries, paginateRows, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
@@ -15,7 +15,6 @@ const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();
-const RATING_LABELS = { excellent: "神价", good: "折扣", fair: "公道", bad: "溢价" };
 const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
 
@@ -288,10 +287,9 @@ function renderRows() {
   $("#comparison-body").innerHTML = visible.map((row, index) => {
     const station = stationFor(row);
     const delta = row.pricingUnavailable || !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
-    const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : delta < 0 ? "cheaper" : "expensive";
+    const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : `delta-${deltaTone(delta)}`;
     const deltaLabel = delta === null ? (row.pricingUnavailable ? pricingUnavailableLabel(row) : row.stationCategory === "public" ? "仅公益站比较" : "无官方价") : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const isPublic = state.comparisonMode === "public";
-    const rating = RATING_LABELS[row.category] || "";
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
     const monthlyCostCurrency = row.costCurrency || currency;
     const monthlyCost = formatPrice(row.monthlyCost, monthlyCostCurrency);
@@ -313,9 +311,8 @@ function renderRows() {
       <td data-label="中转单价">${unitPricesMarkup(row.quotedPrices, row.sourceCurrency, row, false, true)}</td>
       <td data-label="官方单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${unitPricesMarkup(officialQuotedPrices || row.officialPrices, officialQuotedPrices ? (row.officialCurrency || "CREDITS") : currency, row, true, Boolean(officialQuotedPrices))}</td>
       <td data-label="月成本" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="cost-cell"><strong>${monthlyCost}<small>/月</small></strong>${monthlyDifference === null ? "" : `<span class="cost-gap ${monthlyDifference >= 0 ? "is-saving" : "is-extra"}">${monthlyDifference >= 0 ? "月省" : "月多付"} ${formatPrice(Math.abs(monthlyDifference), currency)}</span>`}</div></td>
-      <td data-label="相对官方" class="paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
+      <td data-label="价差" class="paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
       <td data-label="混合单价" class="paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cell"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong>${chartBarMarkup(row, chartFor(row))}</div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
-      <td data-label="推荐" class="paid-only-column"${isPublic ? " hidden" : ""}><div class="recommendation-cell"><span class="recommendation-tag ${row.recommended ? "is-best" : ""}">${escapeHtml(row.recommendationLabel || "—")}</span>${rating ? `<span class="rating-tag rating-${row.category}">${rating}</span>` : ""}${statusMarkup(row)}</div></td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");

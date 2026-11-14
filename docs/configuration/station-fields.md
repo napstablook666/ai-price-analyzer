@@ -87,7 +87,7 @@ Token 存在扩展本地存储里，不进工作区文件、不进导出的 JSON
 | 数字不对 | 看这里 |
 | --- | --- |
 | 所有价格都差 1000 倍 | `priceCurrency` 是每 M 还是每 K |
-| 相对官方恒为 0 | `rechargeCredits` 填成了「到账金额」而不是积分 |
+| 价差恒为 0 | `rechargeCredits` 填成了「到账金额」而不是积分 |
 | 输入价对、输出价差几倍 | 站点输出档位没对上，检查 responseFormat |
 | 整站无数据 | `baseUrl` 或 `endpoint` 错，或需要登录 |
 
