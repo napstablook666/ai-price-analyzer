@@ -133,6 +133,10 @@ const PROVIDER_ORDER = SITE_PLUGIN_ORDER;
 // Keep the exported binding stable: collectors and request strategies read it lazily.
 export const PROVIDER_REGISTRY = [];
 
+export function listSiteProviders() {
+  return [...PROVIDER_REGISTRY];
+}
+
 export function registerSiteProvider(provider) {
   if (!provider?.id || typeof provider.matches !== "function") throw new Error("站点插件缺少有效的 id 或 matches");
   const index = PROVIDER_REGISTRY.findIndex(item => item.id === provider.id);
@@ -144,6 +148,11 @@ export function registerSiteProvider(provider) {
     return (leftOrder < 0 ? PROVIDER_ORDER.length : leftOrder) - (rightOrder < 0 ? PROVIDER_ORDER.length : rightOrder);
   });
   return provider;
+}
+
+export function unregisterSiteProvider(id) {
+  const index = PROVIDER_REGISTRY.findIndex(item => item.id === id);
+  if (index >= 0) PROVIDER_REGISTRY.splice(index, 1);
 }
 
 export function retainSiteProviders(providerIds) {

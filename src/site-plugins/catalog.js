@@ -34,6 +34,8 @@ const entry = (id, name, host, mode, load, options = {}) => ({
   category: options.category || "paid",
   addable: options.addable !== false,
   authLabel: mode === "page" ? "使用当前浏览器登录态" : "公开接口，无需登录",
+  kind: "bundled",
+  source: "bundled",
   description: options.description || "内置站点适配器",
   load
 });
@@ -80,10 +82,11 @@ export function sitePluginForStation(station = {}) {
     || (hostMatches.length === 1 ? hostMatches[0] : null);
 }
 
-export function sitePluginCatalogForStations(stations = []) {
+export function sitePluginCatalogForStations(stations = [], options = {}) {
   const addedIds = new Set(stations.map(sitePluginForStation).filter(Boolean).map(plugin => plugin.id));
   return SITE_PLUGIN_CATALOG.map(({ load, paths, hosts, ...plugin }) => ({
     ...plugin,
+    version: options.bundledVersion || "",
     added: addedIds.has(plugin.id),
     stationCount: stations.filter(station => sitePluginForStation(station)?.id === plugin.id).length
   }));

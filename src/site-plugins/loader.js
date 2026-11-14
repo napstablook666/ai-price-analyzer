@@ -1,4 +1,5 @@
-import { providerById, providerForStation, registerSiteProvider, resetProviderRegistry, retainSiteProviders } from "../core/provider-registry.js";
+import { providerById, providerForStation, registerSiteProvider, resetProviderRegistry, retainSiteProviders, unregisterSiteProvider } from "../core/provider-registry.js";
+import { providerFromSpec } from "../core/declarative-plugin.js";
 import { SITE_PLUGIN_CATALOG, sitePluginById, sitePluginForStation } from "./catalog.js";
 
 export async function loadSitePlugin(id) {
@@ -26,8 +27,21 @@ export async function syncSitePlugins(stations = []) {
   return ids.map(providerById).filter(Boolean);
 }
 
-export function pruneSitePlugins(stations = []) {
-  const activeIds = new Set(stations.map(station => providerForStation(station)?.id).filter(Boolean));
+// 仓库插件与本地插件是声明式规格，运行时拼成 provider 注册，内置插件同 id 时内置优先。
+export function syncSpecSitePlugins(specs = []) {
+  for (const spec of specs) {
+    if (providerById(spec.id)) continue;
+    registerSiteProvider(providerFromSpec(spec));
+  }
+  return loadedSitePluginIds();
+}
+
+export function unloadSpecSitePlugin(id) {
+  unregisterSiteProvider(id);
+}
+
+export function pruneSitePlugins(stations = [], keepIds = []) {
+  const activeIds = new Set([...keepIds, ...stations.map(station => providerForStation(station)?.id).filter(Boolean)]);
   retainSiteProviders(activeIds);
 }
 

@@ -4,8 +4,10 @@ import { buildStationRequest, resolveStationCollection } from "./core/request-st
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
 import { inferStationAdapter } from "./core/adapters.js";
 import { addProviderStationPresets } from "./core/station-presets.js";
-import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins } from "./site-plugins/loader.js";
+import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins, syncSpecSitePlugins, unloadSpecSitePlugin } from "./site-plugins/loader.js";
 import { sitePluginById, sitePluginCatalogForStations, sitePluginForStation } from "./site-plugins/catalog.js";
+import { PLUGIN_REGISTRY_SNAPSHOT } from "./site-plugins/registry-snapshot.js";
+import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedPluginSpecs, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState } from "./core/declarative-plugin.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
@@ -38,6 +40,36 @@ async function getSettings() {
 
 async function settingsForUi() {
   return await getSettings();
+}
+
+function bundledPluginVersion() {
+  try {
+    return chrome.runtime.getManifest?.().version || "";
+  } catch {
+    return "";
+  }
+}
+let workspacePluginsSynced = false;
+
+// 仓库安装与本地开发的声明式插件只在内存注册表里，service worker 重启后要重新拼一次。
+async function ensureWorkspacePlugins({ force = false } = {}) {
+  if (workspacePluginsSynced && !force) return;
+  try {
+    const settings = await getSettings();
+    syncSpecSitePlugins(installedPluginSpecs(settings));
+    workspacePluginsSynced = true;
+  } catch (error) {
+    // 注册失败不能拖垮采集与刷新，下一次调用再试。
+    workspacePluginsSynced = false;
+    console.debug("[AI比价] 插件注册失败", error);
+  }
+}
+
+async function persistSettings(settings) {
+  await setValue("settings", normalizeSettings(settings));
+  workspacePluginsSynced = false;
+  await ensureWorkspacePlugins({ force: true });
+  return getSettings();
 }
 
 async function stationWithCredentials(station) {
@@ -91,6 +123,7 @@ export async function withPageFetch(station, preferredTabId, task, { existingTab
 }
 
 async function collect(stationInput, preferredTabId) {
+  await ensureWorkspacePlugins();
   await loadSitePluginForStation(stationInput);
   const collection = resolveStationCollection(await stationWithCredentials(stationInput));
   const { station } = collection;
@@ -515,6 +548,7 @@ async function refreshAll(options = {}) {
 
 async function dashboard() {
   await restoreRefreshPreflightState();
+  await ensureWorkspacePlugins();
   const savedSettings = await settingsForUi();
   if (activeRefreshPreflight?.expiresAt <= Date.now()) await invalidateRefreshPreflight();
   const revisionAtStart = getComparisonRevision();
@@ -568,7 +602,7 @@ async function dashboard() {
     .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
-  return { stations, sitePlugins: sitePluginCatalogForStations(stations), snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
+  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), checkinState: await getCheckinState(), checkinStations, refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
 }
 
 async function scheduleCheckinAlarm() {
@@ -679,7 +713,7 @@ async function addSitePlugins(ids) {
     const addedStations = next.slice(current.length).map(prepareComparisonStation);
     const added = addedStations.map(station => sitePluginForStation(station)?.id).filter(Boolean);
     if (addedStations.length) await putStations([...current, ...addedStations]);
-    pruneSitePlugins([...current, ...addedStations]);
+    pruneSitePlugins([...current, ...addedStations], installedPluginSpecs(settings).map(spec => spec.id));
     return {
       stations: [...current, ...addedStations],
       added,
@@ -714,7 +748,8 @@ async function saveStations(input) {
     stations.push({ ...station, auth: { type: submitted.type, token: "", username: "", password: "" } });
   }
   await putStations(stations);
-  pruneSitePlugins(stations);
+  const pluginSettings = await getSettings();
+  pruneSitePlugins(stations, installedPluginSpecs(pluginSettings).map(spec => spec.id));
   await invalidation;
   return stations;
 }
@@ -729,7 +764,14 @@ async function saveComparisonMode(mode) {
 }
 
 async function saveSettings(input = {}) {
-  const next = normalizeSettings(input);
+  const current = await getSettings();
+  const next = normalizeSettings({
+    ...input,
+    // 插件来源只走插件管理接口，普通设置保存不能把它们清掉。
+    devMode: current.devMode,
+    localPlugins: current.localPlugins,
+    pluginRegistry: current.pluginRegistry
+  });
   const invalidation = invalidateRefreshPreflight();
   await setValue("settings", next);
   await invalidation;
@@ -761,6 +803,155 @@ async function adaptStation(message) {
   const notices = discoveryWarning ? [discoveryWarning] : [];
   return { suggestion: local, discovery, warning: notices.join("；") };
 }
+const PLUGIN_REGISTRY_FETCH_TIMEOUT_MS = 15000;
+const PLUGIN_REGISTRY_MAX_BYTES = 512 * 1024;
+
+async function fetchPluginRegistryIndex(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PLUGIN_REGISTRY_FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { signal: controller.signal, credentials: "omit", cache: "no-store", redirect: "follow" });
+    if (!response.ok) throw new Error(`插件仓库返回 HTTP ${response.status}`);
+    const body = await response.text();
+    if (body.length > PLUGIN_REGISTRY_MAX_BYTES) throw new Error("插件仓库索引超过 512KB");
+    try {
+      return JSON.parse(body);
+    } catch {
+      throw new Error("插件仓库索引不是合法 JSON");
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") throw new Error("插件仓库请求超时");
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function pluginRegistryView(registry) {
+  return {
+    url: registry.url,
+    fetchedAt: registry.fetchedAt,
+    error: registry.error,
+    entries: registry.entries.map(entry => {
+      const record = registry.installed[entry.id];
+      const builtin = sitePluginById(entry.id);
+      return {
+        id: entry.id,
+        name: entry.name,
+        version: entry.version,
+        description: entry.description,
+        hosts: entry.hosts,
+        needsCode: entry.needsCode,
+        installed: Boolean(record),
+        installedVersion: record?.version || "",
+        updateAvailable: Boolean(record) && comparePluginVersions(record.version, entry.version) < 0,
+        builtin: Boolean(builtin && builtin.source === "bundled")
+      };
+    })
+  };
+}
+
+// 还没成功拉取过仓库时，先用随扩展发布的内置快照，避免插件商店空白。
+function seededRegistry(registry) {
+  const current = normalizeRegistryState(registry);
+  if (current.entries.length) return current;
+  return normalizeRegistryState({ ...current, entries: PLUGIN_REGISTRY_SNAPSHOT.plugins });
+}
+async function pluginWorkspaceState() {
+  const [settings, stations] = await Promise.all([getSettings(), getStations()]);
+  const manifest = chrome.runtime.getManifest?.() || {};
+  const localSpecs = settings.devMode === true
+    ? installedPluginSpecs({ ...settings, pluginRegistry: { ...settings.pluginRegistry, entries: [], installed: {} } })
+    : [];
+  const repositorySpecs = installedPluginSpecs({ devMode: false, localPlugins: [], pluginRegistry: settings.pluginRegistry });
+  const describe = spec => ({ id: spec.id, name: spec.name, version: spec.version, hosts: spec.hosts, mode: spec.mode, description: spec.description });
+  return {
+    catalog: sitePluginCatalogForStations(stations, { bundledVersion: manifest.version || "" }),
+    registry: pluginRegistryView(seededRegistry(settings.pluginRegistry)),
+    devMode: settings.devMode === true,
+    localPlugins: localSpecs.map(describe),
+    repositoryPlugins: repositorySpecs.map(describe),
+    extension: { id: manifest.id || "", version: manifest.version || "", updateUrl: manifest.update_url || "" }
+  };
+}
+
+async function refreshPluginRegistry(message = {}) {
+  return withKeyedLock("plugin-registry:refresh", async () => {
+    const settings = await getSettings();
+    const current = normalizeRegistryState(settings.pluginRegistry);
+    const url = String(message.url || current.url || DEFAULT_PLUGIN_REGISTRY_URL).trim();
+    let next;
+    try {
+      const { entries, rejected } = normalizeRegistryPayload(await fetchPluginRegistryIndex(url));
+      if (!entries.length) throw new Error(rejected.length ? `插件仓库没有可用条目：${rejected[0].error}` : "插件仓库是空的");
+      const installed = {};
+      for (const [id, record] of Object.entries(current.installed)) {
+        const entry = entries.find(item => item.id === id);
+        if (entry && !entry.needsCode) installed[id] = { version: entry.version, installedAt: record.installedAt || Date.now() };
+      }
+      next = { url, fetchedAt: Date.now(), error: "", entries, installed };
+    } catch (error) {
+      // 拉取失败保留上次成功的缓存，只记错误。
+      next = { ...current, url, error: error.message || String(error) };
+    }
+    await persistSettings({ ...settings, pluginRegistry: next });
+    return pluginWorkspaceState();
+  });
+}
+
+async function installPlugin(id) {
+  return withKeyedLock("plugin-install", async () => {
+    const settings = await getSettings();
+    const registry = normalizeRegistryState(settings.pluginRegistry);
+    const entry = registry.entries.find(item => item.id === String(id || ""));
+    if (!entry) throw new Error("插件仓库里没有这个插件，先刷新插件仓库");
+    if (entry.needsCode || !entry.spec) throw new Error("该插件需要随扩展发布的采集代码，无法从仓库安装");
+    const installed = { ...registry.installed, [entry.id]: { version: entry.version, installedAt: Date.now() } };
+    await persistSettings({ ...settings, pluginRegistry: { ...registry, installed } });
+    return pluginWorkspaceState();
+  });
+}
+
+async function uninstallPlugin(id) {
+  const pluginId = String(id || "").trim();
+  const descriptor = sitePluginById(pluginId);
+  if (!pluginId || (descriptor && descriptor.source === "bundled")) throw new Error("内置插件不能卸载");
+  const settings = await getSettings();
+  const registry = normalizeRegistryState(settings.pluginRegistry);
+  const installed = { ...registry.installed };
+  delete installed[pluginId];
+  const localPlugins = settings.localPlugins.filter(spec => spec.id !== pluginId);
+  unloadSpecSitePlugin(pluginId);
+  await persistSettings({ ...settings, pluginRegistry: { ...registry, installed }, localPlugins });
+  return pluginWorkspaceState();
+}
+
+async function saveDevMode(enabled) {
+  const settings = await getSettings();
+  const nextEnabled = Boolean(enabled);
+  if (!nextEnabled) for (const spec of settings.localPlugins) unloadSpecSitePlugin(spec.id);
+  await persistSettings({ ...settings, devMode: nextEnabled });
+  return pluginWorkspaceState();
+}
+
+async function addLocalPlugin(rawSpec) {
+  const settings = await getSettings();
+  if (settings.devMode !== true) throw new Error("先打开开发模式才能加载本地插件");
+  const spec = { ...normalizePluginSpec(rawSpec), source: "local" };
+  if (sitePluginById(spec.id)?.source === "bundled") throw new Error(`插件 id ${spec.id} 与内置插件冲突`);
+  const localPlugins = [...settings.localPlugins.filter(item => item.id !== spec.id), spec];
+  await persistSettings({ ...settings, localPlugins });
+  return pluginWorkspaceState();
+}
+
+async function removeLocalPlugin(id) {
+  const pluginId = String(id || "").trim();
+  const settings = await getSettings();
+  if (!settings.localPlugins.some(spec => spec.id === pluginId)) throw new Error("本地插件不存在");
+  unloadSpecSitePlugin(pluginId);
+  await persistSettings({ ...settings, localPlugins: settings.localPlugins.filter(spec => spec.id !== pluginId) });
+  return pluginWorkspaceState();
+}
 
 
 
@@ -781,6 +972,13 @@ async function handle(message, sender) {
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
     case "SAVE_STATIONS": return saveStations(message.stations);
     case "ADD_SITE_PLUGINS": return addSitePlugins(message.ids);
+    case "GET_PLUGIN_WORKSPACE": return pluginWorkspaceState();
+    case "REFRESH_PLUGIN_REGISTRY": return refreshPluginRegistry(message);
+    case "INSTALL_PLUGIN": return installPlugin(message.id);
+    case "UNINSTALL_PLUGIN": return uninstallPlugin(message.id);
+    case "SAVE_DEV_MODE": return saveDevMode(message.enabled);
+    case "ADD_LOCAL_PLUGIN": return addLocalPlugin(message.spec);
+    case "REMOVE_LOCAL_PLUGIN": return removeLocalPlugin(message.id);
     case "ADAPT_STATION": return adaptStation(message);
     case "CHECKIN_STATUS":
       return checkinAll({ stationId: message.stationId, stationOrigin: message.stationOrigin, claim: false, autoOnly: false });
@@ -842,6 +1040,7 @@ async function handle(message, sender) {
         const next = importedById.get(previous.id);
         if (!next || String(next.baseUrl || "") !== previous.baseUrl || String(next.auth?.type || "none") !== previous.auth?.type) await removeStationCredential(previous.id);
       }
+      workspacePluginsSynced = false;
       await invalidation;
       return dashboard();
     }
@@ -852,6 +1051,9 @@ async function handle(message, sender) {
     default: throw new Error(`未知操作：${message.type}`);
   }
 }
+
+// service worker 每次启动都重新注册仓库安装与本地开发的声明式插件。
+ensureWorkspacePlugins();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "REFRESH_PROGRESS") return;
@@ -873,8 +1075,14 @@ chrome.tabs?.onRemoved?.addListener(tabId => {
   return reconcile.catch(error => console.warn("[AI比价] 刷新预检状态恢复失败", error));
 });
 
-chrome.runtime.onInstalled.addListener(() => scheduleCheckinAlarm());
-chrome.runtime.onStartup.addListener(() => scheduleCheckinAlarm());
+chrome.runtime.onInstalled.addListener(() => {
+  scheduleCheckinAlarm();
+  ensureWorkspacePlugins({ force: true });
+});
+chrome.runtime.onStartup.addListener(() => {
+  scheduleCheckinAlarm();
+  ensureWorkspacePlugins({ force: true });
+});
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === CHECKIN_ALARM_NAME) return checkinAll({ claim: true, autoOnly: true }).catch(error => console.warn("[AI比价] 定时签到失败", error));
 });

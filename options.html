@@ -31,8 +31,36 @@
       <div class="settings-content">
         <section class="settings-view" id="settings-view-stations" role="tabpanel" aria-labelledby="settings-tab-stations" data-settings-view="stations">
           <div class="view-heading"><div><h2>站点插件</h2><p>插件保存在扩展内，添加后才加载对应采集适配器。</p></div><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div>
+          <section class="plugin-manager" aria-labelledby="plugin-manager-title">
+            <div class="plugin-manager-head">
+              <div><h3 id="plugin-manager-title">插件</h3><p>内置插件随扩展发布，仓库插件从线上插件仓库安装，本地插件只在开发模式下加载，各自标注来源。</p></div>
+              <div class="plugin-source-legend" aria-hidden="true"><span class="plugin-source-badge is-bundled">内置</span><span class="plugin-source-badge is-registry">仓库</span><span class="plugin-source-badge is-local">本地插件</span></div>
+            </div>
+            <div class="plugin-manager-tabs" role="tablist" aria-label="插件管理">
+              <button id="plugin-tab-installed" type="button" role="tab" aria-selected="true" aria-controls="plugin-panel-installed" data-plugin-tab="installed">已安装</button>
+              <button id="plugin-tab-registry" type="button" role="tab" aria-selected="false" aria-controls="plugin-panel-registry" data-plugin-tab="registry" tabindex="-1">插件仓库</button>
+            </div>
+            <div class="plugin-panel" id="plugin-panel-installed" role="tabpanel" aria-labelledby="plugin-tab-installed" data-plugin-panel="installed">
+              <div id="plugin-installed-list" class="plugin-list" aria-live="polite"></div>
+            </div>
+            <div class="plugin-panel" id="plugin-panel-registry" role="tabpanel" aria-labelledby="plugin-tab-registry" data-plugin-panel="registry" hidden>
+              <div class="registry-toolbar">
+                <label class="plugin-search registry-url-field"><span data-icon="link" class="icon"></span><span class="sr-only">插件仓库地址</span><input id="plugin-registry-url" type="url" placeholder="https://raw.githubusercontent.com/…/plugins.json" autocomplete="off"></label>
+                <button class="button button-quiet button-small" id="plugin-registry-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新仓库</span></button>
+                <label class="check-label dev-mode-toggle"><input id="dev-mode" type="checkbox"><span>开发模式</span></label>
+              </div>
+              <p class="registry-status" id="plugin-registry-status" role="status" aria-live="polite">尚未拉取插件仓库</p>
+              <div id="plugin-registry-list" class="plugin-list" aria-live="polite"></div>
+              <section class="dev-plugin-panel" id="dev-plugin-panel" hidden aria-labelledby="dev-plugin-title">
+                <div class="dev-plugin-heading"><div><h4 id="dev-plugin-title">本地插件</h4><p>只加载到本机，关闭开发模式会一并卸载。</p></div><label class="button button-quiet button-small file-button"><span data-icon="upload" class="icon"></span><span>选择 JSON 文件</span><input id="dev-plugin-file" type="file" accept="application/json,.json"></label></div>
+                <textarea id="dev-plugin-spec" class="dev-plugin-spec" rows="6" spellcheck="false" placeholder="粘贴插件 JSON 规格"></textarea>
+                <div class="dev-plugin-actions"><button class="button button-primary button-small" id="dev-plugin-load" type="button"><span data-icon="plus" class="icon"></span><span>加载本地插件</span></button></div>
+                <div id="local-plugin-list" class="plugin-list" aria-live="polite"></div>
+              </section>
+            </div>
+          </section>
           <section class="plugin-browser" aria-labelledby="plugin-browser-title">
-            <div class="plugin-browser-heading"><div><h3 id="plugin-browser-title">本地插件目录</h3><p>搜索并多选站点，一次添加到工作区。</p></div><span id="plugin-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span></div>
+            <div class="plugin-browser-heading"><div><h3 id="plugin-browser-title">可选站点</h3><p>从已安装的插件里挑选站点，一次添加到工作区。</p></div><span id="plugin-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span></div>
             <div class="plugin-toolbar">
               <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索站点插件</span><input id="plugin-search" type="search" placeholder="搜索站点或域名" autocomplete="off"></label>
               <div class="plugin-filters" role="group" aria-label="插件分类"><button type="button" data-plugin-category="all" aria-pressed="true">全部</button><button type="button" data-plugin-category="paid" aria-pressed="false">付费</button><button type="button" data-plugin-category="public" aria-pressed="false">公益</button></div>

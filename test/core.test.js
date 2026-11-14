@@ -969,7 +969,6 @@ test("uses the measured monthly workload as the default usage", () => {
   assert.equal(settings.usage.cacheWrite1h, 0);
   assert.equal(USAGE_PRESETS.find(preset => preset.id === "measured").usage.requests, 45494);
 });
-
 test("migrates old usage presets to the measured monthly workload", () => {
   const legacyUsages = [
     { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.5 },

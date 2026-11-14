@@ -21,8 +21,12 @@ const PROVIDER_DIR = path.join(ROOT, "src", "site-plugins", "providers");
 const CATALOG_FILE = path.join(ROOT, "src", "site-plugins", "catalog.js");
 const ORDER_FILE = path.join(ROOT, "src", "shared", "plugin-order.js");
 const GENERATED = "由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs";
+// 插件仓库索引：一份随扩展内置（离线也能看到商店），一份写进插件仓库用于线上分发。
+const REGISTRY_SNAPSHOT_FILE = path.join(ROOT, "src", "site-plugins", "registry-snapshot.js");
+const REGISTRY_JSON_FILE = path.join(PLUGIN_DIR, "plugins.json");
+const BUNDLED_VERSION = String(readJson(path.join(ROOT, "manifest.json")).version || "0.0.0");
 
-const MANIFEST_KEYS = ["id", "name", "host", "hosts", "paths", "mode", "category", "addable", "description", "order"];
+const MANIFEST_KEYS = ["id", "name", "version", "host", "hosts", "paths", "mode", "category", "addable", "description", "order"];
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));
@@ -83,6 +87,29 @@ export const SITE_PLUGIN_ORDER = ${JSON.stringify(ids, null, 2)};
 `;
 }
 
+function registryEntries(plugins) {
+  return orderedPlugins(plugins).map(plugin => {
+    const manifest = plugin.manifest;
+    return {
+      id: manifest.id,
+      name: manifest.name || manifest.id,
+      version: String(manifest.version || BUNDLED_VERSION),
+      description: manifest.description || "",
+      hosts: Array.isArray(manifest.hosts) && manifest.hosts.length ? manifest.hosts : [manifest.host],
+      needsCode: true
+    };
+  });
+}
+
+// 内置快照与线上索引内容一致，区别只是扩展里带一份、插件仓库发布一份。
+function renderRegistrySnapshot(plugins) {
+  const payload = { schemaVersion: 1, plugins: registryEntries(plugins) };
+  return `// ${GENERATED}\n// 内置的插件仓库快照：首次打开插件商店时先用它，刷新仓库后以线上索引为准。\nexport const PLUGIN_REGISTRY_SNAPSHOT = ${JSON.stringify(payload, null, 2)};\n`;
+}
+
+function renderRegistryJson(plugins) {
+  return `${JSON.stringify({ schemaVersion: 1, plugins: registryEntries(plugins) }, null, 2)}\n`;
+}
 function renderCatalog(plugins) {
   const imports = orderedPlugins(plugins).map(plugin => ({
     plugin,
@@ -114,6 +141,8 @@ function renderCatalog(plugins) {
   category: options.category || "paid",
   addable: options.addable !== false,
   authLabel: mode === "page" ? "使用当前浏览器登录态" : "公开接口，无需登录",
+  kind: "bundled",
+  source: "bundled",
   description: options.description || "内置站点适配器",
   load
 });
@@ -139,10 +168,11 @@ export function sitePluginForStation(station = {}) {
     || (hostMatches.length === 1 ? hostMatches[0] : null);
 }
 
-export function sitePluginCatalogForStations(stations = []) {
+export function sitePluginCatalogForStations(stations = [], options = {}) {
   const addedIds = new Set(stations.map(sitePluginForStation).filter(Boolean).map(plugin => plugin.id));
   return SITE_PLUGIN_CATALOG.map(({ load, paths, hosts, ...plugin }) => ({
     ...plugin,
+    version: options.bundledVersion || "",
     added: addedIds.has(plugin.id),
     stationCount: stations.filter(station => sitePluginForStation(station)?.id === plugin.id).length
   }));
@@ -156,6 +186,9 @@ function build() {
   const seen = new Set();
   for (const plugin of plugins) {
     if (!/^[a-z0-9][a-z0-9-]*$/.test(plugin.id)) throw new Error(`插件 id 只能用 a-z 0-9 与连字符：${plugin.id}`);
+    if (plugin.manifest.version !== undefined && !/^\d+\.\d+\.\d+$/.test(String(plugin.manifest.version))) {
+      throw new Error(`plugins/${plugin.id}/manifest.json 的 version 必须是 x.y.z：${plugin.manifest.version}`);
+    }
     for (const key of Object.keys(plugin.manifest)) {
       if (!MANIFEST_KEYS.includes(key)) throw new Error(`plugins/${plugin.id}/manifest.json 有未知字段：${key}`);
     }
@@ -174,6 +207,8 @@ function build() {
   for (const plugin of plugins) files.set(path.join(PROVIDER_DIR, `${plugin.id}.js`), renderProvider(plugin));
   files.set(CATALOG_FILE, renderCatalog(plugins));
   files.set(ORDER_FILE, renderOrder(plugins));
+  files.set(REGISTRY_SNAPSHOT_FILE, renderRegistrySnapshot(plugins));
+  files.set(REGISTRY_JSON_FILE, renderRegistryJson(plugins));
   return { plugins, files };
 }
 
@@ -216,8 +251,8 @@ if (isMain) {
     console.log(`插件产物与源同步：${plugins.length} 个插件`);
   } else {
     writeOutputs(files);
-    console.log(`已生成 ${plugins.length} 个插件产物：providers/*.js + catalog.js`);
+    console.log(`已生成 ${plugins.length} 个插件产物：providers/*.js + catalog.js + registry-snapshot.js + plugins.json`);
   }
 }
 
-export { build, checkOutputs, renderCatalog, renderProvider, rewriteImports };
+export { build, checkOutputs, renderCatalog, renderProvider, renderRegistryJson, renderRegistrySnapshot, rewriteImports };

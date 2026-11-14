@@ -1,3 +1,5 @@
+import { DEFAULT_PLUGIN_REGISTRY_URL, normalizeLocalPlugins, normalizeRegistryState } from "../core/declarative-plugin.js";
+
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 export const BOC_EXCHANGE_URL = "https://www.boc.cn/sourcedb/whpj/";
 export const DEFAULT_EXCHANGE_RATE = 7.3;
@@ -33,7 +35,6 @@ export const DEFAULT_MONTHLY_USAGE = {
   images: 0,
   cacheWrite1h: 0,
 };
-
 export const USAGE_PRESETS = [
   { id: "measured", label: "实测月用量", usage: MEASURED_MONTHLY_VOLUME },
   {
@@ -94,6 +95,9 @@ const DEFAULT_SETTINGS = {
   showUnmatched: true,
   showStale: true,
   comparisonMode: "paid",
+  devMode: false,
+  localPlugins: [],
+  pluginRegistry: { url: DEFAULT_PLUGIN_REGISTRY_URL, fetchedAt: 0, error: "", entries: [], installed: {} },
 };
 
 export const STATION_CATEGORY_LABELS = {
@@ -161,6 +165,9 @@ export function normalizeSettings(input = {}) {
     matchingRules: Array.isArray(input.matchingRules) ? input.matchingRules.map((rule) => ({ ...rule })) : base.matchingRules.map((rule) => ({ ...rule })),
     modelMatchOverrides: normalizeModelMatchOverrides(input.modelMatchOverrides),
     recommendationProfile: ["balanced", "price", "reliability"].includes(input.recommendationProfile) ? input.recommendationProfile : "price",
+    devMode: input.devMode === true,
+    localPlugins: normalizeLocalPlugins(input.localPlugins).specs,
+    pluginRegistry: normalizeRegistryState(input.pluginRegistry),
   };
   if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
   settings.usage.imageTokens = settings.usage.imageOutputTokens;

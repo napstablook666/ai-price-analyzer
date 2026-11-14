@@ -5,7 +5,7 @@ import { enqueueWorkspaceOperation, getStoredWorkspace, isWorkspaceSupported, pi
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, selectedPluginIds: new Set(), selectedStationIds: new Set(), stationSourceTabIds: new Map(), configStationId: null, pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
+const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, pluginTab: "installed", selectedPluginIds: new Set(), selectedStationIds: new Set(), stationSourceTabIds: new Map(), configStationId: null, pluginCategory: "all", pendingStation: null, previewRequestId: 0 };
 const workspace = { handle: null };
 const $ = selector => document.querySelector(selector);
 
@@ -197,6 +197,291 @@ async function addSelectedPlugins() {
     updatePluginSelection();
   }
 }
+const PLUGIN_SOURCE_LABELS = { bundled: "内置", registry: "仓库安装", local: "本地插件" };
+const PLUGIN_SOURCE_ORDER = ["bundled", "registry", "local"];
+const PLUGIN_GROUP_TITLES = { bundled: "内置插件", registry: "仓库安装", local: "本地插件" };
+
+function pluginSourceKey(plugin) {
+  const source = String(plugin?.source || "bundled");
+  return PLUGIN_SOURCE_LABELS[source] ? source : "bundled";
+}
+
+function pluginSourceBadge(plugin) {
+  const source = pluginSourceKey(plugin);
+  return `<span class="plugin-source-badge is-${source}">${PLUGIN_SOURCE_LABELS[source]}</span>`;
+}
+
+function pluginInitial(plugin) {
+  const text = String(plugin?.name || plugin?.id || plugin?.host || "?").trim();
+  return escapeHtml(text.slice(0, 1).toUpperCase() || "?");
+}
+
+function pluginRow(plugin, actions = "") {
+  const source = pluginSourceKey(plugin);
+  const count = Number(plugin.stationCount) || 0;
+  const badges = [
+    pluginSourceBadge(plugin),
+    plugin.version ? `<span class="plugin-version">v${escapeHtml(plugin.version)}</span>` : "",
+    `<span class="station-badge">${plugin.mode === "page" ? "页面模式" : "直接接口"}</span>`
+  ].filter(Boolean).join("");
+  return `<article class="plugin-row" data-plugin-row="${escapeHtml(plugin.id)}">
+    <span class="plugin-row-icon is-${source}" aria-hidden="true">${pluginInitial(plugin)}</span>
+    <div class="plugin-row-main">
+      <div class="plugin-row-title"><strong>${escapeHtml(plugin.name || plugin.id)}</strong><span class="plugin-row-badges">${badges}</span></div>
+      <span class="plugin-row-host">${escapeHtml(plugin.host || "")}</span>
+      <span class="plugin-row-description">${escapeHtml(plugin.description || "")}</span>
+    </div>
+    <span class="plugin-row-count">${count ? `${count} 个站点` : "未添加站点"}</span>
+    <div class="plugin-row-actions">${actions}</div>
+  </article>`;
+}
+
+function pluginInstalledActions(plugin) {
+  const parts = [];
+  if (plugin.addable && !plugin.added) parts.push(`<button class="button button-quiet button-small" data-plugin-add="${escapeHtml(plugin.id)}" type="button">添加站点</button>`);
+  if (pluginSourceKey(plugin) !== "bundled") parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(plugin.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
+  return parts.join("");
+}
+
+// 已安装列表把内置、仓库安装、本地开发三类合在一起，按来源分组；同 id 时本地盖过仓库。
+function installedPluginEntries() {
+  const workspace = state.pluginWorkspace || {};
+  const catalog = workspace.catalog || [];
+  const counts = new Map(catalog.map(plugin => [plugin.id, plugin.stationCount || 0]));
+  const extraCounts = new Map();
+  for (const station of state.stations || []) {
+    if (!station.pluginId || counts.has(station.pluginId)) continue;
+    extraCounts.set(station.pluginId, (extraCounts.get(station.pluginId) || 0) + 1);
+  }
+  const merged = new Map(catalog.map(plugin => [plugin.id, { ...plugin, source: pluginSourceKey(plugin) }]));
+  for (const plugin of workspace.repositoryPlugins || []) {
+    if (merged.has(plugin.id)) continue;
+    merged.set(plugin.id, { ...plugin, source: "registry" });
+  }
+  for (const plugin of workspace.localPlugins || []) merged.set(plugin.id, { ...plugin, source: "local" });
+  return [...merged.values()].map(plugin => ({ ...plugin, stationCount: counts.get(plugin.id) ?? extraCounts.get(plugin.id) ?? 0 }));
+}
+
+function renderPluginInstalled() {
+  const list = $("#plugin-installed-list");
+  if (!list) return;
+  const plugins = installedPluginEntries();
+  if (!plugins.length) {
+    list.innerHTML = `<p class="plugin-empty">还没有可用插件。</p>`;
+    return;
+  }
+  const groups = new Map(PLUGIN_SOURCE_ORDER.map(key => [key, []]));
+  for (const plugin of plugins) groups.get(pluginSourceKey(plugin)).push(plugin);
+  for (const plugin of plugins) groups.get(pluginSourceKey(plugin)).push(plugin);
+  list.innerHTML = PLUGIN_SOURCE_ORDER.filter(key => groups.get(key).length).map(key => `<section class="plugin-group">
+    <div class="plugin-group-heading"><h4>${PLUGIN_GROUP_TITLES[key]}</h4><span>${groups.get(key).length}</span></div>
+    ${groups.get(key).map(plugin => pluginRow(plugin, pluginInstalledActions(plugin))).join("")}
+  </section>`).join("");
+  hydrateIcons(list);
+}
+
+function formatPluginTime(timestamp) {
+  const value = Number(timestamp);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  return new Date(value).toLocaleString("zh-CN", { hour12: false });
+}
+
+function registryEntryBadges(entry) {
+  return [
+    entry.version ? `<span class="plugin-version">v${escapeHtml(entry.version)}</span>` : "",
+    entry.builtin ? `<span class="station-badge">内置已提供</span>` : "",
+    entry.needsCode ? `<span class="station-badge is-warning">需随扩展发布</span>` : "",
+    entry.installed ? `<span class="plugin-source-badge is-registry">已安装</span>` : "",
+    entry.updateAvailable ? `<span class="station-badge is-warning">有更新</span>` : ""
+  ].filter(Boolean).join("");
+}
+
+function registryEntryActions(entry) {
+  if (entry.builtin || entry.needsCode) return "";
+  if (!entry.installed) return `<button class="button button-primary button-small" data-plugin-install="${escapeHtml(entry.id)}" type="button">安装</button>`;
+  const parts = [];
+  if (entry.updateAvailable) parts.push(`<button class="button button-quiet button-small" data-plugin-install="${escapeHtml(entry.id)}" type="button">更新</button>`);
+  parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(entry.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
+  return parts.join("");
+}
+
+function renderPluginRegistry() {
+  const registry = state.pluginWorkspace?.registry;
+  const status = $("#plugin-registry-status");
+  if (status && registry) {
+    const fetchedAt = formatPluginTime(registry.fetchedAt);
+    if (registry.error) {
+      status.dataset.status = "error";
+      status.textContent = `拉取失败：${registry.error}${fetchedAt ? `（保留 ${fetchedAt} 的结果）` : ""}`;
+    } else {
+      status.dataset.status = fetchedAt ? "ok" : "";
+      status.textContent = fetchedAt ? `上次刷新：${fetchedAt}，共 ${registry.entries.length} 个插件` : "尚未拉取插件仓库";
+    }
+  }
+  const urlInput = $("#plugin-registry-url");
+  if (urlInput && registry && !urlInput.value) urlInput.value = registry.url || "";
+  const list = $("#plugin-registry-list");
+  if (!list) return;
+  const entries = registry?.entries || [];
+  list.innerHTML = entries.length ? entries.map(entry => `<article class="plugin-row" data-registry-row="${escapeHtml(entry.id)}">
+    <span class="plugin-row-icon is-registry" aria-hidden="true">${pluginInitial(entry)}</span>
+    <div class="plugin-row-main">
+      <div class="plugin-row-title"><strong>${escapeHtml(entry.name || entry.id)}</strong><span class="plugin-row-badges">${registryEntryBadges(entry)}</span></div>
+      <span class="plugin-row-host">${escapeHtml(entry.id)}${entry.hosts?.length ? ` · ${escapeHtml(entry.hosts.join(" / "))}` : ""}</span>
+      <span class="plugin-row-description">${escapeHtml(entry.description || "")}</span>
+    </div>
+    <div class="plugin-row-actions">${registryEntryActions(entry)}</div>
+  </article>`).join("") : `<p class="plugin-empty">仓库里还没有条目，填好仓库地址后点「刷新仓库」。</p>`;
+  hydrateIcons(list);
+}
+
+function renderLocalPlugins() {
+  const workspace = state.pluginWorkspace;
+  const devMode = workspace?.devMode === true;
+  const toggle = $("#dev-mode");
+  if (toggle) toggle.checked = devMode;
+  const panel = $("#dev-plugin-panel");
+  if (panel) panel.hidden = !devMode;
+  const list = $("#local-plugin-list");
+  if (!list) return;
+  const catalog = workspace?.catalog || [];
+  const plugins = workspace?.localPlugins || [];
+  list.innerHTML = plugins.length ? plugins.map(plugin => pluginRow({
+    ...plugin,
+    source: "local",
+    stationCount: catalog.find(item => item.id === plugin.id)?.stationCount || 0
+  }, `<button class="icon-button danger-icon" data-plugin-remove="${escapeHtml(plugin.id)}" type="button" title="移除本地插件" aria-label="移除本地插件">${icon("trash-2", { className: "icon" })}</button>`)).join("") : `<p class="plugin-empty">开发模式下还没有加载本地插件。</p>`;
+  hydrateIcons(list);
+}
+
+function syncPluginTab(tab = state.pluginTab, { focus = false } = {}) {
+  state.pluginTab = tab === "registry" ? "registry" : "installed";
+  for (const button of document.querySelectorAll("[data-plugin-tab]")) {
+    const active = button.dataset.pluginTab === state.pluginTab;
+    button.setAttribute("aria-selected", String(active));
+    button.tabIndex = active ? 0 : -1;
+    if (active && focus) button.focus();
+  }
+  for (const panel of document.querySelectorAll("[data-plugin-panel]")) panel.hidden = panel.dataset.pluginPanel !== state.pluginTab;
+}
+
+function renderPluginWorkspace() {
+  if (!state.pluginWorkspace) return;
+  state.sitePlugins = state.pluginWorkspace.catalog?.length ? state.pluginWorkspace.catalog : state.sitePlugins;
+  renderPluginInstalled();
+  renderPluginRegistry();
+  renderLocalPlugins();
+  syncPluginTab();
+  renderSitePlugins();
+}
+
+function applyPluginWorkspace(workspace) {
+  if (!workspace) return;
+  state.pluginWorkspace = workspace;
+  renderPluginWorkspace();
+}
+
+async function refreshPluginRegistry() {
+  const button = $("#plugin-registry-refresh");
+  const label = button?.querySelector("span:last-child");
+  const original = label?.textContent;
+  if (button) button.disabled = true;
+  if (label) label.textContent = "刷新中";
+  try {
+    const workspace = await callService("REFRESH_PLUGIN_REGISTRY", { url: $("#plugin-registry-url")?.value.trim() || "" });
+    applyPluginWorkspace(workspace);
+    const registry = workspace.registry;
+    if (registry.error) toast(`插件仓库拉取失败：${registry.error}`);
+    else toast(`插件仓库已刷新，共 ${registry.entries.length} 个插件`);
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    if (button) button.disabled = false;
+    if (label && original) label.textContent = original;
+    hydrateIcons(button || document);
+  }
+}
+
+async function installPluginVersion(pluginId) {
+  try {
+    const workspace = await callService("INSTALL_PLUGIN", { id: pluginId });
+    applyPluginWorkspace(workspace);
+    const entry = workspace.registry.entries.find(item => item.id === pluginId);
+    toast(`已安装 ${entry?.name || pluginId}${entry?.version ? ` v${entry.version}` : ""}`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function uninstallPluginVersion(pluginId) {
+  const plugin = (state.pluginWorkspace?.catalog || []).find(item => item.id === pluginId);
+  if (!window.confirm(`移除插件「${plugin?.name || pluginId}」？已添加的站点会保留，重新安装插件后继续可用。`)) return;
+  try {
+    const workspace = await callService("UNINSTALL_PLUGIN", { id: pluginId });
+    applyPluginWorkspace(workspace);
+    toast(`已移除 ${plugin?.name || pluginId}`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function toggleDevMode(enabled) {
+  try {
+    const workspace = await callService("SAVE_DEV_MODE", { enabled });
+    applyPluginWorkspace(workspace);
+    toast(enabled ? "开发模式已打开，可以加载本地插件" : "开发模式已关闭，本地插件已卸载");
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function addPluginSite(pluginId) {
+  try {
+    const result = await callService("ADD_SITE_PLUGINS", { ids: [pluginId] });
+    const existingIds = new Set(state.stations.map(station => station.id));
+    for (const station of result.stations || []) if (!existingIds.has(station.id)) state.stations.push(station);
+    if (state.pluginWorkspace) applyPluginWorkspace({ ...state.pluginWorkspace, catalog: result.sitePlugins || state.sitePlugins });
+    renderStations();
+    await saveWorkspace({ notify: false });
+    toast(`已添加 ${result.added?.length || 0} 个站点`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function loadLocalPlugin() {
+  const textarea = $("#dev-plugin-spec");
+  const raw = textarea?.value.trim() || "";
+  if (!raw) {
+    toast("先粘贴插件 JSON 或选择文件");
+    return;
+  }
+  let spec;
+  try {
+    spec = JSON.parse(raw);
+  } catch {
+    toast("插件 JSON 解析失败");
+    return;
+  }
+  try {
+    const workspace = await callService("ADD_LOCAL_PLUGIN", { spec });
+    textarea.value = "";
+    applyPluginWorkspace(workspace);
+    toast(`本地插件 ${spec.id || spec.name || ""} 已加载`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
+
+async function removeLocalPluginEntry(pluginId) {
+  try {
+    const workspace = await callService("REMOVE_LOCAL_PLUGIN", { id: pluginId });
+    applyPluginWorkspace(workspace);
+    toast(`已移除本地插件 ${pluginId}`);
+  } catch (error) {
+    toast(error.message);
+  }
+}
 
 
 
@@ -254,9 +539,11 @@ function stationCard(station) {
   const host = stationHostName(station.baseUrl);
   const name = station.name || host || "未命名站点";
   const verified = station.priceCurrencyVerified !== false;
+  const pluginDescriptor = state.sitePlugins.find(plugin => plugin.id === station.pluginId);
   const badges = [
     `<span class="station-badge">${escapeHtml(STATION_CATEGORY_LABELS[category])}</span>`,
     `<span class="station-badge">${station.mode === "page" ? "页面模式" : "直接接口"}</span>`,
+    pluginDescriptor ? `<span class="plugin-source-badge is-${pluginSourceKey(pluginDescriptor)}">${PLUGIN_SOURCE_LABELS[pluginSourceKey(pluginDescriptor)]} · ${escapeHtml(pluginDescriptor.name)}</span>` : "",
     verified ? "" : `<span class="station-badge is-warning">币种未核实</span>`
   ].join("");
   return `<article class="station-card${station.enabled ? "" : " is-disabled"}" id="station-card-${escapeHtml(station.id)}" data-station-id="${escapeHtml(station.id)}">
@@ -638,13 +925,14 @@ async function refreshStation(stationId) {
 
 async function load() {
   try {
-    const data = await callService("GET_DASHBOARD");
+    const [data, pluginWorkspace] = await Promise.all([callService("GET_DASHBOARD"), callService("GET_PLUGIN_WORKSPACE")]);
+    state.pluginWorkspace = pluginWorkspace;
     state.stations = data.stations || [];
-    state.sitePlugins = data.sitePlugins || [];
+    state.sitePlugins = pluginWorkspace.catalog?.length ? pluginWorkspace.catalog : data.sitePlugins || [];
     state.selectedPluginIds.clear();
     state.settings = data.settings;
     renderSettings();
-    renderSitePlugins();
+renderPluginWorkspace();
     renderStations();
     hydrateIcons();
     const params = new URLSearchParams(location.search);
@@ -855,6 +1143,57 @@ $("#select-visible-plugins").addEventListener("click", () => {
   renderSitePlugins();
 });
 $("#add-selected-plugins").addEventListener("click", addSelectedPlugins);
+
+for (const button of document.querySelectorAll("[data-plugin-tab]")) {
+  button.addEventListener("click", () => syncPluginTab(button.dataset.pluginTab, { focus: true }));
+  button.addEventListener("keydown", event => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    syncPluginTab(state.pluginTab === "installed" ? "registry" : "installed", { focus: true });
+  });
+}
+$("#plugin-registry-refresh").addEventListener("click", refreshPluginRegistry);
+$("#plugin-registry-url").addEventListener("keydown", event => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  refreshPluginRegistry();
+});
+$("#dev-mode").addEventListener("change", event => toggleDevMode(event.currentTarget.checked));
+$("#dev-plugin-load").addEventListener("click", loadLocalPlugin);
+$("#dev-plugin-file").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    $("#dev-plugin-spec").value = await file.text();
+    toast("已读取插件文件，确认后点「加载本地插件」");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    event.target.value = "";
+  }
+});
+$("#plugin-installed-list").addEventListener("click", event => {
+  const addButton = event.target.closest("[data-plugin-add]");
+  if (addButton) {
+    addPluginSite(addButton.dataset.pluginAdd);
+    return;
+  }
+  const removeButton = event.target.closest("[data-plugin-uninstall]");
+  if (removeButton) uninstallPluginVersion(removeButton.dataset.pluginUninstall);
+});
+$("#plugin-registry-list").addEventListener("click", event => {
+  const installButton = event.target.closest("[data-plugin-install]");
+  if (installButton) {
+    installPluginVersion(installButton.dataset.pluginInstall);
+    return;
+  }
+  const removeButton = event.target.closest("[data-plugin-uninstall]");
+  if (removeButton) uninstallPluginVersion(removeButton.dataset.pluginUninstall);
+});
+$("#local-plugin-list").addEventListener("click", event => {
+  const removeButton = event.target.closest("[data-plugin-remove]");
+  if (removeButton) removeLocalPluginEntry(removeButton.dataset.pluginRemove);
+});
 
 $("#add-station-top").addEventListener("click", () => openStationDialog());
 $("#cancel-add-station").addEventListener("click", closeStationDialog);
