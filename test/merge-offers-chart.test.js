@@ -152,4 +152,8 @@ test("dashboard folds official matching into one confidence detail control", () 
   assert.equal(script.includes('class="candidate-tag"'), false);
   assert.match(css, /\.model-match-details:hover \.model-match-popover/);
   assert.match(css, /\.model-match-details\[open\] \.model-match-popover/);
+  assert.match(script, /function closeModelMatchDetails\(except = null\)/);
+  assert.match(script, /document\.addEventListener\("click", event => \{\s*closeModelMatchDetails\(event\.target\.closest\("\.model-match-details"\)\);/);
+  assert.match(script, /document\.addEventListener\("mouseout", event =>/);
+  assert.match(script, /details\.contains\(event\.relatedTarget\)/);
 });

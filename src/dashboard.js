@@ -286,6 +286,12 @@ function modelMatchMarkup(row, currency) {
   return `<details class="model-match-details"><summary class="confidence-tag" title="${escapeHtml(`${detailTitle}；悬停或点击查看详情`)}" aria-label="匹配置信度 ${confidence}%，查看官方匹配详情">${confidence}%</summary><div class="model-match-popover" aria-label="官方匹配详情"><div class="match-detail-primary"><span class="match-detail-label">官方模型</span><strong>${escapeHtml(officialName)}</strong></div><div class="match-detail-line"><span>供应商</span><span>${escapeHtml(provider)}</span></div><div class="match-detail-line"><span>匹配规则</span><span>${escapeHtml(rule)}</span></div><div class="match-detail-line"><span>置信度</span><span>${confidence}%</span></div>${candidatesMarkup}</div></details>`;
 }
 
+function closeModelMatchDetails(except = null) {
+  for (const details of document.querySelectorAll(".model-match-details[open]")) {
+    if (details !== except) details.open = false;
+  }
+}
+
 function renderRows() {
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
@@ -557,6 +563,15 @@ document.addEventListener("input", event => {
   }
   const input = event.target.closest("[data-facet-search]");
   if (input) filterFacetOptions(input.dataset.facetSearch);
+});
+document.addEventListener("click", event => {
+  closeModelMatchDetails(event.target.closest(".model-match-details"));
+});
+document.addEventListener("mouseout", event => {
+  const details = event.target.closest(".model-match-details");
+  if (!details?.open) return;
+  if (event.relatedTarget && details.contains(event.relatedTarget)) return;
+  details.open = false;
 });
 document.addEventListener("click", event => {
   const activeMenu = event.target.closest(".facet-menu");
