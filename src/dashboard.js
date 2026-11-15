@@ -323,6 +323,15 @@ function sanitizeFiltersForRows(rows) {
     state.filters[key] = state.filters[key].filter(value => values.has(value));
   }
 }
+// 切模式时先清掉上一种模式的筛选和模型对比框，再交给 render 重新派生下拉项。
+function resetFiltersForModeSwitch() {
+  state.filters = modeSwitchFilters(state.filters, DEFAULT_PROVIDER_FILTER);
+  state.page = 0;
+  modelFilterBoxCount = MODEL_FILTER_BOXES;
+  saveModelFilterBoxCount();
+  $("#search").value = "";
+  for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
+}
 
 function modelMatchMarkup(row, currency) {
   const candidates = Array.isArray(row.officialCandidates) ? row.officialCandidates : [];
@@ -886,13 +895,10 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-  state.filters = { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
-  modelFilterBoxCount = MODEL_FILTER_BOXES;
-  saveModelFilterBoxCount();
-  $("#search").value = "";
+resetFiltersForModeSwitch();
+  state.filters = { ...state.filters, showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
   renderModelFilter();
   renderStationFilter(state.rows);
-  for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
   $("#sort-by").value = "blendedUnitPrice";
   $("#sort-secondary").value = "diffPercent";
   $("#sort-direction").value = "asc";

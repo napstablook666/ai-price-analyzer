@@ -89,3 +89,8 @@ export function monthlyCostRankingFor(row, rankings, { limit = 10 } = {}) {
     top: entries.slice(0, topLimit)
   };
 }
+// 付费与公益是两套数据集：站点、供应商、分组、模型筛选在另一种模式里不存在，
+// 沿用过去会被 sanitizeFiltersForRows 裁成空集合，报价被静默筛光。切模式时一起重置。
+export function modeSwitchFilters(filters = {}, defaultProviderFilter = []) {
+  return { ...filters, search: "", stationId: "", provider: [...defaultProviderFilter], group: null, models: [] };
+}

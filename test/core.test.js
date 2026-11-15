@@ -10,7 +10,7 @@ import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEY
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationStatus, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, getTierShares, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
-import { createDashboardIndex, matchesModelQueries, paginateRows, rowBandClasses } from "../src/dashboard-index.js";
+import { createDashboardIndex, matchesModelQueries, modeSwitchFilters, paginateRows, rowBandClasses } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
@@ -4670,7 +4670,13 @@ test("normalizes dashboard comparison mode with paid as the default", () => {
 test("defaults provider filters to Anthropic, DeepSeek, OpenAI, and z-ai", () => {
   const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   assert.match(source, /const DEFAULT_PROVIDER_FILTER = \["anthropic", "deepseek", "openai", "z-ai"\]/);
-  assert.equal((source.match(/provider: DEFAULT_PROVIDER_FILTER/g) || []).length, 2);
+  assert.match(source, /filters: \{ search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER/);
+  assert.equal((source.match(/modeSwitchFilters\(state\.filters, DEFAULT_PROVIDER_FILTER\)/g) || []).length, 1);
+});
+
+test("mode switches drop filters that only exist in the other dataset", () => {
+  const filters = modeSwitchFilters({ search: "claude", stationId: "linuxdo", provider: ["windhub"], group: "gpt", models: ["gpt-4o"], showUnmatched: false, sortBy: "model", sortSecondary: "none", sortDirection: "desc" }, ["openai"]);
+  assert.deepEqual(filters, { search: "", stationId: "", provider: ["openai"], group: null, models: [], showUnmatched: false, sortBy: "model", sortSecondary: "none", sortDirection: "desc" });
 });
 
 test("indexes dashboard search text and station lookups", () => {

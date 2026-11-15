@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
-import { buildMonthlyCostRankings, deltaTone, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
+import { buildMonthlyCostRankings, deltaTone, modeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
 
@@ -174,9 +174,11 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
   assert.equal(html.includes("price-group-heading"), false);
-  assert.match(html, /class="paid-only-column price-key-heading is-section-start">费用项/);
-  assert.match(html, /<th scope="col" class="paid-only-column">官方<\/th>/);
-  assert.match(html, /<th scope="col" class="paid-only-column">中转<\/th>/);
+  // 费用项、官方、中转三个表头合并成一组 colspan，所以按合并后的结构断言。
+  assert.match(html, /colspan="3" class="paid-only-column price-key-heading is-section-start"/);
+  assert.match(html, /class="price-head-key">费用项/);
+  assert.match(html, /class="price-head-side">官方<\/span>/);
+  assert.match(html, /class="price-head-side">中转<\/span>/);
   assert.match(html, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 混合单价<\/th>/);
   assert.match(html, /class="unit-hint-popover".*中转币/);
   assert.equal(html.includes('data-sort-keys="diffPercent" '), false);
@@ -229,4 +231,23 @@ test("keeps reference status selectors aligned with the topbar markup", () => {
   assert.match(script, /\$\("#reference-status"\)\.textContent/);
   assert.match(script, /\$\("#reference-note"\)\.textContent/);
   assert.doesNotMatch(script, /pill\.querySelector\("\[data-reference-(?:status|note)\]"\)/);
+});
+test("switching comparison mode drops filters that belong to the other dataset", () => {
+  const defaults = ["anthropic", "openai"];
+  const filters = { search: "gpt", stationId: "s1", provider: ["z-ai"], group: ["Claude"], models: ["gpt-5"], showUnmatched: true, sortBy: "monthlyCost", sortSecondary: "diffPercent", sortDirection: "desc" };
+  const next = modeSwitchFilters(filters, defaults);
+  assert.deepEqual(next.provider, ["anthropic", "openai"]);
+  assert.equal(next.search, "");
+  assert.equal(next.stationId, "");
+  assert.equal(next.group, null);
+  assert.deepEqual(next.models, []);
+  assert.equal(next.showUnmatched, true);
+  assert.equal(next.sortBy, "monthlyCost");
+  assert.equal(next.sortDirection, "desc");
+  assert.deepEqual(filters.provider, ["z-ai"]);
+  next.provider.push("x-ai");
+  assert.deepEqual(defaults, ["anthropic", "openai"]);
+  const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  assert.match(script, /resetFiltersForModeSwitch\(\);\s*\n\s*render\(data\);/);
+  assert.match(script, /state\.filters = modeSwitchFilters\(state\.filters, DEFAULT_PROVIDER_FILTER\)/);
 });

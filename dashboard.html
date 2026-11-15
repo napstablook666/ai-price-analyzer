@@ -107,9 +107,13 @@
             <tr class="thead-columns">
               <th scope="col" data-sort-keys="model provider">模型</th>
               <th scope="col" data-sort-keys="groupName">中转站</th>
-              <th scope="col" class="paid-only-column price-key-heading is-section-start">费用项<details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong>价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。表里每个数字都是每 1M tokens 消耗的中转币数量，官方和中转两列已折算到同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></th>
-              <th scope="col" class="paid-only-column">官方</th>
-              <th scope="col" class="paid-only-column">中转</th>
+              <th scope="col" colspan="3" class="paid-only-column price-key-heading is-section-start">
+                <span class="price-head">
+                  <span class="price-head-key">费用项<details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong>价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。表里每个数字都是每 1M tokens 消耗的中转币数量，官方和中转两列已折算到同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></span>
+                  <span class="price-head-side">官方</span>
+                  <span class="price-head-side">中转</span>
+                </span>
+              </th>
               <th scope="col" class="paid-only-column monthly-cost-heading is-section-start" data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 混合单价</th>
               <th scope="col" class="public-only-column" hidden>状态</th>
             </tr>
