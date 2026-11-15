@@ -78,6 +78,20 @@
 
 分类决定站点进哪个视图，也决定汇总口径。「基准」站点用来做参照，不参与推荐排序。
 
+## 关于与更新
+
+「关于」分区放版本信息、更新检测和项目链接，数据来自 GitHub Releases，不上报任何本地数据。
+
+| 设置 | 默认 | 说明 |
+| --- | --- | --- |
+| `updateAutoCheck` | `true` | 是否按间隔在后台静默检查 |
+| `updateIntervalMinutes` | `360` | 检查间隔，只接受 `60` / `360` / `1440` 分钟 |
+| `updateChannel` | `stable` | `stable` 只提示正式发布，`prerelease` 连预发布一起提示 |
+
+改动即时生效：关掉自动检查会清掉 `update-check` 定时任务，改间隔会按新周期重建。最近一次检查结果单独存 `update-state`，不写进设置，也不随导出文件走。
+
+「检查更新」先读公开的 `github.com/<仓库>/releases/latest` 页面（`prerelease` 渠道读 `releases` 列表），从跳转后的地址或页面链接里取 tag，再和本地 `manifest.json` 的 `version` 按语义化版本比较。页面不带发布说明，所以拿到版本后还会试一次 `api.github.com` 补说明，接口不通就留空，不影响「有没有新版本」的结论。仓库还没发过版本时 GitHub 返回 404，界面显示「仓库还没有发布版本」，不当错误处理。走页面是因为未登录的接口配额只有每小时 60 次，撞上限时提示剩余恢复时间（读 `X-RateLimit-Reset`）；自动检查在恢复时间前直接跳过，不重复消耗配额。
+
 ## 不会被恢复的旧设置
 
 老版本的 `llm`、`jev`、`providerProfiles`、`activeProviders` 在保存时会被清掉。这些功能已经下线，不要再往设置里塞回去。

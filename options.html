@@ -13,7 +13,7 @@
   <header class="topbar settings-topbar">
     <a class="brand-lockup" href="dashboard.html" aria-label="Model Atlas 首页"><span class="brand-mark"><img class="brand-image" src="icons/icon.svg" alt=""></span><span class="brand-copy"><span class="brand-overline">MODEL ATLAS</span><strong>站点与设置</strong></span></a>
     <nav class="top-actions" aria-label="页面操作">
-      <button class="button button-primary" id="save-all" type="button"><span data-icon="check" class="icon"></span><span>保存全部</span></button>
+      <button class="autosave-status" id="save-status" type="button" data-state="idle" title="改动自动保存，点一下立即保存"><span class="autosave-icon" data-save-icon></span><span class="autosave-text" data-save-status-text role="status" aria-live="polite">自动保存</span></button>
       <details class="top-menu" id="top-menu">
         <summary class="button button-quiet" aria-label="打开菜单" aria-expanded="false"><span data-icon="menu" class="icon"></span><span>菜单</span></summary>
         <div class="top-menu-body" role="menu" aria-label="快速跳转">
@@ -23,6 +23,7 @@
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="plugin-registry"><span data-icon="store" class="icon"></span><span>插件仓库</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="settings-panel"><span data-icon="calculator" class="icon"></span><span>成本估算</span></button>
           <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="assistant-panel"><span data-icon="bot" class="icon"></span><span>AI 辅助</span></button>
+          <button class="top-menu-item" role="menuitem" type="button" data-menu-jump="about-version"><span data-icon="info" class="icon"></span><span>关于</span></button>
           <div class="top-menu-sep" role="separator"></div>
           <button class="top-menu-item" role="menuitem" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
         </div>
@@ -60,6 +61,14 @@
                 <li><button type="button" class="settings-subnav-item" data-nav-jump="assistant-review"><span data-icon="list-checks" class="icon"></span><span class="settings-subnav-label">判定队列</span></button></li>
               </ul>
             </li>
+          </ul>
+        </div>
+        <div class="settings-nav-group" data-nav-group="about">
+          <button id="settings-tab-about" type="button" role="tab" aria-selected="false" aria-controls="settings-view-about" aria-expanded="false" data-settings-target="about" tabindex="-1"><span data-icon="info" class="icon"></span><span>关于</span><span data-icon="chevron-right" class="icon nav-chevron"></span></button>
+          <ul class="settings-subnav" aria-label="关于" hidden>
+            <li><button type="button" class="settings-subnav-item" data-nav-jump="about-version"><span data-icon="refresh-cw" class="icon"></span><span class="settings-subnav-label">版本与更新</span></button></li>
+            <li><button type="button" class="settings-subnav-item" data-nav-jump="about-links"><span data-icon="external-link" class="icon"></span><span class="settings-subnav-label">链接与许可</span></button></li>
+            <li><button type="button" class="settings-subnav-item" data-nav-jump="about-local"><span data-icon="hard-drive" class="icon"></span><span class="settings-subnav-label">本地数据</span></button></li>
           </ul>
         </div>
       </nav>

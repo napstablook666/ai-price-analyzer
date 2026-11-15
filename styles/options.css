@@ -1,5 +1,5 @@
 .options-page { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-/* 嵌在 dashboard 设置抽屉里：顶栏只留保存按钮，页头交给抽屉标题栏 */
+/* 嵌在 dashboard 设置抽屉里：顶栏只留自动保存状态，页头交给抽屉标题栏 */
 .options-page.is-embedded .settings-topbar { min-height: 0; padding: 6px 14px; border-bottom: 0; background: transparent; }
 .options-page.is-embedded .settings-topbar .brand-lockup,
 .options-page.is-embedded .settings-topbar .top-menu,

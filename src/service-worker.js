@@ -667,6 +667,75 @@ async function updateCheckinRecord(stationId, updater) {
   return record;
 }
 
+// 更新检测：只读 GitHub Releases，不上报任何本地数据。
+function currentExtensionVersion() {
+  try {
+    return chrome.runtime.getManifest?.().version || "";
+  } catch {
+    return "";
+  }
+}
+
+async function readUpdateResult() {
+  const stored = await getValue(UPDATE_STATE_KEY, null);
+  return stored && typeof stored === "object" ? stored : null;
+}
+
+async function updateStateForUi() {
+  const settings = await getSettings();
+  return {
+    currentVersion: currentExtensionVersion(),
+    autoCheck: settings.updateAutoCheck,
+    intervalMinutes: settings.updateIntervalMinutes,
+    channel: settings.updateChannel,
+    lastCheck: await readUpdateResult()
+  };
+}
+
+async function runUpdateCheck({ force = false } = {}) {
+  const settings = await getSettings();
+  const previous = await readUpdateResult();
+  const nowMs = Date.now();
+  // 配额用完到恢复时间之间不再打接口，免得上限越来越久。
+  if (!force && Number(previous?.resetAt) > nowMs) {
+    return { ...(await updateStateForUi()), lastCheck: previous, skipped: true };
+  }
+  const result = await checkForUpdate({
+    currentVersion: currentExtensionVersion(),
+    channel: settings.updateChannel,
+    etag: previous?.etag || "",
+    cachedRelease: previous?.release || null,
+    now: () => nowMs
+  });
+  const stored = {
+    ...result,
+    release: result.latestVersion
+      ? { version: result.latestVersion, tag: result.latestVersion, url: result.releaseUrl, notes: result.notes, publishedAt: result.publishedAt }
+      : null
+  };
+  await setValue(UPDATE_STATE_KEY, stored);
+  return { ...(await updateStateForUi()), lastCheck: stored };
+}
+
+async function scheduleUpdateAlarm() {
+  await chrome.alarms.clear(UPDATE_ALARM_NAME);
+  const settings = await getSettings();
+  if (!settings.updateAutoCheck) return;
+  chrome.alarms.create(UPDATE_ALARM_NAME, { periodInMinutes: settings.updateIntervalMinutes });
+}
+
+async function saveUpdatePrefs(input = {}) {
+  const current = await getSettings();
+  const next = normalizeSettings({
+    ...current,
+    updateAutoCheck: input.autoCheck === undefined ? current.updateAutoCheck : input.autoCheck !== false,
+    updateIntervalMinutes: input.intervalMinutes === undefined ? current.updateIntervalMinutes : input.intervalMinutes,
+    updateChannel: input.channel === undefined ? current.updateChannel : input.channel
+  });
+  await setValue("settings", next);
+  await scheduleUpdateAlarm();
+  return updateStateForUi();
+}
 async function runCheckinForStation(station, { claim = true, autoOnly = false, presets = [] } = {}) {
   const preset = matchCheckinPreset(station, presets);
   if (!preset) return null;
@@ -1446,3 +1515,8 @@ chrome.runtime.onStartup.addListener(() => {
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === CHECKIN_ALARM_NAME) return checkinAll({ claim: true, autoOnly: true }).catch(error => console.warn("[AI比价] 定时签到失败", error));
 });
+    case "GET_UPDATE_STATE": return updateStateForUi();
+    case "CHECK_UPDATE": return runUpdateCheck({ force: true });
+    case "SAVE_UPDATE_PREFS": return saveUpdatePrefs(message);
+  scheduleUpdateAlarm();
+  scheduleUpdateAlarm();

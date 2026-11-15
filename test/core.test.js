@@ -4977,3 +4977,35 @@ const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url)
   assert.match(html, /id="uninstall-selected-plugins"[^>]*disabled/);
   assert.match(html, /id="registry-select-all" type="checkbox"/);
 });
+
+test("saves settings automatically instead of behind a global save button", () => {
+  const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
+  const options = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../styles/options.css", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+
+  assert.equal(html.includes("save-all"), false, "the global save button is gone");
+  assert.match(html, /id="save-status"[^>]*data-state=/);
+  assert.match(html, /data-save-status-text[^>]*aria-live="polite"/);
+
+  assert.match(options, /const AUTO_SAVE_DELAY = 400;/);
+  assert.match(options, /function scheduleSettingsSave\(\)/);
+  assert.match(options, /function flushSettingsSave\(\)/);
+  assert.match(options, /function scheduleStationsSave\(\)/);
+  assert.match(options, /function flushStationsSave\(\)/);
+  for (const selector of ["#settings-form", "#llm-form"]) {
+    assert.ok(options.includes(`"${selector}"`), `${selector} is wired to autosave`);
+  }
+  assert.match(options, /form\.addEventListener\("submit", event => \{[\s\S]{0,80}event\.preventDefault\(\);[\s\S]{0,80}flushSettingsSave\(\);/);
+  assert.match(options, /window\.addEventListener\("pagehide", \(\) => void flushAutoSave\(\)\)/);
+  assert.match(options, /document\.addEventListener\("visibilitychange"/);
+  assert.match(options, /station\.enabled = event\.target\.checked;\n\s*scheduleStationsSave\(\);/);
+  assert.match(options, /state\.stations = state\.stations\.filter\(station => station\.id !== stationId\);\n\s*renderStations\(\);\n\s*scheduleStationsSave\(\);/);
+  assert.match(options, /void flushStationsSave\(\);\n\s*toast\("站点已添加/);
+  assert.match(css, /\.autosave-status \{/);
+
+  // 抽屉不再每存一次就重拉仪表盘，改在关闭抽屉时刷新。
+  assert.match(dashboard, /let settingsStale = false;/);
+  assert.match(dashboard, /settingsDirty = true;\n\s*settingsStale = true;/);
+  assert.match(dashboard, /if \(settingsStale\) \{[\s\S]{0,80}load\(\);/);
+});

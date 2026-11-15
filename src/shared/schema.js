@@ -1,4 +1,5 @@
 import { DEFAULT_PLUGIN_REGISTRY_URL, normalizeLocalPlugins, normalizeRegistryState } from "../core/declarative-plugin.js";
+import { DEFAULT_UPDATE_CHANNEL, DEFAULT_UPDATE_INTERVAL_MINUTES, normalizeUpdateChannel, normalizeUpdateInterval } from "../core/update-check.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 export const BOC_EXCHANGE_URL = "https://www.boc.cn/sourcedb/whpj/";
@@ -130,6 +131,9 @@ const DEFAULT_SETTINGS = {
   pluginInstallMigrated: false,
   localPlugins: [],
   pluginRegistry: { url: DEFAULT_PLUGIN_REGISTRY_URL, fetchedAt: 0, error: "", entries: [], installed: {} },
+  updateAutoCheck: true,
+  updateIntervalMinutes: DEFAULT_UPDATE_INTERVAL_MINUTES,
+  updateChannel: DEFAULT_UPDATE_CHANNEL,
 };
 
 export const STATION_CATEGORY_LABELS = {
@@ -218,6 +222,9 @@ export function normalizeSettings(input = {}) {
     pluginInstallMigrated: input.pluginInstallMigrated === true,
     localPlugins: normalizeLocalPlugins(input.localPlugins).specs,
     pluginRegistry: normalizeRegistryState(input.pluginRegistry),
+    updateAutoCheck: input.updateAutoCheck !== false,
+    updateIntervalMinutes: normalizeUpdateInterval(input.updateIntervalMinutes),
+    updateChannel: normalizeUpdateChannel(input.updateChannel),
   };
   if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
   settings.usage.imageTokens = settings.usage.imageOutputTokens;

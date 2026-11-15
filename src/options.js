@@ -1,5 +1,5 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
-import { callService, escapeHtml, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
+import { callService, escapeHtml, hydrateIcons, icon, onAssistProgress, onRefreshProgress, toast } from "./shared/ui.js";
 import { siteLogoUrl } from "./shared/site-icon.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
@@ -15,7 +15,7 @@ function selected(value, expected) { return value === expected ? " selected" : "
 function checked(value) { return value ? " checked" : ""; }
 
 
-const SETTINGS_VIEWS = ["installed", "registry", "costs", "assistant"];
+const SETTINGS_VIEWS = ["installed", "registry", "costs", "assistant", "about"];
 const PLUGIN_CATEGORY_LABELS = { paid: "付费", public: "公益", benchmark: "基准" };
 const PLUGIN_MODE_LABELS = { direct: "直接接口", page: "页面模式" };
 
@@ -31,8 +31,9 @@ function activateSettingsView(requested, { focus = false, updateHash = true } = 
     if (active && focus) tab.focus();
   }
   syncNavGroup(view);
-  if (updateHash && location.hash !== `#${view}`) history.replaceState(null, "", `${location.pathname}${location.search}#${view}`);
+  if (view === "about") refreshUpdateState().catch(() => {});
 navPinnedKey = "";
+  if (updateHash && location.hash !== `#${view}`) history.replaceState(null, "", `${location.pathname}${location.search}#${view}`);
   const firstAnchor = $(`#settings-view-${view}`)?.querySelector("[data-nav-anchor]");
   setNavActiveKey(firstAnchor ? firstAnchor.dataset.navAnchor : "");
   scheduleNavActive();
@@ -1098,15 +1099,112 @@ async function refreshStation(stationId) {
 }
 
 
-async function load() {
+function aboutCheckedAtLabel(timestamp) {
+  const value = Number(timestamp);
+  if (!Number.isFinite(value) || value <= 0) return "还没有检查记录";
+  return `上次检查：${new Date(value).toLocaleString("zh-CN", { hour12: false })}`;
+}
+
+function aboutStatusText(last) {
+  if (!last) return "尚未检查更新";
+  if (last.status === "update") return `有新版本 v${last.latestVersion}`;
+  if (last.status === "latest") return "已是最新版本";
+  if (last.status === "none") return "仓库还没有发布版本";
+  if (last.status === "error") return `检查失败：${last.error || "未知错误"}`;
+  return "尚未检查更新";
+}
+
+function syncSegmented(attribute, match) {
+  for (const button of document.querySelectorAll(`[${attribute}]`)) {
+    button.setAttribute("aria-pressed", String(Boolean(match(button.getAttribute(attribute)))));
+  }
+}
+
+function formatStorageSize(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value < 0) return "—";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function renderAbout() {
+  const update = state.update || {};
+  const last = update.lastCheck || null;
+  const versionNode = $("#about-current-version");
+  if (versionNode) versionNode.textContent = update.currentVersion ? `v${update.currentVersion}` : "—";
+  const statusNode = $("#about-version-status");
+  if (statusNode) statusNode.textContent = aboutStatusText(last);
+  const lastCheckNode = $("#about-last-check");
+  if (lastCheckNode) lastCheckNode.textContent = aboutCheckedAtLabel(last?.checkedAt);
+  const notesNode = $("#about-release-notes");
+  if (notesNode) notesNode.textContent = last?.notes || (last?.status === "latest" ? "当前版本已是最新。" : "—");
+  const releaseNode = $("#about-release-source");
+  if (releaseNode && last?.latestVersion) releaseNode.textContent = `最近发布 v${last.latestVersion} · napstablook666/ai-price-analyzer`;
+  syncSegmented("data-update-auto", value => value === (update.autoCheck === false ? "off" : "on"));
+  syncSegmented("data-update-interval", value => Number(value) === Number(update.intervalMinutes || 360));
+  syncSegmented("data-update-channel", value => value === (update.channel || "stable"));
+}
+
+async function renderStorageUsage() {
+  const node = $("#about-storage-usage");
+  if (!node) return;
   try {
+    node.textContent = formatStorageSize(await chrome.storage.local.getBytesInUse(null));
+  } catch {
+    node.textContent = "—";
+  }
+}
+
+async function refreshUpdateState() {
+  try {
+    state.update = await callService("GET_UPDATE_STATE");
+  } catch (error) {
+    toast(error.message);
+    return;
+  }
+  renderAbout();
+  renderStorageUsage();
+}
+
+async function checkUpdateNow() {
+  const button = $("#about-check-update");
+  if (button) button.disabled = true;
+  try {
+    state.update = await callService("CHECK_UPDATE");
+    renderAbout();
+    const last = state.update.lastCheck;
+    if (last?.status === "update") toast(`发现新版本 v${last.latestVersion}`);
+    else if (last?.status === "latest") toast("已是最新版本");
+    else if (last?.status === "none") toast("仓库还没有发布版本");
+    else toast(`检查失败：${last?.error || "未知错误"}`);
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function saveUpdatePrefs(patch) {
+  try {
+    state.update = await callService("SAVE_UPDATE_PREFS", patch);
+    renderAbout();
+    toast("更新设置已保存");
+  } catch (error) {
+    toast(error.message);
+  }
+}
+  try {
+async function load() {
     const [data, pluginWorkspace] = await Promise.all([callService("GET_DASHBOARD"), callService("GET_PLUGIN_WORKSPACE")]);
     state.pluginWorkspace = pluginWorkspace;
     state.stations = data.stations || [];
     state.sitePlugins = pluginWorkspace.catalog?.length ? pluginWorkspace.catalog : data.sitePlugins || [];
     state.settings = data.settings;
     renderSettings();
-renderPluginWorkspace();
+    renderPluginWorkspace();
+    renderAbout();
+    refreshUpdateState();
     renderStations();
     hydrateIcons();
     const params = new URLSearchParams(location.search);
@@ -1279,7 +1377,8 @@ function commitStationPreview() {
   const card = document.querySelector(`[data-station-id="${station.id}"]`);
   card?.scrollIntoView({ behavior: "smooth", block: "center" });
   $("#add-station-dialog").close();
-  toast("站点已添加，请点击“保存站点”使配置生效");
+  void flushStationsSave();
+  toast("站点已添加，自动保存");
 }
 
 function closeStationDialog() {
@@ -1298,8 +1397,24 @@ $("#top-menu")?.addEventListener("click", event => {
   const item = event.target.closest("[data-menu-jump]");
   if (item) jumpToNavTarget(item.dataset.menuJump);
 });
-const settingsContent = $(".settings-content");
+$("#settings-view-about")?.addEventListener("click", event => {
+  const prefButton = event.target.closest("[data-update-auto], [data-update-interval], [data-update-channel]");
+  if (prefButton) {
+    if (prefButton.dataset.updateAuto) saveUpdatePrefs({ autoCheck: prefButton.dataset.updateAuto === "on" });
+    else if (prefButton.dataset.updateInterval) saveUpdatePrefs({ intervalMinutes: Number(prefButton.dataset.updateInterval) });
+    else if (prefButton.dataset.updateChannel) saveUpdatePrefs({ channel: prefButton.dataset.updateChannel });
+    return;
+  }
+  if (event.target.closest("#about-check-update")) {
+    checkUpdateNow();
+    return;
+  }
+  if (event.target.closest("#about-open-release")) {
+    window.open(state.update?.lastCheck?.releaseUrl || "https://github.com/napstablook666/ai-price-analyzer/releases", "_blank", "noopener,noreferrer");
+  }
+});
 settingsContent.addEventListener("scroll", scheduleNavActive, { passive: true });
+const settingsContent = $(".settings-content");
 for (const type of ["wheel", "touchstart", "pointerdown"]) {
   settingsContent.addEventListener(type, () => { navPinnedKey = ""; }, { passive: true });
 }
@@ -1470,8 +1585,9 @@ $("#plugin-installed-list").addEventListener("click", async event => {
     state.stationSourceTabIds.delete(stationId);
     state.stations = state.stations.filter(station => station.id !== stationId);
     renderStations();
-    return;
+    scheduleStationsSave();
   }
+    return;
   if (event.target.closest("[data-config-station]")) {
     openStationConfig(stationId);
     return;
@@ -1489,8 +1605,9 @@ $("#plugin-installed-list").addEventListener("change", event => {
   const station = state.stations.find(item => item.id === card.dataset.stationId);
   if (!station) return;
   station.enabled = event.target.checked;
-  card.classList.toggle("is-disabled", !station.enabled);
+  scheduleStationsSave();
 });
+  card.classList.toggle("is-disabled", !station.enabled);
 $("#station-config-form").addEventListener("submit", event => {
   event.preventDefault();
   void saveStationConfig();
@@ -1519,38 +1636,146 @@ async function refreshExchangeRate() {
     const rate = Number(data.references?.exchangeRate);
     if (!Number.isFinite(rate) || rate <= 0) throw new Error("中国银行汇率数据不可用");
     $("#exchange-rate").value = rate.toFixed(4);
-    refreshRechargeDisplays();
+    scheduleSettingsSave();
     toast(`官方汇率已更新：${rate.toFixed(4)}`);
+    refreshRechargeDisplays();
   } catch (error) {
     toast(error.message);
   } finally {
     button.disabled = false;
   }
 }
-$("#save-all").addEventListener("click", async event => {
-  const button = event.currentTarget;
-  button.disabled = true;
-  button.dataset.label = button.innerHTML;
-  button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>保存中</span>`;
-  try {
-    await persistStations();
-    renderStations();
-    state.settings = await callService("SAVE_SETTINGS", {
-      settings: readSettings(),
-    });
-    renderSettings();
-    toast("站点与设置已保存");
-    if (EMBEDDED) window.parent.postMessage({ type: "MODEL_ATLAS_SETTINGS_SAVED" }, location.origin);
-  } catch (error) { toast(error.message); }
-  finally {
-    button.disabled = false;
-    button.innerHTML = button.dataset.label;
-    hydrateIcons(button);
+// 设置页不再有「保存全部」：字段改动防抖后落库，站点开关与增删即时提交，页面隐藏时补一次。
+const AUTO_SAVE_DELAY = 400;
+const SAVE_STATUS_PRESETS = {
+  idle: { icon: "check", text: "自动保存" },
+  pending: { icon: "loader-circle", text: "待保存", spin: true },
+  saving: { icon: "loader-circle", text: "保存中", spin: true },
+  saved: { icon: "check", text: "已保存" },
+  error: { icon: "circle-alert", text: "保存失败" }
+};
+let settingsSaveTimer = 0;
+let stationsSaveTimer = 0;
+let settingsDirty = false;
+let stationsDirty = false;
+let settingsSaveChain = Promise.resolve();
+let stationsSaveChain = Promise.resolve();
+
+function setSaveStatus(name) {
+  const node = $("#save-status");
+  if (!node) return;
+  const preset = SAVE_STATUS_PRESETS[name] || SAVE_STATUS_PRESETS.idle;
+  node.dataset.state = name;
+  const iconSlot = node.querySelector("[data-save-icon]");
+  if (iconSlot) iconSlot.innerHTML = icon(preset.icon, { className: preset.spin ? "icon spin" : "icon" });
+  const textSlot = node.querySelector("[data-save-status-text]");
+  if (textSlot) textSlot.textContent = preset.text;
+}
+
+function notifySettingsSaved() {
+  if (EMBEDDED) window.parent.postMessage({ type: "MODEL_ATLAS_SETTINGS_SAVED" }, location.origin);
+}
+
+function scheduleSettingsSave() {
+  settingsDirty = true;
+  setSaveStatus("pending");
+  clearTimeout(settingsSaveTimer);
+  settingsSaveTimer = setTimeout(() => void flushSettingsSave(), AUTO_SAVE_DELAY);
+}
+
+function scheduleStationsSave() {
+  stationsDirty = true;
+  clearTimeout(stationsSaveTimer);
+  stationsSaveTimer = setTimeout(() => void flushStationsSave(), AUTO_SAVE_DELAY);
+}
+
+function flushSettingsSave() {
+  if (settingsSaveTimer) {
+    clearTimeout(settingsSaveTimer);
+    settingsSaveTimer = 0;
   }
+  if (!settingsDirty) return settingsSaveChain;
+  settingsDirty = false;
+  settingsSaveChain = settingsSaveChain.then(async () => {
+    setSaveStatus("saving");
+    try {
+      state.settings = await callService("SAVE_SETTINGS", { settings: readSettings() });
+      // 密钥已经写进本机密钥区，清空输入框，免得下一次保存再写一遍。
+      const keyInput = $("#llm-api-key");
+      if (keyInput?.value.trim() && document.activeElement !== keyInput) {
+        keyInput.value = "";
+        keyInput.placeholder = "已保存，留空则不修改";
+      }
+      setSaveStatus("saved");
+      notifySettingsSaved();
+    } catch (error) {
+      settingsDirty = true;
+      setSaveStatus("error");
+      toast(`设置保存失败：${error.message || error}`);
+    }
+  });
+  return settingsSaveChain;
+}
+
+function stationSignature() {
+  return (state.stations || []).map(station => `${station.id}:${station.enabled ? 1 : 0}:${station.name}:${station.baseUrl}`).join("|");
+}
+
+function flushStationsSave() {
+  if (stationsSaveTimer) {
+    clearTimeout(stationsSaveTimer);
+    stationsSaveTimer = 0;
+  }
+  if (!stationsDirty) return stationsSaveChain;
+  stationsDirty = false;
+  stationsSaveChain = stationsSaveChain.then(async () => {
+    try {
+      const before = stationSignature();
+      await persistStations();
+      // 服务端会归一 id 与开关，只在结果真的变了时重绘，避免打字时列表跳动。
+      if (stationSignature() !== before) renderStations();
+      notifySettingsSaved();
+    } catch (error) {
+      stationsDirty = true;
+      setSaveStatus("error");
+      toast(`站点保存失败：${error.message || error}`);
+    }
+  });
+  return stationsSaveChain;
+}
+
+function flushAutoSave() {
+  return Promise.all([flushSettingsSave(), flushStationsSave()]);
+}
+
+// 状态按钮本身就是兜底入口：保存失败后点它重试，平常点它等于「现在就存」。
+$("#save-status").addEventListener("click", () => void flushAutoSave());
+
+for (const selector of ["#settings-form", "#llm-form"]) {
+  const form = $(selector);
+  if (!form) continue;
+  form.addEventListener("input", event => {
+    // 密钥框每敲一个字符就落库没有意义，等失焦（change）再写。
+    if (event.target?.id === "llm-api-key") return;
+    scheduleSettingsSave();
+  });
+  form.addEventListener("change", scheduleSettingsSave);
+  // 表单里按回车直接落库，不再整页提交。
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    void flushSettingsSave();
+  });
+}
+
+window.addEventListener("pagehide", () => void flushAutoSave());
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) void flushAutoSave();
 });
 
+setSaveStatus("idle");
 
 const [initialView, initialJump] = location.hash.slice(1).split(":");
+
 activateSettingsView(initialView);
 if (initialJump) requestAnimationFrame(() => jumpToNavTarget(initialJump));
 hydrateIcons();

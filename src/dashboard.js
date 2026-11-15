@@ -703,7 +703,7 @@ function render(data) {
   const emptyState = $("#empty-state");
   const publicEmpty = state.comparisonMode === "public";
   emptyState.querySelector("h3").textContent = publicEmpty ? (hasStations ? "暂无公益站报价" : "还没有公益站") : (hasStations ? "站点已保存，尚未采集报价" : "还没有可比较的报价");
-  emptyState.querySelector("p").textContent = publicEmpty ? (hasStations ? "启用 Linux.do Marketplace 或 WindHub 后刷新。" : "启用公益站后刷新。") : (hasStations ? "点右上角刷新开始采集。" : "添加中转站并刷新即可。");
+  emptyState.querySelector("p").textContent = publicEmpty ? "启用公益站后刷新。" : (hasStations ? "点右上角刷新开始采集。" : "添加中转站并刷新即可。");
   $("#empty-state-action-label").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
   renderCheckin(data);
@@ -727,7 +727,9 @@ document.querySelectorAll("[data-comparison-mode]").forEach(button => {
     renderRefreshPreflight();
     button.disabled = true;
     try {
-      render(await callService("SAVE_COMPARISON_MODE", { mode }));
+      const data = await callService("SAVE_COMPARISON_MODE", { mode });
+      resetFiltersForModeSwitch();
+      render(data);
     } catch (error) {
       state.comparisonMode = previousMode;
       renderComparisonMode();
@@ -1193,11 +1195,11 @@ settingsLayer?.addEventListener("click", event => {
 document.addEventListener("keydown", event => {
   if (event.key === "Escape" && settingsLayer && !settingsLayer.hidden) closeSettingsView();
 });
-// 抽屉里保存过设置就重新拉一遍仪表盘，下次打开抽屉也重新加载设置页
+// 设置页自己落库：抽屉里改过就先标脏，关掉抽屉再重拉仪表盘
 window.addEventListener("message", event => {
   if (event.origin !== location.origin || event.data?.type !== "MODEL_ATLAS_SETTINGS_SAVED") return;
   settingsDirty = true;
-  load();
+  settingsStale = true;
 });
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
@@ -1209,3 +1211,10 @@ load();
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) load();
 });
+// 设置页会自己落库，抽屉里每改一下就重拉一次仪表盘太费；标脏，等抽屉关掉再拉。
+let settingsStale = false;
+if (settingsStale) {
+    settingsStale = false;
+    settingsDirty = false;
+    load();
+  }
