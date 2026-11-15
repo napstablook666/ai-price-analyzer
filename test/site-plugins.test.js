@@ -71,14 +71,14 @@ test("restores saved stations by plugin id or unique host and re-registers prune
 
 test("adds multiple selected presets once and derives added state from stations", async () => {
   await withCleanRegistry(async () => {
-    const providers = await loadSitePlugins(["centos", "linux-do-marketplace"]);
+    const providers = await loadSitePlugins(["centos", "windhub"]);
     const stations = addProviderStationPresets([], providers, { exchangeRate: 7.2 });
     assert.equal(stations.length, 2);
-    assert.deepEqual(stations.map(station => station.pluginId).sort(), ["centos", "linux-do-marketplace"]);
-    assert.equal(stations.find(station => station.pluginId === "linux-do-marketplace").category, "public");
+    assert.deepEqual(stations.map(station => station.pluginId).sort(), ["centos", "windhub"]);
+    assert.equal(stations.find(station => station.pluginId === "windhub").category, "public");
     assert.equal(addProviderStationPresets(stations, providers), stations);
     const added = sitePluginCatalogForStations(stations).filter(plugin => plugin.added).map(plugin => plugin.id);
-    assert.deepEqual(added.sort(), ["centos", "linux-do-marketplace"]);
+    assert.deepEqual(added.sort(), ["centos", "windhub"]);
     assert.equal(providerById("centos").id, "centos");
   });
 });

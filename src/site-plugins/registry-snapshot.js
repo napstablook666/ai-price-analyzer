@@ -24,16 +24,6 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
-      "id": "linux-do-marketplace",
-      "name": "Linux.do Marketplace",
-      "version": "0.3.0",
-      "description": "只读 GraphQL 价格，页面会话采集",
-      "hosts": [
-        "hub.linux.do"
-      ],
-      "needsCode": true
-    },
-    {
       "id": "windhub",
       "name": "WindHub",
       "version": "0.3.0",
@@ -228,8 +218,8 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "site-checkin",
       "name": "站点签到插件",
-      "version": "1.0.0",
-      "description": "用浏览器登录态给站点每日签到，只发签到请求，不采集价格。",
+      "version": "1.1.0",
+      "description": "用浏览器登录态给站点每日签到，只发签到请求，不采集价格。需要先在这个浏览器里登录过站点。",
       "hosts": [
         "vyceai.com"
       ],
@@ -241,6 +231,8 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "claimMethod": "POST",
         "tokenStorageKey": "vyce_session",
         "tokenCookieName": "session",
+        "loginPath": "/login",
+        "tokenHint": "登录后自动保存；也可以粘贴 vyce_session 的值或 session Cookie 的值",
         "fields": {
           "canClaim": "canClaim",
           "streak": "streak",

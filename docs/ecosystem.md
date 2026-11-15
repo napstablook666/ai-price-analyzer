@@ -33,10 +33,6 @@ plugins/<id>/models.json      模型别名
 
 构建脚本把它生成到 `src/site-plugins/`。协议见[扩展侧插件协议](./plugin-development)。
 
-## 社区与市场
-
-Linux.do 社区的市场数据也能采：走 `/admin/graphql` 的 `marketplaceModels` 查询，先探一次价格版本再决定是否拉详情。这类来源和普通中转站一样，按站点配置管理。
-
 ## 贡献
 
 - 新站点：提 PR 到插件仓库，只动 `plugins/<id>/`。

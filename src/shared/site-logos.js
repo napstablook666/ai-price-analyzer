@@ -13,7 +13,6 @@ export const SITE_LOGOS = {
   "hepingan": "icons/sites/hepingan.png",
   "jiji": "icons/sites/jiji.png",
   "killai": "icons/sites/killai.png",
-  "linux-do-marketplace": "icons/sites/linux-do-marketplace.png",
   "liuguang": "icons/sites/liuguang.svg",
   "nexavlinks": "icons/sites/nexavlinks.png",
   "nodeai": "icons/sites/nodeai.png",

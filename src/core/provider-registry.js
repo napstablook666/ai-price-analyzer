@@ -14,7 +14,6 @@ export const KILLAI_PRICING_ENDPOINT = "/api/pricing";
 export const TOKENFLUX_PRICING_ENDPOINT = "/api/pricing";
 export const CENTOS_PRICING_ENDPOINT = "/api/pricing";
 export const WINDHUB_PRICING_ENDPOINT = "/api/pricing";
-export const LINUX_DO_MARKETPLACE_URL = "https://hub.linux.do/marketplace";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";

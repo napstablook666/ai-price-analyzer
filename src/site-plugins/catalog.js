@@ -3,7 +3,6 @@
 import { stationContext } from "../core/provider-registry.js";
 import { sitePlugin as sevenaiPlugin } from "./providers/sevenai.js";
 import { sitePlugin as tokenfluxPlugin } from "./providers/tokenflux.js";
-import { sitePlugin as linuxDoMarketplacePlugin } from "./providers/linux-do-marketplace.js";
 import { sitePlugin as windhubPlugin } from "./providers/windhub.js";
 import { sitePlugin as centosPlugin } from "./providers/centos.js";
 import { sitePlugin as trueSotaPlugin } from "./providers/true-sota.js";
@@ -44,7 +43,6 @@ const entry = (id, name, host, mode, load, options = {}) => ({
 export const SITE_PLUGIN_CATALOG = [
   entry("sevenai", "SevenAI", "sevenai.moe", "direct", () => ({ sitePlugin: sevenaiPlugin }), { paths: ["/model-plaza"], description: "公开模型广场，直连采集" }),
   entry("tokenflux", "TokenFlux", "tokenflux.cloud", "direct", () => ({ sitePlugin: tokenfluxPlugin }), { paths: ["/","/pricing"], description: "公开定价 API，直连采集" }),
-  entry("linux-do-marketplace", "Linux.do Marketplace", "hub.linux.do", "page", () => ({ sitePlugin: linuxDoMarketplacePlugin }), { paths: ["/marketplace"], category: "public", description: "只读 GraphQL 价格，页面会话采集" }),
   entry("windhub", "WindHub", "windhub.cc", "direct", () => ({ sitePlugin: windhubPlugin }), { paths: ["/pricing"], category: "public", description: "公益站公开价格接口" }),
   entry("centos", "ai.centos.hk", "ai.centos.hk", "direct", () => ({ sitePlugin: centosPlugin }), { paths: ["/pricing"], description: "公开定价 API，直连采集" }),
   entry("true-sota", "TrueSOTA", "true-sota.com", "direct", () => ({ sitePlugin: trueSotaPlugin }), { paths: ["/model-pricing"], description: "公开模型价格 API" }),

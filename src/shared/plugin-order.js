@@ -2,7 +2,6 @@
 export const SITE_PLUGIN_ORDER = [
   "sevenai",
   "tokenflux",
-  "linux-do-marketplace",
   "windhub",
   "centos",
   "true-sota",

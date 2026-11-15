@@ -228,21 +228,21 @@ async function waitFor(predicate) {
 
 test("adds selected local plugins in one idempotent batch without eager loading", async () => {
   resetSitePluginLoader();
-  const installed = { centos: { version: "1.0.0", installedAt: 1 }, "linux-do-marketplace": { version: "1.0.0", installedAt: 1 } };
+  const installed = { centos: { version: "1.0.0", installedAt: 1 }, "windhub": { version: "1.0.0", installedAt: 1 } };
   await withWorker({ stations: [], values: { settings: { comparisonMode: "paid", exchangeRate: 7.2, pluginRegistry: { url: "", fetchedAt: 0, error: "", entries: [], installed } } } }, {}, async (worker, stores) => {
     responseData(await worker.send("GET_DASHBOARD"));
     assert.deepEqual(loadedSitePluginIds(), []);
 
-    const ids = ["centos", "linux-do-marketplace", "centos"];
+    const ids = ["centos", "windhub", "centos"];
     const first = responseData(await worker.send("ADD_SITE_PLUGINS", { ids }));
-    assert.deepEqual(first.added.slice().sort(), ["centos", "linux-do-marketplace"]);
+    assert.deepEqual(first.added.slice().sort(), ["centos", "windhub"]);
     assert.equal(first.stations.length, 2);
     assert.equal(stores.stations.size, 2);
-    assert.deepEqual(loadedSitePluginIds().slice().sort(), ["centos", "linux-do-marketplace"]);
+    assert.deepEqual(loadedSitePluginIds().slice().sort(), ["centos", "windhub"]);
 
     const second = responseData(await worker.send("ADD_SITE_PLUGINS", { ids }));
     assert.deepEqual(second.added, []);
-    assert.deepEqual(second.alreadyAdded.slice().sort(), ["centos", "linux-do-marketplace"]);
+    assert.deepEqual(second.alreadyAdded.slice().sort(), ["centos", "windhub"]);
     assert.equal(second.stations.length, 2);
     assert.equal(stores.stations.size, 2);
 
@@ -419,23 +419,6 @@ test("GET_DASHBOARD compares false and missing recharge verification at 1:1", as
     assert.equal(confirmedOffer.costPrices.input, 1.2);
     assert.ok(!confirmedOffer.pricingUnavailableReasons.includes("recharge_unverified"));
     assert.ok(offers.every(offer => !offer.pricingUnavailableReasons.includes("recharge_unverified")));
-  });
-});
-
-test("Linux.do preflight uses the safe GET probe and never sends GraphQL or extension credentials", async () => {
-  const stations = [{ id: "linux-do", name: "Linux.do Marketplace", baseUrl: "https://hub.linux.do/marketplace", enabled: true, mode: "page", category: "public", auth: { type: "bearer", token: "extension-secret-must-not-cross" }, adapter: { kind: "linux-do-marketplace", endpoint: "/admin/graphql", method: "POST", responseFormat: "linux-do-marketplace" } }];
-  await withWorker({ stations, values: { settings: { comparisonMode: "public" } } }, { pageResponses: { "hub.linux.do": { ok: true, status: 200, body: { ok: true } } } }, async worker => {
-    const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    assert.equal(preflight.results[0].status, "ready");
-    assert.equal(worker.pageRequests.length, 1);
-    const request = worker.pageRequests[0];
-    assert.equal(request.method, "GET");
-    assert.equal(request.url, "https://hub.linux.do/admin/system/price-version");
-    assert.equal(request.body, undefined);
-    assert.equal(request.pageAuth.storageKey, "axonhub_access_token");
-    assert.equal(request.pageAuth.header, "Authorization");
-    assert.equal(JSON.stringify(request).includes("extension-secret-must-not-cross"), false);
-    assert.equal(JSON.stringify(request).includes("/admin/graphql"), false);
   });
 });
 

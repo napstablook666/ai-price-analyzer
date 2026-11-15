@@ -950,15 +950,10 @@ function fillStationConfigDialog(station) {
   configRechargeRate();
   const origin = currentSiteOrigin(station.baseUrl);
   const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
-  const isLinuxDoMarketplace = station.adapter?.kind === "linux-do-marketplace";
-  $("#config-station-hint").textContent = isLinuxDoMarketplace
-    ? "页面模式：请先在当前 Chrome 配置文件登录 Linux.do，扩展只通过页面会话读取价格。"
-    : station.mode === "page"
-      ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
-      : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
-  const warning = isLinuxDoMarketplace
-    ? "仅使用当前页面登录会话读取 Linux.do Marketplace；令牌不会写入站点配置或扩展存储。站点积分仅按 1:1 作为展示基准，不代表人民币成本。"
-    : station.priceCurrencyVerified !== false ? "" : `模型价格映射未核实：${station.priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。"}`;
+  $("#config-station-hint").textContent = station.mode === "page"
+    ? isFastAiToken ? "复用本 Chrome 登录态，采集令牌不会保存到扩展。" : "页面模式：请先在当前标签页登录。"
+    : "直接模式：读取模型列表地址，通常无需登录；需要登录时切换页面模式。";
+  const warning = station.priceCurrencyVerified !== false ? "" : `模型价格映射未核实：${station.priceCurrencyNote || "请确认该站点模型列表报价可按 CREDITS 比较后勾选核实，否则该站点报价不会参与比价。"}`;
   const warningNode = $("#config-station-warning");
   warningNode.hidden = !warning;
   warningNode.textContent = warning;

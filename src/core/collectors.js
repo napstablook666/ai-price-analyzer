@@ -3,7 +3,6 @@ import { PAGE_RUNTIME_CAPTURE_TYPE, PAGE_RUNTIME_FETCH_TYPE } from "./bridge-pro
 import { getResponseFormatDefinition } from "./response-formats.js";
 import { NORMALIZED_PRICE_FIELDS } from "./price-fields.js";
 import { buildStationRequest } from "./request-strategy.js";
-import { collectLinuxDoMarketplace } from "./linux-do-marketplace.js";
 
 function hasInvalidPricingValue(value, priceKeys, depth = 0) {
   if (!value || depth > 6 || typeof value !== "object") return false;
@@ -67,10 +66,6 @@ function buildSnapshot(station, normalized, url, status = 200) {
 
 export async function collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {}) {
   if (!collection) throw new Error("collectStation requires a prepared collection");
-  if (station.adapter?.kind === "linux-do-marketplace") {
-    const result = await collectLinuxDoMarketplace(station, { pageFetch, requestStrategy: collection.request });
-    return buildSnapshot(station, result.normalized, result.url, result.status);
-  }
   const { endpoints, priceKeys, request: requestStrategy } = collection;
   const rawJson = String(station.adapter?.rawJson || "").trim();
   if (rawJson) {
