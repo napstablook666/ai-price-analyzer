@@ -126,11 +126,13 @@ export const sitePlugin = {
 | `claimMethod` | 否 | 默认 `POST` |
 | `tokenStorageKey` | 否 | 站点把 token 存在 `localStorage` 的键名 |
 | `tokenCookieName` | 否 | token 存在 cookie 时的名字，默认 `session` |
+| `loginPath` | 否 | 站点登录页路径，必须以 `/` 开头；未登录时面板用它打开登录页，默认站点根地址 |
+| `tokenHint` | 否 | 签到卡片「填写令牌」输入框的提示文案 |
 | `cookiePath` | 否 | 用 cookie 取 token 时带的 Path |
 | `fields` | 否 | 接口响应里各字段的路径，如 `streak` / `canClaim` / `rewardAmount` |
 | `cooldownHours` | 否 | 两次签到的最小间隔，默认 24 |
 
-登录态来自浏览器本身：签到请求带 `credentials: "include"`，没有可用 token 时由 `chrome.scripting` 在页面主世界读一次 localStorage / cookie 补上。PATCH/DELETE 这类非简单请求需要 `extraHeaders`，扩展页面不在场时 service worker 可能被 CORS 预检拦住，这是浏览器限制，不是插件的问题。
+登录态来自浏览器本身：签到请求带 `credentials: "include"`，没有可用 token 时由 `chrome.scripting` 在页面主世界读一次 localStorage / cookie 补上。签到时扩展还会把站点会话 cookie（`tokenCookieName`；没写这个名字时取该域下 `__Host-` / `__Secure-` 前缀项）存成快照，浏览器 cookie 丢了就用快照写回再试一次。快照是明文，存在扩展本地存储，用户可以在签到卡片上清除；`cookies` 权限就是为它加的。PATCH/DELETE 这类非简单请求需要 `extraHeaders`，扩展页面不在场时 service worker 可能被 CORS 预检拦住，这是浏览器限制，不是插件的问题。
 
 签到卡片在顶栏「菜单 → 每日签到」里，站点按 `manifest.hosts` 匹配。
 

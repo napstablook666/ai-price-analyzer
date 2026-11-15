@@ -1,7 +1,7 @@
 import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { buildMonthlyCostRankings, createDashboardIndex, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, paginateRows, rowBandClasses } from "./dashboard-index.js";
+import { buildMonthlyCostRankings, createDashboardIndex, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
@@ -623,18 +623,29 @@ function renderCheckin(data) {
   list.innerHTML = stations.map(station => {
     const record = state[station.id] || {};
     const claimedToday = record.lastStatus === "ok" && !record.lastResult?.includes("可签到");
-    const statusText = record.lastStatus === "error" ? record.lastResult || "查询失败" : record.lastResult || "尚未查询";
-    const statusClass = record.lastStatus === "error" ? "checkin-status-error" : claimedToday ? "checkin-status-ok" : "checkin-status-idle";
+    const needsLogin = station.needsLogin === true || record.lastStatus === "needs-login";
+    const statusText = needsLogin ? "未登录" : record.lastStatus === "error" ? record.lastResult || "查询失败" : record.lastResult || "尚未查询";
+    const statusClass = needsLogin ? "checkin-status-warn" : record.lastStatus === "error" ? "checkin-status-error" : claimedToday ? "checkin-status-ok" : "checkin-status-idle";
     const host = (station.hosts || [])[0];
+    const tokenHint = station.tokenHint || "粘贴站点令牌或 Cookie 值";
+    const sessionNote = station.hasSession ? " · 登录已保存" : "";
     return `
       <div class="checkin-item" data-station-id="${escapeHtml(station.id)}">
         <div class="checkin-info">
           <strong>${escapeHtml(station.name)}</strong>
-          <span class="checkin-meta">${host ? `${escapeHtml(host)} · ` : ""}连续签到 ${Number(record.streak) || 0} 天 · <span class="${statusClass}">${escapeHtml(statusText)}</span></span>
+          <span class="checkin-meta">${host ? `${escapeHtml(host)} · ` : ""}连续签到 ${Number(record.streak) || 0} 天 · <span class="${statusClass}">${escapeHtml(statusText)}</span>${sessionNote}</span>
         </div>
         <div class="checkin-actions">
           <label class="check-label"><input type="checkbox" data-checkin-action="auto" data-station-id="${escapeHtml(station.id)}" ${station.autoEnabled ? "checked" : ""}><span>自动签到</span></label>
-          <button class="button button-quiet" type="button" data-checkin-action="claim" data-station-id="${escapeHtml(station.id)}"><span data-icon="sparkles" class="icon"></span><span>立即签到</span></button>
+          ${needsLogin
+            ? `<button class="button button-quiet" type="button" data-checkin-action="login" data-station-id="${escapeHtml(station.id)}"><span>打开站点登录</span></button>`
+            : `<button class="button button-quiet" type="button" data-checkin-action="claim" data-station-id="${escapeHtml(station.id)}"><span data-icon="sparkles" class="icon"></span><span>立即签到</span></button>`}
+          <button class="button button-quiet" type="button" data-checkin-action="token" data-station-id="${escapeHtml(station.id)}" aria-expanded="false"><span>${station.hasManualToken ? "改令牌" : "填令牌"}</span></button>
+        </div>
+        <div class="checkin-token" data-token-row="${escapeHtml(station.id)}" hidden>
+          <input class="checkin-token-input" type="text" spellcheck="false" placeholder="${escapeHtml(tokenHint)}" data-checkin-token="${escapeHtml(station.id)}">
+          <button class="button button-quiet" type="button" data-checkin-action="save-token" data-station-id="${escapeHtml(station.id)}"><span>保存令牌</span></button>
+          ${station.hasSession ? `<button class="button button-quiet" type="button" data-checkin-action="forget-session" data-station-id="${escapeHtml(station.id)}"><span>清除已存登录</span></button>` : ""}
         </div>
       </div>`;
   }).join("");
@@ -1125,6 +1136,60 @@ document.addEventListener("click", async event => {
     openSettingsView("installed");
     return;
   }
+  const tokenButton = event.target.closest("[data-checkin-action='token']");
+  if (tokenButton) {
+    const row = tokenButton.closest(".checkin-item")?.querySelector("[data-token-row]");
+    if (row) {
+      row.hidden = !row.hidden;
+      tokenButton.setAttribute("aria-expanded", String(!row.hidden));
+      if (!row.hidden) row.querySelector("input")?.focus();
+    }
+    return;
+  }
+  const loginButton = event.target.closest("[data-checkin-action='login']");
+  if (loginButton) {
+    loginButton.disabled = true;
+    try {
+      await callService("OPEN_CHECKIN_LOGIN", { stationId: loginButton.dataset.stationId });
+      toast("已打开登录页，登录成功后签到状态会自动更新");
+    } catch (error) {
+      toast(error.message || "打开登录页失败");
+    } finally {
+      loginButton.disabled = false;
+    }
+    return;
+  }
+  const saveTokenButton = event.target.closest("[data-checkin-action='save-token']");
+  if (saveTokenButton) {
+    const input = saveTokenButton.closest(".checkin-item")?.querySelector("[data-checkin-token]");
+    saveTokenButton.disabled = true;
+    try {
+      const data = await callService("SAVE_CHECKIN", { stationId: saveTokenButton.dataset.stationId, token: input?.value || "" });
+      const result = (data.results || [])[0];
+      if (result?.error) throw new Error(result.error);
+      toast(result?.message || "令牌已保存");
+      render(await callService("GET_DASHBOARD"));
+    } catch (error) {
+      toast(error.message || "保存失败");
+    } finally {
+      saveTokenButton.disabled = false;
+    }
+    return;
+  }
+  const forgetButton = event.target.closest("[data-checkin-action='forget-session']");
+  if (forgetButton) {
+    forgetButton.disabled = true;
+    try {
+      await callService("CLEAR_CHECKIN_SESSION", { stationId: forgetButton.dataset.stationId });
+      toast("已清除保存的登录");
+      render(await callService("GET_DASHBOARD"));
+    } catch (error) {
+      toast(error.message || "清除失败");
+    } finally {
+      forgetButton.disabled = false;
+    }
+    return;
+  }
   const claimButton = event.target.closest("[data-checkin-action='claim']");
   if (!claimButton) return;
   const stationId = claimButton.dataset.stationId;
@@ -1168,6 +1233,8 @@ const settingsFrame = $("#settings-frame");
 const settingsTrigger = $("#open-settings");
 let settingsReloadToken = 0;
 let settingsDirty = false;
+// 设置页会自己落库，抽屉里每改一下就重拉一次仪表盘太费；标脏，等抽屉关掉再拉。
+let settingsStale = false;
 function openSettingsView(view = "installed") {
   if (!settingsLayer || !settingsFrame) return;
   const src = `options.html?embed=1${settingsDirty ? `&r=${++settingsReloadToken}` : ""}#${view}`;
@@ -1181,6 +1248,11 @@ function closeSettingsView() {
   settingsLayer.hidden = true;
   settingsTrigger?.setAttribute("aria-expanded", "false");
   settingsTrigger?.focus();
+if (settingsStale) {
+    settingsStale = false;
+    settingsDirty = false;
+    load();
+  }
 }
 settingsTrigger?.addEventListener("click", () => {
   if (settingsLayer && !settingsLayer.hidden) closeSettingsView();
@@ -1203,6 +1275,7 @@ window.addEventListener("message", event => {
 });
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
+  if (message?.type === "CHECKIN_UPDATED") load();
 });
 onRefreshProgress(renderRefreshProgress);
 load();
@@ -1211,10 +1284,3 @@ load();
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) load();
 });
-// 设置页会自己落库，抽屉里每改一下就重拉一次仪表盘太费；标脏，等抽屉关掉再拉。
-let settingsStale = false;
-if (settingsStale) {
-    settingsStale = false;
-    settingsDirty = false;
-    load();
-  }

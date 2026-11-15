@@ -132,6 +132,10 @@ function normalizeCheckin(raw) {
   for (const field of ["tokenStorageKey", "tokenCookieName"]) {
     checkin[field] = text(raw[field], `checkin.${field}`, { max: 120, required: false });
   }
+  const loginPath = text(raw.loginPath, "checkin.loginPath", { max: 120, required: false });
+  if (loginPath && !loginPath.startsWith("/")) fail("插件字段 checkin.loginPath 必须以 / 开头");
+  checkin.loginPath = loginPath;
+  checkin.tokenHint = text(raw.tokenHint, "checkin.tokenHint", { max: 160, required: false });
   const source = raw.fields && typeof raw.fields === "object" && !Array.isArray(raw.fields) ? raw.fields : {};
   const fields = {};
   for (const field of CHECKIN_FIELDS) {

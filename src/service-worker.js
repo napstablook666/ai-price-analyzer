@@ -22,10 +22,16 @@ import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, g
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
 import { ASSIST_BATCH_SIZE, applyAssistResults, buildAssistEntries, buildAssistPrompt, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, selectPendingEntries, summarizeCache } from "./core/llm-matching.js";
-import { checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, performCheckin } from "./core/checkin.js";
+import { checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, normalizeCheckinSession, performCheckin, readPageToken } from "./core/checkin.js";
+import { checkForUpdate } from "./core/update-check.js";
 
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
 const CHECKIN_ALARM_NAME = "checkin-stations";
+const CHECKIN_LOGIN_ALARM_NAME = "checkin-login";
+const UPDATE_ALARM_NAME = "update-check";
+const UPDATE_STATE_KEY = "update-state";
+const CHECKIN_LOGIN_WATCH_LIMIT = 12;
+const CHECKIN_LOGIN_COOKIE_PREFIXES = ["__Host-", "__Secure-"];
 
 const REFRESH_CONCURRENCY = 3;
 const REFRESH_PREFLIGHT_SESSION_KEY = "ai-price-analyzer:refresh-preflight";
@@ -186,15 +192,15 @@ function notifyRefreshProgress(progress) {
 function notifyReferencesRefresh(active) {
   chrome.runtime.sendMessage({ type: "REFERENCES_REFRESHING", active: Boolean(refreshAllTask || active) }, () => void chrome.runtime.lastError);
 }
+// 识别是一串串行 LLM 请求，界面靠这条消息画进度条，不要并到 REFRESH_PROGRESS 上。
+function notifyAssistProgress(progress) {
+  chrome.runtime.sendMessage({ type: "ASSIST_PROGRESS", progress }, () => void chrome.runtime.lastError);
+}
 
 function prepareComparisonStation(station) {
   const prepared = normalizeStation(prepareStationInput(station));
   // 没装的插件不参与匹配，站点退回手动适配器。
   return { ...prepared, pluginId: activeSitePluginForStation(prepared)?.id || "" };
-}
-// 识别是一串串行 LLM 请求，界面靠这条消息画进度条，不要并到 REFRESH_PROGRESS 上。
-function notifyAssistProgress(progress) {
-  chrome.runtime.sendMessage({ type: "ASSIST_PROGRESS", progress }, () => void chrome.runtime.lastError);
 }
 
 async function getPreparedStations() {
@@ -628,13 +634,20 @@ async function dashboard() {
   const checkinRecords = await getCheckinState();
   const checkinStations = checkinPresets.map(preset => {
     const linked = stations.find(station => station.enabled && matchCheckinPreset(station, checkinPresets)?.id === preset.id);
+    const record = checkinRecords[preset.id] || {};
     return {
       id: preset.id,
       name: preset.name,
       hosts: preset.matchHosts,
       linkedStationId: linked ? linked.id : null,
-      autoEnabled: Boolean(linked?.checkin?.autoEnabled || checkinRecords[preset.id]?.autoEnabled),
-      presetAutoEnabled: Boolean(checkinRecords[preset.id]?.autoEnabled)
+      autoEnabled: Boolean(linked?.checkin?.autoEnabled || record.autoEnabled),
+      presetAutoEnabled: Boolean(record.autoEnabled),
+      needsLogin: record.lastStatus === "needs-login",
+      hasSession: Boolean(record.session),
+      sessionCapturedAt: Number(record.session?.capturedAt) || 0,
+      hasManualToken: Boolean(linked?.checkin?.token || record.token),
+      loginPath: preset.loginPath || "",
+      tokenHint: preset.tokenHint || ""
     };
   });
   const refreshPreflight = activeRefreshPreflight?.stationSignature === refreshStationSignature(refresh.stations, refresh.comparisonMode)
@@ -654,23 +667,6 @@ async function scheduleCheckinAlarm() {
   await chrome.alarms.clear(CHECKIN_ALARM_NAME);
   chrome.alarms.create(CHECKIN_ALARM_NAME, { periodInMinutes: 240 });
 }
-
-async function resolveCheckinPresets(settings = null) {
-  const source = settings || await getSettings();
-  return checkinPresetsFromSpecs(installedCheckinSpecs(source));
-}
-
-async function getCheckinState() {
-  return await getValue("checkinState", {});
-}
-
-async function updateCheckinRecord(stationId, updater) {
-  const state = await getCheckinState();
-  const record = updater(normalizeCheckinRecord(state[stationId] || {}));
-  await setValue("checkinState", { ...state, [stationId]: record });
-  return record;
-}
-
 // 更新检测：只读 GitHub Releases，不上报任何本地数据。
 function currentExtensionVersion() {
   try {
@@ -740,6 +736,147 @@ async function saveUpdatePrefs(input = {}) {
   await scheduleUpdateAlarm();
   return updateStateForUi();
 }
+
+async function resolveCheckinPresets(settings = null) {
+  const source = settings || await getSettings();
+  return checkinPresetsFromSpecs(installedCheckinSpecs(source));
+}
+
+async function getCheckinState() {
+  return await getValue("checkinState", {});
+}
+
+async function updateCheckinRecord(stationId, updater) {
+  const state = await getCheckinState();
+  const record = updater(normalizeCheckinRecord(state[stationId] || {}));
+  await setValue("checkinState", { ...state, [stationId]: record });
+  return record;
+}
+// 与预设对应的站点地址：有保存站点用站点，没有就用预设域名。
+function checkinSiteOrigin(preset, station = null) {
+  if (station?.baseUrl) {
+    try { return new URL(station.baseUrl).origin; } catch {}
+  }
+  return `https://${preset.matchHosts[0]}`;
+}
+
+function wantsSessionCookie(preset, cookie) {
+  if (preset.tokenCookieName) return cookie.name === preset.tokenCookieName;
+  return CHECKIN_LOGIN_COOKIE_PREFIXES.some(prefix => cookie.name.startsWith(prefix));
+}
+
+// 抓一份登录态快照：页面里的 token + 站点会话 cookie。
+async function captureCheckinSession(preset, station = null) {
+  const origin = checkinSiteOrigin(preset, station);
+  let cookies = [];
+  try {
+    const found = await chrome.cookies.getAll({ url: origin });
+    cookies = found
+      .filter(cookie => wantsSessionCookie(preset, cookie))
+      .filter(cookie => !cookie.expirationDate || cookie.expirationDate * 1000 > Date.now());
+  } catch {
+    cookies = [];
+  }
+  let token = "";
+  try {
+    const fromPage = await readPageToken(origin, preset);
+    token = typeof fromPage === "string" ? fromPage : "";
+  } catch {
+    token = "";
+  }
+  return normalizeCheckinSession({ token, cookies, origin, capturedAt: Date.now() });
+}
+
+async function saveCheckinSession(presetId, session) {
+  const normalized = normalizeCheckinSession(session);
+  if (!normalized) return null;
+  await updateCheckinRecord(presetId, prev => ({ ...prev, session: normalized, needsLoginAt: 0 }));
+  return normalized;
+}
+
+// 浏览器里的 cookie 被清掉时，把快照里的 cookie 写回去。
+async function restoreCheckinCookies(cookies = []) {
+  let restored = 0;
+  for (const cookie of cookies) {
+    const host = String(cookie.domain || "").replace(/^\./, "");
+    if (!host) continue;
+    try {
+      await chrome.cookies.set({
+        url: `${cookie.secure ? "https" : "http"}://${host}${cookie.path || "/"}`,
+        name: cookie.name,
+        value: cookie.value,
+        domain: cookie.domain || undefined,
+        path: cookie.path || "/",
+        secure: Boolean(cookie.secure),
+        httpOnly: Boolean(cookie.httpOnly),
+        sameSite: cookie.sameSite || "lax",
+        ...(Number(cookie.expirationDate) > 0 ? { expirationDate: Number(cookie.expirationDate) } : {})
+      });
+      restored += 1;
+    } catch {
+      // 单个 cookie 写不进去不影响其它 cookie
+    }
+  }
+  return restored;
+}
+
+async function clearCheckinSession(stationId) {
+  const id = String(stationId || "");
+  if (!id) throw new Error("站点不存在");
+  await updateCheckinRecord(id, prev => ({ ...prev, session: null, needsLoginAt: 0, lastStatus: prev.lastStatus === "needs-login" ? "idle" : prev.lastStatus, lastResult: prev.lastStatus === "needs-login" ? "" : prev.lastResult }));
+  return { state: await getCheckinState() };
+}
+
+async function startCheckinLoginWatch(presetId, tabId = 0) {
+  await setValue("checkinLoginWatch", { presetId, tabId, startedAt: Date.now(), attempts: 0 });
+  await chrome.alarms.clear(CHECKIN_LOGIN_ALARM_NAME);
+  chrome.alarms.create(CHECKIN_LOGIN_ALARM_NAME, { periodInMinutes: 0.5, delayInMinutes: 0.5 });
+}
+
+async function stopCheckinLoginWatch() {
+  await chrome.alarms.clear(CHECKIN_LOGIN_ALARM_NAME);
+  await setValue("checkinLoginWatch", null);
+}
+
+async function openCheckinLogin({ stationId } = {}) {
+  const presets = await resolveCheckinPresets();
+  const preset = presets.find(item => item.id === String(stationId || ""));
+  if (!preset) throw new Error("站点不存在");
+  const url = `${checkinSiteOrigin(preset)}${preset.loginPath || "/"}`;
+  const tab = await chrome.tabs.create({ url });
+  await startCheckinLoginWatch(preset.id, tab?.id || 0);
+  return { url, state: await getCheckinState() };
+}
+
+function notifyCheckinUpdated(stationId) {
+  chrome.runtime.sendMessage({ type: "CHECKIN_UPDATED", stationId }, () => void chrome.runtime.lastError);
+}
+
+// 打开登录页之后每 30 秒探一次，最多 12 次；确认登录成功就存快照并通知界面。
+async function watchCheckinLogin() {
+  const watch = await getValue("checkinLoginWatch", null);
+  if (!watch?.presetId) { await chrome.alarms.clear(CHECKIN_LOGIN_ALARM_NAME); return; }
+  const attempts = Number(watch.attempts) || 0;
+  if (attempts >= CHECKIN_LOGIN_WATCH_LIMIT) { await stopCheckinLoginWatch(); return; }
+  await setValue("checkinLoginWatch", { ...watch, attempts: attempts + 1 });
+  const presets = await resolveCheckinPresets();
+  const preset = presets.find(item => item.id === watch.presetId);
+  if (!preset) { await stopCheckinLoginWatch(); return; }
+  const stations = await getStations();
+  const station = stations.find(item => item.enabled && matchCheckinPreset(item, presets)?.id === preset.id)
+    || { id: preset.id, name: preset.name, baseUrl: `https://${preset.matchHosts[0]}`, enabled: true };
+  const record = (await getCheckinState())[preset.id] || {};
+  try {
+    const result = await performCheckin({ station, claim: false, preset, token: record.token || "", session: record.session || null, restoreCookies: restoreCheckinCookies });
+    await saveCheckinSession(preset.id, await captureCheckinSession(preset, station));
+    await updateCheckinRecord(preset.id, prev => ({ ...prev, lastCheckedAt: Date.now(), lastStatus: "ok", lastResult: result.message || "已登录", needsLoginAt: 0 }));
+    await stopCheckinLoginWatch();
+    notifyCheckinUpdated(preset.id);
+  } catch (error) {
+    if (error?.code !== "CHECKIN_NEEDS_LOGIN") await stopCheckinLoginWatch();
+  }
+}
+
 async function runCheckinForStation(station, { claim = true, autoOnly = false, presets = [] } = {}) {
   const preset = matchCheckinPreset(station, presets);
   if (!preset) return null;
@@ -747,8 +884,11 @@ async function runCheckinForStation(station, { claim = true, autoOnly = false, p
   if (autoOnly && !record.autoEnabled) return null;
   // 冷却期内（cooldownHours）不重复查询状态，减少无效请求
   if (record.lastClaimedAt && Date.now() - record.lastClaimedAt < preset.cooldownHours * 60 * 60 * 1000) return null;
+  const manualToken = String(station.checkin?.token || record.token || "");
   try {
-    const result = await performCheckin({ station, claim, preset });
+    const result = await performCheckin({ station, claim, preset, token: manualToken, session: record.session || null, restoreCookies: restoreCheckinCookies });
+    // 签到成功后刷新快照（站点可能在响应里换了会话 cookie）；没快照时首查也存一份。
+    if (claim || !record.session) await saveCheckinSession(preset.id, await captureCheckinSession(preset, station));
     await updateCheckinRecord(preset.id, prev => ({
       ...prev,
       lastCheckedAt: Date.now(),
@@ -760,18 +900,21 @@ async function runCheckinForStation(station, { claim = true, autoOnly = false, p
       bonusPercent: result.bonusPercent,
       totalClaimed: result.totalClaimed,
       lastClaimDate: result.lastClaimDate || prev.lastClaimDate,
+      needsLoginAt: 0,
       autoEnabled: record.autoEnabled
     }));
     return { stationId: preset.id, stationName: station.name, ...result };
   } catch (error) {
+    const needsLogin = error?.code === "CHECKIN_NEEDS_LOGIN";
     await updateCheckinRecord(preset.id, prev => ({
       ...prev,
       lastCheckedAt: Date.now(),
-      lastResult: error.message || String(error),
-      lastStatus: "error",
+      lastResult: needsLogin ? "未登录" : error.message || String(error),
+      lastStatus: needsLogin ? "needs-login" : "error",
+      needsLoginAt: needsLogin ? Date.now() : prev.needsLoginAt,
       autoEnabled: record.autoEnabled
     }));
-    return { stationId: preset.id, stationName: station.name, ok: false, error: error.message || String(error) };
+    return { stationId: preset.id, stationName: station.name, ok: false, needsLogin, error: needsLogin ? "需要先登录站点" : error.message || String(error) };
   }
 }
 
@@ -808,17 +951,30 @@ async function checkinAll({ stationId, stationOrigin, claim = true, autoOnly = f
   return { results, state: await getCheckinState() };
 }
 
-async function saveCheckinConfig({ stationId, autoEnabled } = {}) {
+async function saveCheckinConfig({ stationId, autoEnabled, token } = {}) {
+  const hasToken = typeof token === "string";
+  const manualToken = hasToken ? token.trim() : "";
   const stations = await getStations();
   const presets = await resolveCheckinPresets();
   const station = stations.find(item => item.id === String(stationId || ""));
   if (!station) {
-    // 预设 id（未保存站点）：签到开关存到 checkinState，无需手动添加站点
+    // 预设 id（未保存站点）：签到开关和手填令牌存到 checkinState，无需手动添加站点
     if (!presets.some(item => item.id === String(stationId || ""))) throw new Error("站点不存在");
-    await updateCheckinRecord(String(stationId), prev => ({ ...prev, autoEnabled: Boolean(autoEnabled) }));
+    await updateCheckinRecord(String(stationId), prev => ({
+      ...prev,
+      ...(autoEnabled === undefined ? {} : { autoEnabled: Boolean(autoEnabled) }),
+      ...(hasToken ? { token: manualToken, needsLoginAt: 0 } : {})
+    }));
     return checkinAll({ stationId: String(stationId), claim: false, autoOnly: false });
   }
-  const next = stations.map(item => item.id === station.id ? normalizeStation({ ...item, checkin: { ...item.checkin, autoEnabled: Boolean(autoEnabled) } }) : item);
+  const next = stations.map(item => item.id === station.id ? normalizeStation({
+    ...item,
+    checkin: {
+      ...item.checkin,
+      ...(autoEnabled === undefined ? {} : { autoEnabled: Boolean(autoEnabled) }),
+      ...(hasToken ? { token: manualToken } : {})
+    }
+  }) : item);
   await putStations(next);
   return checkinAll({ stationId: station.id, claim: false, autoOnly: false });
 }
@@ -1005,6 +1161,30 @@ async function runModelAssist({ force = false } = {}) {
     const fingerprintByKey = {};
     let ranBatches = 0;
     let errors = 0;
+    const batches = chunkList(pending, ASSIST_BATCH_SIZE);
+    let completed = 0;
+    let completedBatches = 0;
+    const tally = { accepted: 0, none: 0, invalid: 0 };
+    const addToTally = list => {
+      for (const item of list) {
+        if (item.status === "accepted") tally.accepted += 1;
+        else if (item.status === "none") tally.none += 1;
+        else if (item.status === "invalid") tally.invalid += 1;
+      }
+    };
+    // 界面只认这条消息画进度：每批开头报一次、收工报一次，中途不刷新缓存。
+    const reportProgress = phase => notifyAssistProgress({
+      phase,
+      total: pending.length,
+      completed,
+      totalBatches: batches.length,
+      completedBatches,
+      accepted: tally.accepted,
+      none: tally.none,
+      invalid: tally.invalid,
+      errors,
+    });
+    reportProgress("start");
 
     for (const batch of batches) {
       reportProgress("request");
@@ -1026,19 +1206,27 @@ async function runModelAssist({ force = false } = {}) {
         console.debug("[AI比价] 模型识别批次失败", error);
         errors += 1;
         notAsked.push(...batch);
+        completed += batch.length;
+        completedBatches += 1;
+        reportProgress("batch");
         continue;
       }
       results.push(...parsed.accepted, ...parsed.invalid);
+      addToTally(parsed.accepted);
+      addToTally(parsed.invalid);
       const answered = new Set([...parsed.accepted, ...parsed.invalid].map(item => item.key));
       notAsked.push(...batch.filter(entry => !answered.has(entry.key)));
       ranBatches += 1;
+      completed += batch.length;
+      completedBatches += 1;
+      reportProgress("batch");
     }
 
     const nextCache = applyAssistResults(cache, results, { fingerprintByKey, notAsked });
     await setValue("llmMatchCache", nextCache);
     // 缓存不进 comparisonRevision，这里手动让下一次 dashboard 重算。
     comparisonCache = null;
-    return {
+    const summary = {
       ...summarizeCache(nextCache),
       ranBatches,
       pending: pending.length,
@@ -1167,30 +1355,6 @@ function pluginRegistryView(registry) {
         hosts: entry.hosts,
         kind: spec?.kind || "price",
         needsCode: entry.needsCode,
-    const batches = chunkList(pending, ASSIST_BATCH_SIZE);
-    let completed = 0;
-    let completedBatches = 0;
-    const tally = { accepted: 0, none: 0, invalid: 0 };
-    const addToTally = list => {
-      for (const item of list) {
-        if (item.status === "accepted") tally.accepted += 1;
-        else if (item.status === "none") tally.none += 1;
-        else if (item.status === "invalid") tally.invalid += 1;
-      }
-    };
-    // 界面只认这条消息画进度：每批开头报一次、收工报一次，中途不刷新缓存。
-    const reportProgress = phase => notifyAssistProgress({
-      phase,
-      total: pending.length,
-      completed,
-      totalBatches: batches.length,
-      completedBatches,
-      accepted: tally.accepted,
-      none: tally.none,
-      invalid: tally.invalid,
-      errors,
-    });
-    reportProgress("start");
         installed: Boolean(record),
         installedVersion: record?.version || "",
         updateAvailable: Boolean(record) && comparePluginVersions(record.version, entry.version) < 0,
@@ -1211,20 +1375,12 @@ function pluginRegistryView(registry) {
     })
   };
 }
-        completed += batch.length;
-        completedBatches += 1;
-        reportProgress("batch");
 
 // 还没成功拉取过仓库时，先用随扩展发布的内置快照，避免插件商店空白。
 function seededRegistry(registry) {
-      addToTally(parsed.accepted);
-      addToTally(parsed.invalid);
   const current = normalizeRegistryState(registry);
   if (current.entries.length) return current;
   return normalizeRegistryState({ ...current, entries: PLUGIN_REGISTRY_SNAPSHOT.plugins });
-      completed += batch.length;
-      completedBatches += 1;
-      reportProgress("batch");
 }
 function describePlugin(id, { registry, record, local }) {
   const entry = registry.entries.find(item => item.id === id) || null;
@@ -1336,7 +1492,7 @@ export async function installPlugins(ids) {
       }
     }
     const workspace = await pluginWorkspaceState();
-    const summary = {
+    return {
       workspace,
       stationsAdded,
       results,
@@ -1426,6 +1582,9 @@ async function handle(message, sender) {
     case "GET_DASHBOARD": return dashboard();
     case "SAVE_COMPARISON_MODE": return saveComparisonMode(message.mode);
     case "GET_SETTINGS": return settingsForUi();
+    case "GET_UPDATE_STATE": return updateStateForUi();
+    case "CHECK_UPDATE": return runUpdateCheck({ force: true });
+    case "SAVE_UPDATE_PREFS": return saveUpdatePrefs(message);
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
     case "TEST_MODEL_CONNECTION": return testModelAssistant(message.config || {});
     case "FETCH_MODEL_CATALOG": return fetchModelAssistantCatalog(message.config || {});
@@ -1451,6 +1610,10 @@ case "UNINSTALL_PLUGINS": return uninstallPlugins(message.ids);
       return checkinAll({ stationId: message.stationId, stationOrigin: message.stationOrigin, claim: true, autoOnly: false });
     case "SAVE_CHECKIN":
       return saveCheckinConfig(message);
+    case "OPEN_CHECKIN_LOGIN":
+      return openCheckinLogin(message);
+    case "CLEAR_CHECKIN_SESSION":
+      return clearCheckinSession(message.stationId);
     case "REFRESH_PREFLIGHT": return createRefreshPreflight();
     case "CANCEL_REFRESH_PREFLIGHT": return cancelRefreshPreflight();
     case "REFRESH_ALL": {
@@ -1548,17 +1711,16 @@ chrome.tabs?.onRemoved?.addListener(tabId => {
 
 chrome.runtime.onInstalled.addListener(() => {
   scheduleCheckinAlarm();
+  scheduleUpdateAlarm();
   ensureWorkspacePlugins({ force: true });
 });
 chrome.runtime.onStartup.addListener(() => {
   scheduleCheckinAlarm();
+  scheduleUpdateAlarm();
   ensureWorkspacePlugins({ force: true });
 });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === CHECKIN_ALARM_NAME) return checkinAll({ claim: true, autoOnly: true }).catch(error => console.warn("[AI比价] 定时签到失败", error));
+  if (alarm.name === CHECKIN_LOGIN_ALARM_NAME) return watchCheckinLogin().catch(error => console.warn("[AI比价] 签到登录探测失败", error));
+  if (alarm.name === UPDATE_ALARM_NAME) return runUpdateCheck().catch(error => console.warn("[AI比价] 检查更新失败", error));
 });
-    case "GET_UPDATE_STATE": return updateStateForUi();
-    case "CHECK_UPDATE": return runUpdateCheck({ force: true });
-    case "SAVE_UPDATE_PREFS": return saveUpdatePrefs(message);
-  scheduleUpdateAlarm();
-  scheduleUpdateAlarm();

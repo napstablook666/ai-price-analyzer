@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkinPresetFromSpec, checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, performCheckin } from "../src/core/checkin.js";
+import { checkinPresetFromSpec, checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, normalizeCheckinSession, performCheckin } from "../src/core/checkin.js";
 import { normalizePluginSpec } from "../src/core/declarative-plugin.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "../src/site-plugins/registry-snapshot.js";
 
@@ -153,10 +153,163 @@ test("check-in plugin JSON carries the endpoint spec", () => {
   assert.ok(PRESET.tokenStorageKey.length > 0);
   assert.equal(PRESET.tokenCookieName, "session");
   assert.equal(PRESET.cooldownHours, 24);
+  assert.equal(PRESET.loginPath, "/login");
+  assert.equal(typeof PRESET.tokenHint, "string");
+  assert.ok(PRESET.tokenHint.length > 0);
   assert.equal(checkinPresetFromSpec({ id: "plain", version: "1.0.0" }), null);
 });
 
 test("check-in plugins stay out of the price plugin pipeline", () => {
   assert.equal(CHECKIN_SPEC.request, null);
   assert.equal(CHECKIN_SPEC.addable, false);
+});
+test("classifies 401 and 403 as needs-login", async () => {
+  const originalFetch = globalThis.fetch;
+  try {
+    for (const status of [401, 403]) {
+      globalThis.fetch = async () => ({
+        ok: false,
+        status,
+        headers: { get: () => "application/json" },
+        json: async () => ({ message: "请先登录" })
+      });
+      await assert.rejects(
+        () => performCheckin({ station: vyceaiStation, preset: PRESET, claim: false, token: "tok-1" }),
+        error => error.code === "CHECKIN_NEEDS_LOGIN" && error.status === status && error.message === "请先登录"
+      );
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("restores snapshot cookies once when the live login is gone", async () => {
+  const originalFetch = globalThis.fetch;
+  const restored = [];
+  let authenticated = false;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (!authenticated) {
+      return { ok: false, status: 401, headers: { get: () => "application/json" }, json: async () => ({ message: "未登录" }) };
+    }
+    return jsonResponse({ canClaim: false, streak: 2 });
+  };
+  try {
+    const result = await performCheckin({
+      station: vyceaiStation,
+      preset: PRESET,
+      claim: false,
+      session: { cookies: [{ name: "session", value: "snap-1", domain: "vyceai.com", path: "/" }] },
+      restoreCookies: async cookies => {
+        restored.push(cookies);
+        authenticated = true;
+      }
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.streak, 2);
+    assert.equal(calls, 2);
+    assert.equal(restored.length, 1);
+    assert.equal(restored[0][0].name, "session");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("restores once and stays needs-login when the snapshot is stale", async () => {
+  const originalFetch = globalThis.fetch;
+  let restoreCalls = 0;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return { ok: false, status: 401, headers: { get: () => "application/json" }, json: async () => ({}) };
+  };
+  try {
+    await assert.rejects(
+      () => performCheckin({
+        station: vyceaiStation,
+        preset: PRESET,
+        claim: true,
+        session: { cookies: [{ name: "session", value: "snap-1" }] },
+        restoreCookies: async () => { restoreCalls += 1; }
+      }),
+      error => error.code === "CHECKIN_NEEDS_LOGIN"
+    );
+    assert.equal(restoreCalls, 1);
+    assert.equal(fetchCalls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("does not restore when there is no snapshot", async () => {
+  const originalFetch = globalThis.fetch;
+  let restoreCalls = 0;
+  let fetchCalls = 0;
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return { ok: false, status: 401, headers: { get: () => "application/json" }, json: async () => ({}) };
+  };
+  try {
+    await assert.rejects(
+      () => performCheckin({
+        station: vyceaiStation,
+        preset: PRESET,
+        claim: true,
+        restoreCookies: async () => { restoreCalls += 1; }
+      }),
+      error => error.code === "CHECKIN_NEEDS_LOGIN"
+    );
+    assert.equal(restoreCalls, 0);
+    assert.equal(fetchCalls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("falls back to the snapshot token when the page has none", async () => {
+  const originalFetch = globalThis.fetch;
+  let authorization = "";
+  globalThis.fetch = async (url, options = {}) => {
+    authorization = options.headers?.Authorization || "";
+    return jsonResponse({ canClaim: false, streak: 1 });
+  };
+  try {
+    await performCheckin({ station: vyceaiStation, preset: PRESET, claim: false, session: { token: "snap-token" } });
+    assert.equal(authorization, "Bearer snap-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("normalizes login-state snapshots", () => {
+  const session = normalizeCheckinSession({
+    token: " t ",
+    origin: "https://vyceai.com",
+    capturedAt: "123",
+    cookies: [
+      { name: "session", value: "v", domain: "VyceAI.com", sameSite: "weird" },
+      { name: "", value: "ignored" }
+    ]
+  });
+  assert.equal(session.token, "t");
+  assert.equal(session.origin, "https://vyceai.com");
+  assert.equal(session.capturedAt, 123);
+  assert.equal(session.cookies.length, 1);
+  assert.equal(session.cookies[0].domain, "vyceai.com");
+  assert.equal(session.cookies[0].sameSite, "lax");
+  assert.equal(normalizeCheckinSession({}), null);
+  assert.equal(normalizeCheckinSession({ token: "  " }), null);
+});
+
+test("keeps snapshots and needs-login marks in check-in records", () => {
+  const record = normalizeCheckinRecord({ needsLoginAt: "99", session: { token: "snap-token" } });
+  assert.equal(record.needsLoginAt, 99);
+  assert.equal(record.session.token, "snap-token");
+  assert.equal(normalizeCheckinRecord({ session: {} }).session, null);
+});
+
+test("rejects a check-in spec whose loginPath is not a site path", () => {
+  const raw = PLUGIN_REGISTRY_SNAPSHOT.plugins.find(entry => entry.kind === "checkin");
+  assert.throws(() => normalizePluginSpec({ ...raw, checkin: { ...raw.checkin, loginPath: "login" } }), /loginPath/);
 });
