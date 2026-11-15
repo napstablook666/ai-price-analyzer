@@ -51,6 +51,20 @@ test("完全不沾边的写法没有候选，不进判定队列", () => {
   assert.deepEqual(suggestModelCandidates("完全无关的模型", official), []);
   assert.equal(entriesFor(["完全无关的模型"]).length, 0);
 });
+test("官方条目缺 id 时按 name 兜底，判定队列不会整池丢空", () => {
+  const withoutId = [{ name: "anthropic/claude-sonnet-4", aliases: ["claude-sonnet-4"] }];
+  const [entry] = buildAssistEntries({
+    unmatched: [{ stationId: "s1", stationName: "中转 A", modelName: "claude-sonnet-4", count: 1 }],
+    officialList: withoutId,
+    referencesFetchedAt: 100
+  });
+  assert.equal(entry.candidates[0].id, "anthropic/claude-sonnet-4");
+  const [manual] = matchModelWithOverrides("claude-sonnet-4", withoutId, {
+    stationId: "s1",
+    overrides: [{ stationId: "s1", modelName: "claude-sonnet-4", officialModelId: "anthropic/claude-sonnet-4" }]
+  });
+  assert.equal(manual.ruleId, "manual");
+});
 
 test("缓存键与人工覆盖用同一套归一写法", () => {
   assert.equal(cacheKey("s1", "GPT-5.5"), ["s1", "gpt-5.5"].join(zero));

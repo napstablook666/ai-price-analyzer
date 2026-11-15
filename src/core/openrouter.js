@@ -27,6 +27,7 @@ export function parseOpenRouterData(json) {
     const aliases = [id, shortId, model.name, model.canonical_slug].filter(Boolean).map(String).map(value => value.toLowerCase());
     const modalities = model.architecture?.output_modalities;
     return [{
+      id: id || model.name,
       name: id || model.name,
       display_name: model.name || id,
       aliases: [...new Set(aliases)],

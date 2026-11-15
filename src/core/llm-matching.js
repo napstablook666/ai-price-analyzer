@@ -95,12 +95,14 @@ export function assistFingerprint({ candidateIds = [], referencesFetchedAt = 0 }
 export function buildAssistEntries({ unmatched = [], officialList = [], referencesFetchedAt = 0, limit = ASSIST_CANDIDATE_LIMIT } = {}) {
   return unmatched.map(entry => {
     const candidates = suggestModelCandidates(entry.modelName, officialList, limit);
-    const candidateIds = candidates.map(model => String(model.id || "").trim()).filter(Boolean);
+    // 官方条目不一定带 id（OpenRouter 解析件只保证有 name），判定目标要和 modelById 的 id || name 对齐。
+    const candidateId = model => String(model.id || model.name || "").trim();
+    const candidateIds = candidates.map(candidateId).filter(Boolean);
     return {
       ...entry,
       key: cacheKey(entry.stationId, entry.modelName),
       candidates: candidates.map(model => ({
-        id: String(model.id || "").trim(),
+        id: candidateId(model),
         name: String(model.name || model.id || "").trim(),
         displayName: String(model.display_name || model.name || model.id || "").trim()
       })).filter(model => model.id),
