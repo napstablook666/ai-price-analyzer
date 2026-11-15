@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, providerFromSpec } from "../src/core/declarative-plugin.js";
+import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, providerFromSpec, registryStateAfterRefresh } from "../src/core/declarative-plugin.js";
 import { sitePluginCatalogForStations } from "../src/site-plugins/catalog.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "../src/site-plugins/registry-snapshot.js";
 
@@ -100,6 +100,36 @@ test("内置插件带来源与版本，未拉取仓库时也能列出", () => {
     assert.ok(entry.hosts.length);
     assert.match(entry.version, /^\d+\.\d+\.\d+$/);
   }
+});
+test("刷新仓库保留全部安装记录，needsCode 插件不会变回未安装", () => {
+  const { entries } = normalizeRegistryPayload([
+    { id: "code-only", name: "Code Only", version: "2.0.0", hosts: ["code.example"], needsCode: true },
+    SPEC
+  ]);
+  const current = {
+    url: "https://plugins.example/plugins.json",
+    entries: [],
+    installed: {
+      "code-only": { version: "1.0.0", installedAt: 111 },
+      "demo-plugin": { version: "1.2.0", installedAt: 222 },
+      "gone-from-index": { version: "0.9.0", installedAt: 333 }
+    }
+  };
+  const next = registryStateAfterRefresh(current, { url: current.url, entries, fetchedAt: 444 });
+  // needsCode 插件的记录必须留下，且保留已装版本，仓库的新版本只用于提示有更新。
+  assert.deepEqual(next.installed["code-only"], { version: "1.0.0", installedAt: 111 });
+  assert.deepEqual(next.installed["demo-plugin"], { version: "1.2.0", installedAt: 222 });
+  // 仓库暂时少了条目也不卸载，与 normalizeRegistryState 的保留语义一致。
+  assert.deepEqual(next.installed["gone-from-index"], { version: "0.9.0", installedAt: 333 });
+  assert.equal(next.entries.length, 2);
+  assert.equal(next.fetchedAt, 444);
+  assert.equal(next.error, "");
+});
+
+test("已安装列表里的内置插件可以勾选移除，不按 bundled 来源禁用", () => {
+  // 内置代码插件也是按仓库安装管理的，标成 removable: false 会让勾选框和全选一起失效。
+  const source = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  assert.ok(!source.includes('removable: plugin.source !== "bundled"'), "catalog 插件不能再按 bundled 来源禁止移除");
 });
 
 test("插件仓库发布的 plugins.json 与内置快照一致", () => {

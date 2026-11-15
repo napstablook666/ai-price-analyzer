@@ -8,7 +8,7 @@ import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePl
 import { sitePluginById, sitePluginCatalogForStations, sitePluginForStation } from "./site-plugins/catalog.js";
 import { activeCatalogForStations, activePluginIds, activeSitePluginForStation, installedPluginIds, setActivePluginIds } from "./site-plugins/activation.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "./site-plugins/registry-snapshot.js";
-import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpecs, installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState } from "./core/declarative-plugin.js";
+import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpecs, installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState, registryStateAfterRefresh } from "./core/declarative-plugin.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
@@ -1162,12 +1162,7 @@ async function refreshPluginRegistry(message = {}) {
     try {
       const { entries, rejected } = normalizeRegistryPayload(await fetchPluginRegistryIndex(url));
       if (!entries.length) throw new Error(rejected.length ? `插件仓库没有可用条目：${rejected[0].error}` : "插件仓库是空的");
-      const installed = {};
-      for (const [id, record] of Object.entries(current.installed)) {
-        const entry = entries.find(item => item.id === id);
-        if (entry && !entry.needsCode) installed[id] = { version: entry.version, installedAt: record.installedAt || Date.now() };
-      }
-      next = { url, fetchedAt: Date.now(), error: "", entries, installed };
+      next = registryStateAfterRefresh(current, { url, entries });
     } catch (error) {
       // 拉取失败保留上次成功的缓存，只记错误。
       next = { ...current, url, error: error.message || String(error) };

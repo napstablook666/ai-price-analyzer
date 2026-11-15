@@ -217,7 +217,7 @@ function installedPluginEntries() {
     if (!station.pluginId || counts.has(station.pluginId)) continue;
     extraCounts.set(station.pluginId, (extraCounts.get(station.pluginId) || 0) + 1);
   }
-  const merged = new Map(catalog.map(plugin => [plugin.id, { ...plugin, source: pluginSourceKey(plugin), removable: plugin.source !== "bundled" }]));
+  const merged = new Map(catalog.map(plugin => [plugin.id, { ...plugin, source: pluginSourceKey(plugin) }]));
   for (const plugin of workspace.repositoryPlugins || []) {
     if (merged.has(plugin.id)) continue;
     merged.set(plugin.id, { ...plugin, source: "registry" });
@@ -579,6 +579,7 @@ async function installSelectedPlugins() {
     const failed = result.failed || [];
     const stations = result.stationsAdded || 0;
     const suffix = stations ? `、${stations} 个站点已加入工作区` : "";
+    const installed = result.installed?.length || 0;
     if (failed.length) toast(`已安装 ${installed} 个，失败 ${failed.length} 个：${failed.map(item => item.id).join("、")}`);
     else toast(`已安装 ${installed} 个插件${suffix}${skipped ? `，${skipped} 个已经装过` : ""}`);
   } catch (error) {

@@ -341,6 +341,21 @@ export function normalizeRegistryState(input = {}) {
   };
 }
 
+
+// 刷新仓库只替换条目清单，安装记录原样保留：needsCode 插件的采集代码随扩展打包，
+// 清掉记录会让已装插件在界面上变回「未安装」；已装版本也不能被仓库版本顶掉，
+// 否则 updateAvailable 永远算不出「有更新」。
+export function registryStateAfterRefresh(current = {}, { url, entries, fetchedAt = Date.now() } = {}) {
+  const previous = normalizeRegistryState(current);
+  return normalizeRegistryState({
+    ...previous,
+    url: url || previous.url,
+    fetchedAt,
+    error: "",
+    entries,
+    installed: previous.installed
+  });
+}
 export function normalizeLocalPlugins(input) {
   const { specs, rejected } = normalizePluginSpecList(input);
   return { specs, rejected };
