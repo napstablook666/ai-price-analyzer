@@ -192,6 +192,10 @@ function prepareComparisonStation(station) {
   // 没装的插件不参与匹配，站点退回手动适配器。
   return { ...prepared, pluginId: activeSitePluginForStation(prepared)?.id || "" };
 }
+// 识别是一串串行 LLM 请求，界面靠这条消息画进度条，不要并到 REFRESH_PROGRESS 上。
+function notifyAssistProgress(progress) {
+  chrome.runtime.sendMessage({ type: "ASSIST_PROGRESS", progress }, () => void chrome.runtime.lastError);
+}
 
 async function getPreparedStations() {
   const stations = await getStations();
@@ -1002,7 +1006,8 @@ async function runModelAssist({ force = false } = {}) {
     let ranBatches = 0;
     let errors = 0;
 
-    for (const batch of chunkList(pending, ASSIST_BATCH_SIZE)) {
+    for (const batch of batches) {
+      reportProgress("request");
       for (const entry of batch) fingerprintByKey[entry.key] = entry.fingerprint;
       let parsed;
       try {
@@ -1041,7 +1046,12 @@ async function runModelAssist({ force = false } = {}) {
       invalidAnswers: results.filter(item => item.status === "invalid").length,
       errors
     };
-  })();
+    reportProgress("complete");
+    return summary;
+  })().catch(error => {
+    notifyAssistProgress({ phase: "error", message: error.message || "模型识别失败", total: 0, completed: 0, totalBatches: 0, completedBatches: 0 });
+    throw error;
+  });
   try {
     return await modelAssistTask;
   } finally {
@@ -1157,6 +1167,30 @@ function pluginRegistryView(registry) {
         hosts: entry.hosts,
         kind: spec?.kind || "price",
         needsCode: entry.needsCode,
+    const batches = chunkList(pending, ASSIST_BATCH_SIZE);
+    let completed = 0;
+    let completedBatches = 0;
+    const tally = { accepted: 0, none: 0, invalid: 0 };
+    const addToTally = list => {
+      for (const item of list) {
+        if (item.status === "accepted") tally.accepted += 1;
+        else if (item.status === "none") tally.none += 1;
+        else if (item.status === "invalid") tally.invalid += 1;
+      }
+    };
+    // 界面只认这条消息画进度：每批开头报一次、收工报一次，中途不刷新缓存。
+    const reportProgress = phase => notifyAssistProgress({
+      phase,
+      total: pending.length,
+      completed,
+      totalBatches: batches.length,
+      completedBatches,
+      accepted: tally.accepted,
+      none: tally.none,
+      invalid: tally.invalid,
+      errors,
+    });
+    reportProgress("start");
         installed: Boolean(record),
         installedVersion: record?.version || "",
         updateAvailable: Boolean(record) && comparePluginVersions(record.version, entry.version) < 0,
@@ -1177,12 +1211,20 @@ function pluginRegistryView(registry) {
     })
   };
 }
+        completed += batch.length;
+        completedBatches += 1;
+        reportProgress("batch");
 
 // 还没成功拉取过仓库时，先用随扩展发布的内置快照，避免插件商店空白。
 function seededRegistry(registry) {
+      addToTally(parsed.accepted);
+      addToTally(parsed.invalid);
   const current = normalizeRegistryState(registry);
   if (current.entries.length) return current;
   return normalizeRegistryState({ ...current, entries: PLUGIN_REGISTRY_SNAPSHOT.plugins });
+      completed += batch.length;
+      completedBatches += 1;
+      reportProgress("batch");
 }
 function describePlugin(id, { registry, record, local }) {
   const entry = registry.entries.find(item => item.id === id) || null;
@@ -1294,7 +1336,7 @@ export async function installPlugins(ids) {
       }
     }
     const workspace = await pluginWorkspaceState();
-    return {
+    const summary = {
       workspace,
       stationsAdded,
       results,

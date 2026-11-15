@@ -125,3 +125,8 @@ export function onRefreshProgress(callback) {
     if (message?.type === "REFRESH_PROGRESS") callback(message.progress);
   });
 }
+export function onAssistProgress(callback) {
+  chrome.runtime.onMessage.addListener(message => {
+    if (message?.type === "ASSIST_PROGRESS") callback(message.progress);
+  });
+}

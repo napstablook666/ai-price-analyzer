@@ -4719,6 +4719,21 @@ test("provides configurable dashboard pagination and back-to-top controls", () =
   assert.match(source, /backToTop\.addEventListener\("click"/);
 });
 
+test("pages the model-assist review queue with the shared pager", () => {
+  const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
+  const source = readFileSync(new URL("../src/options.js", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../styles/options.css", import.meta.url), "utf8");
+  assert.match(html, /id="llm-review-list"><\/div>\s*<nav class="assistant-pagination" id="llm-pagination"[^>]*hidden/);
+  assert.match(html, /id="llm-page-size"[^>]*><option value="20" selected>20<\/option><option value="50">50<\/option><option value="100">100<\/option>/);
+  assert.match(html, /id="llm-previous"[^>]*disabled|id="llm-previous"[^>]*aria-label="上一页"/);
+  assert.match(source, /import \{ paginateRows \} from "\.\/dashboard-index\.js"/);
+  assert.match(source, /const page = paginateAssistant\(rows\);/);
+  assert.match(source, /list\.innerHTML = page\.rows\.map\(row =>/);
+  assert.match(source, /state\.assistantFilter = button\.dataset\.filter;\s*\n\s*state\.assistantPage = 0;/);
+  assert.match(source, /function flipAssistantPage\(delta\)/);
+  assert.match(css, /\.assistant-pagination\[hidden\] \{ display: none; \}/);
+});
+
 test("includes partial station counts in refresh summaries", () => {
   assert.equal(formatRefreshSummary({ total: 1, successCount: 0, partialCount: 1, errorCount: 0, totalModels: 3, durationMs: 1000 }), "查询完成：0 成功，1 部分成功，0 失败，共 3 个模型 · 1.0 秒");
   assert.equal(formatRefreshSummary({ total: 0 }), "没有启用的站点可查询");

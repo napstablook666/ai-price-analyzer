@@ -254,6 +254,14 @@
 .assistant-test-actions .assistant-status[data-error="true"] { color: var(--warn); }
 /* 动作按钮等宽排成一块，避免长短不齐 */
 .assistant-review-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; justify-content: initial; padding-inline: 18px; }
+/* 识别进度：和采集进度同一套进度条语言，不额外引入组件 */
+.assistant-progress { margin: 12px 18px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface-2); }
+.assistant-progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.assistant-progress-heading h3 { margin: 0; color: var(--text-2); font-size: 11px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.assistant-progress-count { color: var(--text-3); font-family: var(--font-mono); font-size: 10px; white-space: nowrap; }
+.assistant-progress progress { width: 100%; height: 5px; margin-top: 7px; accent-color: var(--accent); }
+.assistant-progress-message { margin: 6px 0 0; color: var(--text-2); font-size: 11px; line-height: 1.5; }
+.assistant-progress-message[data-error="true"] { color: var(--warn); }
 .assistant-review-list { display: grid; gap: 8px; margin-top: 12px; padding: 0 18px 18px; }
 .assistant-review-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.3fr) minmax(0, .9fr) auto; gap: 10px; align-items: center; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface-2); font-size: 11px; }
 .assistant-review-model { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
@@ -273,3 +281,53 @@
 .assistant-filter { min-height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
 .assistant-filter:hover { color: var(--text); background: var(--surface); }
 .assistant-filter[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+/* 判定队列按 20 条一页，翻页控件沿用价格表的分页语言 */
+.assistant-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 7px; margin: 0 18px 18px; }
+.assistant-pagination[hidden] { display: none; }
+.assistant-pagination .button { min-height: 30px; font-size: 11px; }
+.assistant-page-size { display: inline-flex; align-items: center; gap: 5px; color: var(--text-2); font-size: 11px; }
+.assistant-page-size select { width: 66px; min-height: 30px; height: 30px; padding: 0 26px 0 8px; font-size: 11px; }
+.assistant-page-count { min-width: 96px; color: var(--text-2); font-size: 11px; text-align: center; }
+@media (max-width: 720px) {
+  .assistant-pagination .button, .assistant-page-size select { min-height: 44px; }
+}
+/* 关于页：左侧标签、右侧当前值与操作的清单形态 */
+.about-panel + .about-panel { margin-top: 14px; }
+.about-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 14px; border-bottom: 1px solid var(--line); }
+.about-mark { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); }
+.about-mark img { width: 26px; height: 26px; }
+.about-heading { display: grid; flex: 1 1 auto; gap: 2px; min-width: 0; }
+.about-heading strong { color: var(--text); font-size: 14px; font-weight: 650; }
+.about-heading span { color: var(--text-2); font-size: 11px; }
+.about-current-version { flex: 0 0 auto; padding: 3px 9px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.about-list { display: grid; gap: 1px; padding: 6px 18px 16px; }
+.about-row { display: grid; grid-template-columns: minmax(170px, 240px) minmax(0, 1fr); align-items: center; gap: 10px 16px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.about-row:last-child { border-bottom: 0; }
+.about-row-label { display: grid; gap: 2px; min-width: 0; }
+.about-row-label > span { color: var(--text); font-size: 12px; font-weight: 600; }
+.about-row-label small { color: var(--text-2); font-size: 11px; line-height: 1.4; }
+.about-notes { margin-top: 4px; color: var(--text-3); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-line; }
+.about-row-control { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.about-row-control .button { text-decoration: none; }
+.about-value { color: var(--text-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.segmented button { min-height: 28px; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.segmented button:hover { color: var(--text); background: var(--surface); }
+.segmented button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+@media (max-width: 720px) {
+  .about-row { grid-template-columns: 1fr; }
+  .about-row-control { justify-content: flex-start; }
+  .segmented button { min-height: 40px; }
+}
+/* 顶栏自动保存状态：安静的胶囊按钮，点一下立即落库 */
+.autosave-status { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-3); background: var(--surface); font-size: 11.5px; font-weight: 600; line-height: 1; cursor: pointer; transition: color .15s ease, border-color .15s ease, background .15s ease; }
+.autosave-status .icon { width: 14px; height: 14px; }
+.autosave-status:hover { color: var(--text-2); border-color: var(--line-strong); background: var(--surface-2); }
+.autosave-status[data-state="pending"] { color: var(--text-2); }
+.autosave-status[data-state="saving"] { color: var(--text-2); }
+.autosave-status[data-state="saved"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 28%, var(--line)); }
+.autosave-status[data-state="error"] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 32%, var(--line)); background: var(--danger-soft); }
+@media (max-width: 720px) {
+  .autosave-status { padding: 0 8px; }
+  .autosave-status .autosave-text { display: none; }
+}

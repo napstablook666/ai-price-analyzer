@@ -161,14 +161,74 @@
               <button class="button button-quiet" id="llm-apply" type="button"><span data-icon="check" class="icon"></span><span>接受的写成人工确认</span></button>
               <button class="button button-quiet" id="llm-clear" type="button"><span data-icon="trash-2" class="icon"></span><span>清空缓存</span></button>
             </div>
+            <div class="assistant-progress" id="llm-progress" role="status" aria-live="polite" aria-atomic="true" hidden>
+              <div class="assistant-progress-heading"><h3>识别进度</h3><span class="assistant-progress-count" id="llm-progress-count">0 / 0 个写法 · 0 / 0 批</span></div>
+              <progress id="llm-progress-bar" max="1" value="0" aria-label="模型识别进度"></progress>
+              <p class="assistant-progress-message" id="llm-progress-message"></p>
+            </div>
             <div class="assistant-review-filters" id="llm-filters" role="group" aria-label="按状态筛选">
               <button type="button" class="assistant-filter" data-filter="all" aria-pressed="true">全部</button>
+              <button type="button" class="assistant-filter" data-filter="no-candidates" aria-pressed="false">无候选</button>
               <button type="button" class="assistant-filter" data-filter="accepted" aria-pressed="false">已接受</button>
               <button type="button" class="assistant-filter" data-filter="none" aria-pressed="false">判为没有</button>
               <button type="button" class="assistant-filter" data-filter="invalid" aria-pressed="false">无效</button>
               <button type="button" class="assistant-filter" data-filter="failed" aria-pressed="false">失败</button>
             </div>
             <div class="assistant-review-list" id="llm-review-list"></div>
+            <nav class="assistant-pagination" id="llm-pagination" aria-label="判定队列分页" hidden>
+              <label class="assistant-page-size"><span>每页</span><select id="llm-page-size" aria-label="每页显示数量"><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option></select><span>条</span></label>
+              <button class="button button-quiet" id="llm-previous" type="button" aria-label="上一页" title="上一页"><span data-icon="chevron-left" class="icon"></span><span>上一页</span></button>
+              <span class="assistant-page-count" id="llm-page" aria-live="polite"></span>
+              <button class="button button-quiet" id="llm-next" type="button" aria-label="下一页" title="下一页"><span>下一页</span><span data-icon="chevron-right" class="icon"></span></button>
+            </nav>
+          </section>
+        </section>
+        <section class="settings-view" id="settings-view-about" role="tabpanel" aria-labelledby="settings-tab-about" data-settings-view="about" hidden>
+          <div class="view-heading"><div><h2>关于</h2><p>版本与更新检测。检查更新只读 GitHub Releases，不上报任何本地数据。</p></div></div>
+          <section class="panel about-panel" id="about-version" data-nav-anchor="about-version">
+            <div class="about-head">
+              <span class="about-mark"><img src="icons/icon.svg" alt=""></span>
+              <div class="about-heading"><strong>AI 中转站价格对比</strong><span>Model Atlas · 本地运行，没有自建服务端</span></div>
+              <span class="about-current-version" id="about-current-version">—</span>
+            </div>
+            <div class="about-list">
+              <div class="about-row">
+                <div class="about-row-label"><span>版本</span><small id="about-version-status">尚未检查更新</small></div>
+                <div class="about-row-control"><button class="button button-quiet button-small" id="about-check-update" type="button"><span data-icon="refresh-cw" class="icon"></span><span>检查更新</span></button></div>
+              </div>
+              <div class="about-row">
+                <div class="about-row-label"><span>更新内容</span><small id="about-last-check">还没有检查记录</small><div class="about-notes" id="about-release-notes">—</div></div>
+                <div class="about-row-control"><button class="button button-quiet button-small" id="about-open-release" type="button"><span data-icon="arrow-up-right" class="icon"></span><span>发布页</span></button></div>
+              </div>
+              <div class="about-row">
+                <div class="about-row-label"><span>自动检查更新</span><small>后台按间隔静默检查，有新版本只在「关于」里提示</small></div>
+                <div class="about-row-control"><div class="segmented" role="group" aria-label="自动检查更新"><button type="button" data-update-auto="off">关闭</button><button type="button" data-update-auto="on">开启</button></div></div>
+              </div>
+              <div class="about-row">
+                <div class="about-row-label"><span>检查间隔</span><small>间隔越短越费流量，改动立即生效</small></div>
+                <div class="about-row-control"><div class="segmented" role="group" aria-label="检查间隔"><button type="button" data-update-interval="60">1 小时</button><button type="button" data-update-interval="360">6 小时</button><button type="button" data-update-interval="1440">24 小时</button></div></div>
+              </div>
+              <div class="about-row">
+                <div class="about-row-label"><span>更新渠道</span><small>稳定版只提示正式发布，每个版本含预发布</small></div>
+                <div class="about-row-control"><div class="segmented" role="group" aria-label="更新渠道"><button type="button" data-update-channel="stable">稳定版</button><button type="button" data-update-channel="prerelease">每个版本</button></div></div>
+              </div>
+            </div>
+          </section>
+          <section class="panel about-panel" id="about-links" data-nav-anchor="about-links">
+            <div class="panel-heading"><div><h2>链接与许可</h2><p class="muted">项目主页、发布页与问题反馈都在 GitHub。</p></div></div>
+            <div class="about-list">
+              <div class="about-row"><div class="about-row-label"><span>官网与文档</span><small>napstablook666.github.io/ai-price-analyzer</small></div><div class="about-row-control"><a class="button button-quiet button-small" href="https://napstablook666.github.io/ai-price-analyzer/" target="_blank" rel="noreferrer"><span data-icon="external-link" class="icon"></span><span>打开</span></a></div></div>
+              <div class="about-row"><div class="about-row-label"><span>下载源</span><small>GitHub Releases</small><div class="about-notes" id="about-release-source">napstablook666/ai-price-analyzer</div></div><div class="about-row-control"><a class="button button-quiet button-small" href="https://github.com/napstablook666/ai-price-analyzer/releases" target="_blank" rel="noreferrer"><span data-icon="download" class="icon"></span><span>打开</span></a></div></div>
+              <div class="about-row"><div class="about-row-label"><span>反馈问题</span><small>GitHub Issues</small></div><div class="about-row-control"><a class="button button-quiet button-small" href="https://github.com/napstablook666/ai-price-analyzer/issues" target="_blank" rel="noreferrer"><span data-icon="circle-help" class="icon"></span><span>打开</span></a></div></div>
+              <div class="about-row"><div class="about-row-label"><span>开源许可</span><small>GNU General Public License v3.0</small></div><div class="about-row-control"><a class="button button-quiet button-small" href="https://github.com/napstablook666/ai-price-analyzer/blob/main/LICENSE" target="_blank" rel="noreferrer"><span data-icon="scale" class="icon"></span><span>查看</span></a></div></div>
+            </div>
+          </section>
+          <section class="panel about-panel" id="about-local" data-nav-anchor="about-local">
+            <div class="panel-heading"><div><h2>本地数据</h2><p class="muted">站点、报价快照与设置存在本机扩展存储；密钥只进会话存储，不进导出文件。</p></div></div>
+            <div class="about-list">
+              <div class="about-row"><div class="about-row-label"><span>扩展存储用量</span><small>chrome.storage.local</small></div><div class="about-row-control"><span class="about-value" id="about-storage-usage">—</span></div></div>
+              <div class="about-row"><div class="about-row-label"><span>卸载与禁用</span><small>在浏览器扩展管理页操作</small></div><div class="about-row-control"><span class="about-value">chrome://extensions</span></div></div>
+            </div>
           </section>
         </section>
       </div>

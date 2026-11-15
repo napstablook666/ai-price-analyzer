@@ -5,8 +5,9 @@ import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
+import { paginateRows } from "./dashboard-index.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "" };
+const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
 const $ = selector => document.querySelector(selector);
 const EMBEDDED = new URLSearchParams(location.search).get("embed") === "1";
 if (EMBEDDED) document.body.classList.add("is-embedded");
@@ -32,8 +33,8 @@ function activateSettingsView(requested, { focus = false, updateHash = true } = 
   }
   syncNavGroup(view);
   if (view === "about") refreshUpdateState().catch(() => {});
-navPinnedKey = "";
   if (updateHash && location.hash !== `#${view}`) history.replaceState(null, "", `${location.pathname}${location.search}#${view}`);
+navPinnedKey = "";
   const firstAnchor = $(`#settings-view-${view}`)?.querySelector("[data-nav-anchor]");
   setNavActiveKey(firstAnchor ? firstAnchor.dataset.navAnchor : "");
   scheduleNavActive();
@@ -1194,8 +1195,8 @@ async function saveUpdatePrefs(patch) {
     toast(error.message);
   }
 }
-  try {
 async function load() {
+  try {
     const [data, pluginWorkspace] = await Promise.all([callService("GET_DASHBOARD"), callService("GET_PLUGIN_WORKSPACE")]);
     state.pluginWorkspace = pluginWorkspace;
     state.stations = data.stations || [];
@@ -1413,8 +1414,8 @@ $("#settings-view-about")?.addEventListener("click", event => {
     window.open(state.update?.lastCheck?.releaseUrl || "https://github.com/napstablook666/ai-price-analyzer/releases", "_blank", "noopener,noreferrer");
   }
 });
-settingsContent.addEventListener("scroll", scheduleNavActive, { passive: true });
 const settingsContent = $(".settings-content");
+settingsContent.addEventListener("scroll", scheduleNavActive, { passive: true });
 for (const type of ["wheel", "touchstart", "pointerdown"]) {
   settingsContent.addEventListener(type, () => { navPinnedKey = ""; }, { passive: true });
 }
@@ -1586,8 +1587,8 @@ $("#plugin-installed-list").addEventListener("click", async event => {
     state.stations = state.stations.filter(station => station.id !== stationId);
     renderStations();
     scheduleStationsSave();
-  }
     return;
+  }
   if (event.target.closest("[data-config-station]")) {
     openStationConfig(stationId);
     return;
@@ -1606,8 +1607,8 @@ $("#plugin-installed-list").addEventListener("change", event => {
   if (!station) return;
   station.enabled = event.target.checked;
   scheduleStationsSave();
-});
   card.classList.toggle("is-disabled", !station.enabled);
+});
 $("#station-config-form").addEventListener("submit", event => {
   event.preventDefault();
   void saveStationConfig();
@@ -1637,8 +1638,8 @@ async function refreshExchangeRate() {
     if (!Number.isFinite(rate) || rate <= 0) throw new Error("中国银行汇率数据不可用");
     $("#exchange-rate").value = rate.toFixed(4);
     scheduleSettingsSave();
-    toast(`官方汇率已更新：${rate.toFixed(4)}`);
     refreshRechargeDisplays();
+    toast(`官方汇率已更新：${rate.toFixed(4)}`);
   } catch (error) {
     toast(error.message);
   } finally {
@@ -1774,8 +1775,8 @@ document.addEventListener("visibilitychange", () => {
 
 setSaveStatus("idle");
 
-const [initialView, initialJump] = location.hash.slice(1).split(":");
 
+const [initialView, initialJump] = location.hash.slice(1).split(":");
 activateSettingsView(initialView);
 if (initialJump) requestAnimationFrame(() => jumpToNavTarget(initialJump));
 hydrateIcons();
@@ -1785,13 +1786,31 @@ onRefreshProgress(progress => {
 });
 void load();
 
-const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "多次失败，已停手" };
+const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "多次失败，已停手", "no-candidates": "无候选" };
 
 function setAssistantStatus(message, error = false) {
   const node = $("#llm-status");
   if (!node) return;
   node.textContent = message;
   node.dataset.error = error ? "true" : "false";
+}
+
+const ASSIST_PAGE_SIZE = 20;
+
+// 判定队列一页放 20 条，翻页复用价格表那套 paginateRows，不做第二份分页实现。
+function paginateAssistant(rows) {
+  const page = paginateRows(rows, state.assistantPage, Number(state.assistantPageSize) || ASSIST_PAGE_SIZE);
+  state.assistantPage = page.page;
+  return page;
+}
+
+function renderAssistantPagination(page, total) {
+  const nav = $("#llm-pagination");
+  if (!nav) return;
+  nav.hidden = total === 0;
+  $("#llm-page").textContent = page.pageCount ? `第 ${page.page + 1} / ${page.pageCount} 页 · 共 ${total} 条` : "";
+  $("#llm-previous").disabled = page.page === 0;
+  $("#llm-next").disabled = page.page + 1 >= page.pageCount;
 }
 
 function renderAssistantQueue(data) {
@@ -1804,12 +1823,23 @@ function renderAssistantQueue(data) {
     ? `已接受 ${counts.accepted || 0} · 判为没有 ${counts.none || 0} · 无效 ${counts.invalid || 0} · 失败 ${counts.failed || 0} · 无候选 ${data.noCandidates || 0}`
     : "先在模型服务里填好地址、密钥与模型，再打开启用开关。";
   const filter = state.assistantFilter || "all";
-  const rows = state.assistantRows.filter(row => row.status !== "no-candidates" && (filter === "all" || row.status === filter));
+  // 无候选的写法也要露头：它们不在判定队列里，只靠一个数字看不出来卡在哪。
+  const rows = state.assistantRows
+    .filter(row => filter === "all" || row.status === filter)
+    .sort((left, right) => Number(left.status === "no-candidates") - Number(right.status === "no-candidates"));
   if (!rows.length) {
-    list.innerHTML = `<p class="assistant-review-empty">${filter === "all" ? "当前没有待识别的模型，采集之后再来看。" : "这个状态下没有条目。"}</p>`;
+    const empty = filter === "all"
+      ? "当前没有未匹配的模型写法，采集之后再来看。"
+      : filter === "no-candidates"
+        ? "没有卡在无候选的写法，规则已经能给每个未匹配写法找到候选。"
+        : "这个状态下没有条目。";
+    list.innerHTML = `<p class="assistant-review-empty">${empty}</p>`;
+    renderAssistantPagination({ page: 0, pageCount: 0 }, 0);
     return;
   }
-  list.innerHTML = rows.map(row => `
+  const page = paginateAssistant(rows);
+  renderAssistantPagination(page, rows.length);
+  list.innerHTML = page.rows.map(row => `
     <div class="assistant-review-row">
       <span class="assistant-review-model">${escapeHtml(row.modelName)}</span>
       <span class="assistant-review-target">${row.targetId ? escapeHtml(row.targetId) : "—"}</span>
@@ -1821,9 +1851,49 @@ function renderAssistantQueue(data) {
 
 async function refreshAssistantState() {
   try {
+    // 队列内容变了，页码回到第一页，避免停在已经不存在的页上。
+    state.assistantPage = 0;
     renderAssistantQueue(await callService("GET_MODEL_ASSIST_STATE"));
   } catch (error) {
     console.debug("[AI比价] 读取判定队列失败", error);
+  }
+}
+
+let assistProgressTimer = 0;
+
+// 识别是串行的分批请求，进度只能靠 service worker 回报；这里只负责把回报画成条。
+function renderAssistProgress(progress) {
+  const panel = $("#llm-progress");
+  if (!panel) return;
+  clearTimeout(assistProgressTimer);
+  const total = Math.max(0, Number(progress.total) || 0);
+  const completed = Math.min(Math.max(0, Number(progress.completed) || 0), total);
+  const totalBatches = Math.max(0, Number(progress.totalBatches) || 0);
+  const doneBatches = Math.min(Math.max(0, Number(progress.completedBatches) || 0), totalBatches);
+  const counts = `接受 ${Number(progress.accepted) || 0} · 判为没有 ${Number(progress.none) || 0} · 无效 ${Number(progress.invalid) || 0} · 失败 ${Number(progress.errors) || 0}`;
+  const bar = $("#llm-progress-bar");
+  const counter = $("#llm-progress-count");
+  const message = $("#llm-progress-message");
+  panel.hidden = false;
+  bar.max = Math.max(total, 1);
+  bar.value = progress.phase === "complete" ? bar.max : Math.min(completed, bar.max);
+  counter.textContent = `${completed} / ${total} 个写法 · ${doneBatches} / ${totalBatches} 批`;
+  message.dataset.error = progress.phase === "error" ? "true" : "false";
+  if (progress.phase === "start") {
+    message.textContent = `正在把 ${total} 个未匹配写法分 ${totalBatches} 批发给模型`;
+  } else if (progress.phase === "request") {
+    message.textContent = `正在问第 ${Math.min(doneBatches + 1, totalBatches)} / ${totalBatches} 批，已完成 ${completed} / ${total} 个写法`;
+  } else if (progress.phase === "batch") {
+    message.textContent = `已问 ${doneBatches} / ${totalBatches} 批 · ${counts}`;
+  } else if (progress.phase === "complete") {
+    message.textContent = `识别完成：${total} 个写法、${totalBatches} 批 · ${counts}`;
+    assistProgressTimer = setTimeout(() => { panel.hidden = true; }, 6000);
+  } else if (progress.phase === "error") {
+    counter.textContent = "";
+    bar.max = 1;
+    bar.value = 0;
+    message.textContent = progress.message || "模型识别失败";
+    assistProgressTimer = setTimeout(() => { panel.hidden = true; }, 8000);
   }
 }
 
@@ -1931,11 +2001,28 @@ $("#llm-apply").addEventListener("click", async event => {
 });
 
 void refreshAssistantState();
+onAssistProgress(renderAssistProgress);
 
 for (const button of document.querySelectorAll(".assistant-filter")) {
   button.addEventListener("click", () => {
     state.assistantFilter = button.dataset.filter;
+    state.assistantPage = 0;
     for (const item of document.querySelectorAll(".assistant-filter")) item.setAttribute("aria-pressed", String(item === button));
     if (state.assistantState) renderAssistantQueue(state.assistantState);
   });
+}
+
+$("#llm-previous").addEventListener("click", () => flipAssistantPage(-1));
+$("#llm-next").addEventListener("click", () => flipAssistantPage(1));
+$("#llm-page-size").addEventListener("change", event => {
+  state.assistantPageSize = Number(event.target.value) || ASSIST_PAGE_SIZE;
+  state.assistantPage = 0;
+  if (state.assistantState) renderAssistantQueue(state.assistantState);
+});
+
+function flipAssistantPage(delta) {
+  if (!state.assistantState) return;
+  state.assistantPage = Math.max(0, (state.assistantPage || 0) + delta);
+  renderAssistantQueue(state.assistantState);
+  $("#assistant-review").scrollIntoView({ behavior: "smooth", block: "start" });
 }
