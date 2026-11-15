@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="./icons/icon.svg" width="96" height="96" alt="AI Price Analyzer">
+</p>
 <h1 align="center">AI Price Analyzer</h1>
 
 <p align="center">在浏览器里横向比较 AI 中转站模型价格：采集一次，按模型身份对齐，用你的实际用量算月成本。</p>

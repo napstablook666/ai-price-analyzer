@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="./icons/icon.svg" width="96" height="96" alt="AI Price Analyzer">
+</p>
 <h1 align="center">AI Price Analyzer</h1>
 
 <p align="center">Compare AI gateway model prices side by side in your browser: collect once, align by model identity, price it with your own usage.</p>
