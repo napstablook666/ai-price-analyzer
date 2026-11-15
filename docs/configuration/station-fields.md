@@ -11,6 +11,7 @@
 | `enabled` | 布尔 | 关掉后不采集、不参与比价 | 面板里整行消失 |
 | `mode` | `direct` / `page` | 采集通道，默认 `direct` | 见[站点与插件](../guide/stations) |
 | `tags` | 字符串数组 | 自定义标签，用于筛选 | 只是分类 |
+| `category` | `benchmark` / `paid` / `public` | 站点落在哪个视图，默认 `paid` | 归错视图后，在付费或公益面板里都找不到它 |
 
 `baseUrl` 用根地址，不要带 `/pricing` 这类具体路径。路径由调接口的端点字段决定。
 
@@ -53,7 +54,7 @@
 | `api-key` | `token` | `X-API-Key: <token>` |
 | `basic` | `username` + `password` | HTTP Basic 认证 |
 
-Token 存在扩展本地存储里，不进导出的 JSON。换设备要重填。
+Token 存在扩展本地存储里，换设备要重填。
 
 `page` 模式的站点不用填 token，用的是浏览器里的登录态。
 
