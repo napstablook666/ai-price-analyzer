@@ -51,8 +51,9 @@
   </header>
 
   <main class="page-shell">
-    <section class="dashboard-heading" aria-labelledby="page-title">
-      <div><p class="eyebrow">MODEL EXPLORER</p><h1 id="page-title">模型报价</h1></div><span class="result-count" id="result-count" title="当前筛选后的报价条数">0 条报价</span>
+    <section class="summary-bar" aria-label="统计摘要">
+      <div class="summary-strip" id="summary"></div>
+      <span class="result-count" id="result-count" title="当前筛选后的报价条数">0 条报价</span>
     </section>
 
     <section class="panel refresh-preflight-panel" id="refresh-preflight-panel" aria-labelledby="refresh-preflight-title" hidden>
@@ -66,9 +67,6 @@
       <p id="refresh-progress-message" role="status" aria-live="polite" aria-atomic="true"></p>
       <ul id="refresh-progress-results" aria-live="off"></ul>
     </section>
-
-    <section class="summary-grid" id="summary" aria-label="统计摘要"></section>
-
 <div class="dashboard-workspace">
       <aside class="dashboard-sidebar" aria-label="筛选与签到">
         <section class="panel toolbar-panel" id="toolbar-panel" data-collapsible aria-label="筛选和排序">
@@ -104,18 +102,17 @@
         <section class="panel comparison-panel" id="comparison-panel" aria-label="价格明细表">
       <div class="table-wrap" tabindex="0" role="region" aria-label="模型价格表，可滚动">
         <table class="comparison-table">
-          <colgroup><col><col><col class="paid-only-column"><col class="paid-only-column"><col class="paid-only-column"><col class="paid-only-column"><col class="paid-only-column"><col class="paid-only-column"><col class="public-only-column" hidden></colgroup>
+          <colgroup><col><col><col class="paid-only-column"><col class="paid-only-column"><col class="paid-only-column"><col class="paid-only-column"><col class="public-only-column" hidden></colgroup>
           <thead>
-            <tr class="thead-groups">
-              <th scope="col" rowspan="2" data-sort-keys="model provider">模型</th>
-              <th scope="col" rowspan="2" data-sort-keys="groupName">中转站</th>
-              <th scope="colgroup" colspan="3" class="paid-only-column price-group-heading is-section-start"><span class="th-label">单价 <span class="th-unit">/ 每 M tokens</span></span><details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong>价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。表里每个数字都是每 1M tokens 消耗的中转币数量，官方和中转两列已折算到同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></th>
-              <th scope="col" rowspan="2" class="paid-only-column monthly-cost-heading is-section-start" data-sort-keys="monthlyCost">月成本</th>
-              <th scope="col" rowspan="2" class="paid-only-column is-section-start" data-sort-keys="diffPercent">价差</th>
-              <th scope="col" rowspan="2" class="paid-only-column" data-sort-keys="blendedUnitPrice">混合单价</th>
-              <th scope="col" rowspan="2" class="public-only-column" hidden>状态</th>
+            <tr class="thead-columns">
+              <th scope="col" data-sort-keys="model provider">模型</th>
+              <th scope="col" data-sort-keys="groupName">中转站</th>
+              <th scope="col" class="paid-only-column price-key-heading is-section-start">费用项<details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong>价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。表里每个数字都是每 1M tokens 消耗的中转币数量，官方和中转两列已折算到同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></th>
+              <th scope="col" class="paid-only-column">官方</th>
+              <th scope="col" class="paid-only-column">中转</th>
+              <th scope="col" class="paid-only-column monthly-cost-heading is-section-start" data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 混合单价</th>
+              <th scope="col" class="public-only-column" hidden>状态</th>
             </tr>
-            <tr class="thead-subcolumns"><th scope="col" class="paid-only-column price-key-heading is-section-start">费用项</th><th scope="col" class="paid-only-column">官方</th><th scope="col" class="paid-only-column">中转</th></tr>
           </thead>
           <tbody id="comparison-body"></tbody>
         </table>

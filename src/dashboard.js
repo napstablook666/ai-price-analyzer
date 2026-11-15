@@ -95,7 +95,7 @@ function renderSummary(rows) {
     ["首选方案", String(recommended), "同模型推荐"],
     ["需核验", String(needsReview), reviewNote]
   ];
-  $("#summary").innerHTML = cards.map(([label, value, note], index) => `<article class="summary-card${index === 0 ? " is-primary" : ""}"><span class="summary-label">${label}</span><strong class="summary-value">${escapeHtml(value)}</strong><span class="summary-note">${escapeHtml(note)}</span></article>`).join("");
+  $("#summary").innerHTML = cards.map(([label, value, note], index) => `<span class="summary-item${index === 0 ? " is-primary" : ""}" title="${escapeHtml(note)}"><span class="summary-label">${escapeHtml(label)}</span><strong class="summary-value">${escapeHtml(value)}</strong></span>`).join("");
 }
 function renderStationFilter(rows) {
   const current = state.filters.stationId;
@@ -237,7 +237,7 @@ function sortRows(rows) {
     return `${left.stationName} ${left.modelName}`.localeCompare(`${right.stationName} ${right.modelName}`);
   });
 }
-function priceGridMarkup(row, currency, officialQuotedPrices) {
+function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") {
   const relayLines = row.quotedPrices ? dashboardPriceLines(row.quotedPrices, row, false).filter(([, value]) => value !== null && value !== undefined) : [];
   const officialSource = officialQuotedPrices || row.officialPrices || null;
   const officialBlocked = row.stationCategory === "public";
@@ -269,7 +269,7 @@ function priceGridMarkup(row, currency, officialQuotedPrices) {
     return `<div class="price-grid-row${primary}"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${cellMarkup(entry.relay, relayFormat)}</div>`;
   }).join("");
   const notes = [officialNote, relayNote].filter(Boolean).map(note => `<span class="price-grid-note">${note}</span>`).join("");
-  return `<div class="price-grid">${bodyRows}</div>${notes ? `<div class="price-grid-notes">${notes}</div>` : ""}`;
+  return `<div class="price-grid">${bodyRows}</div>${notes ? `<div class="price-grid-notes">${notes}</div>` : ""}${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
 }
 
 
@@ -353,18 +353,113 @@ function closeModelMatchDetails(except = null) {
 }
 
 
-function closeMonthlyCostDetails(except = null) {
-  for (const details of document.querySelectorAll(".monthly-cost-details[open]")) {
-    if (details === except) continue;
-    details.open = false;
-    delete details.dataset.hoverOpen;
+// 月成本排名浮层：固定定位挂在 body 层的浮层里，鼠标移进浮层滚动列表不会把它关掉。
+const monthlyCostPanelHome = new WeakMap();
+let monthlyCostPanelState = null;
+let monthlyCostOpenTimer = 0;
+let monthlyCostCloseTimer = 0;
+
+function monthlyCostLayer() {
+  let layer = document.getElementById("monthly-cost-layer");
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.id = "monthly-cost-layer";
+    layer.className = "floating-layer";
+    document.body.append(layer);
   }
+  return layer;
+}
+
+function monthlyCostPanelFor(trigger) {
+  const row = trigger?.closest("tr");
+  return row ? row.querySelector("[data-monthly-cost-panel]") : null;
+}
+
+function placeMonthlyCostPanel(trigger, panel) {
+  const rect = trigger.getBoundingClientRect();
+  const margin = 8;
+  const width = panel.offsetWidth || 430;
+  const height = panel.offsetHeight || 320;
+  const left = Math.min(Math.max(margin, rect.right - width), Math.max(margin, window.innerWidth - width - margin));
+  let top = rect.bottom + 8;
+  if (top + height > window.innerHeight - margin) {
+    const above = rect.top - height - 8;
+    top = above >= margin ? above : Math.max(margin, window.innerHeight - height - margin);
+  }
+  panel.style.left = `${Math.round(left)}px`;
+  panel.style.top = `${Math.round(top)}px`;
+}
+
+function openMonthlyCostPanel(trigger) {
+  clearTimeout(monthlyCostOpenTimer);
+  clearTimeout(monthlyCostCloseTimer);
+  monthlyCostOpenTimer = 0;
+  monthlyCostCloseTimer = 0;
+  if (!trigger?.isConnected) return;
+  const panel = monthlyCostPanelFor(trigger);
+  if (!panel) return;
+  if (monthlyCostPanelState?.panel === panel) {
+    placeMonthlyCostPanel(trigger, panel);
+    return;
+  }
+  closeMonthlyCostPanel();
+  if (!monthlyCostPanelHome.has(panel)) monthlyCostPanelHome.set(panel, panel.parentElement);
+  monthlyCostLayer().append(panel);
+  panel.hidden = false;
+  panel.dataset.floating = "true";
+  monthlyCostPanelState = { trigger, panel };
+  trigger.setAttribute("aria-expanded", "true");
+  placeMonthlyCostPanel(trigger, panel);
+}
+
+function closeMonthlyCostPanel() {
+  clearTimeout(monthlyCostOpenTimer);
+  clearTimeout(monthlyCostCloseTimer);
+  monthlyCostOpenTimer = 0;
+  monthlyCostCloseTimer = 0;
+  const current = monthlyCostPanelState;
+  if (!current) return;
+  monthlyCostPanelState = null;
+  current.panel.hidden = true;
+  delete current.panel.dataset.floating;
+  current.panel.style.left = "";
+  current.panel.style.top = "";
+  const home = monthlyCostPanelHome.get(current.panel);
+  if (home?.isConnected) home.append(current.panel);
+  current.trigger.setAttribute("aria-expanded", "false");
+}
+
+function scheduleMonthlyCostOpen(trigger) {
+  clearTimeout(monthlyCostCloseTimer);
+  monthlyCostCloseTimer = 0;
+  if (monthlyCostPanelState?.trigger === trigger) return;
+  clearTimeout(monthlyCostOpenTimer);
+  monthlyCostOpenTimer = setTimeout(() => openMonthlyCostPanel(trigger), 110);
+}
+
+function scheduleMonthlyCostClose() {
+  clearTimeout(monthlyCostOpenTimer);
+  monthlyCostOpenTimer = 0;
+  clearTimeout(monthlyCostCloseTimer);
+  monthlyCostCloseTimer = setTimeout(closeMonthlyCostPanel, 160);
+}
+
+function repositionMonthlyCostPanel() {
+  const current = monthlyCostPanelState;
+  if (!current) return;
+  const rect = current.trigger.getBoundingClientRect();
+  if (!current.trigger.isConnected || !current.panel.isConnected || rect.bottom < 0 || rect.top > window.innerHeight) {
+    closeMonthlyCostPanel();
+    return;
+  }
+  placeMonthlyCostPanel(current.trigger, current.panel);
 }
 
 function modelIconMarkup(row) {
   return providerIconMarkup([row.provider, row.canonicalModel, row.modelName, row.displayName], { size: 15 });
 }
 function renderRows() {
+  closeMonthlyCostPanel();
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
   const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
@@ -391,16 +486,15 @@ function renderRows() {
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
     const monthlyCostCurrency = row.costCurrency || currency;
     const officialQuotedPrices = row.officialQuotedPrices || null;
+    const monthlyRanking = monthlyCostRankingFor(row, monthlyCostRankings);
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
     const officialNote = !isPublic ? modelMatchMarkup(row, currency) : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
       <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}">${siteIconMarkup(station.pluginId, row.stationName, { size: 16 })}<span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
-      <td colspan="3" data-label="单价 / 每 M tokens" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceGridMarkup(row, currency, officialQuotedPrices)}</td>
-      <td data-label="月成本" class="monthly-cost-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}><div class="monthly-cost-content">${monthlyCostSummaryMarkup(row, currency)}${monthlyCostDetailsMarkup(row, currency, monthlyCostRankingFor(row, monthlyCostRankings))}</div></td>
-      <td data-label="价差" class="delta-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}><span class="delta-tag ${deltaClass}">${deltaLabel}</span></td>
-      <td data-label="混合单价" class="blended-cell paid-only-column"${isPublic ? " hidden" : ""}>${Number.isFinite(row.blendedUnitPrice) ? `<div class="cost-cell blended-cost"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}><strong>${formatPrice(row.blendedUnitPrice, monthlyCostCurrency, 4)}<small>/M</small></strong></div>` : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`}</td>
+      <td colspan="3" data-label="单价 / 每 M tokens" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceGridMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking))}</td>
+      <td data-label="月成本 · 混合单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, monthlyRanking, deltaClass, deltaLabel)}</td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");
@@ -414,23 +508,46 @@ function renderRows() {
 }
 
 // 条长只做同模型月成本相对比较，排名来自完整筛选结果。
-function cellChartMarkup({ width, kind = "is-monthly-cost", title }) {
+function cellChartMarkup({ width, kind = "is-monthly-cost", title, trigger = false }) {
   const safeWidth = Number.isFinite(width) ? Math.max(0, Math.min(100, width)) : 0;
-  return `<span class="cell-chart ${kind}" role="img" aria-label="${escapeHtml(title)}"><span class="chart-track" title="${escapeHtml(title)}"><span class="chart-bar" style="width:${safeWidth.toFixed(2)}%"></span></span></span>`;
+  const bar = `<span class="chart-bar" style="width:${safeWidth.toFixed(2)}%"></span>`;
+  if (trigger) {
+    return `<span class="cell-chart ${kind}" data-monthly-cost-trigger role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="${escapeHtml(title)}"><span class="chart-track">${bar}</span></span>`;
+  }
+  return `<span class="cell-chart ${kind}" role="img" aria-label="${escapeHtml(title)}"><span class="chart-track" title="${escapeHtml(title)}">${bar}</span></span>`;
 }
 
-function monthlyCostSummaryMarkup(row, currency) {
-  return `<div class="cost-cell"><strong>${formatPrice(row.monthlyCost, row.costCurrency || currency)}</strong></div>`;
+// 月成本和混合单价合并成一格：上面是月成本与同模型名次，下面是价差和混合单价。
+function costCombinedMarkup(row, currency, ranking, deltaClass, deltaLabel) {
+  const blended = Number.isFinite(row.blendedUnitPrice)
+    ? `<span class="blended-cost"${row.blendedMix ? ` title="按 ${mixLabel(row.blendedMix)} 混合"` : ""}>${formatPrice(row.blendedUnitPrice, row.costCurrency || currency, 4)}<small>/M</small></span>`
+    : `<span class="price-empty">${row.stationCategory === "public" ? "仅公益站比较" : "无混合价"}</span>`;
+  return `<div class="cost-combined"><div class="cost-combined-main">${monthlyCostSummaryMarkup(row, currency, ranking)}<span class="delta-tag ${deltaClass}">${deltaLabel}</span></div><span class="blended-line"><span class="blended-label">混合</span>${blended}</span>${monthlyCostPanelMarkup(row, currency, ranking)}</div>`;
 }
 
-function monthlyCostDetailsMarkup(row, currency, ranking) {
+function monthlyCostSummaryMarkup(row, currency, ranking) {
+  const { rank, total, top } = ranking;
+  const amount = formatPrice(row.monthlyCost, row.costCurrency || currency);
+  const ariaLabel = rank
+    ? `月成本 ${amount}，同模型第 ${rank} / ${total} 名，查看月成本最低的前 ${top.length} 条报价`
+    : `月成本 ${amount}，暂无同模型排名`;
+  return `<strong class="cost-amount" data-monthly-cost-trigger role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="${escapeHtml(ariaLabel)}">${amount}</strong>`;
+}
+// 长条只做同模型月成本相对比较，放在单价单元格底部；名次和价差仍在月成本列。
+function monthlyCostRankTitle(row, currency, { rank, total, baseline }) {
+  return rank
+    ? `同模型第 ${rank} / ${total} 名，月成本 ${formatPrice(row.monthlyCost, row.costCurrency || currency)}；柱长按组内最高月成本 ${formatPrice(baseline, row.costCurrency || currency)} 归一`
+    : "月成本不可用，无法参与同模型排名";
+}
+
+function monthlyCostChartMarkup(row, currency, ranking) {
+  const width = ranking.rank ? monthlyCostBarWidth(row.monthlyCost, ranking.baseline) : null;
+  return cellChartMarkup({ width, title: monthlyCostRankTitle(row, currency, ranking), trigger: true });
+}
+
+// 排名浮层只在悬停或点击月成本、长条时出现，表格里不再常驻名次。
+function monthlyCostPanelMarkup(row, currency, ranking) {
   const { rank, total, baseline, top } = ranking;
-  const width = rank ? monthlyCostBarWidth(row.monthlyCost, baseline) : null;
-  const title = !rank
-    ? "月成本不可用，无法参与同模型排名"
-    : `同模型第 ${rank} / ${total} 名，月成本 ${formatPrice(row.monthlyCost, row.costCurrency || currency)}；柱长按组内最高月成本 ${formatPrice(baseline, row.costCurrency || currency)} 归一`;
-  const chart = cellChartMarkup({ width, title });
-  const rankLabel = rank ? `#${rank}<small> / ${total}</small>` : "—";
   const items = top.map(entry => {
     const entryRow = entry.row;
     const entryCurrency = entryRow.costCurrency || currency;
@@ -438,8 +555,7 @@ function monthlyCostDetailsMarkup(row, currency, ranking) {
     const entryWidth = monthlyCostBarWidth(entry.monthlyCost, baseline) ?? 0;
     return `<li class="monthly-cost-ranking-item${entryRow === row ? " is-current" : ""}"><div class="monthly-cost-ranking-meta"><span class="monthly-cost-ranking-position">#${entry.rank}</span><span class="monthly-cost-ranking-station" title="${escapeHtml(`${entryRow.stationName} · ${entryRow.groupName || "未分组"}`)}">${escapeHtml(entryRow.stationName)}</span><strong class="monthly-cost-ranking-cost">${formatPrice(entry.monthlyCost, entryCurrency)}</strong></div><span class="monthly-cost-ranking-group">${escapeHtml(entryRow.groupName || "未分组")}</span>${cellChartMarkup({ width: entryWidth, title: entryTitle })}</li>`;
   }).join("");
-  const ariaLabel = rank ? `同模型月成本第 ${rank} / ${total} 名，查看最低的前 ${top.length} 条报价` : "月成本不可用，查看同模型排名";
-  return `<details class="monthly-cost-details"><summary class="monthly-cost-summary" aria-label="${escapeHtml(ariaLabel)}" title="${escapeHtml(`${title}；悬停或点击查看同模型月成本最低的前 ${top.length} 条报价`)}"><span class="monthly-cost-rank" aria-hidden="true">${rankLabel}</span>${chart}</summary><div class="monthly-cost-popover" aria-label="同模型月成本排名"><div class="monthly-cost-popover-heading"><strong>月成本最低前 ${top.length} 条</strong><span>当前第 ${rank || "—"} / ${total} 名</span></div><ol class="monthly-cost-ranking-list">${items || '<li class="monthly-cost-ranking-empty">暂无可排名报价</li>'}</ol></div></details>`;
+  return `<div class="monthly-cost-popover" data-monthly-cost-panel role="group" aria-label="同模型月成本排名" hidden><div class="monthly-cost-popover-heading"><strong>月成本最低前 ${top.length} 条</strong><span>当前第 ${rank || "—"} / ${total} 名</span></div><ol class="monthly-cost-ranking-list">${items || '<li class="monthly-cost-ranking-empty">暂无可排名报价</li>'}</ol></div>`;
 }
 
 
@@ -644,14 +760,13 @@ document.addEventListener("input", event => {
   if (input) filterFacetOptions(input.dataset.facetSearch);
 });
 document.addEventListener("mouseover", event => {
-  const summary = event.target.closest(".monthly-cost-summary, .model-match-details > .confidence-tag");
+  const summary = event.target.closest(".model-match-details > .confidence-tag");
   if (!summary) return;
   const details = summary.closest("details");
   if (!details) return;
   if (event.relatedTarget && details.contains(event.relatedTarget)) return;
   // 未展开的 details 不渲染子内容，悬停必须由 JS 打开，CSS :hover 起不到作用。
-  if (details.classList.contains("model-match-details")) closeModelMatchDetails(details);
-  else closeMonthlyCostDetails(details);
+  closeModelMatchDetails(details);
   if (!details.open) {
     details.open = true;
     details.dataset.hoverOpen = "true";
@@ -666,24 +781,60 @@ document.addEventListener("click", event => {
     matchDetails.open = true;
     delete matchDetails.dataset.hoverOpen;
   }
-  const summary = event.target.closest(".monthly-cost-summary");
-  const details = summary?.parentElement;
-  if (details?.dataset.hoverOpen === "true") {
-    // 悬停已经展开时，点击应固定当前展开态，不能被 summary 默认行为马上关掉。
-    event.preventDefault();
-    details.open = true;
-    delete details.dataset.hoverOpen;
-  }
-  closeMonthlyCostDetails(event.target.closest(".monthly-cost-details"));
 });
 document.addEventListener("mouseout", event => {
-  for (const details of [event.target.closest(".model-match-details"), event.target.closest(".monthly-cost-details")]) {
-    if (!details?.open) continue;
-    if (event.relatedTarget && details.contains(event.relatedTarget)) continue;
-    details.open = false;
-    delete details.dataset.hoverOpen;
+  const details = event.target.closest(".model-match-details");
+  if (!details?.open) return;
+  if (event.relatedTarget && details.contains(event.relatedTarget)) return;
+  details.open = false;
+  delete details.dataset.hoverOpen;
+});
+const MONTHLY_COST_TRIGGER = "[data-monthly-cost-trigger]";
+const MONTHLY_COST_PANEL = "[data-monthly-cost-panel]";
+document.addEventListener("pointerover", event => {
+  const target = event.target;
+  if (!target?.closest) return;
+  const trigger = target.closest(MONTHLY_COST_TRIGGER);
+  if (trigger) {
+    scheduleMonthlyCostOpen(trigger);
+    return;
+  }
+  if (target.closest(MONTHLY_COST_PANEL)) {
+    clearTimeout(monthlyCostCloseTimer);
+    monthlyCostCloseTimer = 0;
   }
 });
+document.addEventListener("pointerout", event => {
+  const target = event.target;
+  if (!target?.closest) return;
+  if (!target.closest(`${MONTHLY_COST_TRIGGER}, ${MONTHLY_COST_PANEL}`)) return;
+  const next = event.relatedTarget;
+  if (next?.closest && next.closest(`${MONTHLY_COST_TRIGGER}, ${MONTHLY_COST_PANEL}`)) return;
+  scheduleMonthlyCostClose();
+});
+document.addEventListener("click", event => {
+  const target = event.target;
+  if (!target?.closest) return;
+  const trigger = target.closest(MONTHLY_COST_TRIGGER);
+  if (trigger) {
+    event.preventDefault();
+    openMonthlyCostPanel(trigger);
+    return;
+  }
+  if (!target.closest(MONTHLY_COST_PANEL)) closeMonthlyCostPanel();
+});
+document.addEventListener("keydown", event => {
+  const target = event.target;
+  const trigger = target?.closest ? target.closest(MONTHLY_COST_TRIGGER) : null;
+  if (trigger && (event.key === "Enter" || event.key === " ")) {
+    event.preventDefault();
+    openMonthlyCostPanel(trigger);
+    return;
+  }
+  if (event.key === "Escape") closeMonthlyCostPanel();
+});
+document.addEventListener("scroll", repositionMonthlyCostPanel, true);
+window.addEventListener("resize", repositionMonthlyCostPanel);
 document.addEventListener("click", event => {
   const activeMenu = event.target.closest(".facet-menu");
   for (const menu of document.querySelectorAll(".facet-menu[open]")) {

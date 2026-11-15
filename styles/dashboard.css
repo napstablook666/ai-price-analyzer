@@ -2,9 +2,9 @@
 .dashboard-topbar { position: relative; flex: 0 0 auto; min-height: 60px; padding-block: 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .dashboard-topbar .top-actions { flex-wrap: wrap; }
 .page-shell { display: flex; flex-direction: column; gap: 14px; width: min(1760px, 100%); flex: 1; height: auto; min-height: 0; margin: 0 auto; padding: 18px 24px 20px; overflow: hidden; }
-.dashboard-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex: 0 0 auto; }
-.dashboard-heading h1 { margin: 0; color: var(--text); font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -.025em; }
-.dashboard-heading .lead { margin: 5px 0 0; color: var(--text-2); font-size: 12px; }
+.summary-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
+.summary-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.summary-strip:empty { display: none; }
 .comparison-mode { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
 .comparison-mode-button { min-height: 32px; padding: 0 14px; border-radius: 6px; color: var(--text-2); background: transparent; font-size: 12px; font-weight: 600; }
 .comparison-mode-button.is-active { color: var(--accent); background: var(--surface); box-shadow: 0 1px 3px #0f172a12; }
@@ -24,15 +24,12 @@
 .preflight-reason { color: var(--text-2); }
 .preflight-needsLogin .preflight-label, .preflight-uncertain .preflight-label { color: var(--warn); }
 .preflight-ready .preflight-label, .preflight-noLoginRequired .preflight-label { color: var(--ok); }
-.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; flex: 0 0 auto; }
-.summary-grid:empty { display: none; }
-.summary-card { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: 96px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow); }
-.summary-card.is-primary { border-color: #bfdbfe; background: var(--accent-soft); }
-:root[data-theme="dark"] .summary-card.is-primary { border-color: #284a73; background: #1d2939; }
-.summary-label { color: var(--text-2); font-size: 12px; font-weight: 600; }
-.summary-value { margin-top: 5px; color: var(--text); font-size: 30px; font-weight: 700; line-height: 1.15; letter-spacing: -.025em; font-variant-numeric: tabular-nums; }
-.summary-card.is-primary .summary-value { color: var(--accent); }
-.summary-note { min-width: 0; margin-top: 5px; color: var(--text-3); font-size: 11px; line-height: 1.35; }
+.summary-item { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; padding: 2px 9px; border-radius: var(--radius-pill); background: var(--surface-2); }
+.summary-item.is-primary { background: var(--accent-soft); box-shadow: inset 0 0 0 1px #bfdbfe; }
+:root[data-theme="dark"] .summary-item.is-primary { box-shadow: inset 0 0 0 1px #284a73; }
+.summary-label { color: var(--text-2); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.summary-value { color: var(--text); font-size: 13px; font-weight: 700; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.summary-item.is-primary .summary-value { color: var(--accent); }
 .toolbar-panel { flex: 0 0 auto; overflow: visible; }
 .toolbar-panel > .panel-heading { padding-inline: 16px; }
 .toolbar-main { display: grid; gap: 0; padding: 0 16px; }
@@ -112,35 +109,27 @@
 .comparison-is-public .readout-sep { display: none; }
 .table-wrap { position: relative; flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .comparison-table { width: 100%; min-width: 1040px; table-layout: fixed; border-collapse: separate; border-spacing: 0; color: var(--text-2); font-size: 12.5px; }
-.comparison-table th, .comparison-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.comparison-table th, .comparison-table td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 .comparison-table .is-section-start { border-left: 1px solid var(--line-strong); }
 .comparison-table th:first-child, .comparison-table td:first-child { position: sticky; left: 0; }
 /* 固定列宽让费用项、官方、中转、月成本在每一行保持同一条竖线。 */
-.comparison-table colgroup col:nth-child(1) { width: 18%; }
-.comparison-table colgroup col:nth-child(2) { width: 12%; }
+.comparison-table colgroup col:nth-child(1) { width: 24%; }
+.comparison-table colgroup col:nth-child(2) { width: 20%; }
 .comparison-table colgroup col:nth-child(3) { width: 9%; }
-.comparison-table colgroup col:nth-child(4) { width: 10%; }
-.comparison-table colgroup col:nth-child(5) { width: 10%; }
-.comparison-table colgroup col:nth-child(6) { width: 16%; }
-.comparison-table colgroup col:nth-child(7) { width: 11%; }
-.comparison-table colgroup col:nth-child(8) { width: 14%; }
+.comparison-table colgroup col:nth-child(4) { width: 13%; }
+.comparison-table colgroup col:nth-child(5) { width: 13%; }
+.comparison-table colgroup col:nth-child(6) { width: 21%; }
 .comparison-table.is-public colgroup col:nth-child(1) { width: 42%; }
 .comparison-table.is-public colgroup col:nth-child(2) { width: 24%; }
-.comparison-table.is-public colgroup col:nth-child(9) { width: 34%; }
+.comparison-table.is-public colgroup col:nth-child(7) { width: 34%; }
 .comparison-table thead th { position: sticky; top: 0; z-index: 4; height: 40px; padding-block: 9px; color: var(--text-2); background: var(--surface); font-size: 11px; font-weight: 700; letter-spacing: .015em; white-space: nowrap; border-bottom: 1px solid var(--line); }
-.comparison-table .thead-subcolumns th { top: 40px; z-index: 3; height: 32px; padding-block: 6px; color: var(--text-3); background: var(--surface-2); font-size: 10px; font-weight: 600; border-bottom: 1px solid var(--line-strong); }
-.comparison-table .thead-groups th:first-child { z-index: 6; }
+.comparison-table .thead-columns th:first-child { z-index: 6; }
 .comparison-table tbody tr:last-child td { border-bottom: 0; }
 .comparison-table tbody td { background: var(--surface); transition: background-color .12s ease; }
 .comparison-table tbody tr.model-band-start td { border-top: 2px solid var(--line-strong); }
 .comparison-table tbody tr:hover td { background: var(--accent-soft); }
 .comparison-table tbody td:first-child { z-index: 2; }
-.comparison-table .th-unit { color: var(--text-3); font-size: 9px; font-weight: 500; }
 .comparison-table .price-key-heading { border-left: 1px solid var(--line-strong); }
-.comparison-table .price-group-heading { white-space: normal; }
-.comparison-table .monthly-cost-heading, .comparison-table td.monthly-cost-cell,
-.comparison-table th[data-sort-keys="diffPercent"], .comparison-table td.delta-cell,
-.comparison-table th[data-sort-keys="blendedUnitPrice"], .comparison-table td.blended-cell { text-align: right; }
 .comparison-table [hidden] { display: none !important; }
 .model-cell { display: grid; gap: 4px; min-width: 0; }
 .model-head { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
@@ -157,8 +146,8 @@
 .confidence-tag { padding: 0 5px; border-radius: var(--radius-pill); color: var(--text-3); background: var(--surface-2); font-size: 9.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .provider-tag, .group-tag, .status-tag, .delta-tag { display: inline-flex; align-items: center; gap: 3px; width: fit-content; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 10px; line-height: 1.35; }
 .station-cell { display: grid; justify-items: start; gap: 6px; min-width: 0; }
-.station-filter-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 0; color: var(--text); background: transparent; font-size: 12px; font-weight: 650; text-align: left; }
-.station-filter-link > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.station-filter-link { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; padding: 0; color: var(--text); background: transparent; font-size: 12px; font-weight: 650; text-align: left; }
+.station-filter-link > span:last-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .station-meta { color: var(--text-3); font-size: 10px; line-height: 1.4; overflow-wrap: anywhere; }
 .price-cell { vertical-align: top; }
 .price-grid { display: grid; grid-template-columns: 64px repeat(2, minmax(64px, 1fr)); gap: 5px 10px; align-items: baseline; width: 100%; font-size: 11px; line-height: 1.45; }
@@ -171,22 +160,29 @@
 .price-value-missing { color: var(--text-3) !important; font-weight: 400 !important; }
 .price-value.is-estimated { color: var(--text-3); }
 .price-grid-notes { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; color: var(--text-3); font-size: 10px; }
+.price-chart { margin-top: 8px; }
+.price-chart .cell-chart { width: 100%; max-width: none; min-width: 0; }
 .price-empty { color: var(--text-3); font-size: 11px; }
-.monthly-cost-content { display: grid; justify-items: end; gap: 9px; min-width: 0; }
-.monthly-cost-content > .cost-cell { width: 100%; }
 .cost-cell { display: grid; gap: 3px; }
 .cost-cell > strong { color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .cost-cell small, .cost-meta { color: var(--text-3); font-size: 10px; font-weight: 500; }
-.delta-cell { vertical-align: middle; }
+.delta-tag { white-space: nowrap; }
 .delta-tag.delta-excellent { color: var(--cat-excellent); border-color: var(--ok-line); background: var(--ok-soft); }
 .delta-tag.delta-good { color: var(--cat-good); border-color: color-mix(in srgb, var(--cat-good) 28%, var(--line)); background: color-mix(in srgb, var(--cat-good) 8%, var(--surface)); }
 .delta-tag.delta-fair { color: var(--cat-fair); border-color: var(--warn-line); background: var(--warn-soft); }
 .delta-tag.delta-bad { color: var(--cat-bad); border-color: color-mix(in srgb, var(--cat-bad) 30%, var(--line)); background: var(--danger-soft); }
 .delta-tag.neutral { color: var(--text-3); background: var(--surface-2); }
 .comparison-table .delta-tag { padding: 4px 8px; border-radius: var(--radius-pill); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.blended-cell .cost-cell { justify-items: end; }
-.blended-cost strong { color: var(--accent); }
-.blended-cost small { margin-left: 2px; }
+/* 月成本 + 混合单价合并列：金额与名次在上，价差与混合单价在下 */
+.cost-combined { display: grid; gap: 4px; min-width: 0; }
+.cost-combined-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cost-amount { color: var(--text); font-size: 15px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; border-radius: 3px; }
+.cost-amount:hover { color: var(--accent); }
+.cost-amount:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.blended-line { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
+.blended-label { color: var(--text-3); font-size: 9.5px; }
+.blended-cost { color: var(--accent); font-size: 11.5px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.blended-cost small { margin-left: 2px; color: var(--accent); font-size: 9px; font-weight: 600; }
 .recommendation-cell { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; min-width: 0; }
 .status-cluster { display: flex; flex-wrap: wrap; gap: 3px; }
 .status-tag .icon { width: 10px; height: 10px; }
@@ -268,8 +264,8 @@
   .comparison-panel { flex: 0 0 auto; height: min(62dvh, 600px); min-height: 360px; }
   .dashboard-topbar { align-items: flex-start; }
   .dashboard-topbar .top-actions { gap: 5px; }
-  .dashboard-heading { align-items: flex-start; }
-  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-bar { align-items: flex-start; flex-wrap: wrap; }
+  .summary-strip { gap: 4px; }
   .search-field { flex: 1 1 220px; max-width: none; }
   .comparison-table { min-width: 0; }
   .comparison-table thead { display: none; }
@@ -278,7 +274,7 @@
   .comparison-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 9px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; }
   .comparison-table td { display: grid; gap: 4px; min-width: 0; padding: 0; border: 0; }
   .comparison-table td::before { content: attr(data-label); color: var(--text-3); font-size: 9px; }
-  .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="状态"], .comparison-table td.price-cell, .comparison-table td.monthly-cost-cell { grid-column: 1 / -1; }
+  .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="状态"], .comparison-table td.price-cell, .comparison-table td.cost-combined-cell { grid-column: 1 / -1; }
   .comparison-table th:first-child, .comparison-table td:first-child { position: static; }
   .comparison-table tbody td.cost-cell { display: grid; }
   .comparison-table tbody tr:hover td { background: transparent; }
@@ -292,12 +288,7 @@
   .dashboard-topbar .refresh-station-body, .dashboard-topbar .checkin-body { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; max-height: calc(100dvh - 76px); overflow-y: auto; }
   .dashboard-topbar .button { min-height: 44px; }
   .page-shell { height: auto; }
-  .dashboard-heading { display: grid; gap: 8px; }
-  .dashboard-heading h1 { font-size: 20px; }
-  .dashboard-heading .lead { display: none; }
   .comparison-mode-button { min-height: 44px; }
-  .summary-card { min-height: 88px; padding: 12px; }
-  .summary-value { font-size: 24px; }
   .toolbar-main, .toolbar-options { align-items: stretch; }
   .search-field { flex-basis: 100%; max-width: none; height: 44px; }
   .facet-menu { flex: 1 1 100%; }
@@ -327,9 +318,8 @@
 .cell-chart { display: block; width: 100%; max-width: 180px; height: 5px; min-width: 36px; position: relative; }
 .chart-track { display: block; position: relative; height: 100%; overflow: hidden; background: var(--surface-2); border: 1px solid var(--line); border-radius: 99px; }
 .chart-bar { position: absolute; inset: 0 auto 0 0; min-width: 2px; border-radius: inherit; background: var(--text-3); transition: width .2s ease; }
-.cell-chart.is-monthly-cost { flex: 1 1 180px; max-width: none; min-width: 100px; height: 6px; }
+.cell-chart.is-monthly-cost { max-width: none; min-width: 0; height: 6px; }
 .cell-chart.is-monthly-cost .chart-bar { background: var(--accent); }
-.price-group-heading .th-label { font-weight: 700; }
 /* 列头小图标：悬停或点击解释价格单位（中转币），表格只留数值 */
 .unit-hint { display: inline-block; position: relative; margin-left: 5px; vertical-align: -0.1em; font-weight: 400; }
 .unit-hint-trigger { display: inline-grid; place-items: center; width: 15px; height: 15px; color: var(--text-3); border-radius: 50%; cursor: pointer; list-style: none; }
@@ -343,17 +333,16 @@
 /* 图标与浮层之间有 7px 间隙，用透明桥接避免鼠标下移时浮层闪没 */
 .unit-hint-popover::before { content: ""; position: absolute; top: -7px; right: 0; left: 0; height: 7px; }
 .unit-hint:hover > .unit-hint-popover, .unit-hint:focus-within > .unit-hint-popover, .unit-hint[open] > .unit-hint-popover { display: grid; }
-.monthly-cost-details { position: relative; width: 100%; min-width: 0; }
-.monthly-cost-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; cursor: pointer; outline-offset: 3px; }
-.monthly-cost-summary::-webkit-details-marker { display: none; }
-.monthly-cost-summary::marker { content: ""; }
-.monthly-cost-rank { min-width: 48px; color: var(--text-2); font: 600 10px var(--font-mono); white-space: nowrap; }
-.monthly-cost-rank small { color: var(--text-3); font-size: 9px; font-weight: 400; }
-.monthly-cost-summary .cell-chart { max-width: none; flex: none; width: 100%; }
-.monthly-cost-popover { position: absolute; z-index: 35; left: 0; top: calc(100% + 8px); width: min(430px, 80vw); padding: 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-card); box-shadow: var(--shadow-pop); }
+/* 月成本排名浮层挂在 body 层，鼠标移进浮层滚动列表不会把它关掉 */
+.floating-layer { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.floating-layer > * { pointer-events: auto; }
+.monthly-cost-popover[hidden] { display: none; }
+.monthly-cost-popover { position: fixed; z-index: 65; width: min(430px, calc(100vw - 16px)); max-height: min(72vh, 480px); overflow: auto; padding: 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-card); box-shadow: var(--shadow-pop); }
+.cell-chart.is-monthly-cost[data-monthly-cost-trigger] { cursor: pointer; }
+.cell-chart.is-monthly-cost[data-monthly-cost-trigger]:hover .chart-bar { opacity: 0.82; }
 .monthly-cost-popover-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--text-2); font-size: 10px; }
 .monthly-cost-popover-heading strong { color: var(--text); font-size: 11px; }
-.monthly-cost-ranking-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 7px; max-height: 360px; overflow: auto; }
+.monthly-cost-ranking-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 7px; }
 .monthly-cost-ranking-item { display: grid; gap: 4px; padding: 7px 8px; background: var(--surface-2); border-radius: 6px; }
 .monthly-cost-ranking-item.is-current { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .monthly-cost-ranking-meta { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; }
@@ -363,10 +352,6 @@
 .monthly-cost-ranking-group { margin-left: 40px; overflow: hidden; color: var(--text-3); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .monthly-cost-ranking-list .cell-chart { max-width: none; flex: none; }
 .monthly-cost-ranking-empty { padding: 8px 0; color: var(--text-3); font-size: 11px; }
-.monthly-cost-details:hover:not([open]) > .monthly-cost-popover,
-.monthly-cost-details:focus-within > .monthly-cost-popover,
-.monthly-cost-details[open] > .monthly-cost-popover { display: block; }
-.monthly-cost-details:not(:hover):not(:focus-within):not([open]) > .monthly-cost-popover { display: none; }
 /* 模型匹配详情：表格里只保留置信度，其余信息悬停或点击展开 */
 .model-match-details { display: inline-block; position: relative; }
 .model-match-details > summary { cursor: pointer; list-style: none; }
@@ -389,5 +374,5 @@
 
 /* 放在桌面基础规则之后，避免移动端单列与浮层宽度被覆盖。 */
 @media (max-width: 760px) {
-  .monthly-cost-popover { left: auto; right: 0; width: min(360px, 80vw); max-height: 60dvh; overflow-y: auto; }
+  .monthly-cost-popover { width: min(360px, calc(100vw - 16px)); max-height: 60dvh; }
 }

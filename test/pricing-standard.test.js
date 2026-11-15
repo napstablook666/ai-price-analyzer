@@ -105,7 +105,7 @@ test("keeps the dashboard and options pages on the blended price口径", () => {
   const dashboardScript = fs.readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const options = fs.readFileSync(new URL("../options.html", import.meta.url), "utf8");
   assert.match(dashboard, /<option value="blendedUnitPrice"[^>]*selected>混合单价<\/option>/);
-  assert.match(dashboard, /data-sort-keys="diffPercent blendedUnitPrice"/);
+  assert.match(dashboard, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent"/);
   assert.doesNotMatch(dashboard, /recommendationScore/);
   assert.doesNotMatch(dashboardScript, /recommendationScore/);
   assert.match(options, /id="evidence-threshold"/);
