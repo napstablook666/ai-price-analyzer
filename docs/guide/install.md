@@ -7,9 +7,9 @@
 | 项目 | 要求 |
 | --- | --- |
 | 浏览器 | Chrome / Edge 等 Chromium 内核浏览器，支持 MV3 |
-| 扩展版本 | `0.3.0`（见 `manifest.json`） |
+| 扩展版本 | `0.4.0`（见 `manifest.json`） |
 | Node.js | 仅开发与测试需要，Node 20 及以上 |
-| 权限 | `storage`、`scripting`、`tabs`、`alarms`，主机权限 `<all_urls>` |
+| 权限 | `storage`、`scripting`、`tabs`、`alarms`、`cookies`，主机权限 `<all_urls>` |
 
 `<all_urls>` 是故意的：站点域名由插件目录决定，加站不需要重新申请权限。扩展只在你添加过的站点上注入页面脚本，其余页面不读内容。
 
@@ -44,6 +44,7 @@ node scripts/plugin-build.mjs      # 生成 src/site-plugins/*
 
 - Release 安装：下载新包解压覆盖旧目录，然后在 `chrome://extensions` 里点扩展卡片上的刷新按钮。
 - 源码安装：`git pull` 后同样点刷新。改了插件源码的，先跑 `node scripts/plugin-build.mjs`。
+- 忘了看版本：设置页「关于 → 版本与更新」里有当前版本、检查更新按钮和最近一次检查状态，默认每 6 小时自动检查一次。
 
 扩展版本、插件生成物、`package.json` 三处版本号要保持一致，`npm run version:check` 会校验。
 

@@ -51,7 +51,7 @@ For plugin development, check the plugin repository out as a sibling `plugins/` 
 4. Save the station and choose **Refresh all** from the dashboard.
 5. Review collected models, reference prices, matching status, estimated monthly cost, and recommendations.
 
-The settings page also provides reference refresh, supported check-in settings, and JSON state import/export. Exported state excludes station secrets and API keys.
+The settings page also provides reference refresh, check-in with saved login state, and version/update checks under **About**.
 
 ## Documentation
 
@@ -98,7 +98,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the pull request checklist.
 
 ## Releases
 
-Releases are tag-driven. Keep the version in `package.json` and `manifest.json` synchronized, then push a tag such as `v0.3.0`. GitHub Actions publishes:
+Releases are tag-driven. Keep the version in `package.json` and `manifest.json` synchronized, then push a tag such as `v0.4.0`. GitHub Actions publishes:
 
 - `ai-relay-price-extension-v<version>.zip`: the loadable Chromium extension.
 - `ai-price-analyzer-v<version>-source.zip`: source files plus the plugin snapshot used for the build.

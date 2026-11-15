@@ -51,7 +51,7 @@ AI Price Analyzer 从配置的 AI 中转站采集模型价格，把不同站点�
 4. 保存站点后回到对比面板，点击“刷新全部”。
 5. 查看已采集模型、参考价格、匹配状态、估算成本和推荐结果。
 
-设置页面还提供参考价刷新、支持站点的签到设置，以及 JSON 状态导入导出。导出的状态不包含站点密钥或 API Key。
+设置页面还提供参考价刷新、签到与登录态管理，以及「关于」里的版本信息与更新检测。
 
 ## 文档
 
@@ -98,7 +98,7 @@ node canonical/build.mjs --offline
 
 ## 发布
 
-发布由 Git tag 触发。保持 `package.json` 与 `manifest.json` 的版本一致，然后推送类似 `v0.3.0` 的 tag。GitHub Actions 会发布：
+发布由 Git tag 触发。保持 `package.json` 与 `manifest.json` 的版本一致，然后推送类似 `v0.4.0` 的 tag。GitHub Actions 会发布：
 
 - `ai-relay-price-extension-v<version>.zip`：可直接加载的 Chromium 扩展。
 - `ai-price-analyzer-v<version>-source.zip`：构建所用的源码和插件快照。
