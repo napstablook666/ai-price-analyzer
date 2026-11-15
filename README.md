@@ -98,7 +98,7 @@ node canonical/build.mjs --offline
 
 ## 发布
 
-发布由 Git tag 触发。保持 `package.json` 与 `manifest.json` 的版本一致，然后推送类似 `v0.2.1` 的 tag。GitHub Actions 会发布：
+发布由 Git tag 触发。保持 `package.json` 与 `manifest.json` 的版本一致，然后推送类似 `v0.3.0` 的 tag。GitHub Actions 会发布：
 
 - `ai-relay-price-extension-v<version>.zip`：可直接加载的 Chromium 扩展。
 - `ai-price-analyzer-v<version>-source.zip`：构建所用的源码和插件快照。

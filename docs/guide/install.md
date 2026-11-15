@@ -7,7 +7,7 @@
 | 项目 | 要求 |
 | --- | --- |
 | 浏览器 | Chrome / Edge 等 Chromium 内核浏览器，支持 MV3 |
-| 扩展版本 | `0.2.1`（见 `manifest.json`） |
+| 扩展版本 | `0.3.0`（见 `manifest.json`） |
 | Node.js | 仅开发与测试需要，Node 20 及以上 |
 | 权限 | `storage`、`scripting`、`tabs`、`alarms`，主机权限 `<all_urls>` |
 

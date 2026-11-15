@@ -98,7 +98,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for the pull request checklist.
 
 ## Releases
 
-Releases are tag-driven. Keep the version in `package.json` and `manifest.json` synchronized, then push a tag such as `v0.2.1`. GitHub Actions publishes:
+Releases are tag-driven. Keep the version in `package.json` and `manifest.json` synchronized, then push a tag such as `v0.3.0`. GitHub Actions publishes:
 
 - `ai-relay-price-extension-v<version>.zip`: the loadable Chromium extension.
 - `ai-price-analyzer-v<version>-source.zip`: source files plus the plugin snapshot used for the build.

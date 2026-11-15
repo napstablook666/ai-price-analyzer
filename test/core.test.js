@@ -5252,7 +5252,8 @@ test("installing a registry plugin adds its addable stations to the workspace ri
     assert.equal(first.results[0].stations, 1);
     assert.equal(stationRows.length, 1);
     assert.equal(stationRows[0].pluginId, "true-sota");
-    assert.equal(first.workspace.registry.entries.find(item => item.id === "true-sota")?.installedVersion, "0.2.1");
+    const bundledVersion = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8")).version;
+    assert.equal(first.workspace.registry.entries.find(item => item.id === "true-sota")?.installedVersion, bundledVersion);
 
     const second = await installPlugins(["true-sota"]);
     assert.deepEqual(second.skipped, ["true-sota"]);
