@@ -4982,7 +4982,7 @@ test("plugin lists support select-all and shift range selection wired to bulk ac
   const html = readFileSync(new URL("../options.html", import.meta.url), "utf8");
 const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url), "utf8");
   assert.match(options, /function applyRangeSelection\(order, anchorId, currentId, checked, selection, isSelectable\)/);
-  assert.match(options, /state\.installedSelectable = new Set\(ordered\.filter\(plugin => plugin\.removable !== false\)/);
+  assert.match(options, /state\.installedSelectable = new Set\(plugins\.filter\(plugin => plugin\.removable !== false\)/);
   assert.match(options, /state\.registryOrder = visible\.map\(entry => String\(entry\.id\)\)/);
   assert.match(options, /applyRangeSelection\(state\.registryOrder, state\.registryAnchorId, id, check\.checked, state\.registrySelected, isSelectable\)/);
   assert.match(options, /applyRangeSelection\(state\.installedOrder, state\.installedAnchorId, id, check\.checked, state\.installedSelected, isSelectable\)/);
@@ -4991,6 +4991,9 @@ const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url)
   assert.match(html, /id="installed-select-all" type="checkbox"/);
   assert.match(html, /id="uninstall-selected-plugins"[^>]*disabled/);
   assert.match(html, /id="registry-select-all" type="checkbox"/);
+  assert.match(html, /id="plugin-installed-search" type="search"/);
+  assert.match(options, /function matchedInstalledPlugins\(plugins, orphans\)/);
+  assert.match(options, /\$\("#plugin-installed-search"\)\.addEventListener\("input", renderPluginInstalled\)/);
 });
 
 test("saves settings automatically instead of behind a global save button", () => {

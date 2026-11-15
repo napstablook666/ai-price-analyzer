@@ -161,7 +161,7 @@ function pluginDetailBlocks({ description, rows, note = "" }) {
 }
 
 // 一行放完：图标、名称、徽标、域名、站点数、操作，介绍收进展开区。
-function pluginRow(plugin, actions = "", { stations = true, selectable = false } = {}) {
+function pluginRow(plugin, actions = "", { stations, selectable = false } = {}) {
   const checked = selectable && state.installedSelected.has(String(plugin.id));
   const source = pluginSourceKey(plugin);
   const count = Number(plugin.stationCount) || 0;
@@ -193,7 +193,7 @@ function pluginRow(plugin, actions = "", { stations = true, selectable = false }
         ["站点数", count ? `${count} 个` : "未添加站点"]
       ]
     }) : ""}
-    ${stations ? pluginStations(plugin) : ""}
+    ${stations === false ? "" : pluginStations(plugin, Array.isArray(stations) ? stations : null)}
   </section>`;
 }
 
@@ -203,10 +203,10 @@ function pluginInstalledActions(plugin) {
   if (plugin.removable !== false) parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(plugin.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
   return parts.join("");
 }
-function pluginStations(plugin) {
-  const stations = state.stations.filter(station => station.pluginId === plugin.id);
-  if (!stations.length) return "";
-  return `<div class="stations-list plugin-stations">${stations.map(stationCard).join("")}</div>`;
+function pluginStations(plugin, stations = null) {
+  const list = stations || state.stations.filter(station => station.pluginId === plugin.id);
+  if (!list.length) return "";
+  return `<div class="stations-list plugin-stations">${list.map(stationCard).join("")}</div>`;
 }
 
 // 已安装列表把内置、仓库安装、本地开发三类合在一起，按来源分组；同 id 时本地盖过仓库。
@@ -228,28 +228,71 @@ function installedPluginEntries() {
   return [...merged.values()].map(plugin => ({ ...plugin, stationCount: counts.get(plugin.id) ?? extraCounts.get(plugin.id) ?? 0 }));
 }
 
+function installedQuery() {
+  return ($("#plugin-installed-search")?.value || "").trim().toLowerCase();
+}
+
+function pluginSearchText(plugin) {
+  return [plugin.name, plugin.id, plugin.description, ...(plugin.hosts || []), plugin.host]
+    .map(value => String(value || "")).join(" ").toLowerCase();
+}
+
+function stationSearchText(station) {
+  return [station.name, stationHostName(station.baseUrl)].map(value => String(value || "")).join(" ").toLowerCase();
+}
+
+// 已安装列表搜索：插件自身命中就保留它全部站点，只有站点命中就只留命中那几个站点。
+function matchedInstalledPlugins(plugins, orphans) {
+  const query = installedQuery();
+  if (!query) return { entries: plugins.map(plugin => ({ plugin, stations: null })), orphans };
+  const stationsOfPlugin = new Map();
+  for (const station of state.stations || []) {
+    if (!station.pluginId) continue;
+    if (!stationsOfPlugin.has(station.pluginId)) stationsOfPlugin.set(station.pluginId, []);
+    stationsOfPlugin.get(station.pluginId).push(station);
+  }
+  const entries = [];
+  for (const plugin of plugins) {
+    if (pluginSearchText(plugin).includes(query)) {
+      entries.push({ plugin, stations: null });
+      continue;
+    }
+    const stations = (stationsOfPlugin.get(plugin.id) || []).filter(station => stationSearchText(station).includes(query));
+    if (stations.length) entries.push({ plugin, stations });
+  }
+  return { entries, orphans: orphans.filter(station => stationSearchText(station).includes(query)) };
+}
+
 function renderPluginInstalled() {
   const list = $("#plugin-installed-list");
   if (!list) return;
   const plugins = installedPluginEntries();
   const knownIds = new Set(plugins.map(plugin => plugin.id));
-  const orphans = state.stations.filter(station => !station.pluginId || !knownIds.has(station.pluginId));
-  if (!plugins.length && !orphans.length) {
-state.installedOrder = [];
+  const allOrphans = state.stations.filter(station => !station.pluginId || !knownIds.has(station.pluginId));
+  if (!plugins.length && !allOrphans.length) {
+    state.installedOrder = [];
     state.installedSelectable = new Set();
     list.innerHTML = `<p class="plugin-empty">还没有可用插件。到「插件仓库」装一个，或点右上「添加站点」。</p>`;
     updateInstalledSelection();
     return;
   }
-const groups = new Map(PLUGIN_SOURCE_ORDER.map(key => [key, []]));
-  for (const plugin of plugins) groups.get(pluginSourceKey(plugin)).push(plugin);
+  const { entries, orphans } = matchedInstalledPlugins(plugins, allOrphans);
+  // 可选集合按全量插件算，搜索过滤不该悄悄丢掉已经勾上的选择。
+  state.installedSelectable = new Set(plugins.filter(plugin => plugin.removable !== false).map(plugin => String(plugin.id)));
+  if (!entries.length && !orphans.length) {
+    state.installedOrder = [];
+    list.innerHTML = `<p class="plugin-empty">没有匹配「${escapeHtml(installedQuery())}」的插件或站点。</p>`;
+    updateInstalledSelection();
+    return;
+  }
+  const groups = new Map(PLUGIN_SOURCE_ORDER.map(key => [key, []]));
+  for (const entry of entries) groups.get(pluginSourceKey(entry.plugin)).push(entry);
   // installedOrder 按渲染顺序记下可选条目，Shift 区间选择直接照这个顺序取。
   const ordered = PLUGIN_SOURCE_ORDER.filter(key => groups.get(key).length).flatMap(key => groups.get(key));
-  state.installedOrder = ordered.map(plugin => String(plugin.id));
-  state.installedSelectable = new Set(ordered.filter(plugin => plugin.removable !== false).map(plugin => String(plugin.id)));
+  state.installedOrder = ordered.map(entry => String(entry.plugin.id));
   list.innerHTML = PLUGIN_SOURCE_ORDER.filter(key => groups.get(key).length).map(key => `<section class="plugin-group">
     <div class="plugin-group-heading"><h4>${PLUGIN_GROUP_TITLES[key]}</h4><span>${groups.get(key).length}</span></div>
-    ${groups.get(key).map(plugin => pluginRow(plugin, pluginInstalledActions(plugin), { selectable: plugin.removable !== false })).join("")}
+    ${groups.get(key).map(entry => pluginRow(entry.plugin, pluginInstalledActions(entry.plugin), { stations: entry.stations, selectable: entry.plugin.removable !== false })).join("")}
   </section>`).join("") + (orphans.length ? `<section class="plugin-group">
     <div class="plugin-group-heading"><h4>未关联插件</h4><span>${orphans.length}</span></div>
     ${orphans.map(stationCard).join("")}
@@ -403,12 +446,14 @@ function updateInstalledSelection() {
     const label = button.querySelector("span:last-child");
     if (label) label.textContent = count ? `移除所选 ${count} 个` : "移除所选";
   }
+  const visible = state.installedOrder.filter(id => state.installedSelectable.has(id));
   const selectAll = $("#installed-select-all");
   if (selectAll) {
-    const total = state.installedSelectable.size;
+    const total = visible.length;
+    const chosen = visible.filter(id => state.installedSelected.has(id)).length;
     selectAll.disabled = total === 0;
-    selectAll.checked = total > 0 && count === total;
-    selectAll.indeterminate = count > 0 && count < total;
+    selectAll.checked = total > 0 && chosen === total;
+    selectAll.indeterminate = chosen > 0 && chosen < total;
   }
 }
 
@@ -1509,6 +1554,7 @@ $("#plugin-registry-list").addEventListener("change", event => {
   updateRegistrySelection();
 });
 $("#plugin-registry-search").addEventListener("input", renderPluginRegistry);
+$("#plugin-installed-search").addEventListener("input", renderPluginInstalled);
 for (const button of document.querySelectorAll("[data-registry-filter]")) {
   button.addEventListener("click", () => {
     state.registryFilter = button.dataset.registryFilter;
@@ -1540,7 +1586,7 @@ $("#plugin-installed-list").addEventListener("change", event => {
   updateInstalledSelection();
 });
 $("#installed-select-all").addEventListener("change", event => {
-  for (const id of state.installedSelectable) {
+  for (const id of state.installedOrder) {
     if (event.currentTarget.checked) state.installedSelected.add(id);
     else state.installedSelected.delete(id);
   }
