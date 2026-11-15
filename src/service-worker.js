@@ -100,7 +100,6 @@ async function persistSettings(settings) {
 }
 
 async function stationWithCredentials(station) {
-  if (station.adapter?.kind === "linux-do-marketplace") return { ...station, auth: { type: "none" } };
   const credential = await getStationCredential(station.id);
   const auth = { ...(station.auth || {}) };
   for (const field of ["token", "username", "password"]) if (!auth[field]) auth[field] = credential[field] || "";
