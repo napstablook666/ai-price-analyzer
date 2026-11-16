@@ -1,11 +1,7 @@
 .options-page { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
-/* 嵌在 dashboard 设置抽屉里：顶栏只留自动保存状态，页头交给抽屉标题栏 */
-.options-page.is-embedded .settings-topbar { min-height: 0; padding: 6px 14px; border-bottom: 0; background: transparent; }
-.options-page.is-embedded .settings-topbar .brand-lockup,
-.options-page.is-embedded .settings-topbar .top-menu,
-.options-page.is-embedded .settings-topbar .theme-toggle,
+/* 嵌在 dashboard 设置抽屉里：页头交给抽屉标题栏，顶栏整条不显示 */
+.options-page.is-embedded .settings-topbar,
 .options-page.is-embedded .settings-intro { display: none; }
-.options-page.is-embedded .settings-topbar .top-actions { margin-left: auto; }
 .options-page.is-embedded .settings-shell { gap: 10px; padding: 0 14px 12px; }
 .settings-topbar { position: relative; flex: 0 0 auto; min-height: 58px; background: var(--surface); }
 .settings-shell { display: flex; flex-direction: column; gap: 12px; width: min(1440px, 100%); flex: 1; height: auto; min-height: 0; margin: 0 auto; padding: 14px 20px 18px; overflow: hidden; }
@@ -318,16 +314,4 @@
   .about-row { grid-template-columns: 1fr; }
   .about-row-control { justify-content: flex-start; }
   .segmented button { min-height: 40px; }
-}
-/* 顶栏自动保存状态：安静的胶囊按钮，点一下立即落库 */
-.autosave-status { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-3); background: var(--surface); font-size: 11.5px; font-weight: 600; line-height: 1; cursor: pointer; transition: color .15s ease, border-color .15s ease, background .15s ease; }
-.autosave-status .icon { width: 14px; height: 14px; }
-.autosave-status:hover { color: var(--text-2); border-color: var(--line-strong); background: var(--surface-2); }
-.autosave-status[data-state="pending"] { color: var(--text-2); }
-.autosave-status[data-state="saving"] { color: var(--text-2); }
-.autosave-status[data-state="saved"] { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 28%, var(--line)); }
-.autosave-status[data-state="error"] { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 32%, var(--line)); background: var(--danger-soft); }
-@media (max-width: 720px) {
-  .autosave-status { padding: 0 8px; }
-  .autosave-status .autosave-text { display: none; }
 }

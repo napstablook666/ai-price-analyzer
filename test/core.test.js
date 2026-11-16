@@ -5003,8 +5003,7 @@ test("saves settings automatically instead of behind a global save button", () =
   const dashboard = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
 
   assert.equal(html.includes("save-all"), false, "the global save button is gone");
-  assert.match(html, /id="save-status"[^>]*data-state=/);
-  assert.match(html, /data-save-status-text[^>]*aria-live="polite"/);
+  assert.equal(html.includes("save-status"), false, "the autosave status pill is gone too");
 
   assert.match(options, /const AUTO_SAVE_DELAY = 400;/);
   assert.match(options, /function scheduleSettingsSave\(\)/);
@@ -5020,7 +5019,7 @@ test("saves settings automatically instead of behind a global save button", () =
   assert.match(options, /station\.enabled = event\.target\.checked;\n\s*scheduleStationsSave\(\);/);
   assert.match(options, /state\.stations = state\.stations\.filter\(station => station\.id !== stationId\);\n\s*renderStations\(\);\n\s*scheduleStationsSave\(\);/);
   assert.match(options, /void flushStationsSave\(\);\n\s*toast\("站点已添加/);
-  assert.match(css, /\.autosave-status \{/);
+  assert.equal(css.includes(".autosave-status"), false, "the autosave pill styles are gone");
 
   // 抽屉不再每存一次就重拉仪表盘，改在关闭抽屉时刷新。
   assert.match(dashboard, /let settingsStale = false;/);

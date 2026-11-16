@@ -1694,13 +1694,6 @@ async function refreshExchangeRate() {
 }
 // 设置页不再有「保存全部」：字段改动防抖后落库，站点开关与增删即时提交，页面隐藏时补一次。
 const AUTO_SAVE_DELAY = 400;
-const SAVE_STATUS_PRESETS = {
-  idle: { icon: "check", text: "自动保存" },
-  pending: { icon: "loader-circle", text: "待保存", spin: true },
-  saving: { icon: "loader-circle", text: "保存中", spin: true },
-  saved: { icon: "check", text: "已保存" },
-  error: { icon: "circle-alert", text: "保存失败" }
-};
 let settingsSaveTimer = 0;
 let stationsSaveTimer = 0;
 let settingsDirty = false;
@@ -1708,24 +1701,12 @@ let stationsDirty = false;
 let settingsSaveChain = Promise.resolve();
 let stationsSaveChain = Promise.resolve();
 
-function setSaveStatus(name) {
-  const node = $("#save-status");
-  if (!node) return;
-  const preset = SAVE_STATUS_PRESETS[name] || SAVE_STATUS_PRESETS.idle;
-  node.dataset.state = name;
-  const iconSlot = node.querySelector("[data-save-icon]");
-  if (iconSlot) iconSlot.innerHTML = icon(preset.icon, { className: preset.spin ? "icon spin" : "icon" });
-  const textSlot = node.querySelector("[data-save-status-text]");
-  if (textSlot) textSlot.textContent = preset.text;
-}
-
 function notifySettingsSaved() {
   if (EMBEDDED) window.parent.postMessage({ type: "MODEL_ATLAS_SETTINGS_SAVED" }, location.origin);
 }
 
 function scheduleSettingsSave() {
   settingsDirty = true;
-  setSaveStatus("pending");
   clearTimeout(settingsSaveTimer);
   settingsSaveTimer = setTimeout(() => void flushSettingsSave(), AUTO_SAVE_DELAY);
 }
@@ -1744,7 +1725,6 @@ function flushSettingsSave() {
   if (!settingsDirty) return settingsSaveChain;
   settingsDirty = false;
   settingsSaveChain = settingsSaveChain.then(async () => {
-    setSaveStatus("saving");
     try {
       state.settings = await callService("SAVE_SETTINGS", { settings: readSettings() });
       // 密钥已经写进本机密钥区，清空输入框，免得下一次保存再写一遍。
@@ -1753,11 +1733,9 @@ function flushSettingsSave() {
         keyInput.value = "";
         keyInput.placeholder = "已保存，留空则不修改";
       }
-      setSaveStatus("saved");
       notifySettingsSaved();
     } catch (error) {
       settingsDirty = true;
-      setSaveStatus("error");
       toast(`设置保存失败：${error.message || error}`);
     }
   });
@@ -1784,7 +1762,6 @@ function flushStationsSave() {
       notifySettingsSaved();
     } catch (error) {
       stationsDirty = true;
-      setSaveStatus("error");
       toast(`站点保存失败：${error.message || error}`);
     }
   });
@@ -1794,9 +1771,6 @@ function flushStationsSave() {
 function flushAutoSave() {
   return Promise.all([flushSettingsSave(), flushStationsSave()]);
 }
-
-// 状态按钮本身就是兜底入口：保存失败后点它重试，平常点它等于「现在就存」。
-$("#save-status").addEventListener("click", () => void flushAutoSave());
 
 for (const selector of ["#settings-form", "#llm-form"]) {
   const form = $(selector);
@@ -1818,9 +1792,6 @@ window.addEventListener("pagehide", () => void flushAutoSave());
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) void flushAutoSave();
 });
-
-setSaveStatus("idle");
-
 
 const [initialView, initialJump] = location.hash.slice(1).split(":");
 activateSettingsView(initialView);
