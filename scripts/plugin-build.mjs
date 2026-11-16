@@ -39,7 +39,8 @@ function readJson(file) {
 
 function listPlugins() {
   return fs.readdirSync(PLUGIN_DIR, { withFileTypes: true })
-    .filter(entry => entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules")
+    // 只认带 manifest.json 的目录：plugins/assets 这类放 README 图标的目录不算插件。
+    .filter(entry => entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules" && fs.existsSync(path.join(PLUGIN_DIR, entry.name, "manifest.json")))
     .map(entry => entry.name)
     .sort();
 }

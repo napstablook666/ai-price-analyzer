@@ -61,7 +61,9 @@ test("插件源码只能用 @app/ 前缀引用扩展核心", () => {
 test("每个插件目录都有可直接阅读的 manifest", () => {
 // 插件源默认并排签出在 ../plugins；CI 把插件仓签出到仓库内的 plugins/ 时用 PLUGIN_DIR 指过来。
   const dir = path.resolve(process.env.PLUGIN_DIR || path.join(root, "..", "plugins"));
-  for (const id of fs.readdirSync(dir).filter(name => !name.startsWith(".") && fs.statSync(path.join(dir, name)).isDirectory())) {
+  // 只扫带 manifest.json 的目录，plugins/assets 这类放 README 图标的目录不算插件。
+  const isPluginDir = name => !name.startsWith(".") && fs.statSync(path.join(dir, name)).isDirectory() && fs.existsSync(path.join(dir, name, "manifest.json"));
+  for (const id of fs.readdirSync(dir).filter(isPluginDir)) {
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, id, "manifest.json"), "utf8"));
     assert.equal(manifest.id, id);
     assert.ok(manifest.name && manifest.host);
