@@ -61,7 +61,11 @@ jobs:
               manifest.json dashboard.html options.html styles.css styles icons src
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
-          sha256sum "dist/ai-relay-price-extension-${version}.zip" "ai-price-analyzer-${version}-source.zip" > dist/SHA256SUMS.txt
+          # 校验文件里只写文件名：两个包上传后都落在 release 根目录，写成 dist/... 会让下载方 sha256sum -c 找不到文件。
+          (
+            cd dist
+            sha256sum "ai-relay-price-extension-${version}.zip" "../ai-price-analyzer-${version}-source.zip" | sed 's#\.\./##' > SHA256SUMS.txt
+          )
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
