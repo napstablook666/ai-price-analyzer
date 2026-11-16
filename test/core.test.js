@@ -4794,6 +4794,8 @@ test("installing a registry plugin adds its addable stations to the workspace ri
   const previousIndexedDb = globalThis.indexedDB;
   const kv = new Map();
   const stationRows = [];
+  // 内置采集代码的插件按扩展版本号算已装版本，这里让桩返回真实 manifest 版本。
+  const bundledVersion = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8")).version;
   const kvStore = {
     get(key) {
       const request = {};
@@ -4857,7 +4859,7 @@ test("installing a registry plugin adds its addable stations to the workspace ri
       onInstalled: { addListener() {} },
       onStartup: { addListener() {} },
       getURL: () => "chrome-extension://test-extension/",
-      getManifest: () => ({ version: "0.0.0-test" })
+      getManifest: () => ({ version: bundledVersion })
     },
     alarms: { onAlarm: { addListener() {} } },
     tabs: { onUpdated: { addListener() {}, removeListener() {} }, onRemoved: { addListener() {}, removeListener() {} } }
@@ -4870,7 +4872,7 @@ test("installing a registry plugin adds its addable stations to the workspace ri
     assert.equal(first.results[0].stations, 1);
     assert.equal(stationRows.length, 1);
     assert.equal(stationRows[0].pluginId, "true-sota");
-    const bundledVersion = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8")).version;
+
     assert.equal(first.workspace.registry.entries.find(item => item.id === "true-sota")?.installedVersion, bundledVersion);
 
     const second = await installPlugins(["true-sota"]);

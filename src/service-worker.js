@@ -8,7 +8,7 @@ import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePl
 import { sitePluginById, sitePluginCatalogForStations, sitePluginForStation } from "./site-plugins/catalog.js";
 import { activeCatalogForStations, activePluginIds, activeSitePluginForStation, installedPluginIds, setActivePluginIds } from "./site-plugins/activation.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "./site-plugins/registry-snapshot.js";
-import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpecs, installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState, registryStateAfterRefresh } from "./core/declarative-plugin.js";
+import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpecs, installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState, pluginUpdateState, registryStateAfterRefresh } from "./core/declarative-plugin.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { runWithConcurrency, withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
@@ -1366,6 +1366,7 @@ function pluginRegistryView(registry) {
       const record = registry.installed[entry.id];
       const builtin = sitePluginById(entry.id);
       const descriptor = builtin && builtin.source === "bundled" ? builtin : null;
+      const update = pluginUpdateState({ record, entry, codeBundled: Boolean(descriptor), bundledVersion: bundledPluginVersion() });
       const spec = entry.spec || null;
       const mode = spec?.mode || descriptor?.mode || "";
       return {
@@ -1376,9 +1377,9 @@ function pluginRegistryView(registry) {
         hosts: entry.hosts,
         kind: spec?.kind || "price",
         needsCode: entry.needsCode,
-        installed: Boolean(record),
-        installedVersion: record?.version || "",
-        updateAvailable: Boolean(record) && comparePluginVersions(record.version, entry.version) < 0,
+        installed: update.installed,
+        installedVersion: update.installedVersion,
+        updateAvailable: update.updateAvailable,
         builtin: Boolean(descriptor),
         // 界面展开详情用：仓库条目本身没有采集方式这些字段，从内置描述符或声明式规格补齐。
         details: {

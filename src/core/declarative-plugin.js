@@ -305,6 +305,16 @@ export function comparePluginVersions(left, right) {
   return 0;
 }
 
+// 已装插件的更新判定。采集代码随扩展打包的插件（builtin）没有可下载的新代码，
+// 装与不装跑的都是扩展里这一份，版本号只是跟着扩展发版同步跳号；
+// 拿它跟仓库里的版本比，扩展每发一次版就会把所有已装插件都算成「有更新」。
+export function pluginUpdateState({ record, entry, codeBundled = false, bundledVersion = "" } = {}) {
+  if (!record) return { installed: false, installedVersion: "", updateAvailable: false };
+  const installedVersion = codeBundled ? String(bundledVersion || "") : String(record.version || "");
+  const updateAvailable = !codeBundled && comparePluginVersions(record.version, entry?.version) < 0;
+  return { installed: true, installedVersion, updateAvailable };
+}
+
 export function normalizeRegistryState(input = {}) {
   const raw = input && typeof input === "object" ? input : {};
   let url = DEFAULT_PLUGIN_REGISTRY_URL;

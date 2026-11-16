@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, providerFromSpec, registryStateAfterRefresh } from "../src/core/declarative-plugin.js";
+import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, pluginUpdateState, providerFromSpec, registryStateAfterRefresh } from "../src/core/declarative-plugin.js";
 import { sitePluginCatalogForStations } from "../src/site-plugins/catalog.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "../src/site-plugins/registry-snapshot.js";
 
@@ -124,6 +124,21 @@ test("刷新仓库保留全部安装记录，needsCode 插件不会变回未安�
   assert.equal(next.entries.length, 2);
   assert.equal(next.fetchedAt, 444);
   assert.equal(next.error, "");
+});
+
+test("内置采集代码的插件不按扩展版本号报更新", () => {
+  // 仓库里的 plugins.json 版本号由 plugin-build 从扩展 manifest 取，扩展每发一版就会整体跳号。
+  // 采集代码随扩展打包的插件装不装都是同一份代码，不能因此显示「有更新」。
+  const record = { version: "0.4.0", installedAt: 1 };
+  const entry = { version: "0.5.0" };
+  assert.deepEqual(
+    pluginUpdateState({ record, entry, codeBundled: true, bundledVersion: "0.5.0" }),
+    { installed: true, installedVersion: "0.5.0", updateAvailable: false }
+  );
+  // 声明式插件（代码从仓库装）没有内置代码，仍然按版本号判断。
+  assert.equal(pluginUpdateState({ record, entry }).updateAvailable, true);
+  assert.equal(pluginUpdateState({ record: { version: "0.5.0" }, entry }).updateAvailable, false);
+  assert.deepEqual(pluginUpdateState({}), { installed: false, installedVersion: "", updateAvailable: false });
 });
 
 test("已安装列表里的内置插件可以勾选移除，不按 bundled 来源禁用", () => {
