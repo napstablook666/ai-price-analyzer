@@ -117,9 +117,9 @@
 .price-head { display: grid; grid-template-columns: var(--price-cols); gap: 6px 10px; align-items: center; width: 100%; }
 .price-head-key { display: inline-flex; align-items: center; }
 .price-head-side { text-align: left; }
-.comparison-table colgroup col:nth-child(1) { width: 24%; }
-.comparison-table colgroup col:nth-child(2) { width: 20%; }
-.comparison-table colgroup col:nth-child(3) { width: 138px; }
+.comparison-table colgroup col:nth-child(1) { width: 26%; }
+.comparison-table colgroup col:nth-child(2) { width: 18%; }
+.comparison-table colgroup col:nth-child(3) { width: 162px; }
 .comparison-table colgroup col:nth-child(4) { width: 64px; }
 .comparison-table colgroup col:nth-child(5) { width: 66px; }
 /* 月成本列吃掉剩下的宽度，官方/中转 两列的像素宽才不会被表格宽度摊大。 */
@@ -138,8 +138,8 @@
 .comparison-table .price-key-heading { border-left: 1px solid var(--line-strong); }
 .comparison-table [hidden] { display: none !important; }
 .model-cell { display: grid; gap: 4px; min-width: 0; }
-.model-head { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; }
-.model-name { color: var(--text); font-size: 15px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+.model-head { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.model-name { min-width: 0; color: var(--text); font-size: 15px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
 /* 模型图标：品牌图形单色，颜色按当前主题和品牌色混合，浅色深色都看得清 */
 .model-logo { display: inline-grid; place-items: center; flex: 0 0 auto; width: 21px; height: 21px; border-radius: 6px; color: color-mix(in srgb, var(--brand, var(--text-2)) 80%, var(--text)); background: color-mix(in srgb, var(--brand, var(--text-2)) 13%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand, var(--text-2)) 22%, transparent); }
 .model-logo svg { display: block; }
@@ -155,19 +155,29 @@
 .station-filter-link { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; padding: 0; color: var(--text); background: transparent; font-size: 13.5px; font-weight: 650; text-align: left; }
 .station-filter-link > span:last-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .station-meta { color: var(--text-3); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-.price-cell { vertical-align: top; }
-.price-grid { display: grid; grid-template-columns: var(--price-cols); gap: 6px 10px; align-items: baseline; width: 100%; font-size: 13px; line-height: 1.5; }
+.comparison-table td.price-cell { position: relative; padding-block: 6px 12px; vertical-align: top; }
+.price-grid { display: grid; grid-template-columns: var(--price-cols); gap: 1px 10px; align-items: baseline; width: 100%; font-size: 13px; line-height: 1.15; }
 .price-grid-row { display: contents; color: var(--text-3); }
 .price-grid-row.price-line-primary { color: var(--text-2); }
 .price-grid .price-key { max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.price-grid .price-value { justify-self: start; color: var(--text-2); font-family: var(--font-mono); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price-grid .price-value { justify-self: start; color: var(--text-2); font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .price-grid-row.price-line-primary .price-key { color: var(--text); font-weight: 600; }
-.price-grid-row.price-line-primary .price-value { color: var(--text); font-size: 14px; font-weight: 650; }
+.price-grid-row.price-line-primary .price-value { color: var(--text); font-size: 13.5px; font-weight: 650; }
+/* 输入/输出之外的费用项：一排小标签「官方 → 中转」，悬停看完整文字，缓存项前面加一个灰色标签 */
+.price-grid-detail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 5px; margin-top: 2px; grid-column: 1 / -1; overflow: hidden; }
+.price-mini { display: inline-flex; align-items: baseline; gap: 2px; padding: 0 2px; border-radius: 4px; background: var(--surface-2); font-size: 11px; line-height: 1.25; white-space: nowrap; }
+.price-mini-label { margin-right: 2px; color: var(--text-3); font-size: 11px; line-height: 1.25; white-space: nowrap; }
+.price-mini-key { color: var(--text-2); }
+.price-mini-pair { display: inline-flex; align-items: baseline; gap: 1px; font-family: var(--font-mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.price-mini-official { color: var(--text-3); }
+.price-mini-arrow { color: var(--text-3); opacity: .55; }
+.price-mini-relay { color: var(--text); font-weight: 600; }
 .price-value-missing { color: var(--text-3) !important; font-weight: 400 !important; }
 .price-value.is-estimated { color: var(--text-3); }
-.price-grid-notes { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 7px; color: var(--text-3); font-size: 12px; }
-.price-chart { margin-top: 8px; }
-.price-chart .cell-chart { width: 100%; max-width: none; min-width: 0; }
+.price-mini-note { color: var(--text-3); font-size: 11px; line-height: 1.25; white-space: nowrap; }
+/* 月成本条只是参考，绝对定位压在单元格底部，不再占据行高。 */
+.price-chart { position: absolute; left: 12px; right: 12px; bottom: 2px; }
+.price-chart .cell-chart { width: 100%; max-width: none; min-width: 0; height: 4px; }
 .price-empty { color: var(--text-3); font-size: 12px; }
 .cost-cell { display: grid; gap: 3px; }
 .cost-cell > strong { color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -288,6 +298,9 @@
   .comparison-table td[data-label="模型"], .comparison-table td[data-label="中转站"], .comparison-table td[data-label="状态"], .comparison-table td.price-cell, .comparison-table td.cost-combined-cell { grid-column: 1 / -1; }
   .comparison-table th:first-child, .comparison-table td:first-child { position: static; }
   .comparison-table tbody td.cost-cell { display: grid; }
+  /* 卡片模式下单价单元格不再需要给绝对定位的月成本条留位置。 */
+  .comparison-table tbody td.price-cell { position: static; padding-block: 0; }
+  .comparison-table .price-chart { position: static; inset: auto; margin-top: 6px; }
   .comparison-table tbody tr:hover td { background: transparent; }
   .top-menu-checkin { width: min(88vw, 320px); max-height: none; }
 }

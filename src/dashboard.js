@@ -264,12 +264,35 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
   const cellMarkup = (cell, format) => cell
     ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}"${cell.estimated ? ' title="估算值"' : ""}>${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
     : `<span class="price-value price-value-missing">—</span>`;
-  const bodyRows = [...grid.values()].map((entry, index) => {
-    const primary = index < 2 ? " price-line-primary" : "";
-    return `<div class="price-grid-row${primary}"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${cellMarkup(entry.relay, relayFormat)}</div>`;
+  // 输入/输出是常看的，留成对齐的两行；其余费用项压成一行「官方 → 中转」，行高不再随费用项数量增长。
+  const primaryKeys = ["输入", "输出"];
+  const cacheLabels = new Map([["缓存读", "读"], ["缓存写", "写"], ["缓存写入（1h）", "1h"]]);
+  const entries = [...grid.values()];
+  const primaryRows = entries.filter(entry => primaryKeys.includes(entry.base)).map(entry => {
+    return `<div class="price-grid-row price-line-primary"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${cellMarkup(entry.relay, relayFormat)}</div>`;
   }).join("");
-  const notes = [officialNote, relayNote].filter(Boolean).map(note => `<span class="price-grid-note">${note}</span>`).join("");
-  return `<div class="price-grid">${bodyRows}</div>${notes ? `<div class="price-grid-notes">${notes}</div>` : ""}${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
+  const miniText = (cell, format) => cell ? `${cell.estimated ? "≈" : ""}${format(cell)}` : "—";
+  // 一个费用项压缩成「官方 → 中转」，完整文字放 title，鼠标悬停能看全
+  const chip = (label, entry) => {
+    const officialText = miniText(entry.official, officialFormat);
+    const relayText = miniText(entry.relay, relayFormat);
+    const title = `${entry.base} · 官方 ${officialText} / 中转 ${relayText}`;
+    // 官方和中转同价时只留一个数，箭头省掉，一排三个缓存项才放得下
+    if (entry.official && entry.relay && officialText === relayText) {
+      return `<span class="price-mini" title="${escapeHtml(title)}"><span class="price-mini-key">${escapeHtml(label)}</span><span class="price-mini-pair"><span class="price-mini-relay">${escapeHtml(relayText)}</span></span></span>`;
+    }
+    return `<span class="price-mini" title="${escapeHtml(title)}"><span class="price-mini-key">${escapeHtml(label)}</span><span class="price-mini-pair"><span class="price-mini-official">${escapeHtml(officialText)}</span><span class="price-mini-arrow" aria-hidden="true">→</span><span class="price-mini-relay">${escapeHtml(relayText)}</span></span></span>`;
+  };
+  const cacheEntries = entries.filter(entry => cacheLabels.has(entry.base));
+  const cacheGroup = cacheEntries.length
+    ? `<span class="price-mini-label">缓存</span>${cacheEntries.map(entry => chip(cacheLabels.get(entry.base), entry)).join("")}`
+    : "";
+  const otherEntries = entries.filter(entry => !primaryKeys.includes(entry.base) && !cacheLabels.has(entry.base));
+  const otherChips = otherEntries.map(entry => chip(entry.base, entry)).join("");
+  // 「官方价格未收录」这类说明并到同一行末尾，不再单独占一行
+  const notes = [officialNote, relayNote].filter(Boolean).map(note => `<span class="price-mini-note">${note}</span>`).join("");
+  const detailRow = cacheGroup || otherChips || notes ? `<div class="price-grid-detail">${cacheGroup}${otherChips}${notes}</div>` : "";
+  return `<div class="price-grid">${primaryRows}${detailRow}</div>${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
 }
 
 
@@ -500,7 +523,7 @@ function renderRows() {
     const officialNote = !isPublic ? modelMatchMarkup(row, currency) : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}">
-      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
+      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
       <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}">${siteIconMarkup(station.pluginId, row.stationName, { size: 16 })}<span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}</span></div></td>
       <td colspan="3" data-label="单价 / 每 M tokens" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceGridMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking))}</td>
       <td data-label="月成本 · 混合单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, monthlyRanking, deltaClass, deltaLabel)}</td>

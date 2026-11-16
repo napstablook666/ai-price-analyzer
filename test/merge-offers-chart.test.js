@@ -186,7 +186,13 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.equal(html.includes("data-monthly-cost-scale"), false);
   assert.equal(html.includes("monthly-cost-ruler"), false);
   assert.match(script, /<td colspan="3" data-label="单价 \/ 每 M tokens" class="price-cell is-section-start paid-only-column"/);
-  assert.match(script, /class="price-grid-row\$\{primary\}"><span class="price-key">/);
+  // 输入/输出保留两列对齐的主行，其余费用项压成一行小胶囊，行高不再随费用项数量线性增长。
+  assert.match(script, /<div class="price-grid-row price-line-primary"><span class="price-key">/);
+  assert.match(script, /class="price-grid-detail">\$\{cacheGroup\}\$\{otherChips\}/);
+  assert.match(script, /<span class="price-mini-label">缓存<\/span>/);
+  assert.match(script, /class="price-mini-pair"><span class="price-mini-official">/);
+  // 官方和中转同价时不重复写两遍，省掉箭头，一排三个缓存胶囊才放得下
+  assert.match(script, /if \(entry\.official && entry\.relay && officialText === relayText\)/);
   assert.match(script, /<td data-label="月成本 · 混合单价" class="cost-combined-cell is-section-start paid-only-column"/);
   assert.equal(script.includes('data-label="混合单价"'), false);
   assert.equal(script.includes('class="blended-cell'), false);
