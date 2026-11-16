@@ -71,7 +71,7 @@ npm test                  # 全部测试
 | `hosts` | 否 | 一个插件覆盖多个域名时写全量列表 |
 | `paths` | 否 | 允许的路径，用来和同域的其他插件区分 |
 | `category` | 否 | `paid`（默认）/ `public`（公益） |
-| `addable` | 否 | `false` 表示不显示"添加"，只能按具体地址添加 |
+| `addable` | 否 | `false` 表示不显示「添加」，只能按具体地址添加 |
 | `kind` | 否 | `price`（默认，采集价格）/ `checkin`（签到插件，不采集价格、不用写 plugin.js） |
 | `description` | 否 | 首页的一行说明 |
 
@@ -104,7 +104,7 @@ export const sitePlugin = {
 - `matches(context, station)` 拿到 `{ url, hostname, path, hashPath }`，返回布尔。
 - `prepare(stationInput, context)` 在添加站点时改写站点记录（baseUrl、adapter、auth），可以省略。
 - `request` 决定采集请求怎么发：`requestPolicy(urlOrFn, { credentials })`，`page` 模式通常用 `localStoragePageAuth` / `cookiePageAuth`。
-- `preset` 是插件自带的默认站点模板，首页"添加"用的就是它。
+- `preset` 是插件自带的默认站点模板，首页「添加」用的就是它。
 - `modelAliases` 不要手写，构建器会从 `models.json` 注入。
 
 硬约束：
@@ -156,7 +156,7 @@ export const sitePlugin = {
 3. 规范模型层：`claude-4.6-sonnet`、`anthropic/claude-sonnet-4.6:batch`、`Anthropic: Claude Sonnet 4.6` 自动归到一起
 4. 精确 / 后缀 / 忽略版本 / 模糊等内置规则
 
-也就是说，绝大多数拼写差（大小写、`_`/`.`/空格、`provider/` 前缀、`:free` `:thinking` 后缀、`-[日期]` 尾巴）系统已经能自己收敛，不用写别名。写之前先查：
+绝大多数拼写差（大小写、`_`/`.`/空格、`provider/` 前缀、`:free` `:thinking` 后缀、`-[日期]` 尾巴）系统已经能自己收敛，不用写别名。写之前先查：
 
 ```bash
 node scripts/model-lookup.mjs claude sonnet

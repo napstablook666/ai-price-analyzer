@@ -17,7 +17,7 @@
   <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-%E5%9C%A8%E7%BA%BF-4F46E5?style=flat-square" alt="Documentation"></a>
 </p>
 
-The same model shows up under a dozen different names across relay stations, and each station bills top-ups, group multipliers, and cache reads differently, so comparing prices by hand is slow and easy to get wrong. AI Price Analyzer is a Chromium Manifest V3 extension: it collects prices from the stations you add, collapses station-specific names into one canonical model identity, and turns them into a monthly cost and a gap against the official price using your own usage. No backend, no bundler, and the repository root is the loadable extension.
+The same model appears under a dozen names across relay stations, and each station bills top-ups, group multipliers, and cache reads differently, so comparing prices by hand is slow and error-prone. AI Price Analyzer is a Chromium Manifest V3 extension. It collects prices from the stations you add, collapses station-specific names into one canonical model identity, then uses your own usage to compute a monthly cost and a gap against the official price. There is no backend and no bundler; the repository root is the loadable extension.
 
 ## Highlights
 
@@ -28,7 +28,7 @@ The same model shows up under a dozen different names across relay stations, and
 | Direct and page collection | Collect CORS-enabled JSON endpoints directly, or reuse the current browser session when a station needs a login. |
 | Costed with your usage | Input, cache read, cache write, and output are priced separately and rolled into monthly cost and blended unit price. |
 | Data stays local | Snapshots live in IndexedDB and station credentials in extension local storage; requests go only to stations you added and two public reference sources. |
-| Generated files under test | Core, collection, matching, and generated plugin files are covered by `node:test`, and drift turns red. |
+| Generated files under test | `node:test` covers core, collection, matching, and generated plugin files; drift turns red. |
 
 ## Architecture
 
@@ -55,8 +55,8 @@ The same model shows up under a dozen different names across relay stations, and
 
 - `src/site-plugins/providers/<id>.js`: one collection rule per station, generated from the plugin repository.
 - `src/core/provider-registry.js`: request strategies for direct requests, page auth, and cookie sessions.
-- `src/core/adapters.js`: parses responses by `responseFormat` and produces one snapshot per station.
-- `src/core/matching.js`: maps station model names to canonical model IDs, with reference data and the canonical table as inputs.
+- `src/core/adapters.js`: parses responses by `responseFormat` into one snapshot per station.
+- `src/core/matching.js`: maps station model names to canonical model IDs, reading reference data and the canonical table.
 - `src/core/pricing.js`: turns snapshots, reference prices, and your usage into comparison rows.
 - `src/service-worker.js`: message entry points, with `REFRESH_ALL` / `REFRESH_STATION` for collection, `FETCH_REFERENCES` for reference prices, `GET_DASHBOARD` for comparison data, and `ADAPT_STATION` for station detection.
 
@@ -92,7 +92,7 @@ Then load that directory itself in the browser. To change station collection log
 
 1. Click the toolbar icon to open the comparison dashboard, and use the gear in its top bar for station and settings.
 2. Add a station: enter the station URL and choose analyze, and the extension probes the pricing endpoints and page structure and fills in what it found. Alternatively install a site plugin from the plugin registry first, then add the station from the installed list.
-3. Confirm the configuration: collection mode, endpoint path, request method, authentication mode, and top-up ratio. Save it as proposed on the first run and tune it later.
+3. Confirm the configuration: collection mode, endpoint path, request method, authentication mode, and top-up ratio. Save the proposed values on the first run; tune them once collection works.
 4. Choose refresh all. Stations that need a login go through a login pre-check that sorts them into already signed in, needs sign-in, needs manual confirmation, and no login needed; sign in and retry as prompted.
 5. Read the table: each row is one station, group, and model offer, sorted by blended unit price, with a monthly-cost bar for the same model at the bottom of the cell.
 6. Open the cost estimation settings, pick a usage preset or enter your own input and output volume, and monthly cost and price gap recalculate.
@@ -143,7 +143,7 @@ cd ai-price-analyzer
 git clone https://github.com/napstablook666/ai-price-analyzer-plugins.git plugins
 ```
 
-The builder generates `src/site-plugins/providers/<id>.js`, `src/site-plugins/catalog.js`, and `src/shared/plugin-order.js` from `plugins/<id>/`. Generated files are committed here so a release checkout loads directly, but they must be regenerated after plugin source changes, and never edited by hand. Point `PLUGIN_DIR` at the plugin repository when it lives elsewhere.
+The builder generates `src/site-plugins/providers/<id>.js`, `src/site-plugins/catalog.js`, and `src/shared/plugin-order.js` from `plugins/<id>/`. Generated files are committed here so a release checkout loads directly. Regenerate them after plugin source changes; never edit them by hand. Point `PLUGIN_DIR` at the plugin repository when it lives elsewhere.
 
 ## Data sources and privacy
 
@@ -156,7 +156,7 @@ See [PRIVACY.md](./PRIVACY.md) for details and [SECURITY.md](./SECURITY.md) for 
 
 ## Release
 
-Releases are triggered by Git tags. Sync the version with `npm run version:patch` (or `minor` / `major`), then push a tag such as `v0.4.0`. GitHub Actions publishes three files:
+Git tags trigger releases. Sync the version with `npm run version:patch` (or `minor` / `major`), then push a tag such as `v0.4.0`. GitHub Actions publishes three files:
 
 - `ai-relay-price-extension-v<version>.zip`: the loadable Chromium extension.
 - `ai-price-analyzer-v<version>-source.zip`: the source and plugin snapshot used for the build.
