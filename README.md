@@ -65,7 +65,7 @@
 | 项目 | 要求 |
 | --- | --- |
 | 浏览器 | Chrome、Edge 等 Chromium 内核浏览器，支持 Manifest V3 |
-| 扩展版本 | `0.4.0`（见 `manifest.json`） |
+| 扩展版本 | `0.5.0`（见 `manifest.json`） |
 | Node.js | 只有开发和测试需要，Node 20 及以上 |
 | 权限 | `storage`、`scripting`、`tabs`、`alarms`、`cookies`，主机权限 `<all_urls>` |
 
@@ -156,7 +156,7 @@ git clone https://github.com/napstablook666/ai-price-analyzer-plugins.git plugin
 
 ## 发布
 
-发布由 Git tag 触发。先用 `npm run version:patch`（或 `minor` / `major`）同步版本号，再推 `v0.4.0` 这样的 tag。GitHub Actions 会产出三个文件：
+发布由 Git tag 触发。先用 `npm run version:patch`（或 `minor` / `major`）同步版本号，再推 `v0.5.0` 这样的 tag。GitHub Actions 会产出三个文件：
 
 - `ai-relay-price-extension-v<version>.zip`：可直接加载的 Chromium 扩展。
 - `ai-price-analyzer-v<version>-source.zip`：构建所用的源码和插件快照。

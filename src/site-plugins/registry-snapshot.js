@@ -6,7 +6,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "sevenai",
       "name": "SevenAI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型广场，直连采集",
       "hosts": [
         "sevenai.moe"
@@ -16,7 +16,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "tokenflux",
       "name": "TokenFlux",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开定价 API，直连采集",
       "hosts": [
         "tokenflux.cloud"
@@ -26,7 +26,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "windhub",
       "name": "WindHub",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公益站公开价格接口",
       "hosts": [
         "windhub.cc"
@@ -36,7 +36,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "centos",
       "name": "ai.centos.hk",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开定价 API，直连采集",
       "hosts": [
         "ai.centos.hk"
@@ -46,7 +46,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "true-sota",
       "name": "TrueSOTA",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型价格 API",
       "hosts": [
         "true-sota.com"
@@ -56,7 +56,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "sidrune",
       "name": "Sidrune",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型广场，支持汇率配置",
       "hosts": [
         "sidrune.ai"
@@ -66,7 +66,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "nodeai",
       "name": "NodeAI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型广场，直连采集",
       "hosts": [
         "nodeai.cc"
@@ -76,7 +76,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "killai",
       "name": "KillAI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "New API 价格，支持会话刷新",
       "hosts": [
         "api.killai.cc"
@@ -86,7 +86,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "fuck-everyone",
       "name": "fuck-everyone.com",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型广场，直连采集",
       "hosts": [
         "fuck-everyone.com"
@@ -96,7 +96,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "cun",
       "name": "CUN.AI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "复用登录态读取价格 API",
       "hosts": [
         "cun.ai"
@@ -106,7 +106,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "soleapi",
       "name": "SoleAPI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "按具体模型页地址添加",
       "hosts": [
         "soleapi.com"
@@ -116,7 +116,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "dddai",
       "name": "dddai.dev",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型价格 API",
       "hosts": [
         "dddai.dev"
@@ -126,7 +126,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "liuguang",
       "name": "liuguang.ai",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型价格 API",
       "hosts": [
         "liuguang.ai"
@@ -136,7 +136,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "public-pricing",
       "name": "公开价格 API",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "通用公开价格适配，按站点地址添加",
       "hosts": [
         "nomissapi.com",
@@ -148,7 +148,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "hepingan",
       "name": "hepingan.top",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "复用当前浏览器持久登录态",
       "hosts": [
         "api.hepingan.top"
@@ -158,7 +158,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "all-in-one",
       "name": "all-in-one.icu",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "租户模型价格，页面会话采集",
       "hosts": [
         "all-in-one.icu"
@@ -168,7 +168,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "aiapi",
       "name": "AIAPI",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "模型目录与价格，页面会话采集",
       "hosts": [
         "cn.aiapi.bot"
@@ -178,7 +178,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "fastaitoken",
       "name": "fastaitoken.com",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "读取当前账号的可用渠道",
       "hosts": [
         "fastaitoken.com"
@@ -188,7 +188,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "nexavlinks",
       "name": "NexaVlinks",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "读取当前账号的模型渠道",
       "hosts": [
         "nexavlinks.com"
@@ -198,7 +198,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "cheaprouter",
       "name": "CheapRouter",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "公开模型价格 API",
       "hosts": [
         "cheaprouter.cc"
@@ -208,7 +208,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "jiji",
       "name": "吉吉模型市场",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "description": "带 token 的模型市场，按站点地址添加",
       "hosts": [
         "jiji.cc"
