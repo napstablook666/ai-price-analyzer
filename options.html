@@ -81,7 +81,7 @@
             </div>
             <div class="plugin-toolbar plugin-toolbar-installed">
               <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索已安装插件</span><input id="plugin-installed-search" type="search" placeholder="搜索插件、域名、站点名" autocomplete="off"></label>
-              <label class="check-label" title="Shift 点勾选框选一整段"><input id="installed-select-all" type="checkbox"><span>全选</span></label>
+              <label class="check-label"><input id="installed-select-all" type="checkbox"><span>全选</span></label>
               <span id="installed-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
               <button class="button button-quiet button-small" id="uninstall-selected-plugins" type="button" disabled><span data-icon="trash-2" class="icon"></span><span>移除所选</span></button>
             </div>
@@ -118,7 +118,6 @@
               <label class="check-label"><input id="registry-select-all" type="checkbox"><span>全选</span></label>
               <span id="registry-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
               <button class="button button-primary button-small" id="install-selected-plugins" type="button" disabled><span data-icon="package" class="icon"></span><span>安装所选</span></button>
-              <span class="plugin-selection-hint">Shift 点勾选框选一整段</span>
             </div>
             <div id="plugin-registry-list" class="plugin-list" aria-live="polite"></div>
           </section>
