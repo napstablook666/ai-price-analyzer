@@ -1803,7 +1803,8 @@ onRefreshProgress(progress => {
 });
 void load();
 
-const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "多次失败，已停手", "no-candidates": "无候选" };
+// 徽章只写「失败」，具体原因放在行内第二行：整批超时和模型漏答要能一眼分开。
+const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "失败", "no-candidates": "无候选" };
 
 function setAssistantStatus(message, error = false) {
   const node = $("#llm-status");
@@ -1859,7 +1860,7 @@ function renderAssistantQueue(data) {
   list.innerHTML = page.rows.map(row => `
     <div class="assistant-review-row">
       <span class="assistant-review-model">${escapeHtml(row.modelName)}</span>
-      <span class="assistant-review-target">${row.targetId ? escapeHtml(row.targetId) : "—"}</span>
+      <span class="assistant-review-target">${row.targetId ? escapeHtml(row.targetId) : row.failure ? escapeHtml(row.failure) : "—"}</span>
       <span class="assistant-review-station">${escapeHtml(row.stationName || row.stationId)} · ${row.count} 条报价</span>
       <span class="assistant-review-badge" data-status="${escapeHtml(row.status)}">${escapeHtml(ASSIST_STATUS_LABELS[row.status] || row.status)}</span>
     </div>`).join("");
@@ -1878,7 +1879,7 @@ async function refreshAssistantState() {
 
 let assistProgressTimer = 0;
 
-// 识别是串行的分批请求，进度只能靠 service worker 回报；这里只负责把回报画成条。
+// 识别是并行的分批请求，进度只能靠 service worker 回报；这里只负责把回报画成条。
 function renderAssistProgress(progress) {
   const panel = $("#llm-progress");
   if (!panel) return;
@@ -1897,11 +1898,11 @@ function renderAssistProgress(progress) {
   counter.textContent = `${completed} / ${total} 个写法 · ${doneBatches} / ${totalBatches} 批`;
   message.dataset.error = progress.phase === "error" ? "true" : "false";
   if (progress.phase === "start") {
-    message.textContent = `正在把 ${total} 个未匹配写法分 ${totalBatches} 批发给模型`;
+    message.textContent = `正在把 ${total} 个未匹配写法分 ${totalBatches} 批并行发给模型`;
   } else if (progress.phase === "request") {
-    message.textContent = `正在问第 ${Math.min(doneBatches + 1, totalBatches)} / ${totalBatches} 批，已完成 ${completed} / ${total} 个写法`;
+    message.textContent = `正在并行问 ${Math.max(1, Number(progress.concurrency) || 1)} 批（共 ${totalBatches} 批），已完成 ${completed} / ${total} 个写法`;
   } else if (progress.phase === "batch") {
-    message.textContent = `已问 ${doneBatches} / ${totalBatches} 批 · ${counts}`;
+    message.textContent = `已问完 ${doneBatches} / ${totalBatches} 批 · ${counts}`;
   } else if (progress.phase === "complete") {
     message.textContent = `识别完成：${total} 个写法、${totalBatches} 批 · ${counts}`;
     assistProgressTimer = setTimeout(() => { panel.hidden = true; }, 6000);
@@ -1966,7 +1967,10 @@ async function runAssistant(button, force) {
     if (!result.pending) {
       toast(result.reused ? `没有新模型要问，复用 ${result.reused} 条旧结论` : "队列是空的");
     } else {
-      toast(`问了 ${result.ranBatches} 批：接受 ${result.accepted}，判为没有 ${result.none}，无效 ${result.invalidAnswers}，失败 ${result.errors}`);
+      const parts = [`问了 ${result.ranBatches} 批`, `接受 ${result.accepted}`, `判为没有 ${result.none}`, `无效 ${result.invalidAnswers}`];
+      if (result.errors) parts.push(`失败 ${result.errors}${result.timeouts ? `（超时 ${result.timeouts}）` : ""}`);
+      if (result.merged) parts.push(`合并 ${result.merged} 条同写法`);
+      toast(parts.join("，"));
     }
     await refreshAssistantState();
   } catch (error) {

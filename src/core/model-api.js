@@ -126,18 +126,20 @@ export async function testModelConnection({ baseUrl, apiKey, model, fetchImpl = 
   };
 }
 
-export async function completeChat({ baseUrl, apiKey, model, messages, temperature = 0, fetchImpl = fetch, signal, timeoutMs } = {}) {
+export async function completeChat({ baseUrl, apiKey, model, messages, temperature = 0, maxTokens = 0, fetchImpl = fetch, signal, timeoutMs } = {}) {
   if (!String(baseUrl || "").trim()) throw new Error("请先填写模型服务地址");
   if (!String(apiKey || "").trim()) throw new Error("请先填写模型服务密钥");
   if (!String(model || "").trim()) throw new Error("请先选择或填写模型");
   const endpoint = apiUrl(baseUrl, "/chat/completions");
+  const limit = Math.trunc(Number(maxTokens) || 0);
   const response = await request(fetchImpl, endpoint, {
     method: "POST",
     headers: headers(String(apiKey).trim(), true),
     body: JSON.stringify({
       model: String(model).trim(),
       messages: Array.isArray(messages) ? messages : [],
-      temperature: Math.min(1, Math.max(0, Number(temperature) || 0))
+      temperature: Math.min(1, Math.max(0, Number(temperature) || 0)),
+      ...(limit > 0 ? { max_tokens: limit } : {})
     })
   }, { signal, timeoutMs: timeoutMs || 60000 });
   const data = await response.json();

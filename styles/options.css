@@ -266,6 +266,7 @@
 .assistant-review-badge { justify-self: end; padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--text-3); font-size: 10px; white-space: nowrap; }
 .assistant-review-badge[data-status="accepted"] { color: var(--ok); border-color: currentColor; }
 .assistant-review-badge[data-status="invalid"] { color: var(--warn); border-color: currentColor; }
+.assistant-review-badge[data-status="failed"] { color: var(--danger, #d2554b); border-color: currentColor; }
 .assistant-review-empty { margin: 0; padding: 18px; text-align: center; color: var(--text-2); font-size: 11px; border: 1px dashed var(--line-strong); border-radius: var(--radius-card); }
 @media (max-width: 720px) {
   .assistant-review-row { grid-template-columns: minmax(0, 1fr) auto; }

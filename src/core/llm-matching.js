@@ -3,8 +3,13 @@ import { normalizeProxyModelName } from "./matching.js";
 // 改提示词或解析协议必须 +1，否则缓存指纹不变，旧结论会一直复用。
 export const ASSIST_PROMPT_VERSION = "v1";
 export const ASSIST_CANDIDATE_LIMIT = 12;
-export const ASSIST_BATCH_SIZE = 15;
+// 一批 5 条：15 条一批时推理耗时经常越过 60 秒超时，整批 15 条一起记失败；5 条一批实测 11 到 30 秒。
+export const ASSIST_BATCH_SIZE = 5;
 export const ASSIST_MAX_ATTEMPTS = 3;
+// 批次并行上限：批越小批数越多，这里同时压 6 批，整体仍只等一轮往返。别调太高，中转站通常限流。
+export const ASSIST_CONCURRENCY = 6;
+// 识别是长推理任务，60 秒不够；超时太短会把还在跑的批次当成失败记下来。
+export const ASSIST_TIMEOUT_MS = 180000;
 
 const GENERIC_MODEL_TOKENS = new Set([
   "ai", "api", "chat", "model", "models", "llm", "pro", "max", "plus", "turbo",
@@ -182,7 +187,8 @@ export function selectPendingEntries({ cache = {}, entries = [], referencesFetch
       // 指纹盖住提示词版本、候选集合、官方清单时间三样，指纹一致就是输入没变。
       const sameFingerprint = cached.fingerprint === entry.fingerprint;
       const settled = cached.status === "accepted" || cached.status === "invalid" || cached.status === "none";
-      const exhausted = cached.status === "failed" && Number(cached.attempts) >= ASSIST_MAX_ATTEMPTS;
+      // 超时是环境问题（模型慢、中转排队），不代表这个写法判不出来，下次还能再问。
+      const exhausted = cached.status === "failed" && Number(cached.attempts) >= ASSIST_MAX_ATTEMPTS && cached.reason !== "timeout";
       if ((settled && sameFingerprint) || exhausted) {
         reused.push({ ...cached, key });
         continue;
@@ -191,6 +197,42 @@ export function selectPendingEntries({ cache = {}, entries = [], referencesFetch
     pending.push({ ...entry, key });
   }
   return { pending, reused };
+}
+// 一批的输出就是一串短行，给足余量再封顶，避免模型自由发挥把等待时间拉长。
+export function assistMaxTokens(batchSize = ASSIST_BATCH_SIZE) {
+  const count = Math.max(1, Math.trunc(Number(batchSize)) || ASSIST_BATCH_SIZE);
+  return count * 20 + 256;
+}
+
+// 同一个写法在不同站点往往指向同一个模型，候选也完全一样：问一次，答案按候选集合分发到各站点。
+// 签名带上候选 id 列表，候选不同的写法不会被合并。
+export function collapseAssistEntries(entries = []) {
+  const groups = new Map();
+  const followers = new Map();
+  for (const entry of entries) {
+    const signature = `${normalizeProxyModelName(entry.modelName)}\u0000${(entry.candidates || []).map(candidate => candidate.id).join(",")}`;
+    const primary = groups.get(signature);
+    if (!primary) {
+      groups.set(signature, entry);
+      followers.set(entry.key, []);
+      continue;
+    }
+    followers.get(primary.key).push(entry);
+  }
+  return { primary: [...groups.values()], followers };
+}
+
+// 把主条目的结论摊回同一签名的其它站点条目，成功后与失败重问用的是同一个出口。
+export function spreadAssistResults(results = [], followers = new Map()) {
+  if (!followers.size) return results;
+  const spread = [];
+  for (const result of results) {
+    spread.push(result);
+    for (const follower of followers.get(result.key) || []) {
+      spread.push({ ...result, key: follower.key, stationId: follower.stationId, modelName: follower.modelName, fingerprint: follower.fingerprint });
+    }
+  }
+  return spread;
 }
 
 export function applyAssistResults(cache = {}, results = [], { fingerprintByKey = {}, notAsked = [] } = {}) {
@@ -213,6 +255,7 @@ export function applyAssistResults(cache = {}, results = [], { fingerprintByKey 
     };
   }
   // 没被问到的条目（响应里缺该序号）记一次失败，避免同一批反复重问。
+  // 失败原因写进缓存：超时、接口报错、模型漏答要能分开看，否则界面上只剩一个 failed。
   for (const entry of notAsked) {
     const key = entry.key || cacheKey(entry.stationId, entry.modelName);
     const previous = next[key] || {};
@@ -226,10 +269,26 @@ export function applyAssistResults(cache = {}, results = [], { fingerprintByKey 
       fingerprint: entry.fingerprint || "",
       referencesFetchedAt: Number(entry.referencesFetchedAt) || 0,
       at,
+      reason: String(entry.reason || "unanswered"),
+      error: String(entry.error || ""),
       previous: previous.status ? { status: previous.status, targetId: previous.targetId || "", at: previous.at || 0 } : null
     };
   }
   return next;
+}
+
+// 失败原因分得开才修得动：超时和漏答是两回事，前者要加时或缩批，后者要改提示词。
+export const ASSIST_FAILURE_LABELS = {
+  timeout: "请求超时",
+  error: "接口报错",
+  unanswered: "模型没答这条"
+};
+
+export function assistFailureLabel(entry) {
+  if (!entry || entry.status !== "failed") return "";
+  const label = ASSIST_FAILURE_LABELS[entry.reason] || ASSIST_FAILURE_LABELS.unanswered;
+  const detail = String(entry.error || "").trim();
+  return detail ? `${label}：${detail}` : label;
 }
 
 export function llmMatchesFromCache(cache = {}) {

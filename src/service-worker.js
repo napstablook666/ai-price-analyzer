@@ -10,7 +10,7 @@ import { activeCatalogForStations, activePluginIds, activeSitePluginForStation, 
 import { PLUGIN_REGISTRY_SNAPSHOT } from "./site-plugins/registry-snapshot.js";
 import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpecs, installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState, registryStateAfterRefresh } from "./core/declarative-plugin.js";
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
-import { withKeyedLock } from "./core/concurrency.js";
+import { runWithConcurrency, withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
 import { fetchReferences } from "./core/openrouter.js";
 import { buildComparisonRows, buildStationIndexes, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
@@ -21,7 +21,7 @@ import { normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
-import { ASSIST_BATCH_SIZE, applyAssistResults, buildAssistEntries, buildAssistPrompt, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, selectPendingEntries, summarizeCache } from "./core/llm-matching.js";
+import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPrompt, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, selectPendingEntries, spreadAssistResults, summarizeCache } from "./core/llm-matching.js";
 import { checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, normalizeCheckinSession, performCheckin, readPageToken } from "./core/checkin.js";
 import { checkForUpdate } from "./core/update-check.js";
 
@@ -1119,6 +1119,7 @@ async function modelAssistState() {
       candidates: assigned?.candidates?.length || 0,
       // 规则层给不出候选的写法，只能等官方清单更新，不进判定队列。
       status: assigned ? (cached?.status || "pending") : "no-candidates",
+      failure: cached?.status === "failed" ? assistFailureLabel(cached) : "",
       targetId: cached?.targetId || "",
       attempts: Number(cached?.attempts) || 0,
       at: Number(cached?.at) || 0
@@ -1161,9 +1162,14 @@ async function runModelAssist({ force = false } = {}) {
     const fingerprintByKey = {};
     let ranBatches = 0;
     let errors = 0;
-    const batches = chunkList(pending, ASSIST_BATCH_SIZE);
+    // 同写法同候选的站点条目合并成一条问，答案再摊回各站点，省掉重复往返。
+    const { primary, followers } = collapseAssistEntries(pending);
+    for (const entry of pending) fingerprintByKey[entry.key] = entry.fingerprint;
+    const batches = chunkList(primary, ASSIST_BATCH_SIZE);
     let completed = 0;
     let completedBatches = 0;
+    let activeBatches = 0;
+    const weightOf = entry => 1 + (followers.get(entry.key)?.length || 0);
     const tally = { accepted: 0, none: 0, invalid: 0 };
     const addToTally = list => {
       for (const item of list) {
@@ -1179,6 +1185,8 @@ async function runModelAssist({ force = false } = {}) {
       completed,
       totalBatches: batches.length,
       completedBatches,
+      activeBatches,
+      concurrency: ASSIST_CONCURRENCY,
       accepted: tally.accepted,
       none: tally.none,
       invalid: tally.invalid,
@@ -1186,9 +1194,10 @@ async function runModelAssist({ force = false } = {}) {
     });
     reportProgress("start");
 
-    for (const batch of batches) {
+    // 批次并行跑：串行要等 N 轮往返，并行只等一轮；中转站限流时靠 ASSIST_CONCURRENCY 收口。
+    await runWithConcurrency(batches, ASSIST_CONCURRENCY, async batch => {
+      activeBatches += 1;
       reportProgress("request");
-      for (const entry of batch) fingerprintByKey[entry.key] = entry.fingerprint;
       let parsed;
       try {
         const { content } = await completeChat({
@@ -1196,6 +1205,9 @@ async function runModelAssist({ force = false } = {}) {
           apiKey,
           model: config.model,
           temperature: config.temperature,
+          maxTokens: assistMaxTokens(batch.length),
+          // 长推理任务给足时间：超时太短会把还在跑的批次整批记成失败。
+          timeoutMs: ASSIST_TIMEOUT_MS,
           messages: [
             { role: "system", content: "你只输出「序号 => id」的行，不要任何解释。" },
             { role: "user", content: buildAssistPrompt(batch) }
@@ -1205,22 +1217,29 @@ async function runModelAssist({ force = false } = {}) {
       } catch (error) {
         console.debug("[AI比价] 模型识别批次失败", error);
         errors += 1;
-        notAsked.push(...batch);
-        completed += batch.length;
+        activeBatches -= 1;
+        // 超时和接口报错分开记：前者该加时或缩批，后者该看密钥和地址。
+        const reason = /超时/.test(String(error?.message || "")) ? "timeout" : "error";
+        const detail = String(error?.message || "").slice(0, 120);
+        notAsked.push(...spreadAssistResults(batch, followers).map(item => ({ ...item, reason, error: detail })));
+        completed += batch.reduce((sum, entry) => sum + weightOf(entry), 0);
         completedBatches += 1;
         reportProgress("batch");
-        continue;
+        return;
       }
-      results.push(...parsed.accepted, ...parsed.invalid);
-      addToTally(parsed.accepted);
-      addToTally(parsed.invalid);
-      const answered = new Set([...parsed.accepted, ...parsed.invalid].map(item => item.key));
-      notAsked.push(...batch.filter(entry => !answered.has(entry.key)));
+      const answered = [...parsed.accepted, ...parsed.invalid];
+      const spread = spreadAssistResults(answered, followers);
+      results.push(...spread);
+      addToTally(spread);
+      const answeredKeys = new Set(answered.map(item => item.key));
+      const unanswered = batch.filter(entry => !answeredKeys.has(entry.key));
+      notAsked.push(...spreadAssistResults(unanswered, followers).map(item => ({ ...item, reason: "unanswered" })));
       ranBatches += 1;
-      completed += batch.length;
+      activeBatches -= 1;
+      completed += batch.reduce((sum, entry) => sum + weightOf(entry), 0);
       completedBatches += 1;
       reportProgress("batch");
-    }
+    });
 
     const nextCache = applyAssistResults(cache, results, { fingerprintByKey, notAsked });
     await setValue("llmMatchCache", nextCache);
@@ -1229,9 +1248,11 @@ async function runModelAssist({ force = false } = {}) {
     const summary = {
       ...summarizeCache(nextCache),
       ranBatches,
+      timeouts: Object.values(nextCache).filter(entry => entry?.status === "failed" && entry.reason === "timeout").length,
       pending: pending.length,
       reused: reused.length,
       invalidAnswers: results.filter(item => item.status === "invalid").length,
+      merged: pending.length - primary.length,
       errors
     };
     reportProgress("complete");

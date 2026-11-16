@@ -4,15 +4,19 @@ import assert from "node:assert/strict";
 import {
   ASSIST_MAX_ATTEMPTS,
   applyAssistResults,
+  assistFailureLabel,
+  assistMaxTokens,
   assistFingerprint,
   buildAssistEntries,
   buildAssistPrompt,
   cacheKey,
+  collapseAssistEntries,
   collectUnmatchedModels,
   llmMatchesFromCache,
   overrideFromAssist,
   parseAssistResponse,
   selectPendingEntries,
+  spreadAssistResults,
   suggestModelCandidates,
   summarizeCache
 } from "../src/core/llm-matching.js";
@@ -144,6 +148,15 @@ test("反复失败到上限就停手，不再消耗请求", () => {
   assert.equal(pending.length, 0);
 });
 
+test("超时失败不占用重试上限，下次还能再问", () => {
+  const entry = entriesFor(["gpt5.5-turbo"])[0];
+  const cache = {
+    [entry.key]: { stationId: "s1", modelName: "gpt5.5-turbo", targetId: "", status: "failed", confidence: 0, attempts: ASSIST_MAX_ATTEMPTS, reason: "timeout", fingerprint: "旧指纹", referencesFetchedAt: 100 }
+  };
+  const { pending } = selectPendingEntries({ cache, entries: [entry], referencesFetchedAt: 100 });
+  assert.equal(pending.length, 1);
+});
+
 test("强制重算忽略已有缓存", () => {
   const entry = entriesFor(["gpt5.5-turbo"])[0];
   const cache = {
@@ -194,4 +207,54 @@ test("接受的结果可以一键转成人工确认", () => {
   });
   assert.equal(overrideFromAssist({ status: "none", stationId: "s1", modelName: "x", targetId: "" }), null);
   assert.equal(overrideFromAssist({ status: "invalid", stationId: "s1", modelName: "x", targetId: "y" }), null);
+});
+test("同写法同候选的站点条目合并成一次请求，答案摊回各站点", () => {
+  const [left, right] = buildAssistEntries({
+    unmatched: [
+      { stationId: "s1", stationName: "中转 A", modelName: "claude4.5sonnet", count: 1 },
+      { stationId: "s2", stationName: "中转 B", modelName: "claude4.5sonnet", count: 1 }
+    ],
+    officialList: official,
+    referencesFetchedAt: 100
+  });
+  const { primary, followers } = collapseAssistEntries([left, right]);
+  assert.equal(primary.length, 1);
+  assert.equal(primary[0].key, left.key);
+  assert.deepEqual(followers.get(left.key).map(entry => entry.stationId), ["s2"]);
+
+  const spread = spreadAssistResults([
+    { key: left.key, stationId: "s1", modelName: "claude4.5sonnet", targetId: "claude-sonnet-4-5", status: "accepted", confidence: 0.8 }
+  ], followers);
+  assert.equal(spread.length, 2);
+  assert.equal(spread[1].key, right.key);
+  assert.equal(spread[1].stationId, "s2");
+  assert.equal(spread[1].targetId, "claude-sonnet-4-5");
+  assert.equal(spread[1].modelName, "claude4.5sonnet");
+});
+
+test("候选不同的写法不合并，各问各的", () => {
+  const entries = entriesFor(["gpt5.5-turbo", "gemini-3.8-flash-2025-01"]).map((entry, index) => ({ ...entry, stationId: `s${index + 1}` }));
+  const { primary, followers } = collapseAssistEntries(entries);
+  assert.equal(primary.length, 2);
+  assert.equal([...followers.values()].flat().length, 0);
+});
+
+test("输出上限随批大小放大，空值退回默认批大小", () => {
+  assert.equal(assistMaxTokens(1), 276);
+  assert.equal(assistMaxTokens(5), 356);
+  assert.ok(assistMaxTokens(20) > assistMaxTokens(5));
+  assert.equal(assistMaxTokens(0), 356);
+  assert.deepEqual(spreadAssistResults([{ key: "a" }], new Map()), [{ key: "a" }]);
+});
+
+test("失败原因写进缓存，超时和漏答分得开", () => {
+  const entry = entriesFor(["gpt5.5-turbo"])[0];
+  const timedOut = applyAssistResults({}, [], { notAsked: [{ ...entry, reason: "timeout", error: "模型请求超时（180 秒）" }] });
+  assert.equal(timedOut[entry.key].reason, "timeout");
+  assert.equal(assistFailureLabel(timedOut[entry.key]), "请求超时：模型请求超时（180 秒）");
+
+  const missing = applyAssistResults({}, [], { notAsked: [entry] });
+  assert.equal(missing[entry.key].reason, "unanswered");
+  assert.equal(assistFailureLabel(missing[entry.key]), "模型没答这条");
+  assert.equal(assistFailureLabel({ status: "accepted" }), "");
 });
