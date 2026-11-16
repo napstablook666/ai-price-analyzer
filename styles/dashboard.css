@@ -160,9 +160,9 @@
 .price-grid-row { display: contents; color: var(--text-3); }
 .price-grid-row.price-line-primary { color: var(--text-2); }
 .price-grid .price-key { max-width: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.price-grid .price-value { justify-self: start; color: var(--text-2); font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price-grid .price-value { justify-self: start; color: var(--price-tone, var(--text-2)); font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .price-grid-row.price-line-primary .price-key { color: var(--text); font-weight: 600; }
-.price-grid-row.price-line-primary .price-value { color: var(--text); font-size: 13.5px; font-weight: 650; }
+.price-grid-row.price-line-primary .price-value { color: var(--price-tone, var(--text)); font-size: 13.5px; font-weight: 650; }
 /* 输入/输出之外的费用项：一排小标签「官方 → 中转」，悬停看完整文字，缓存项前面加一个灰色标签 */
 .price-grid-detail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 5px; margin-top: 2px; grid-column: 1 / -1; overflow: hidden; }
 .price-mini { display: inline-flex; align-items: baseline; gap: 2px; padding: 0 2px; border-radius: 4px; background: var(--surface-2); font-size: 11px; line-height: 1.25; white-space: nowrap; }
@@ -175,6 +175,17 @@
 .price-value-missing { color: var(--text-3) !important; font-weight: 400 !important; }
 .price-value.is-estimated { color: var(--text-3); }
 .price-mini-note { color: var(--text-3); font-size: 11px; line-height: 1.25; white-space: nowrap; }
+/* 中转 vs 官方：贵标红、便宜标绿，只给中转那一侧上色，官方列保持中性灰当基准。
+   颜色走 --price-tone 自定义属性，让 .price-grid 与 .price-line-primary 两条定色规则统一取它，
+   不必和它们比选择器权重。 */
+.price-grid .price-value.is-up { --price-tone: var(--danger); }
+.price-grid .price-value.is-down { --price-tone: var(--ok); }
+.price-mini-relay.is-up { color: var(--danger); font-weight: 700; }
+.price-mini-relay.is-down { color: var(--ok); }
+.price-tone-mark { margin-right: 1px; font-size: .78em; opacity: .85; }
+/* 缺失值和估算值不上色，避免「估算出来的红绿」被当成结论 */
+.price-grid .price-value.price-value-missing,
+.price-grid .price-value.is-estimated { color: var(--text-3) !important; }
 /* 月成本条只是参考，绝对定位压在单元格底部，不再占据行高。 */
 .price-chart { position: absolute; left: 12px; right: 12px; bottom: 2px; }
 .price-chart .cell-chart { width: 100%; max-width: none; min-width: 0; height: 4px; }

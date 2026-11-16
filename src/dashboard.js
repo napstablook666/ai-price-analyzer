@@ -1,5 +1,5 @@
 import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
-import { dashboardPriceLines, formatSourcePrice } from "./dashboard-pricing.js";
+import { dashboardPriceLines, formatSourcePrice, priceEntryTone } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
 import { buildMonthlyCostRankings, createDashboardIndex, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
@@ -261,27 +261,39 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
     ? cell => formatSourcePrice(cell.value, row.officialCurrency || "CREDITS", cell.precise ? 6 : 4)
     : cell => formatPrice(cell.value, currency, cell.precise ? 6 : 4);
   const relayFormat = cell => formatSourcePrice(cell.value, row.sourceCurrency, cell.precise ? 6 : 4);
-  const cellMarkup = (cell, format) => cell
-    ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}"${cell.estimated ? ' title="估算值"' : ""}>${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
+  // 官方和中转同口径，同一费用项直接比大小上色：中转更贵标红，更便宜标绿。
+  const toneOf = entry => {
+    const dir = priceEntryTone(entry);
+    if (dir === "neutral") return null;
+    return { dir, percent: Math.abs((entry.relay.value / entry.official.value - 1) * 100).toFixed(1) };
+  };
+  const toneClass = tone => tone ? ` is-${tone.dir}` : "";
+  const toneMark = tone => tone ? `<span class="price-tone-mark" aria-hidden="true">${tone.dir === "up" ? "▲" : "▼"}</span>` : "";
+  const toneTitle = tone => tone ? ` · 比官方${tone.dir === "up" ? "贵" : "便宜"} ${tone.percent}%` : "";
+  const cellMarkup = (cell, format, tone = null) => cell
+    ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}${toneClass(tone)}"${cell.estimated ? ' title="估算值"' : ""}>${toneMark(tone)}${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
     : `<span class="price-value price-value-missing">—</span>`;
   // 输入/输出是常看的，留成对齐的两行；其余费用项压成一行「官方 → 中转」，行高不再随费用项数量增长。
   const primaryKeys = ["输入", "输出"];
   const cacheLabels = new Map([["缓存读", "读"], ["缓存写", "写"], ["缓存写入（1h）", "1h"]]);
   const entries = [...grid.values()];
   const primaryRows = entries.filter(entry => primaryKeys.includes(entry.base)).map(entry => {
-    return `<div class="price-grid-row price-line-primary"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${cellMarkup(entry.relay, relayFormat)}</div>`;
+    const tone = toneOf(entry);
+    const relayCell = cellMarkup(entry.relay, relayFormat, tone);
+    return `<div class="price-grid-row price-line-primary"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${relayCell}</div>`;
   }).join("");
   const miniText = (cell, format) => cell ? `${cell.estimated ? "≈" : ""}${format(cell)}` : "—";
   // 一个费用项压缩成「官方 → 中转」，完整文字放 title，鼠标悬停能看全
   const chip = (label, entry) => {
     const officialText = miniText(entry.official, officialFormat);
     const relayText = miniText(entry.relay, relayFormat);
-    const title = `${entry.base} · 官方 ${officialText} / 中转 ${relayText}`;
+    const tone = toneOf(entry);
+    const title = `${entry.base} · 官方 ${officialText} / 中转 ${relayText}${toneTitle(tone)}`;
     // 官方和中转同价时只留一个数，箭头省掉，一排三个缓存项才放得下
     if (entry.official && entry.relay && officialText === relayText) {
       return `<span class="price-mini" title="${escapeHtml(title)}"><span class="price-mini-key">${escapeHtml(label)}</span><span class="price-mini-pair"><span class="price-mini-relay">${escapeHtml(relayText)}</span></span></span>`;
     }
-    return `<span class="price-mini" title="${escapeHtml(title)}"><span class="price-mini-key">${escapeHtml(label)}</span><span class="price-mini-pair"><span class="price-mini-official">${escapeHtml(officialText)}</span><span class="price-mini-arrow" aria-hidden="true">→</span><span class="price-mini-relay">${escapeHtml(relayText)}</span></span></span>`;
+    return `<span class="price-mini" title="${escapeHtml(title)}"><span class="price-mini-key">${escapeHtml(label)}</span><span class="price-mini-pair"><span class="price-mini-official">${escapeHtml(officialText)}</span><span class="price-mini-arrow" aria-hidden="true">→</span><span class="price-mini-relay${toneClass(tone)}">${toneMark(tone)}${escapeHtml(relayText)}</span></span></span>`;
   };
   const cacheEntries = entries.filter(entry => cacheLabels.has(entry.base));
   const cacheGroup = cacheEntries.length

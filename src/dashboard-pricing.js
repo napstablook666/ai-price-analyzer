@@ -7,6 +7,23 @@ export function formatSourcePrice(value, currency = "UNKNOWN", precision = 4) {
   return `${symbol}${rounded}`;
 }
 
+// 官方价和中转价已折算到同一口径，同项直接比大小就能判断贵贱。
+// 用 0.5% 的相对容差吸收四舍五入，避免 0.0700 与 0.0701 被判成涨了。
+const PRICE_TONE_TOLERANCE = 0.005;
+function priceTone(relayValue, officialValue) {
+  if (relayValue === null || relayValue === undefined || officialValue === null || officialValue === undefined) return "neutral";
+  const relay = Number(relayValue);
+  const official = Number(officialValue);
+  if (!Number.isFinite(relay) || !Number.isFinite(official) || official <= 0) return "neutral";
+  const ratio = relay / official;
+  if (Math.abs(ratio - 1) <= PRICE_TONE_TOLERANCE) return "neutral";
+  return ratio > 1 ? "up" : "down";
+}
+// 估算值是拿输入价兜底出来的，拿它和官方价比没有意义，一律不上色。
+export function priceEntryTone(entry) {
+  if (!entry.official || !entry.relay || entry.official.estimated || entry.relay.estimated) return "neutral";
+  return priceTone(entry.relay.value, entry.official.value);
+}
 export function dashboardPriceLines(prices = {}, row = {}, official = false) {
   const readEstimated = official ? prices.cacheRead === null || prices.cacheRead === undefined : row.cacheReadEstimated;
   const writeEstimated = official ? prices.cacheWrite === null || prices.cacheWrite === undefined : row.cacheWriteEstimated;

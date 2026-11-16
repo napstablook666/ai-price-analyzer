@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
 import { buildMonthlyCostRankings, deltaTone, modeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
+import { priceEntryTone } from "../src/dashboard-pricing.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
 
@@ -84,6 +85,21 @@ test("deltaTone maps price difference percentages to readable color levels", () 
   assert.equal(deltaTone(20), "fair");
   assert.equal(deltaTone(50), "fair");
   assert.equal(deltaTone(50.01), "bad");
+});
+
+test("priceEntryTone only compares prices that really exist on both sides", () => {
+  assert.equal(priceEntryTone({ relay: { value: 0.2 }, official: { value: 0.18 } }), "up");
+  assert.equal(priceEntryTone({ relay: { value: 0.14 }, official: { value: 0.18 } }), "down");
+  // 0.5% 容差：四舍五入导致的微小差异不算涨跌。
+  assert.equal(priceEntryTone({ relay: { value: 0.1805 }, official: { value: 0.18 } }), "neutral");
+  assert.equal(priceEntryTone({ relay: { value: 0.182 }, official: { value: 0.18 } }), "up");
+  assert.equal(priceEntryTone({ relay: { value: 0.18 }, official: null }), "neutral");
+  assert.equal(priceEntryTone({ relay: null, official: { value: 0.18 } }), "neutral");
+  assert.equal(priceEntryTone({ relay: { value: 0.18 }, official: { value: 0 } }), "neutral");
+  assert.equal(priceEntryTone({ relay: { value: 0 }, official: { value: 0.18 } }), "down");
+  // 估算值是拿输入价兜底出来的，不参与比价。
+  assert.equal(priceEntryTone({ relay: { value: 0.2, estimated: true }, official: { value: 0.18 } }), "neutral");
+  assert.equal(priceEntryTone({ relay: { value: 0.2 }, official: { value: 0.18, estimated: true } }), "neutral");
 });
 
 test("dashboard drops the paid recommendation column and keeps one delta sort option", () => {
