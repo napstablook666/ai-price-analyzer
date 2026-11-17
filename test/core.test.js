@@ -5068,6 +5068,21 @@ test("defaults provider filters to every provider and remembers the selection", 
   assert.match(source, /mediaModeSwitchFilters\(state\.filters, state\.mediaMode, readProviderFilter\(\)\)/);
 });
 
+test("ships one 常用 button that stores a provider list apart from the last selection", () => {
+  const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
+  const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
+  assert.match(html, /<button type="button" data-facet-favorite="provider"[^>]*>常用<\/button>/);
+  assert.equal((html.match(/data-facet-favorite=/g) || []).length, 1);
+  assert.match(source, /const PROVIDER_FAVORITE_STORE = "model-atlas:provider-favorite"/);
+  // 清空要把键删掉，不留空数组在存储里
+  assert.match(source, /else localStorage\.removeItem\(PROVIDER_FAVORITE_STORE\)/);
+  // 套用时按当前数据集取交集，一个都不剩就回全选，别把表筛空
+  assert.match(source, /const kept = favorite\.filter\(value => offered\.has\(value\)\)/);
+  assert.match(source, /常用里的供应商当前都没有报价，已回到全选/);
+  assert.match(css, /\.facet-favorite-popover \{[^}]*position: fixed/);
+});
+
 test("mode switches drop filters that only exist in the other dataset", () => {
   const filters = modeSwitchFilters({ search: "claude", stationId: "linuxdo", provider: ["windhub"], group: "gpt", models: ["gpt-4o"], showUnmatched: false, sortBy: "model", sortSecondary: "none", sortDirection: "desc" }, ["openai"]);
   assert.deepEqual(filters, { search: "", stationId: "", provider: ["openai"], group: null, models: [], showUnmatched: false, sortBy: "model", sortSecondary: "none", sortDirection: "desc" });

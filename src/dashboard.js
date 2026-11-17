@@ -24,6 +24,23 @@ function saveProviderFilter(selection) {
     else localStorage.removeItem(PROVIDER_FILTER_STORE);
   } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
 }
+// 「常用」是手动攒下来的供应商名单，跟上面那份「上次勾了什么」各存一份：一个随时能回填，一个只是记住上次。
+const PROVIDER_FAVORITE_STORE = "model-atlas:provider-favorite";
+function readProviderFavorite() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PROVIDER_FAVORITE_STORE) || "null");
+    if (!Array.isArray(stored)) return [];
+    return [...new Set(stored.filter(value => typeof value === "string" && value))];
+  } catch { return []; }
+}
+function saveProviderFavorite(values) {
+  const list = [...new Set((values || []).filter(value => typeof value === "string" && value))];
+  try {
+    if (list.length) localStorage.setItem(PROVIDER_FAVORITE_STORE, JSON.stringify(list));
+    else localStorage.removeItem(PROVIDER_FAVORITE_STORE);
+  } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
+  syncFacetFavoriteTrigger();
+}
 const PAGE_SIZE = 20;
 const state = {
   data: null,
@@ -289,6 +306,138 @@ function renderFacetFilters(rows) {
     filterFacetOptions(key);
   }
 }
+
+// 「常用」只占一个按钮：点开是个小浮层，套用、存为常用、点掉单个 chip 都在里面。
+// 浮层挂在 body 层的 .floating-layer 里，免得被筛选菜单的滚动区裁掉。
+const facetFavoriteState = { trigger: null, panel: null };
+
+function facetFavoriteLayer() {
+  let layer = document.getElementById("facet-favorite-layer");
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.id = "facet-favorite-layer";
+    layer.className = "floating-layer";
+    document.body.append(layer);
+  }
+  return layer;
+}
+
+function facetFavoritePanel() {
+  let panel = document.getElementById("provider-favorite-panel");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "provider-favorite-panel";
+    panel.className = "facet-favorite-popover";
+    panel.hidden = true;
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "常用供应商");
+    facetFavoriteLayer().append(panel);
+  }
+  return panel;
+}
+
+function syncFacetFavoriteTrigger() {
+  const trigger = document.querySelector("[data-facet-favorite]");
+  if (!trigger) return;
+  const favorite = readProviderFavorite();
+  trigger.classList.toggle("is-set", favorite.length > 0);
+  trigger.title = favorite.length ? `常用：${favorite.join("、")}` : "把当前勾选的供应商存成常用";
+}
+
+function renderFacetFavoritePanel() {
+  const panel = facetFavoritePanel();
+  const favorite = readProviderFavorite();
+  const offered = new Set([...document.querySelectorAll("#provider-filters input[data-facet-key]")].map(input => input.value));
+  const chips = favorite.map(value => `<button type="button" class="facet-favorite-chip${offered.has(value) ? "" : " is-missing"}" data-favorite-remove="${escapeHtml(value)}" title="从常用里移除 ${escapeHtml(value)}">${providerLogoFor(value) ? providerIconMarkup(value, { size: 12 }) : ""}<span>${escapeHtml(value)}</span><span class="facet-favorite-chip-x" aria-hidden="true">×</span></button>`).join("");
+  panel.innerHTML = `<div class="facet-favorite-head"><strong>常用供应商</strong><span>${favorite.length ? `${favorite.length} 个` : "还没设过"}</span></div>${favorite.length ? `<div class="facet-favorite-chips">${chips}</div>` : `<p class="facet-favorite-empty">先勾选供应商，再点「设为常用」。</p>`}<div class="facet-favorite-actions"><button type="button" data-favorite-action="apply"${favorite.length ? "" : " disabled"}>套用常用</button><button type="button" data-favorite-action="save">设为常用</button><button type="button" data-favorite-action="clear"${favorite.length ? "" : " disabled"}>清除</button></div>`;
+}
+
+function placeFacetFavoritePanel() {
+  const { trigger, panel } = facetFavoriteState;
+  if (!panel || panel.hidden || !trigger?.isConnected) return;
+  const rect = trigger.getBoundingClientRect();
+  if (rect.bottom < 0 || rect.top > window.innerHeight) {
+    closeFacetFavoritePanel();
+    return;
+  }
+  const margin = 8;
+  const width = panel.offsetWidth || 248;
+  const height = panel.offsetHeight || 200;
+  const left = Math.min(Math.max(margin, rect.right - width), Math.max(margin, window.innerWidth - width - margin));
+  let top = rect.bottom + 6;
+  if (top + height > window.innerHeight - margin) top = Math.max(margin, rect.top - height - 6);
+  panel.style.left = `${Math.round(left)}px`;
+  panel.style.top = `${Math.round(top)}px`;
+}
+
+function openFacetFavoritePanel(trigger) {
+  const panel = facetFavoritePanel();
+  facetFavoriteState.trigger = trigger;
+  facetFavoriteState.panel = panel;
+  renderFacetFavoritePanel();
+  panel.hidden = false;
+  trigger.setAttribute("aria-expanded", "true");
+  placeFacetFavoritePanel();
+  panel.querySelector("[data-favorite-action='apply']:not([disabled])")?.focus({ preventScroll: true });
+}
+
+function closeFacetFavoritePanel() {
+  const { trigger, panel } = facetFavoriteState;
+  if (!panel || panel.hidden) return;
+  facetFavoriteState.trigger = null;
+  panel.hidden = true;
+  const menu = trigger?.closest(".facet-menu");
+  if (trigger?.isConnected && (!menu || menu.open)) {
+    trigger.setAttribute("aria-expanded", "false");
+    trigger.focus({ preventScroll: true });
+  }
+}
+
+// 常用里可能留着当前数据集没有的供应商（换过站点、退过插件），套用时按当前有的取交集，一个都不剩就回全选。
+function applyProviderFavorite() {
+  const favorite = readProviderFavorite();
+  if (!favorite.length) return;
+  const offered = new Set(state.rows.map(row => row.provider).filter(Boolean));
+  const kept = favorite.filter(value => offered.has(value));
+  if (!kept.length) {
+    state.filters.provider = null;
+    toast("常用里的供应商当前都没有报价，已回到全选");
+  } else {
+    state.filters.provider = kept;
+    toast(`已套用常用：${kept.length} 个供应商`);
+  }
+  saveProviderFilter(state.filters.provider);
+  renderFacetFilters(state.rows);
+  renderRows();
+  closeFacetFavoritePanel();
+}
+
+function saveProviderFavoriteFromSelection() {
+  const current = facetSelection("provider");
+  if (current === null) {
+    toast("现在就是全选，不用存常用");
+    return;
+  }
+  if (!current.length) {
+    toast("先勾选供应商，再设为常用");
+    return;
+  }
+  saveProviderFavorite(current);
+  renderFacetFavoritePanel();
+  placeFacetFavoritePanel();
+  toast(`已存为常用：${current.length} 个供应商`);
+}
+
+// 供应商菜单一收起，浮层跟着收，免得留在一块没有锚点的地方。
+for (const menu of document.querySelectorAll(".facet-menu")) {
+  // 只认供应商那个菜单：点「常用」时其它菜单会被顺手收起，别让它们的 toggle 把浮层带走。
+  menu.addEventListener("toggle", () => {
+    if (menu.open) return;
+    if (facetFavoriteState.trigger && !menu.contains(facetFavoriteState.trigger)) return;
+    closeFacetFavoritePanel();
+  });
+}
+syncFacetFavoriteTrigger();
 
 const MODEL_FILTER_BOXES = 4;
 const MODEL_FILTER_BOX_LIMIT = 24;
@@ -1257,14 +1406,23 @@ document.addEventListener("keydown", event => {
     openMonthlyCostPanel(trigger);
     return;
   }
-  if (event.key === "Escape") closeMonthlyCostPanel();
+  if (event.key === "Escape") {
+    closeMonthlyCostPanel();
+    closeFacetFavoritePanel();
+  }
 });
 document.addEventListener("scroll", repositionMonthlyCostPanel, true);
 window.addEventListener("resize", repositionMonthlyCostPanel);
+document.addEventListener("scroll", placeFacetFavoritePanel, true);
+window.addEventListener("resize", placeFacetFavoritePanel);
 document.addEventListener("click", event => {
   const activeMenu = event.target.closest(".facet-menu");
+  // 在「常用」浮层里点东西时别把供应商菜单一起收掉，浮层要顶着它用。
+  const inFavoritePanel = Boolean(event.target.closest(".facet-favorite-popover"));
   for (const menu of document.querySelectorAll(".facet-menu[open]")) {
-    if (menu !== activeMenu) menu.open = false;
+    if (menu === activeMenu) continue;
+    if (inFavoritePanel && facetFavoriteState.trigger?.closest(".facet-menu") === menu) continue;
+    menu.open = false;
   }
   const activeHint = event.target.closest(".unit-hint");
   for (const hint of document.querySelectorAll(".unit-hint[open]")) {
@@ -1301,6 +1459,33 @@ document.addEventListener("click", event => {
     renderRows();
     return;
   }
+  const favoriteTrigger = event.target.closest("[data-facet-favorite]");
+  if (favoriteTrigger) {
+    if (facetFavoriteState.trigger === favoriteTrigger && facetFavoriteState.panel && !facetFavoriteState.panel.hidden) closeFacetFavoritePanel();
+    else openFacetFavoritePanel(favoriteTrigger);
+    return;
+  }
+  const favoriteRemove = event.target.closest("[data-favorite-remove]");
+  if (favoriteRemove) {
+    saveProviderFavorite(readProviderFavorite().filter(value => value !== favoriteRemove.dataset.favoriteRemove));
+    renderFacetFavoritePanel();
+    placeFacetFavoritePanel();
+    return;
+  }
+  const favoriteAction = event.target.closest("[data-favorite-action]");
+  if (favoriteAction) {
+    const action = favoriteAction.dataset.favoriteAction;
+    if (action === "apply") applyProviderFavorite();
+    else if (action === "save") saveProviderFavoriteFromSelection();
+    else if (action === "clear") {
+      saveProviderFavorite([]);
+      renderFacetFavoritePanel();
+      placeFacetFavoritePanel();
+      toast("已清除常用");
+    }
+    return;
+  }
+  if (!event.target.closest(".facet-favorite-popover")) closeFacetFavoritePanel();
   const button = event.target.closest("[data-facet-action]");
   if (!button) return;
   const key = button.dataset.facetKey;
