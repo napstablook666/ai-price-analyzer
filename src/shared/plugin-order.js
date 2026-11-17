@@ -20,5 +20,6 @@ export const SITE_PLUGIN_ORDER = [
   "fastaitoken",
   "nexavlinks",
   "cheaprouter",
-  "jiji"
+  "jiji",
+  "maolaoapi"
 ];

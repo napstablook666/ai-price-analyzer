@@ -3,6 +3,7 @@
 // 需要自定义采集代码的站点在仓库里标 needsCode: true，只能随扩展发布。
 
 import { requestPolicy } from "./provider-registry.js";
+import { normalizeRechargeTiers } from "../shared/recharge-tiers.js";
 import { isSupportedResponseFormat, RESPONSE_FORMAT_DEFINITIONS } from "./response-formats.js";
 
 export const PLUGIN_REGISTRY_SCHEMA_VERSION = 1;
@@ -89,6 +90,12 @@ function normalizePreset(raw) {
   }
   for (const field of PRESET_RATE_FIELDS) {
     if (raw[field] !== undefined) preset[field] = Boolean(raw[field]);
+  }
+  if (raw.rechargeTiers !== undefined) {
+    if (!Array.isArray(raw.rechargeTiers)) fail("插件字段 preset.rechargeTiers 必须是数组");
+    const tiers = normalizeRechargeTiers(raw.rechargeTiers);
+    if (tiers.length !== raw.rechargeTiers.length) fail("插件字段 preset.rechargeTiers 含非法档位（amount>0，0<discount<=1）");
+    if (tiers.length) preset.rechargeTiers = tiers;
   }
   for (const field of ["priceCurrency", "priceCurrencyNote", "rechargeRateNote"]) {
     if (raw[field] === undefined) continue;

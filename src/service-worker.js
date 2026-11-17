@@ -21,8 +21,9 @@ import { normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
-import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPrompt, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, selectPendingEntries, spreadAssistResults, summarizeCache } from "./core/llm-matching.js";
+import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_RETRIES, ASSIST_RETRY_DELAY_MS, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPool, buildAssistPrompt, cacheKey, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, poolSummaryLabel, selectPendingEntries, spreadAssistResults, summarizeCache, summarizePool } from "./core/llm-matching.js";
 import { checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, normalizeCheckinSession, performCheckin, readPageToken } from "./core/checkin.js";
+import { MAGPIE_USAGE_WINDOWS, fetchMagpieUsage, normalizeMagpieSyncInterval } from "./core/magpie-usage.js";
 import { checkForUpdate } from "./core/update-check.js";
 
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
@@ -30,6 +31,7 @@ const CHECKIN_ALARM_NAME = "checkin-stations";
 const CHECKIN_LOGIN_ALARM_NAME = "checkin-login";
 const UPDATE_ALARM_NAME = "update-check";
 const UPDATE_STATE_KEY = "update-state";
+const MAGPIE_USAGE_ALARM_NAME = "magpie-usage";
 const CHECKIN_LOGIN_WATCH_LIMIT = 12;
 const CHECKIN_LOGIN_COOKIE_PREFIXES = ["__Host-", "__Secure-"];
 
@@ -111,6 +113,72 @@ async function stationWithCredentials(station) {
   for (const field of ["token", "username", "password"]) if (!auth[field]) auth[field] = credential[field] || "";
   return { ...station, auth };
 }
+// 只放在 HttpOnly cookie 里的登录态：借 DNR 补齐 refresh 接口要的 Origin 与 Cookie，
+// 在 service worker 里换出 access token，省掉每轮刷新都开一个临时标签页。
+const COOKIE_AUTH_RULE_BASE = 9300;
+const COOKIE_AUTH_TOKENS = new Map();
+
+function readPayloadPath(value, path) {
+  return String(path || "").split(".").filter(Boolean).reduce((current, key) => current && typeof current === "object" ? current[key] : undefined, value);
+}
+
+function cookieAuthRuleId(stationId) {
+  let hash = 0;
+  for (const character of String(stationId)) hash = (hash * 31 + character.codePointAt(0)) % 10000;
+  return COOKIE_AUTH_RULE_BASE + hash;
+}
+
+async function cookieAuthAccessToken(station, cookieAuth) {
+  const cached = COOKIE_AUTH_TOKENS.get(station.id);
+  if (cached && cached.expiresAt > Date.now()) return cached.token;
+  const origin = new URL(station.baseUrl).origin;
+  const refreshUrl = new URL(cookieAuth.refreshPath, origin).toString();
+  const cookie = await chrome.cookies.get({ url: refreshUrl, name: cookieAuth.cookieName }).catch(() => null);
+  if (!cookie?.value) throw new Error(cookieAuth.missingMessage);
+  const ruleId = cookieAuthRuleId(station.id);
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [ruleId],
+      addRules: [{
+        id: ruleId,
+        priority: 1,
+        action: {
+          type: "modifyHeaders",
+          requestHeaders: [
+            { header: "origin", operation: "set", value: origin },
+            { header: "cookie", operation: "set", value: `${cookieAuth.cookieName}=${cookie.value}` }
+          ]
+        },
+        condition: { urlFilter: `||${new URL(origin).hostname}${cookieAuth.refreshPath}`, resourceTypes: ["xmlhttprequest"] }
+      }]
+    });
+    const response = await fetch(refreshUrl, { method: "POST", headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error(cookieAuth.failureMessage);
+    const payload = await response.json();
+    const token = String(readPayloadPath(payload, cookieAuth.accessTokenPath) || "").trim();
+    if (!token) throw new Error(cookieAuth.failureMessage);
+    const expiresAt = Number(readPayloadPath(payload, cookieAuth.expiresAtPath)) * 1000;
+    COOKIE_AUTH_TOKENS.set(station.id, { token, expiresAt: Number.isFinite(expiresAt) && expiresAt > Date.now() ? expiresAt - 60000 : Date.now() + 4 * 60 * 1000 });
+    return token;
+  } finally {
+    chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [ruleId] }).catch(() => {});
+  }
+}
+
+async function collectWithCookieAuth(station, collection, cookieAuth) {
+  const attempt = async () => {
+    const token = await cookieAuthAccessToken(station, cookieAuth);
+    const authed = { ...station, auth: { ...station.auth, type: "bearer", token } };
+    return collectStation(authed, { collection: { ...collection, station: authed } });
+  };
+  try {
+    return await attempt();
+  } catch (error) {
+    if (String(error?.message || "") === cookieAuth.missingMessage) throw error;
+    COOKIE_AUTH_TOKENS.delete(station.id);
+    return attempt();
+  }
+}
 
 export async function withPageFetch(station, preferredTabId, task, { existingTab } = {}) {
   const origin = new URL(station.baseUrl).origin;
@@ -159,6 +227,8 @@ async function collect(stationInput, preferredTabId) {
   await loadSitePluginForStation(stationInput);
   const collection = resolveStationCollection(await stationWithCredentials(stationInput));
   const { station } = collection;
+  const cookieAuth = providerForStation(station)?.request?.cookieAuth;
+  if (cookieAuth && station.mode !== "page") return collectWithCookieAuth(station, collection, cookieAuth);
   if (station.mode !== "page") return collectStation(station, { collection });
   return withPageFetch(station, preferredTabId, pageFetch => collectStation(station, { pageFetch, collection }));
 }
@@ -620,7 +690,6 @@ async function dashboard() {
       snapshots: normalizedSnapshots,
       references: effectiveReferences,
       usage: savedSettings.usage,
-      rules: savedSettings.matchingRules,
       modelMatchOverrides: savedSettings.modelMatchOverrides,
       modelAliases: modelAliasesForStations(comparisonStations),
       llmMatches,
@@ -735,6 +804,52 @@ async function saveUpdatePrefs(input = {}) {
   await setValue("settings", next);
   await scheduleUpdateAlarm();
   return updateStateForUi();
+}
+
+// magpie 用量同步：只读本机网关，把两个窗口的实测值写进 settings.magpieSync。
+async function runMagpieUsageSync({ force = false } = {}) {
+  const settings = await getSettings();
+  const interval = normalizeMagpieSyncInterval(settings.magpieSyncIntervalMinutes);
+  const previous = settings.magpieSync || null;
+  const nowMs = Date.now();
+  if (!force) {
+    const lastAttempt = Number(previous?.attemptedAt) || 0;
+    if (!interval) return { ...(await settingsForUi()), skipped: true };
+    // 失败也按间隔退避，网关没开的时候不要每分钟重试。
+    if (lastAttempt && nowMs - lastAttempt < interval * 60_000) return { ...(await settingsForUi()), skipped: true };
+  }
+  const next = { error: "", attemptedAt: nowMs };
+  for (const window of MAGPIE_USAGE_WINDOWS) {
+    try {
+      const result = await fetchMagpieUsage({ baseUrl: settings.magpieBaseUrl, period: window.period, days: window.days });
+      next[window.id] = { usage: result.usage, syncedAt: Date.now(), window: result.window };
+    } catch (error) {
+      // 单个窗口失败不影响另一个；已同步过的数字保留。
+      if (previous?.[window.id]) next[window.id] = previous[window.id];
+      next.error = error.message || String(error);
+    }
+  }
+  await persistSettings({ ...settings, magpieSync: next });
+  return { ...(await settingsForUi()), lastSync: next };
+}
+
+async function scheduleMagpieUsageAlarm() {
+  await chrome.alarms.clear(MAGPIE_USAGE_ALARM_NAME);
+  const settings = await getSettings();
+  if (!settings.magpieSyncIntervalMinutes) return;
+  chrome.alarms.create(MAGPIE_USAGE_ALARM_NAME, { periodInMinutes: settings.magpieSyncIntervalMinutes });
+}
+
+async function saveMagpieUsagePrefs(input = {}) {
+  const current = await getSettings();
+  const next = normalizeSettings({
+    ...current,
+    magpieBaseUrl: input.baseUrl === undefined ? current.magpieBaseUrl : input.baseUrl,
+    magpieSyncIntervalMinutes: input.intervalMinutes === undefined ? current.magpieSyncIntervalMinutes : input.intervalMinutes
+  });
+  await setValue("settings", next);
+  await scheduleMagpieUsageAlarm();
+  return settingsForUi();
 }
 
 async function resolveCheckinPresets(settings = null) {
@@ -1106,6 +1221,8 @@ async function assistContext() {
 
 async function modelAssistState() {
   const { cache, entries, entryByKey, unmatched, referencesFetchedAt } = await assistContext();
+  // 已生效的判定不在 unmatched 里（它已经匹配成功），只靠 unmatched 拼列表会把它整片弄丢，
+  // 于是「已接受」筛选永远空、转人工确认按钮永远 0 条。这里把缓存和未匹配合并成一张池。
   const rows = unmatched.map(entry => {
     const assigned = entryByKey.get(entry.key);
     const cached = cache[entry.key] || null;
@@ -1117,21 +1234,36 @@ async function modelAssistState() {
       displayName: entry.displayName,
       count: entry.count,
       candidates: assigned?.candidates?.length || 0,
-      // 规则层给不出候选的写法，只能等官方清单更新，不进判定队列。
-      status: assigned ? (cached?.status || "pending") : "no-candidates",
+      // 规则层给不出候选的写法模型也无从判断，结论直接记「不是」，界面注明原因。
+      status: assigned ? (cached?.status || "pending") : "none",
+      reason: assigned ? String(cached?.reason || "") : "no-candidates",
       failure: cached?.status === "failed" ? assistFailureLabel(cached) : "",
       targetId: cached?.targetId || "",
       attempts: Number(cached?.attempts) || 0,
       at: Number(cached?.at) || 0
     };
   });
+  const [stations, settings] = await Promise.all([getStations(), getSettings()]);
+  const { pool, orphans } = buildAssistPool({
+    cache,
+    rows,
+    // 已生效的条目已经不在 unmatched 里，站点名只能从站点表补。
+    stationNameById: new Map(stations.map(station => [station.id, station.name || station.baseUrl || station.id])),
+    unmatchedKeys: new Set(unmatched.map(entry => entry.key)),
+    // 人工指定要进池：它是最优先的结论，也是「改回 AI 判定」的对照。
+    overrides: settings.modelMatchOverrides
+  });
+  const poolCounts = summarizePool(pool, orphans);
   return {
     configured: await getModelAssistantEnabled(),
     referencesFetchedAt,
     assigned: entries.length,
     noCandidates: unmatched.length - entries.length,
     summary: summarizeCache(cache),
-    rows
+    pool: poolCounts,
+    poolLabel: poolSummaryLabel(poolCounts),
+    rows: pool,
+    orphans
   };
 }
 
@@ -1141,7 +1273,7 @@ async function getModelAssistantEnabled() {
   return Boolean(config.enabled && String(config.baseUrl || "").trim() && String(config.model || "").trim()) && Boolean(await getModelAssistantKey());
 }
 
-async function runModelAssist({ force = false } = {}) {
+async function runModelAssist({ force = false, keys = [] } = {}) {
   if (modelAssistTask) throw new Error("模型识别正在运行，请等这一轮结束");
   modelAssistTask = (async () => {
     const settings = await getSettings();
@@ -1152,10 +1284,17 @@ async function runModelAssist({ force = false } = {}) {
     if (!apiKey) throw new Error("先填好模型服务密钥");
 
     const { cache, entries, referencesFetchedAt } = await assistContext();
-    if (!entries.length) return { ...summarizeCache(cache), ranBatches: 0, pending: 0, reused: 0, invalidAnswers: 0, errors: 0 };
+    // 空队列分两种：比价表里根本没有未匹配的写法，或者有但每条都有结论了。界面要分开说。
+    if (!entries.length) return { ...summarizeCache(cache), unmatched: 0, ranBatches: 0, pending: 0, reused: 0, invalidAnswers: 0, errors: 0 };
 
-    const { pending, reused } = selectPendingEntries({ cache, entries, referencesFetchedAt, force });
-    if (!pending.length) return { ...summarizeCache(cache), ranBatches: 0, pending: 0, reused: reused.length, invalidAnswers: 0, errors: 0 };
+    // 单条重试只问指定的那几个写法，别把整队都重跑一遍。
+    const only = new Set((Array.isArray(keys) ? keys : []).filter(Boolean));
+    const scopedEntries = only.size ? entries.filter(entry => only.has(entry.key)) : entries;
+    if (!scopedEntries.length) return { ...summarizeCache(cache), unmatched: entries.length, ranBatches: 0, pending: 0, reused: 0, invalidAnswers: 0, errors: 0 };
+
+    // 指定重试时 force 只对这几条生效：别的条目照样按指纹复用。
+    const { pending, reused } = selectPendingEntries({ cache, entries: scopedEntries, referencesFetchedAt, force });
+    if (!pending.length) return { ...summarizeCache(cache), unmatched: entries.length, ranBatches: 0, pending: 0, reused: reused.length, invalidAnswers: 0, errors: 0 };
 
     const results = [];
     const notAsked = [];
@@ -1198,43 +1337,47 @@ async function runModelAssist({ force = false } = {}) {
     await runWithConcurrency(batches, ASSIST_CONCURRENCY, async batch => {
       activeBatches += 1;
       reportProgress("request");
-      let parsed;
-      try {
-        const { content } = await completeChat({
-          baseUrl: config.baseUrl,
-          apiKey,
-          model: config.model,
-          temperature: config.temperature,
-          maxTokens: assistMaxTokens(batch.length),
-          // 长推理任务给足时间：超时太短会把还在跑的批次整批记成失败。
-          timeoutMs: ASSIST_TIMEOUT_MS,
-          messages: [
-            { role: "system", content: "你只输出「序号 => id」的行，不要任何解释。" },
-            { role: "user", content: buildAssistPrompt(batch) }
-          ]
-        });
-        parsed = parseAssistResponse(content, { entries: batch });
-      } catch (error) {
-        console.debug("[AI比价] 模型识别批次失败", error);
-        errors += 1;
-        activeBatches -= 1;
-        // 超时和接口报错分开记：前者该加时或缩批，后者该看密钥和地址。
-        const reason = /超时/.test(String(error?.message || "")) ? "timeout" : "error";
-        const detail = String(error?.message || "").slice(0, 120);
-        notAsked.push(...spreadAssistResults(batch, followers).map(item => ({ ...item, reason, error: detail })));
-        completed += batch.reduce((sum, entry) => sum + weightOf(entry), 0);
-        completedBatches += 1;
-        reportProgress("batch");
-        return;
+      // 一次失败不代表结论：接口偶尔返回空正文、模型偶尔漏行，同一批最多问 3 次，只重问还没答的。
+      const answered = new Map();
+      let remaining = batch;
+      let lastError = null;
+      for (let attempt = 1; attempt <= ASSIST_RETRIES && remaining.length; attempt += 1) {
+        if (attempt > 1) await new Promise(resolve => setTimeout(resolve, ASSIST_RETRY_DELAY_MS));
+        try {
+          const { content } = await completeChat({
+            baseUrl: config.baseUrl,
+            apiKey,
+            model: config.model,
+            temperature: config.temperature,
+            maxTokens: assistMaxTokens(remaining.length),
+            // 长推理任务给足时间：超时太短会把还在跑的批次整批记成失败。
+            timeoutMs: ASSIST_TIMEOUT_MS,
+            messages: [
+              { role: "system", content: "你只输出「序号 => id 分数」的行，不要任何解释。" },
+              { role: "user", content: buildAssistPrompt(remaining) }
+            ]
+          });
+          const parsed = parseAssistResponse(content, { entries: remaining });
+          for (const item of parsed.accepted) answered.set(item.key, item);
+          remaining = remaining.filter(entry => !answered.has(entry.key));
+          lastError = null;
+        } catch (error) {
+          console.debug("[AI比价] 模型识别批次失败", error);
+          lastError = error;
+        }
       }
-      const answered = [...parsed.accepted, ...parsed.invalid];
-      const spread = spreadAssistResults(answered, followers);
+      const resolved = [...answered.values()];
+      if (remaining.length) {
+        errors += 1;
+        // 超时和接口报错分开记：前者该加时或缩批，后者该看密钥和地址；没有报错就是模型漏答。
+        const reason = lastError ? (/超时/.test(String(lastError?.message || "")) ? "timeout" : "error") : "unanswered";
+        const detail = lastError ? String(lastError.message || "").slice(0, 120) : "";
+        notAsked.push(...spreadAssistResults(remaining, followers).map(item => ({ ...item, reason, error: detail })));
+      }
+      const spread = spreadAssistResults(resolved, followers);
       results.push(...spread);
       addToTally(spread);
-      const answeredKeys = new Set(answered.map(item => item.key));
-      const unanswered = batch.filter(entry => !answeredKeys.has(entry.key));
-      notAsked.push(...spreadAssistResults(unanswered, followers).map(item => ({ ...item, reason: "unanswered" })));
-      ranBatches += 1;
+      if (resolved.length) ranBatches += 1;
       activeBatches -= 1;
       completed += batch.reduce((sum, entry) => sum + weightOf(entry), 0);
       completedBatches += 1;
@@ -1251,7 +1394,6 @@ async function runModelAssist({ force = false } = {}) {
       timeouts: Object.values(nextCache).filter(entry => entry?.status === "failed" && entry.reason === "timeout").length,
       pending: pending.length,
       reused: reused.length,
-      invalidAnswers: results.filter(item => item.status === "invalid").length,
       merged: pending.length - primary.length,
       errors
     };
@@ -1267,11 +1409,91 @@ async function runModelAssist({ force = false } = {}) {
     modelAssistTask = null;
   }
 }
+// 撤销已生效的判定：删掉缓存条目，那个写法下一轮就回到未匹配池重新待判。
+// 不能靠清空整张缓存做这件事，那会把另外几十条已生效的结论一起废掉。
+async function forgetModelAssistEntries(keys = []) {
+  const cache = await getValue("llmMatchCache", {});
+  const next = { ...cache };
+  let removed = 0;
+  for (const key of Array.isArray(keys) ? keys : []) {
+    if (next[key]) {
+      delete next[key];
+      removed += 1;
+    }
+  }
+  if (removed) {
+    await setValue("llmMatchCache", next);
+    comparisonCache = null;
+  }
+  return { removed, ...(await modelAssistState()) };
+}
 
 async function clearModelAssistCache() {
   await setValue("llmMatchCache", {});
   comparisonCache = null;
   return modelAssistState();
+}
+
+// 报价里已经消失、结论又不是人工接受的条目清出去：它们发不出请求，留着只占队列名额。
+async function purgeModelAssistOrphans() {
+  const { orphans } = await modelAssistState();
+  return forgetModelAssistEntries(orphans.map(item => item.key));
+}
+
+// 忽略是人工出口：写法反复判成「不是」或者明确不想再问，存下来就不再进识别队列。
+async function setModelAssistIgnored({ keys = [], ignored = true } = {}) {
+  const cache = await getValue("llmMatchCache", {});
+  const next = { ...cache };
+  const at = Date.now();
+  let changed = 0;
+  for (const key of Array.isArray(keys) ? keys : []) {
+    const entry = next[key] || {};
+    const [stationId, modelName] = String(key).split("\u0000");
+    if (ignored) {
+      // 没问过模型也能忽略：规则层没候选的写法跑识别也不会问它，直接记结论。
+      next[key] = {
+        stationId: entry.stationId || stationId,
+        modelName: entry.modelName || modelName,
+        targetId: "",
+        status: "ignored",
+        confidence: 0,
+        attempts: Number(entry.attempts) || 0,
+        fingerprint: "",
+        referencesFetchedAt: 0,
+        at,
+        nextRetryAt: 0,
+        previous: entry.status ? { status: entry.status, targetId: entry.targetId || "", at: entry.at || 0 } : null
+      };
+      changed += 1;
+    } else if (entry.status === "ignored") {
+      // 取消忽略就是删掉这条，写法下一轮回到未匹配池重新排队。
+      delete next[key];
+      changed += 1;
+    }
+  }
+  if (changed) {
+    await setValue("llmMatchCache", next);
+    comparisonCache = null;
+  }
+  return { changed, ...(await modelAssistState()) };
+}
+
+// 冷却到期前想立刻再问一次：清掉 nextRetryAt，条目回到可发送状态。
+async function resetModelAssistCooldown(keys = []) {
+  const cache = await getValue("llmMatchCache", {});
+  const next = { ...cache };
+  let reset = 0;
+  for (const key of Array.isArray(keys) ? keys : []) {
+    if (next[key] && Number(next[key].nextRetryAt)) {
+      next[key] = { ...next[key], nextRetryAt: 0 };
+      reset += 1;
+    }
+  }
+  if (reset) {
+    await setValue("llmMatchCache", next);
+    comparisonCache = null;
+  }
+  return { reset, ...(await modelAssistState()) };
 }
 
 async function applyModelAssistOverrides(keys = []) {
@@ -1300,6 +1522,65 @@ async function applyModelAssistOverrides(keys = []) {
     comparisonCache = null;
   }
   return { added, updated, total: overrides.length };
+}
+
+// 单条人工指定：把某条写法直接钉到某个官方模型，优先级最高，AI 再判也不会改。
+// 传空 targetId 就是撤销人工指定，写法回到 AI 判定或未匹配池。
+async function setModelAssistOverride({ key = "", stationId = "", modelName = "", targetId = "" } = {}) {
+  const settings = await getSettings();
+  const normalizedKey = key || cacheKey(stationId, modelName);
+  if (!normalizedKey) throw new Error("缺少要指定的写法");
+  const [keyStation, keyModel] = String(normalizedKey).split("\u0000");
+  const cache = await getValue("llmMatchCache", {});
+  const cached = cache[normalizedKey] || null;
+  const rawName = String(cached?.modelName || keyModel || "").trim();
+  const rawStation = String(cached?.stationId || keyStation || "").trim();
+  if (!rawStation || !rawName) throw new Error("缺少要指定的写法");
+  const overrideKeyOf = item => `${item.stationId}\u0000${normalizeProxyModelName(item.modelName)}`;
+  const overrides = settings.modelMatchOverrides.filter(item => overrideKeyOf(item) !== normalizedKey);
+  const target = String(targetId || "").trim();
+  if (target) overrides.push({ stationId: rawStation, modelName: rawName, officialModelId: target });
+  // 人工指定一旦存在，AI 那条判定就没有意义了：留着会在撤销人工指定后立刻复活旧结论。
+  const nextCache = { ...cache };
+  if (target) delete nextCache[normalizedKey];
+  if (target || cached) {
+    await persistSettings({ ...settings, modelMatchOverrides: overrides });
+    if (target) await setValue("llmMatchCache", nextCache);
+    comparisonCache = null;
+  }
+  return modelAssistState();
+}
+
+// 官方模型清单：人工指定时按关键词搜索用。只给 id、名称、供应商，不带价格。
+async function modelAssistCatalog({ query = "", limit = 20 } = {}) {
+  const [references, settings] = await Promise.all([getValue("references", {}), getSettings()]);
+  const officialList = Array.isArray(references.models) ? references.models : [];
+  const keyword = String(query || "").trim().toLowerCase();
+  const overrideKeyOf = item => `${item.stationId}\u0000${normalizeProxyModelName(item.modelName)}`;
+  const takenBy = new Map(settings.modelMatchOverrides.map(item => [String(item.officialModelId || ""), overrideKeyOf(item)]));
+  const entries = officialList.map(model => {
+    const id = String(model.id || model.name || "").trim();
+    return {
+      id,
+      name: String(model.name || model.id || "").trim(),
+      displayName: String(model.display_name || model.name || model.id || "").trim(),
+      provider: String(model.provider || (id.includes("/") ? id.split("/")[0] : "") || "").trim()
+    };
+  }).filter(item => item.id);
+  // 关键词按空格拆开逐个匹配：`claude sonnet` 也能命中 `anthropic/claude-sonnet-4.5`。
+  const tokens = keyword.replace(/[-_./:]+/g, " ").split(/\s+/).filter(Boolean);
+  const matched = tokens.length
+    ? entries.filter(item => {
+      const haystack = [item.id, item.name, item.displayName].join(" ").toLowerCase().replace(/[-_./:]+/g, " ");
+      return tokens.every(token => haystack.includes(token));
+    })
+    : entries;
+  const size = Math.max(1, Math.min(200, Math.trunc(Number(limit)) || 20));
+  return {
+    total: entries.length,
+    query: keyword,
+    models: matched.slice(0, size).map(item => ({ ...item, usedBy: takenBy.get(item.id) || "" }))
+  };
 }
 
 function discoveryFromSnapshot(snapshot) {
@@ -1608,12 +1889,20 @@ async function handle(message, sender) {
     case "CHECK_UPDATE": return runUpdateCheck({ force: true });
     case "SAVE_UPDATE_PREFS": return saveUpdatePrefs(message);
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
+    case "SAVE_MAGPIE_PREFS": return saveMagpieUsagePrefs(message);
+    case "SYNC_MAGPIE_USAGE": return runMagpieUsageSync({ force: true });
     case "TEST_MODEL_CONNECTION": return testModelAssistant(message.config || {});
     case "FETCH_MODEL_CATALOG": return fetchModelAssistantCatalog(message.config || {});
     case "GET_MODEL_ASSIST_STATE": return modelAssistState();
     case "RUN_MODEL_ASSIST": return runModelAssist(message);
     case "CLEAR_MODEL_ASSIST_CACHE": return clearModelAssistCache();
+    case "PURGE_MODEL_ASSIST_ORPHANS": return purgeModelAssistOrphans();
+    case "SET_MODEL_ASSIST_IGNORED": return setModelAssistIgnored(message);
+    case "RESET_MODEL_ASSIST_COOLDOWN": return resetModelAssistCooldown(message.keys);
+    case "FORGET_MODEL_ASSIST_ENTRIES": return forgetModelAssistEntries(message.keys);
     case "APPLY_MODEL_ASSIST_OVERRIDES": return applyModelAssistOverrides(message.keys);
+    case "SET_MODEL_ASSIST_OVERRIDE": return setModelAssistOverride(message);
+    case "GET_MODEL_ASSIST_CATALOG": return modelAssistCatalog(message);
     case "SAVE_STATIONS": return saveStations(message.stations);
     case "ADD_SITE_PLUGINS": return addSitePlugins(message.ids);
     case "GET_PLUGIN_WORKSPACE": return pluginWorkspaceState();
@@ -1734,15 +2023,18 @@ chrome.tabs?.onRemoved?.addListener(tabId => {
 chrome.runtime.onInstalled.addListener(() => {
   scheduleCheckinAlarm();
   scheduleUpdateAlarm();
+  scheduleMagpieUsageAlarm();
   ensureWorkspacePlugins({ force: true });
 });
 chrome.runtime.onStartup.addListener(() => {
   scheduleCheckinAlarm();
   scheduleUpdateAlarm();
+  scheduleMagpieUsageAlarm();
   ensureWorkspacePlugins({ force: true });
 });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === CHECKIN_ALARM_NAME) return checkinAll({ claim: true, autoOnly: true }).catch(error => console.warn("[AI比价] 定时签到失败", error));
   if (alarm.name === CHECKIN_LOGIN_ALARM_NAME) return watchCheckinLogin().catch(error => console.warn("[AI比价] 签到登录探测失败", error));
   if (alarm.name === UPDATE_ALARM_NAME) return runUpdateCheck().catch(error => console.warn("[AI比价] 检查更新失败", error));
+  if (alarm.name === MAGPIE_USAGE_ALARM_NAME) return runMagpieUsageSync().catch(error => console.warn("[AI比价] 同步 magpie 用量失败", error));
 });

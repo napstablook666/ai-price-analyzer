@@ -18,6 +18,18 @@ function hasInvalidPricingValue(value, priceKeys, depth = 0) {
 
 
 
+// 站点偶尔一次握手失败就抛 TypeError: Failed to fetch，重试一次多半就好了，
+// 不该让这一站直接记成失败。
+const TRANSIENT_NETWORK_PATTERN = /Failed to fetch|NetworkError|net::ERR_|ERR_CONNECTION|ERR_TIMED_OUT|ERR_NAME_NOT_RESOLVED|ERR_NETWORK_CHANGED|ERR_INTERNET_DISCONNECTED|采集页面加载失败|采集页面加载超时/i;
+
+export const COLLECT_RETRIES = 3;
+export const COLLECT_RETRY_DELAY_MS = 600;
+
+export function isTransientNetworkError(error) {
+  const message = String(error?.message || error || "");
+  return TRANSIENT_NETWORK_PATTERN.test(message);
+}
+
 const PAGE_SESSION_FAILURE = "页面会话已失效，请在当前 Chrome 配置文件重新登录后重试";
 
 function isPageSessionFailure(strategy, response) {
@@ -64,7 +76,24 @@ function buildSnapshot(station, normalized, url, status = 200) {
   };
 }
 
-export async function collectStation(station, { fetchImpl = fetch, pageFetch, collection } = {}) {
+export async function collectStation(station, { retries = COLLECT_RETRIES, retryDelayMs = COLLECT_RETRY_DELAY_MS, ...options } = {}) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await collectStationOnce(station, options);
+    } catch (error) {
+      if (!isTransientNetworkError(error)) throw error;
+      // 重试用完还是失败：浏览器原话（Failed to fetch）对用户没信息量，换成能看懂的。
+      if (attempt >= retries) {
+        throw /^(Failed to fetch|NetworkError)/i.test(String(error?.message || ""))
+          ? new Error(`${station.name || "站点"} 网络请求失败：站点或代理暂时不可达，请稍后重试`)
+          : error;
+      }
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs * attempt));
+    }
+  }
+}
+
+async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, collection } = {}) {
   if (!collection) throw new Error("collectStation requires a prepared collection");
   const { endpoints, priceKeys, request: requestStrategy } = collection;
   const rawJson = String(station.adapter?.rawJson || "").trim();
