@@ -19,15 +19,32 @@
 
 The same model appears under a dozen names across relay stations, and each station bills top-ups, group multipliers, and cache reads differently, so comparing prices by hand is slow and error-prone. AI Price Analyzer is a Chromium Manifest V3 extension. It collects prices from the stations you add, collapses station-specific names into one canonical model identity, then uses your own usage to compute a monthly cost and a gap against the official price. There is no backend and no bundler; the repository root is the loadable extension.
 
+## Preview
+
+**Price comparison**: one row per station, group, and model; the same model collapses into a single row, with filtering and sorting on the right.
+
+<p align="center"><img src="./assets/screenshots/comparison-text.jpg" width="880" alt="Text model price comparison"></p>
+
+**Cost estimate**: turns unit prices into a monthly bill; point it at your local magpie gateway and usage syncs itself.
+
+<p align="center"><img src="./assets/screenshots/cost-usage.jpg" width="880" alt="Cost estimate settings"></p>
+
+**AI assisted matching**: model names the rules cannot guess go to your own model service, and accepted verdicts become manual overrides.
+
+<p align="center"><img src="./assets/screenshots/ai-matching.jpg" width="880" alt="AI assisted matching and review queue"></p>
+
 ## Highlights
 
 | Highlight | Why it matters |
 | --- | --- |
 | One collection rule per station | Station knowledge lives in `<id>/` directories in the plugin repository, so adding a station never touches the extension core. |
-| Model identity before price | Canonical table, plugin aliases, and manual overrides resolve in three layers, so `GLM-5.3`, `z-ai/glm-5.3`, and `glm-5.3:thinking` land on one row. |
+| Model identity before price | Manual overrides, plugin aliases, AI verdicts, and the canonical table resolve in that order, so `GLM-5.3`, `z-ai/glm-5.3`, and `glm-5.3:thinking` land on one row. |
 | Direct and page collection | Collect CORS-enabled JSON endpoints directly, or reuse the current browser session when a station needs a login. |
-| Costed with your usage | Input, cache read, cache write, and output are priced separately and rolled into monthly cost and blended unit price. |
-| Data stays local | Snapshots live in IndexedDB and station credentials in extension local storage; requests go only to stations you added and two public reference sources. |
+| Text, image, and video kept apart | The three billing units never convert into each other, so each gets its own table and only competes with the same unit and tier. |
+| Usage can arrive by itself | Point it at your local magpie gateway and it folds the last 7 or 30 days into monthly volume, every 6 hours by default. |
+| AI for what rules cannot guess | Your own OpenAI-compatible service judges unfamiliar model names; verdicts land in a review queue and manual overrides always win. |
+| Costed with your usage | Input, cache reads and writes, output, per-request, per-second, per-image, and peak tiers are priced separately into monthly cost and blended unit price. |
+| Data stays local | Snapshots live in IndexedDB and station credentials in extension local storage; the model service key stays on this machine and never enters an export. Requests go only to the stations you added, the local magpie gateway you point it at, and two public reference sources. |
 | Generated files under test | `node:test` covers core, collection, matching, and generated plugin files; drift turns red. |
 
 ## Architecture
@@ -149,6 +166,7 @@ The builder generates `src/site-plugins/providers/<id>.js`, `src/site-plugins/ca
 
 - Model and price data come from the stations you configure, through their pages or endpoints.
 - There are exactly two public reference sources: the OpenRouter model catalog at `https://openrouter.ai/api/v1/models` and the Bank of China exchange rates at `https://www.boc.cn/sourcedb/whpj/`.
+- Two optional requests exist, and both only fire after you enter an address: the local magpie gateway (reads a usage summary) and your OpenAI-compatible model service (receives unfamiliar model names and candidate lists). Leave them blank and nothing is sent.
 - Settings and collection snapshots stay in extension local storage and IndexedDB. The project runs no server-side account or analytics service.
 - Do not paste private API responses, cookies, authorization headers, account identifiers, or credentials into issues or pull requests.
 
