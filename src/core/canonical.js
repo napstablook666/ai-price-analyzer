@@ -13,7 +13,10 @@ const DECORATION_PATTERNS = [
   /:peft:\d+$/,
   /@(?:eu|us|global|jp|au|in|cn|default|\d+)$/,
   /-v\d+(?::\d+)?$/,
-  /-(?:19|20)\d{2}(?:0\d|1[0-2])?(?:[0-3]\d)?$/
+  /-(?:19|20)\d{2}(?:0\d|1[0-2])?(?:[0-3]\d)?$/,
+  // OpenRouter 生图列表里的路由代号：gpt-image-2.5-flare 与 -sunburst 是同一模型的两条通道，
+  // 计价完全一致，站点侧只会写 gpt-image-2.5。留着代码会让这种报价匹配不上官方。
+  /-(?:flare|sunburst)$/
 ];
 
 export function stripDecoration(value) {

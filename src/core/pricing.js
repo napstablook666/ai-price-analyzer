@@ -1,7 +1,9 @@
-import { DEFAULT_MATCHING_RULES, STATION_CATEGORIES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
+import { STATION_CATEGORIES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { buildModelMatchIndex, matchModelWithOverrides } from "./matching.js";
 import { STANDARD_PRICE_FIELDS } from "./price-fields.js";
 import { canonicalKey, stripDecoration, stripVendorPrefix } from "./canonical.js";
+import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaUnitLabel, mediaUnitRank, pickImageQuote, toPerImage } from "./image-billing.js";
+import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -73,6 +75,16 @@ function hasAnyPrice(prices = {}) {
   return STANDARD_PRICE_FIELDS.some(field => Number.isFinite(prices[field]));
 }
 
+// 有「元/张」才走生图道。这类报价没有 token 维度，摊进按 token 的混合单价
+// 分母里没有「张」，只会算出 ¥0；而且生图模型常常同时报文本 prompt 的 token 价，
+// 只看「有没有 token 价」会把它们判成文本模型。
+// 只报「元/1M 图输出 token」的报价仍留在 token 道，用量里的「图像输出」能覆盖它。
+export function billingModeOf(prices = {}) {
+  if (Number(prices.request) > 0) return "request";
+  if (Number(prices.imagePrice) > 0) return "image";
+  return "token";
+}
+
 export function getProxyPriceQuote(item = {}, groupRatio = 1, rechargeRate = 1, basePrice = SYSTEM_BASE_PRICE_PER_1M, priceCurrencyVerified = true, rechargeRateVerified = true) {
   const effectiveRechargeRate = rechargeRateVerified === true ? rechargeRate : 1;
   const factor = currencyToRmb(item.price_currency, effectiveRechargeRate);
@@ -107,6 +119,89 @@ export function workloadCost(prices = {}, usage = {}) {
     perMillion(prices.imageInput, usage.imageInputTokens) +
     perMillion(prices.imageOutput, usage.imageOutputTokens ?? usage.imageTokens) +
     (Number(usage.images) || 0) * (Number.isFinite(prices.imagePrice) ? prices.imagePrice : 0);
+}
+
+// 落档：橘子站 11 档折扣随额度单调加深，多档拼凑从不比单档便宜，所以取「第一个 >= 消耗的档」即可。
+// 额度永久有效，多买的额度下月继续用，因此实付按实际消耗折，而不是按档位面值折。
+export function resolveRechargeTier(tiers = [], spend = 0) {
+  const amount = Number(spend);
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  const usable = (Array.isArray(tiers) ? tiers : []).filter(tier =>
+    Number.isFinite(Number(tier?.amount)) && Number(tier.amount) > 0 &&
+    Number.isFinite(Number(tier?.discount)) && Number(tier.discount) > 0 && Number(tier.discount) <= 1);
+  if (!usable.length) return null;
+  const sorted = usable.map(tier => ({ amount: Number(tier.amount), discount: Number(tier.discount) }))
+    .sort((left, right) => left.amount - right.amount);
+  const tier = sorted.find(entry => entry.amount >= amount) || sorted[sorted.length - 1];
+  return { amount: tier.amount, discount: tier.discount, faceValue: amount, payRmb: amount * tier.discount };
+}
+
+// costPrices 里已经乘过的充值汇率。档位折扣要从面值算，所以先按它还原。
+// CNY 站在 currencyToRmb 里固定返回 1，不受 rechargeRate 影响。
+function rechargeFactorOf(station, currency) {
+  const code = String(currency ?? "").trim().toUpperCase();
+  if (!["USD", "CREDITS", "POINTS"].includes(code)) return 1;
+  if (!station?.rechargeRateVerified) return 1;
+  const rate = Number(station.rechargeRate);
+  return Number.isFinite(rate) && rate > 0 ? rate : 1;
+}
+
+// 按次价格折成元/百万 token：分母是站点画像里的单次 token，不是全局平均。
+// 分母缺失时返回 null，调用方据此显示「—」而不是编一个数出来。
+export function requestUnitPriceOf(requestRmb, tokensPerRequest) {
+  const price = Number(requestRmb);
+  const tokens = Number(tokensPerRequest);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  if (!Number.isFinite(tokens) || tokens <= 0) return null;
+  return price * 1_000_000 / tokens;
+}
+
+// 官方出图价优先取 /images/models/{id}/endpoints 的 output_image，那里才有单位。
+// 拉不到时退回落 /models 的 image_output（美元/图输出 token），标成估算来源。
+// pricing.image 是「美元/输入图」，不是出图价，这里不用。
+function officialImageQuoteOf(model, references = {}) {
+  if (!model) return null;
+  const factor = Number(references.openRouterRechargeRate) || Number(references.exchangeRate) || 1;
+  const quote = (references.imageQuotes || {})[model.id];
+  if (quote && Number.isFinite(quote.value) && quote.value > 0) {
+    return { unit: quote.unit, value: quote.value * factor, provider: quote.provider, variant: quote.variant, source: "endpoints" };
+  }
+  if (Number.isFinite(model.imageOutput) && model.imageOutput > 0) {
+    return { unit: "token", value: model.imageOutput * factor, provider: "", variant: "", source: "models" };
+  }
+  return null;
+}
+
+// 生图行的整块结果：站内口径、官方口径、折合元/张、价差、月成本。
+// 折算不出来就留 null，展示层显示「—」，不编数。
+function resolveImagePricing({ costPrices, quotedPrices, model, references, modelId, imageCount, skipOfficial, rowTier }) {
+  const official = skipOfficial ? null : officialImageQuoteOf(model, references);
+  const station = pickImageQuote(costPrices ?? {}, official?.unit || "");
+  const stationQuoted = pickImageQuote(quotedPrices ?? {}, official?.unit || "");
+  const stationPerImage = toPerImage(station, modelId);
+  // 站内规格来自自己的档位列（size_tier / tier_name），官方来自 endpoints 的 variant。
+  // 取不到就 unstated，不猜；两边档位不同就当不了同口径，展示层要分开摆。
+  const stationTier = imageTierOf(rowTier);
+  const officialTier = imageTierOf(official?.variant || "");
+  return {
+    station,
+    stationQuoted,
+    official,
+    stationTier,
+    officialTier,
+    stationPerImage,
+    officialPerImage: toPerImage(official, modelId),
+    compare: compareImageQuote(station, official, modelId, stationTier, officialTier),
+    monthlyCost: stationPerImage && imageCount > 0 ? stationPerImage.perImage * imageCount : null
+  };
+}
+
+// 一行自己的计价单位。元/张 和 元/1M 图token 分属两榜，所以单位是分榜键不是展示细节。
+// 视频的 request_price 是每秒价，request_unit 已经标了 second，别和按次混一起。
+function mediaUnitOf(billingMode, requestUnit, imageQuote) {
+  if (billingMode === "image") return imageQuote?.unit || null;
+  if (billingMode === "request") return String(requestUnit || "").trim().toLowerCase() === "second" ? "second" : "request";
+  return null;
 }
 
 function referencePrices(model, exchangeRate = 1) {
@@ -198,8 +293,32 @@ export function confidenceScore(row) {
   let score = Number(row.matchConfidence ?? 0.6) * 100;
   if (row.cacheReadEstimated) score -= 10;
   if (row.cacheWriteEstimated) score -= 5;
+  // 按次报价摊成 token 单价全靠「单次 token」这个假设，降一档可信度。
+  if (row.billingMode === "request") score -= 10;
   if (!row.officialName || !row.provider) score -= 15;
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+// 按次报价的折算单价与盈亏平衡点。
+// 盈亏平衡点 = 单次价格 × 1M / 同组按量报价里最低的混合单价，
+// 意思是「一次跑多少 token 以内，这个按次模型才比按量便宜」。
+// 同组没有按量报价时留 null，不拿别组的最低单价凑。
+function resolveRequestPricing(comparisons) {
+  for (const comparison of comparisons) {
+    const tokenUnitPrices = comparison.offers
+      .filter(offer => offer.billingMode !== "request" && !offer.pricingUnavailable)
+      .map(offer => Number(offer.blendedUnitPrice))
+      .filter(price => Number.isFinite(price) && price > 0);
+    const referenceUnitPrice = tokenUnitPrices.length ? Math.min(...tokenUnitPrices) : null;
+    for (const offer of comparison.offers) {
+      if (offer.billingMode !== "request") continue;
+      const requestRmb = Number(offer.costPrices?.request ?? offer.prices?.request);
+      offer.requestUnitPrice = requestUnitPriceOf(requestRmb, offer.tokensPerRequest);
+      offer.breakEvenTokens = referenceUnitPrice && Number.isFinite(requestRmb) && requestRmb > 0
+        ? requestRmb * 1_000_000 / referenceUnitPrice
+        : null;
+    }
+  }
 }
 
 function classifyOffer(offer) {
@@ -216,11 +335,15 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
   const threshold = Math.max(0, Math.min(100, Number(evidenceThreshold) || 0));
   for (const comparison of comparisons) {
     const eligible = comparison.comparisonGroup === "public" ? [] : comparison.offers.filter(offer =>
-      !offer.pricingUnavailable && offer.matchRuleId === "exact" &&
+      !offer.pricingUnavailable && (offer.billingMode ?? "token") === "token" && offer.matchRuleId === "exact" &&
       Number(offer.officialMonthlyCost) > 0 && Number(offer.confidenceScore) >= threshold);
     const recommended = eligible.reduce((current, offer) => !current || offer.monthlyCost < current.monthlyCost ? offer : current, null);
     for (const offer of comparison.offers) {
-      offer.category = comparison.comparisonGroup === "public" ? "" : classifyOffer(offer);
+      // 生图行按元/张的价差分档；「按次」行的成本口径是摊出来的，不给档位。
+      const mode = offer.billingMode ?? "token";
+      offer.category = comparison.comparisonGroup === "public" ? "" :
+        mode === "image" ? (Number(offer.imagePerImage) > 0 ? imageCategoryOf(offer.imageCompare) : "") :
+          mode === "request" ? "" : classifyOffer(offer);
       offer.recommendationEligible = eligible.includes(offer);
       offer.recommended = offer === recommended;
       offer.recommendationLabel = comparison.comparisonGroup === "public" ? "" :
@@ -231,7 +354,7 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
   return comparisons;
 }
 
-export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, rules = DEFAULT_MATCHING_RULES, modelMatchOverrides = [], modelAliases = {}, llmMatches = {}, showUnmatched = true, evidenceThreshold = 60 } = {}) {
+export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, modelMatchOverrides = [], modelAliases = {}, llmMatches = {}, showUnmatched = true, evidenceThreshold = 60 } = {}) {
   const stationMap = new Map(stations.map(station => [station.id, station]));
   const referenceList = Array.isArray(references.models) ? references.models : [];
   const latestByStation = new Map();
@@ -247,6 +370,13 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     const stationCategory = normalizeStationCategory(station);
     const isPublic = stationCategory === "public";
     const comparisonGroup = isPublic ? "public" : "standard";
+    // 按次模型的折算分母。站点画像优先；没配就回落到「本次估算用量的单次 token」。
+    const billingProfile = station.billingProfile || {};
+    const requestCount = Number(usage.requests) || 0;
+    const fallbackTokensPerRequest = requestCount > 0 ? tokenTotalOf(usage) / requestCount : 0;
+    const profileTokens = Number(billingProfile.tokensPerRequest) || 0;
+    const tokensPerRequest = profileTokens > 0 ? profileTokens : fallbackTokensPerRequest;
+    const tokensPerRequestEstimated = billingProfile.source !== "measured";
     const tierSharesByGroup = new Map();
     const tierItemsByGroup = new Map();
     const rawUnpricedModelKeys = snapshot.unpricedModels || snapshot.normalized?.unpricedModels;
@@ -254,6 +384,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     snapshot.normalized.data.forEach(item => {
       if (item.catalogOnly) return;
       if (!item.tier_name) return;
+      // 按秒计价的视频档不参与上下文分档的流量加权。
+      if (item.request_unit === "second") return;
       for (const group of offerGroups(item, snapshot.normalized)) {
         const key = tierKey(item, group);
         if (!tierItemsByGroup.has(key)) tierItemsByGroup.set(key, []);
@@ -264,7 +396,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
 
     snapshot.normalized.data.forEach((item, itemIndex) => {
       if (item.catalogOnly) return;
-      const matches = matchModelWithOverrides(item.model_name, referenceList, { stationId: station.id, rules, index: matchingIndex });
+      const matches = matchModelWithOverrides(item.model_name, referenceList, { stationId: station.id, index: matchingIndex });
       if (!matches.length && stationCategory !== "public" && !showUnmatched) return;
       const matchResults = matches.length ? matches : [{ match: null, rule: "未匹配", ruleId: "unmatched", confidence: 0 }];
       for (const group of offerGroups(item, snapshot.normalized)) {
@@ -276,7 +408,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         const priceQuote = getProxyPriceQuote(item, groupRatio, stationCategory === "public" ? 1 : station.rechargeRate, station.basePricePerMillion, priceCurrencyVerified, stationCategory === "public" ? true : rechargeRateVerified);
         const quotedPrices = priceQuote.quotedPrices;
         const baseCostPrices = priceQuote.costPrices;
-        const share = item.tier_name ? (tierSharesByGroup.get(tierKey(item, group))?.get(item) ?? 0) : 1;
+        // 视频按秒的档位是并列选项，各占 100%，不参与分档加权。
+        const share = item.request_unit === "second" ? 1 : item.tier_name ? (tierSharesByGroup.get(tierKey(item, group))?.get(item) ?? 0) : 1;
         // 同一条报价的多个官方候选合并成一行：中转侧的数值只累加一次，官方侧按候选分桶。
         const resultsByCanonical = new Map();
         for (const result of matchResults) {
@@ -287,10 +420,17 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         for (const [canonicalModel, results] of resultsByCanonical) {
           const primaryResult = results[0];
           let costPrices = baseCostPrices;
-          const rowKey = [station.id, item.model_name, canonicalModel, group, item.tier_name ? "tier" : `item:${itemIndex}`].join("\u0000");
+          const billingMode = billingModeOf(baseCostPrices ?? quotedPrices);
+          const mediaType = mediaTypeForPricing(item, { targetField: billingMode });
+          const rowMediaKey = mediaType || (billingMode === "image" ? "image" : "text");
+          // 按秒计价的视频档（分辨率）是各自独立的报价，不能像上下文分档那样加权合并。
+          const rowTierKey = item.request_unit === "second" ? `second:${item.tier_name ?? ""}` : item.tier_name ? "tier" : `item:${itemIndex}`;
+          const rowKey = [station.id, item.model_name, canonicalModel, group, rowMediaKey, rowTierKey].join("\u0000");
           const row = grouped.get(rowKey) || {
             canonicalModel,
             displayName: primaryResult.match?.display_name || primaryResult.match?.name || item.model_display_name || item.model_name,
+            // 出图规格：映射文档写 size_tier，老站点写 tier_name，两个都认。
+            sizeTier: item.size_tier || item.tier_name || null,
             provider: primaryResult.match?.provider || "未匹配",
             official: null,
             officialCandidates: new Map(),
@@ -315,6 +455,12 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             displayNameOverride: item.model_display_name || item.model_name,
             groupName: group,
             groupRatio,
+            billingMode,
+            mediaType: mediaType || (billingMode === "image" ? "image" : "text"),
+            requestUnit: item.request_unit || "",
+            mediaSpecs: mediaSpecsOf(item),
+            tokensPerRequest,
+            tokensPerRequestEstimated,
             matchRule: primaryResult.rule,
             matchRuleId: primaryResult.ruleId,
             matchConfidence: primaryResult.confidence,
@@ -380,7 +526,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             row.estimatedFields.add("cacheWrite");
           }
           if (!isPublic && costPrices) row.monthlyCost += workloadCost(costPrices, usage) * share;
-          if (item.tier_name) row.tierNames.add(`${item.tier_name} ${Math.round(share * 100)}%`);
+          // 按秒的档位是并列的单条报价，不带「占多少流量」的百分比后缀。
+          if (item.tier_name) row.tierNames.add(item.request_unit === "second" ? item.tier_name : `${item.tier_name} ${Math.round(share * 100)}%`);
           grouped.set(rowKey, row);
         }
       }
@@ -414,6 +561,37 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         ? null
         : blendedUnitPrice(candidate.monthlyCost, usage)
     }));
+    // 实付 = 月消耗面值 × 落档折扣。额度永久有效，所以按实际消耗折，不按档位面值折。
+    // costPrices 对 USD/CREDITS 站已经乘过 rechargeRate，档位折扣必须作用在面值上，否则重复打折。
+    const rowStation = stationMap.get(row.stationId);
+    const rechargeFactor = rechargeFactorOf(rowStation, row.sourceCurrency);
+    const faceMonthlyCost = rechargeFactor > 0 ? row.monthlyCost / rechargeFactor : row.monthlyCost;
+    const rechargePlan = row.stationCategory === "public" || row.pricingUnavailable
+      ? null
+      : resolveRechargeTier(rowStation?.rechargeTiers, faceMonthlyCost);
+    // payRmb 是面值币种里的钱，换回人民币要乘回 rechargeFactor（CNY 站为 1，不受影响）。
+    const monthlyCostPaid = row.stationCategory === "public" || row.pricingUnavailable
+      ? null
+      : (rechargePlan ? rechargePlan.payRmb * rechargeFactor : row.monthlyCost);
+    // 生图道的四种计费口径（张 / 图 token / 像素 / 次）统一折到元/张再比，折算不出来就留空。
+    const imageCount = Number(usage.images) || 0;
+    const imagePricing = row.billingMode === "image"
+      ? resolveImagePricing({
+        costPrices: row.stationCategory === "public" || row.pricingUnavailable ? null : costUnit,
+        quotedPrices: quotedUnit,
+        model: row.official,
+        references,
+        modelId: row.official?.id || row.modelName,
+        imageCount,
+        rowTier: row.sizeTier,
+        skipOfficial: row.stationCategory === "public"
+      })
+      : null;
+    const imageMonthlyCost = imagePricing?.monthlyCost ?? null;
+    const imageRechargePlan = imageMonthlyCost === null || row.stationCategory === "public"
+      ? null
+      : resolveRechargeTier(rowStation?.rechargeTiers, rechargeFactor > 0 ? imageMonthlyCost / rechargeFactor : imageMonthlyCost);
+    const imageMonthlyCostPaid = imageMonthlyCost === null ? null : (imageRechargePlan ? imageRechargePlan.payRmb * rechargeFactor : imageMonthlyCost);
     const offer = {
       stationId: row.stationId,
       stationName: row.stationName,
@@ -431,6 +609,40 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       matchCandidateCount: orderedCandidates.length,
       groupName: row.groupName,
       groupRatio: row.groupRatio,
+      // 生图行按原始计价单位 + 折合元/张展示，不折成 token 单价，也不参与按 token 的月成本排名。
+      imageQuote: imagePricing?.station ?? null,
+      imageQuoteQuoted: imagePricing?.stationQuoted ?? null,
+      imageOfficialQuote: imagePricing?.official ?? null,
+      imagePerImage: imagePricing?.stationPerImage?.perImage ?? null,
+      imagePerImageAssumption: imagePricing?.stationPerImage?.assumption ?? "",
+      imageOfficialPerImage: imagePricing?.officialPerImage?.perImage ?? null,
+      imageOfficialPerImageAssumption: imagePricing?.officialPerImage?.assumption ?? "",
+      imageCompare: imagePricing?.compare ?? null,
+      imageCount,
+      imageMonthlyCost,
+      imageMonthlyCostPaid,
+      imageRechargePlan,
+      billingMode: row.billingMode,
+      mediaType: row.mediaType,
+      requestUnit: row.requestUnit,
+      mediaSpecs: row.mediaSpecs,
+      // 分榜键。同一行只属于一个榜，跨榜不给百分比。
+      mediaUnit: mediaUnitOf(row.billingMode, row.requestUnit, imagePricing?.station),
+      mediaUnitText: mediaUnitLabel(mediaUnitOf(row.billingMode, row.requestUnit, imagePricing?.station), ""),
+      // 原始单位价，不再折算成元/张。折现值留在 imagePerImage，只当注释。
+      mediaUnitPrice: row.billingMode === "image"
+        ? (imagePricing?.station?.value ?? null)
+        : row.billingMode === "request"
+          ? (costUnit?.request ?? quotedUnit?.request ?? null)
+          : null,
+      // 规格档。站内一律 unstated，官方的来自 endpoints 的 variant。
+      imageSizeTier: imagePricing?.stationTier?.size ?? null,
+      imageQualityTier: imagePricing?.stationTier?.quality ?? null,
+      imageTierText: imagePricing ? imageTierLabel(imagePricing.stationTier) : null,
+      officialImageTierText: imagePricing?.officialTier ? imageTierLabel(imagePricing.officialTier) : null,
+      imageTierMatches: imagePricing ? imageTierLabel(imagePricing.stationTier) === imageTierLabel(imagePricing.officialTier) : null,
+      tokensPerRequest: row.tokensPerRequest,
+      tokensPerRequestEstimated: row.tokensPerRequestEstimated,
       tierName: [...row.tierNames].join(" / ") || "标准",
       quotedPrices: quotedUnit,
       prices: quotedUnit,
@@ -441,11 +653,15 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       officialQuotedPrices: officialQuotedUnit,
       officialCurrency: row.officialCurrency,
       monthlyCost: row.stationCategory === "public" || row.pricingUnavailable ? null : row.monthlyCost,
+      monthlyCostPaid,
+      rechargePlan,
       costCurrency: row.stationCategory === "public" ? row.sourceCurrency : null,
       officialMonthlyCost: row.stationCategory === "public" || !primary ? null : primary.monthlyCost,
-      diffPercent: row.stationCategory !== "public" && !row.pricingUnavailable && primary && Number.isFinite(row.monthlyCost) && primary.monthlyCost > 0 ? ((row.monthlyCost - primary.monthlyCost) / primary.monthlyCost) * 100 : null,
-      blendedUnitPrice: row.stationCategory === "public" || row.pricingUnavailable ? null : blendedUnitPrice(row.monthlyCost, usage),
-      blendedMix: row.stationCategory === "public" || row.pricingUnavailable ? null : blendedMixOf(usage),
+      // 按张计价的价差要按元/张比，跟按 token 的月成本不是一回事，这里不填。
+      diffPercent: row.stationCategory !== "public" && !row.pricingUnavailable && row.billingMode !== "image" && primary && Number.isFinite(row.monthlyCost) && primary.monthlyCost > 0 ? ((row.monthlyCost - primary.monthlyCost) / primary.monthlyCost) * 100 : null,
+      // 按次成本摊进 token 分母会污染口径，折算单价改用 requestUnitPrice（见下方补算）。
+      blendedUnitPrice: row.stationCategory === "public" || row.pricingUnavailable || row.billingMode !== "token" ? null : blendedUnitPrice(row.monthlyCost, usage),
+      blendedMix: row.stationCategory === "public" || row.pricingUnavailable || row.billingMode !== "token" ? null : blendedMixOf(usage),
       officialBlendedUnitPrice: row.stationCategory === "public" || !primary ? null : blendedUnitPrice(primary.monthlyCost, usage),
       evidence: row.evidence,
       pricingUnavailable: row.pricingUnavailable,
@@ -456,7 +672,9 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       unpricedModels: row.unpricedModels,
       cacheReadEstimated: row.cacheReadEstimated,
       cacheWriteEstimated: row.cacheWriteEstimated,
-      estimatedFields: [...row.estimatedFields].sort(),
+      estimatedFields: [...row.estimatedFields, ...(row.billingMode === "request" ? ["requestBilled"] : []), ...(row.billingMode === "image" ? ["imageBilled"] : [])].sort(),
+      requestUnitPrice: null,
+      breakEvenTokens: null,
       collectedAt: row.collectedAt,
       sourceFormat: row.sourceFormat
     };
@@ -473,6 +691,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     comparisons.get(comparisonKey).offers.push(offer);
   }
   const result = [...comparisons.values()].sort((a, b) => a.displayName.localeCompare(b.displayName));
+  resolveRequestPricing(result);
   addRecommendationStatus(result, { evidenceThreshold });
   return result;
 }
@@ -482,6 +701,16 @@ export function filterComparisonsByMode(comparisons = [], mode = "paid") {
   return comparisons.filter(comparison => comparison.comparisonGroup === comparisonGroup);
 }
 
+
+export function filterComparisonsByMediaMode(comparisons = [], mode = "text") {
+  const currentMode = ["text", "image", "video"].includes(mode) ? mode : "text";
+  return comparisons
+    .map(comparison => ({
+      ...comparison,
+      offers: (comparison.offers || []).filter(offer => mediaModeMatches(offer, currentMode))
+    }))
+    .filter(comparison => comparison.offers.length);
+}
 export function flattenComparisonRows(comparisons) {
   return comparisons.flatMap(comparison => comparison.offers.map(offer => ({ ...offer, canonicalModel: comparison.canonicalModel })));
 }

@@ -1,7 +1,10 @@
 import { DEFAULT_PLUGIN_REGISTRY_URL, normalizeLocalPlugins, normalizeRegistryState } from "../core/declarative-plugin.js";
 import { DEFAULT_UPDATE_CHANNEL, DEFAULT_UPDATE_INTERVAL_MINUTES, normalizeUpdateChannel, normalizeUpdateInterval } from "../core/update-check.js";
+import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../core/magpie-usage.js";
+import { normalizeRechargeTiers } from "./recharge-tiers.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
+export const OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images/models";
 export const BOC_EXCHANGE_URL = "https://www.boc.cn/sourcedb/whpj/";
 export const DEFAULT_EXCHANGE_RATE = 7.3;
 export const SYSTEM_BASE_PRICE_PER_1M = 2.0;
@@ -17,28 +20,9 @@ export function convertRechargeAmount(amount, fromCurrency, toCurrency, exchange
 
 export const TOKENS_PER_MILLION = 1_000_000;
 
-// 实测月用量：s2api 2026-09-06 至 2026-10-07（32 天）日趋势汇总，按 30 天折算。
-const MEASURED_MONTHLY_VOLUME = {
-  requests: 45494,
-  input: 382.95 * TOKENS_PER_MILLION,
-  cacheRead: 2946.28 * TOKENS_PER_MILLION,
-  output: 30.74 * TOKENS_PER_MILLION,
-  cacheWrite: 0,
-  cacheWrite1h: 0,
-};
-
-export const DEFAULT_MONTHLY_USAGE = {
-  ...MEASURED_MONTHLY_VOLUME,
-  peakShare: 7 / 24,
-  imageInputTokens: 0,
-  imageOutputTokens: 0,
-  imageTokens: 0,
-  images: 0,
-  cacheWrite1h: 0,
-};
-
-// 近 30 天实测：pi session 2026-10-15 至 2026-11-14 汇总（magpie 网关日志 2026-11-03 才启用，覆盖不足 30 天）。
-const RECENT_30D_MONTHLY_VOLUME = {
+// 内置快照：还没同步过 magpie 时先用这组数，同步成功后换成网关实测值。
+// 数据来自 pi session 2026-10-15 至 2026-11-14 汇总（magpie 网关日志 2026-11-03 才启用，覆盖不足 30 天）。
+const BUILTIN_30D_MONTHLY_VOLUME = {
   requests: 54378,
   input: 326.81 * TOKENS_PER_MILLION,
   cacheRead: 4434.31 * TOKENS_PER_MILLION,
@@ -47,8 +31,8 @@ const RECENT_30D_MONTHLY_VOLUME = {
   cacheWrite1h: 0,
 };
 
-// 近 7 天实测：magpie 网关 2026-11-07 14:27 至 2026-11-14 14:27 汇总，按 30/7 折算为月用量。
-const RECENT_7D_MONTHLY_VOLUME = {
+// magpie 网关 2026-11-07 14:27 至 2026-11-14 14:27 汇总，按 30/7 折算为月用量。
+const BUILTIN_7D_MONTHLY_VOLUME = {
   requests: 32567,
   input: 196.25 * TOKENS_PER_MILLION,
   cacheRead: 2077.49 * TOKENS_PER_MILLION,
@@ -56,22 +40,52 @@ const RECENT_7D_MONTHLY_VOLUME = {
   cacheWrite: 0.79 * TOKENS_PER_MILLION,
   cacheWrite1h: 0,
 };
-export const USAGE_PRESETS = [
-  { id: "measured", label: "实测月用量", usage: MEASURED_MONTHLY_VOLUME },
-  { id: "recent30d", label: "magpie-30天", usage: RECENT_30D_MONTHLY_VOLUME },
-  { id: "recent7d", label: "magpie-7天", usage: RECENT_7D_MONTHLY_VOLUME },
-  {
-    id: "baseline",
-    label: "基础估算（3000 万输入 / 600 万输出）",
-    usage: { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0, imageInputTokens: 0, imageOutputTokens: 0, imageTokens: 0, images: 0 }
-  }
-];
 
+const BUILTIN_PRESET_USAGE = {
+  recent30d: BUILTIN_30D_MONTHLY_VOLUME,
+  recent7d: BUILTIN_7D_MONTHLY_VOLUME,
+};
 
-// 兼容旧版本保存的日用量和基础预设，避免已有设置继续覆盖实测月用量。
+export const DEFAULT_MONTHLY_USAGE = {
+  ...BUILTIN_30D_MONTHLY_VOLUME,
+  peakShare: 7 / 24,
+  imageInputTokens: 0,
+  imageOutputTokens: 0,
+  imageTokens: 0,
+  images: 0,
+};
+
+// magpie 预设的用量来自 settings.magpieSync（网关实测）；还没同步过就退回内置快照。
+export function usagePresetUsage(id, magpieSync = null) {
+  const measured = magpieSync?.[id]?.usage;
+  if (measured) return { ...DEFAULT_MONTHLY_USAGE, ...measured };
+  const builtin = BUILTIN_PRESET_USAGE[id];
+  return builtin ? { ...DEFAULT_MONTHLY_USAGE, ...builtin } : null;
+}
+
+export function usagePresetOptions(magpieSync = null) {
+  const stamp = id => {
+    const syncedAt = Number(magpieSync?.[id]?.syncedAt) || 0;
+    if (!syncedAt) return "内置快照";
+    const date = new Date(syncedAt);
+    return `${date.getMonth() + 1} 月 ${date.getDate()} 日同步`;
+  };
+  return [
+    { id: "recent30d", label: `magpie-30天（${stamp("recent30d")}）` },
+    { id: "recent7d", label: `magpie-7天（${stamp("recent7d")}）` },
+    { id: "baseline", label: "基础估算（3000 万输入 / 600 万输出）" },
+    { id: "custom", label: "自定义" },
+  ];
+}
+
+const BASELINE_USAGE = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0, imageInputTokens: 0, imageOutputTokens: 0, imageTokens: 0, images: 0 };
+// 判定口径只看这几个字段，高峰占比与图像用量不参与。
+const USAGE_MATCH_FIELDS = ["requests", "input", "cacheRead", "cacheWrite", "cacheWrite1h", "output"];
+// 兼容旧版本保存的日用量、基础预设和已下线的「实测月用量」预设，避免已有设置继续覆盖当前默认用量。
 const LEGACY_USAGE_PROFILES = [
   { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
   { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
+  { requests: 45494, input: 382.95 * TOKENS_PER_MILLION, cacheRead: 2946.28 * TOKENS_PER_MILLION, output: 30.74 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
   { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0 }
 ];
 
@@ -79,8 +93,23 @@ function isLegacyUsage(usage) {
   return LEGACY_USAGE_PROFILES.some(profile => Object.entries(profile).every(([field, value]) => Number(usage?.[field] ?? 0) === Number(value)));
 }
 
-export function usagePresetId(usage) {
-  return USAGE_PRESETS.find(preset => Object.entries(preset.usage).every(([field, value]) => Number(value) === Number(usage[field] ?? 0)))?.id || "custom";
+// 设置页的输入框把 token 折成百万、保留 4 位小数，读回来就丢了尾巴。
+// 判定预设时按同一精度比，否则同步一次就会被判成「自定义」。
+const USAGE_DISPLAY_DIGITS = 1e4;
+function usageMatchValue(field, value) {
+  const raw = Number(value) || 0;
+  if (field === "requests") return Math.round(raw);
+  return Math.round((raw / TOKENS_PER_MILLION) * USAGE_DISPLAY_DIGITS) / USAGE_DISPLAY_DIGITS * TOKENS_PER_MILLION;
+}
+
+export function usagePresetId(usage, magpieSync = null) {
+  for (const id of ["recent30d", "recent7d"]) {
+    const preset = usagePresetUsage(id, magpieSync);
+    // 判定按输入框的显示精度比，网关原始值和回填值差几百个 token 不算改过。
+    if (preset && USAGE_MATCH_FIELDS.every(field => usageMatchValue(field, preset[field]) === usageMatchValue(field, usage[field]))) return id;
+  }
+  if (USAGE_MATCH_FIELDS.every(field => usageMatchValue(field, BASELINE_USAGE[field]) === usageMatchValue(field, usage[field]))) return "baseline";
+  return "custom";
 }
 
 const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
@@ -99,6 +128,18 @@ export function currentSiteOrigin(value) {
   } catch {
     return "";
   }
+}
+
+export { normalizeRechargeTiers };
+
+export const BILLING_PROFILE_SOURCES = ["auto", "measured", "manual"];
+
+// 站点用量画像：只喂按次计费模型的折算与平衡点，不参与按量模型的月成本。
+export function normalizeBillingProfile(input) {
+  const tokensPerRequest = Number(input?.tokensPerRequest);
+  if (!Number.isFinite(tokensPerRequest) || tokensPerRequest <= 0) return { tokensPerRequest: 0, source: "auto" };
+  const source = BILLING_PROFILE_SOURCES.includes(input?.source) ? input.source : "manual";
+  return { tokensPerRequest, source: source === "auto" ? "manual" : source };
 }
 export const DEFAULT_MATCHING_RULES = [
   { id: "exact", name: "精确名称", enabled: true },
@@ -134,6 +175,9 @@ const DEFAULT_SETTINGS = {
   updateAutoCheck: true,
   updateIntervalMinutes: DEFAULT_UPDATE_INTERVAL_MINUTES,
   updateChannel: DEFAULT_UPDATE_CHANNEL,
+  magpieBaseUrl: MAGPIE_USAGE_DEFAULT_BASE_URL,
+  magpieSyncIntervalMinutes: DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES,
+  magpieSync: null,
 };
 
 export const STATION_CATEGORY_LABELS = {
@@ -160,6 +204,9 @@ export const DEFAULT_STATION = {
   priceCurrencyVerified: true,
   priceCurrencyNote: "",
   basePricePerMillion: SYSTEM_BASE_PRICE_PER_1M,
+  rechargeTiers: [],
+  rechargeTiersVerified: false,
+  billingProfile: { tokensPerRequest: 0, source: "auto" },
   auth: { type: "none", token: "", username: "", password: "" },
   adapter: { kind: "custom", endpoint: "", method: "GET", responseFormat: "auto", rawJson: "" },
   checkin: { token: "", autoEnabled: false },
@@ -225,6 +272,9 @@ export function normalizeSettings(input = {}) {
     updateAutoCheck: input.updateAutoCheck !== false,
     updateIntervalMinutes: normalizeUpdateInterval(input.updateIntervalMinutes),
     updateChannel: normalizeUpdateChannel(input.updateChannel),
+    magpieBaseUrl: normalizeMagpieBaseUrl(input.magpieBaseUrl),
+    magpieSyncIntervalMinutes: normalizeMagpieSyncInterval(input.magpieSyncIntervalMinutes),
+    magpieSync: normalizeMagpieSyncState(input.magpieSync),
   };
   if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
   settings.usage.imageTokens = settings.usage.imageOutputTokens;
@@ -280,5 +330,8 @@ export function normalizeStation(input = {}) {
   station.rechargeRateNote = String(input.rechargeRateNote || "").trim();
   const basePricePerMillion = Number(station.basePricePerMillion);
   station.basePricePerMillion = Number.isFinite(basePricePerMillion) && basePricePerMillion >= 0 ? basePricePerMillion : SYSTEM_BASE_PRICE_PER_1M;
+  station.rechargeTiers = normalizeRechargeTiers(input.rechargeTiers);
+  station.rechargeTiersVerified = station.rechargeTiers.length > 0 && input.rechargeTiersVerified !== false;
+  station.billingProfile = normalizeBillingProfile(input.billingProfile);
   return station;
 }

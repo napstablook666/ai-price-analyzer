@@ -1,8 +1,14 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
+import { mediaSpecsOf, mediaTypeForPricing } from "./media.js";
+import { applyPriceMap } from "./price-map.js";
+import { tokenfluxPriceMap } from "./price-maps/tokenflux.js";
+import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
+import { trueSotaPriceMap } from "./price-maps/true-sota.js";
+import { sidrunePriceMap } from "./price-maps/sidrune.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
-export const NORMALIZATION_VERSION = 24;
+export const NORMALIZATION_VERSION = 25;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -58,6 +64,8 @@ export function cleanPricingRows(rows, options = {}) {
     const imagePrice = priceValues.image_price;
     const hasModelRatio = rawModelRatio !== undefined && rawModelRatio !== null && rawModelRatio !== "" && finitePrice(rawModelRatio) !== null;
     const hasPrice = PRICE_FIELD_DEFINITIONS.some(field => priceValues[field.normalized] !== null);
+    const mediaType = mediaTypeForPricing({ ...item, image_price: imagePrice });
+    const mediaSpecs = mediaSpecsOf(item);
     return {
       model_name: item.model_name || item.model || item.id || item.name || "",
       model_display_name: item.model_display_name || item.display_name || item.name || item.model || item.id || "",
@@ -69,7 +77,11 @@ export function cleanPricingRows(rows, options = {}) {
       enable_groups: item.enable_groups || item.groups || [],
       proxy_group_name: item.proxy_group_name || item.group_name || "",
       tier_name: item.tier_name || item.tier || "",
+      // 出图/视频的规格档（1K / 2K / 4K）单独一列，不混进按长度分档的 tier_name。
+      ...(item.size_tier ? { size_tier: String(item.size_tier).trim() } : {}),
       evidence: item.evidence || "provider_payload",
+      ...(mediaType ? { media_type: mediaType } : {}),
+      ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
       hasPricing: hasModelRatio || hasPrice
     };
   }).filter(item => item.model_name).map(({ hasPricing, ...item }) => ({ ...item, catalogOnly: !hasPricing }));
@@ -79,15 +91,183 @@ export class ParsingStrategy {
   parse() { return { data: [], group_ratio: {} }; }
 }
 
+const TIER_CALL_PATTERN = /tier\s*\(/gi;
+// len <= N / p <= N 这类长度条件决定档位区间，hour(...) 之类的时间条件不算。
+const TIER_BOUNDARY_PATTERN = /(?:^|[^a-z0-9_])(?:len|length|tokens?|input_tokens?|p)\s*(<=|<|>=|>)\s*(\d+(?:\.\d+)?)\s*$/i;
+const TIER_TIME_DISCOUNT_PATTERN = /\*\s*\(\s*(hour\s*\([^)]*\)[^?]*)\?\s*(\d+(?:\.\d+)?)\s*:\s*1\s*\)/i;
+
+function balancedSpan(source, start) {
+  let depth = 1;
+  let quote = "";
+  for (let index = start; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (char === "\\") index += 1;
+      else if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(") depth += 1;
+    else if (char === ")" && --depth === 0) return { body: source.slice(start, index), end: index };
+  }
+  return null;
+}
+
+function splitArguments(body) {
+  const parts = [];
+  let depth = 0;
+  let quote = "";
+  let current = "";
+  for (const char of body) {
+    if (quote) {
+      current += char;
+      if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === "(" || char === "[") depth += 1;
+    else if (char === ")" || char === "]") depth -= 1;
+    if (char === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts;
+}
+
+// 三元链 A ? X : B ? Y : Z 里每个分支的生效条件就是它前面那个 `?` 左侧的表达式，
+// 各分支条件天然互斥（B 成立即 A 不成立），所以不必把 A 的否定拼进去。
+function conditionBefore(expression, questionAt) {
+  let depth = 0;
+  let quote = "";
+  let index = questionAt - 1;
+  for (; index >= 0; index -= 1) {
+    const char = expression[index];
+    if (quote) {
+      if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === ")") {
+      depth += 1;
+      continue;
+    }
+    if (char === "(") {
+      if (!depth) break;
+      depth -= 1;
+      continue;
+    }
+    if (depth) continue;
+    if (char === "?" || char === ":" || char === ",") break;
+  }
+  return expression.slice(index + 1, questionAt).trim();
+}
+
+function ternaryBranches(expression) {
+  const branches = [];
+  const open = [];
+  let depth = 0;
+  let quote = "";
+  for (let index = 0; index < expression.length; index += 1) {
+    const char = expression[index];
+    if (quote) {
+      if (char === quote) quote = "";
+      continue;
+    }
+    if (char === "\"" || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === "(" || char === "[") {
+      depth += 1;
+      continue;
+    }
+    if (char === ")" || char === "]") {
+      depth -= 1;
+      continue;
+    }
+    if (char === "?") {
+      open.push(index);
+      continue;
+    }
+    if (char !== ":" || !open.length) continue;
+    const questionAt = open.pop();
+    branches.push({ condition: conditionBefore(expression, questionAt), start: questionAt + 1, end: index });
+  }
+  for (const questionAt of open) {
+    branches.push({ condition: conditionBefore(expression, questionAt), start: questionAt + 1, end: expression.length });
+  }
+  return branches;
+}
+
+function boundaryOf(condition) {
+  const match = String(condition || "").match(TIER_BOUNDARY_PATTERN);
+  if (!match) return {};
+  const value = Number(match[2]);
+  if (!Number.isFinite(value)) return {};
+  const operator = match[1];
+  // 保留开闭区间：`len > N` 的档从 N+1 开始，`len <= N` 的档到 N 结束、下一档从 N+1 开始。
+  if (operator.startsWith("<")) return { maxTokens: value, maxInclusive: operator === "<=" };
+  return { minTokens: operator === ">=" ? value : value + 1 };
+}
+
 export function parseBillingTiers(expression) {
-  if (typeof expression !== "string" || !expression.includes("tier(")) return [];
+  if (typeof expression !== "string" || !expression.includes("tier")) return [];
+  const branches = ternaryBranches(expression);
   const tiers = [];
-  const pattern = /tier\(\s*["']([^"']+)["']\s*,\s*([^)]*)\)/gi;
+  TIER_CALL_PATTERN.lastIndex = 0;
   let match;
-  while ((match = pattern.exec(expression))) {
+  while ((match = TIER_CALL_PATTERN.exec(expression))) {
+    const callStart = match.index;
+    const span = balancedSpan(expression, TIER_CALL_PATTERN.lastIndex);
+    if (!span) continue;
+    TIER_CALL_PATTERN.lastIndex = span.end + 1;
+    const [rawName, rawBody = ""] = splitArguments(span.body);
+    const name = String(rawName || "").replace(/["']/g, "").trim();
+    const body = rawBody.trim();
+    const branch = branches
+      .filter(item => item.start <= callStart && callStart < item.end)
+      .sort((first, second) => (first.end - first.start) - (second.end - second.start))[0];
+    const boundary = boundaryOf(branch?.condition);
+    const minTokens = boundary.minTokens ?? null;
+    const maxTokens = boundary.maxTokens ?? null;
+    const maxInclusive = boundary.maxInclusive ?? true;
+    // fixed(x) 是站点写的固定单价：* image_count 时按张，否则按次。
+    const fixed = body.match(/^fixed\s*\(\s*(\d+(?:\.\d+)?|\.\d+)\s*\)$/i);
+    if (fixed) {
+      const perImage = /^\s*\*\s*image_count\b/i.test(expression.slice(span.end + 1));
+      const price = Number(fixed[1]);
+      tiers.push({
+        name,
+        input: 0,
+        output: 0,
+        ratio: 0,
+        completion: 1,
+        billing: { cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 },
+        unit: perImage ? "image" : "request",
+        fixed: price,
+        ...(perImage ? {} : { request: price }),
+        minTokens,
+        maxTokens,
+        maxInclusive
+      });
+      continue;
+    }
     const coefficients = {};
-    const terms = match[2].match(/[+-]?[^+-]+/g) || [];
-    for (const term of terms) {
+    for (const term of body.match(/[+-]?[^+-]+/g) || []) {
       const parts = term.trim().match(/^([+-]?)\s*(?:(\d+(?:\.\d+)?|\.\d+)\s*\*\s*)?([a-z0-9]+)(?:\s*\*\s*(\d+(?:\.\d+)?|\.\d+))?$/i);
       if (!parts) continue;
       const sign = parts[1] === "-" ? -1 : 1;
@@ -98,7 +278,7 @@ export function parseBillingTiers(expression) {
     const output = Number(coefficients.c || 0);
     if (input <= 0 && output <= 0) continue;
     tiers.push({
-      name: match[1],
+      name,
       input,
       output,
       ratio: input / SYSTEM_BASE_PRICE_PER_1M,
@@ -107,7 +287,32 @@ export function parseBillingTiers(expression) {
         cacheRead: Number(coefficients.cr || 0),
         cacheWrite: Number(coefficients.cc || 0),
         cacheWrite1h: Number(coefficients.cc1h || 0)
+      },
+      unit: "token",
+      fixed: null,
+      minTokens,
+      maxTokens,
+      maxInclusive
+    });
+  }
+  const timeDiscount = expression.match(TIER_TIME_DISCOUNT_PATTERN);
+  if (timeDiscount) {
+    for (const tier of tiers) {
+      tier.timeDiscount = Number(timeDiscount[2]);
+      tier.timeCondition = timeDiscount[1].trim();
+    }
+  }
+  // 只有出现长度条件时才补区间下界，否则普通单档模型不该凭空多出 min_tokens。
+  if (tiers.some(tier => tier.minTokens !== null || tier.maxTokens !== null)) {
+    tiers.forEach((tier, index) => {
+      if (tier.minTokens !== null) return;
+      if (index === 0) {
+        tier.minTokens = 0;
+        return;
       }
+      const previous = tiers[index - 1];
+      // 上一档上界是闭区间（<=）时，本档从它 +1 开始；开区间（<）时本档就从该值开始。
+      tier.minTokens = previous.maxTokens === null ? null : previous.maxInclusive === false ? previous.maxTokens : previous.maxTokens + 1;
     });
   }
   return tiers;
@@ -162,7 +367,7 @@ export class PqhPricingStrategy extends ParsingStrategy {
       if (!hasModelCatalog && !itemGroups.length) continue;
       if (itemGroups.some(group => mediaGroups.has(group))) continue;
       const requestBilled = hasModelCatalog && Number(item.quota_type) === 1;
-      const tiers = requestBilled ? [] : parseBillingTiers(item.billing_expr);
+      const tiers = requestBilled ? [] : parseBillingTiers(item.billing_expr).filter(tier => tier.unit === "token");
       const variants = tiers.length ? tiers : [{
         name: "标准",
         input: requestBilled ? NaN : Number(item.model_ratio) * base,
@@ -222,90 +427,22 @@ export class TokenFluxPricingStrategy extends ParsingStrategy {
   }
 
   parse(raw) {
+    // 字段映射全在 price-maps/tokenflux.js 里，这里只负责调用和把失败报上去。
+    const { rows, unresolved } = applyPriceMap(tokenfluxPriceMap, raw, { parseTiers: parseBillingTiers });
     const groupRatio = Object.fromEntries(Object.entries(raw.group_ratio)
       .map(([group, value]) => [group, finitePrice(value)])
       .filter(([, value]) => value !== null));
-    const usableGroups = Array.isArray(raw.usable_group)
-      ? raw.usable_group
-      : raw.usable_group && typeof raw.usable_group === "object" ? Object.keys(raw.usable_group) : [];
-    const activeGroups = usableGroups.filter(group => own(groupRatio, group));
-    const unsupportedBillingModes = new Set();
-    const data = [];
-    const groupsFor = item => {
-      const groups = Array.isArray(item.enable_groups) ? item.enable_groups : [item.enable_groups].filter(Boolean);
-      const selected = activeGroups.length ? groups.filter(group => activeGroups.includes(group)) : groups;
-      return selected.length ? selected : groups;
-    };
-
-    for (const item of raw.data) {
-      const modelName = String(item?.model_name || "").trim();
-      if (!modelName) continue;
-      const billingMode = String(item.billing_mode || "").trim().toLowerCase();
-      if (billingMode === "tiered_expr" || typeof item.billing_expr === "string") {
-        unsupportedBillingModes.add(billingMode || "tiered_expr");
-        continue;
-      }
-      const groups = groupsFor(item);
-      if (!groups.length) continue;
-      const modelRatio = finitePrice(item.model_ratio);
-      const completionRatio = finitePrice(item.completion_ratio);
-      const modelPrice = finitePrice(item.model_price);
-      const requestBilled = Number(item.quota_type) === 1;
-      const imageEndpoint = Array.isArray(item.supported_endpoint_types) && item.supported_endpoint_types.includes("image-generation");
-      const specialBilling = requestBilled || imageEndpoint;
-      if (specialBilling && !(modelPrice !== null && modelPrice > 0)) continue;
-      if (!specialBilling && (modelRatio === null || completionRatio === null)) continue;
-
-      for (const group of groups) {
-        const multiplier = groupRatio[group];
-        if (multiplier === undefined) continue;
-        if (specialBilling) {
-          const image = imageEndpoint;
-          data.push({
-            model_name: modelName,
-            model_display_name: modelName,
-            model_ratio: 0,
-            completion_ratio: 1,
-            input_price: null,
-            output_price: null,
-            cache_read_price: null,
-            cache_write_price: null,
-            request_price: image ? null : modelPrice * multiplier,
-            image_price: image ? modelPrice * multiplier : null,
-            price_currency: "CNY",
-            enable_groups: [group],
-            proxy_group_name: group,
-            group_ratio: multiplier,
-            evidence: "exact"
-          });
-          continue;
-        }
-        const inputPrice = modelRatio * multiplier;
-        data.push({
-          model_name: modelName,
-          model_display_name: modelName,
-          model_ratio: modelRatio,
-          completion_ratio: completionRatio,
-          input_price: inputPrice,
-          output_price: inputPrice * completionRatio,
-          cache_read_price: finitePrice(item.cache_ratio) === null ? null : inputPrice * Number(item.cache_ratio),
-          cache_write_price: finitePrice(item.create_cache_ratio) === null ? null : inputPrice * Number(item.create_cache_ratio),
-          request_price: null,
-          image_price: null,
-          price_currency: "CNY",
-          enable_groups: [group],
-          proxy_group_name: group,
-          group_ratio: multiplier,
-          tier_name: "标准",
-          evidence: "exact"
-        });
-      }
-    }
     return {
-      data,
+      data: rows,
       group_ratio: groupRatio,
       sourceFormat: "tokenflux",
-      ...(unsupportedBillingModes.size ? { incomplete: true, unsupportedBillingModes: [...unsupportedBillingModes].sort() } : {})
+      ...(unresolved.length
+        ? {
+            incomplete: true,
+            unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+            unpricedModels: unresolved.map(entry => entry.model)
+          }
+        : {})
     };
   }
 }
@@ -421,6 +558,8 @@ export class FastAiChannelsStrategy extends ParsingStrategy {
               const imageOutput = scale(perMillion(fastAiEffectivePrice(tier, pricing, "image_output_price")));
               const imagePrice = scale(finitePrice(tier.per_image_price ?? tier.image_price ?? pricing.per_image_price ?? pricing.image_price), imageRate);
               if ([input, output, cacheRead, cacheWrite, cacheWrite1h, request, imageOutput, imagePrice].every(value => value === null)) continue;
+              const mediaType = mediaTypeForPricing({ ...model, ...pricing, image_price: imagePrice });
+              const mediaSpecs = mediaSpecsOf(model) || mediaSpecsOf(pricing);
               data.push({
                 model_name: modelName,
                 model_display_name: String(model.name || model.display_name || modelName),
@@ -439,6 +578,8 @@ export class FastAiChannelsStrategy extends ParsingStrategy {
                 proxy_group_name: groupName,
                 group_ratio: 1,
                 tier_name: intervals.length && group.long_context_pricing_enabled !== false ? fastAiTierName(tier) : "标准",
+                ...(mediaType ? { media_type: mediaType } : {}),
+                ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
                 evidence: "exact"
               });
             }
@@ -502,6 +643,8 @@ export class LiuguangModelsStrategy extends ParsingStrategy {
         if (model.modality === "image" && ["images", "calls"].some(metric => hasRule(metric) && prices[LIUGUANG_METRICS[metric][0]] === null)) continue;
         if (model.modality === "image" && prices.image_price === null && prices.request_price === null) continue;
         const group = String(priceBook.label || priceBook.channelId || "Default").trim();
+        const mediaType = mediaTypeForPricing(model);
+        const mediaSpecs = mediaSpecsOf(model);
         data.push({
           model_name: String(model.id),
           model_display_name: String(model.label || model.id),
@@ -513,6 +656,8 @@ export class LiuguangModelsStrategy extends ParsingStrategy {
           enable_groups: [group],
           proxy_group_name: group,
           group_ratio: 1,
+          ...(mediaType ? { media_type: mediaType } : {}),
+          ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
           evidence: "exact"
         });
       }
@@ -638,41 +783,23 @@ export class CheapRouterPricingStrategy extends ParsingStrategy {
   canParse(raw) { return raw?.code === 0 && Array.isArray(raw?.data?.items); }
 
   parse(raw) {
-    const data = [];
+    // 字段映射全在 price-maps/cheaprouter.js 里，这里只负责调用和把失败报上去。
+    const { rows, unresolved } = applyPriceMap(cheapRouterPriceMap, raw);
     const groupRatio = {};
-    for (const item of raw.data.items) {
-      const modelName = String(item?.model || item?.display_name || "").trim();
-      const pricing = item?.effective_pricing_usd || item?.official_pricing || {};
-      if (!modelName || !pricing || typeof pricing !== "object") continue;
-      const input = finitePrice(pricing.input_per_mtok_usd);
-      const output = finitePrice(pricing.output_per_mtok_usd);
-      const cacheRead = finitePrice(pricing.cache_read_per_mtok_usd);
-      const cacheWrite = finitePrice(pricing.cache_write_per_mtok_usd);
-      const request = finitePrice(pricing.per_request_usd);
-      const image = finitePrice(pricing.per_image_usd);
-      if ([input, output, cacheRead, cacheWrite, request, image].every(value => value === null)) continue;
-      const groupName = String(item?.group?.name || "cheaprouter.cc").trim();
-      groupRatio[groupName] = 1;
-      data.push({
-        model_name: modelName,
-        model_display_name: String(item?.display_name || modelName),
-        model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
-        completion_ratio: input > 0 && output !== null ? output / input : 1,
-        input_price: input,
-        output_price: output,
-        cache_read_price: cacheRead,
-        cache_write_price: cacheWrite,
-        request_price: request,
-        image_price: image,
-        price_currency: "USD",
-        enable_groups: [groupName],
-        proxy_group_name: groupName,
-        group_ratio: 1,
-        evidence: "exact"
-      });
-    }
-    if (!data.length) throw new Error("CheapRouter 公开模型价格数据为空");
-    return { data, group_ratio: groupRatio, sourceFormat: "cheaprouter-public-api" };
+    for (const row of rows) groupRatio[row.proxy_group_name] = row.group_ratio;
+    if (!rows.length) throw new Error("CheapRouter 公开模型价格数据为空");
+    return {
+      data: rows,
+      group_ratio: groupRatio,
+      sourceFormat: "cheaprouter-public-api",
+      ...(unresolved.length
+        ? {
+            incomplete: true,
+            unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+            unpricedModels: unresolved.map(entry => entry.model)
+          }
+        : {})
+    };
   }
 }
 
@@ -730,13 +857,6 @@ export class JijiModelMarketStrategy extends ParsingStrategy {
   }
 }
 
-const sidruneMultiplier = group => {
-  if (group?.promo_active === true) {
-    const promo = finitePrice(group.promo_rate_multiplier);
-    if (promo !== null) return promo;
-  }
-  return finitePrice(group?.effective_rate_multiplier) ?? finitePrice(group?.rate_multiplier) ?? 1;
-};
 
 export class SidruneModelPlazaStrategy extends ParsingStrategy {
   canParse(raw) {
@@ -744,67 +864,23 @@ export class SidruneModelPlazaStrategy extends ParsingStrategy {
   }
 
   parse(raw) {
-    const data = [];
+    // 字段映射全在 price-maps/sidrune.js 里，这里只负责调用和把失败报上去。
+    const { rows, unresolved } = applyPriceMap(sidrunePriceMap, raw);
     const groupRatio = {};
-    const groups = new Map((raw.data.groups || []).map(group => [String(group?.id), group]));
-    const perMillion = value => {
-      const parsed = finitePrice(value);
-      return parsed === null ? null : parsed * 1_000_000;
+    for (const row of rows) groupRatio[row.proxy_group_name] = row.group_ratio;
+    if (!rows.length) throw new Error("Sidrune 模型广场价格数据为空");
+    return {
+      data: rows,
+      group_ratio: groupRatio,
+      sourceFormat: "sidrune-model-plaza",
+      ...(unresolved.length
+        ? {
+            incomplete: true,
+            unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+            unpricedModels: unresolved.map(entry => entry.model)
+          }
+        : {})
     };
-
-    for (const pricing of raw.data.pricing) {
-      const groupTargets = (Array.isArray(pricing?.group_ids) ? pricing.group_ids : [])
-        .map(id => groups.get(String(id)))
-        .filter(Boolean);
-      if (!pricing?.name || !groupTargets.length) continue;
-      const intervals = Array.isArray(pricing.intervals) && pricing.intervals.length ? pricing.intervals : [null];
-
-      for (const group of groupTargets) {
-        const groupName = String(group.name || group.id || "Sidrune").trim();
-        const multiplier = sidruneMultiplier(group);
-        groupRatio[groupName] = multiplier;
-        for (const interval of intervals) {
-          const price = field => {
-            const value = interval?.[field] ?? pricing[field];
-            const parsed = perMillion(value);
-            return parsed === null ? null : parsed * multiplier;
-          };
-          const requestValue = interval?.per_request_price ?? pricing.per_request_price;
-          const request = finitePrice(requestValue);
-          const input = price("input_price");
-          const output = price("output_price");
-          const cacheRead = price("cache_read_price");
-          const cacheWrite = price("cache_write_price");
-          const cacheWrite1h = price("cache_write_1h_price");
-          const imageOutput = price("image_output_price");
-          const imageInput = price("image_input_price");
-          if ([input, output, cacheRead, cacheWrite, cacheWrite1h, imageOutput, imageInput, request].every(value => value === null)) continue;
-          const tierName = intervals.length > 1 || interval?.tier_label ? String(interval?.tier_label || "标准") : "";
-          data.push({
-            model_name: String(pricing.name),
-            model_display_name: String(pricing.name),
-            model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
-            completion_ratio: input > 0 && output !== null ? output / input : 1,
-            input_price: input,
-            output_price: output,
-            cache_read_price: cacheRead,
-            cache_write_price: cacheWrite,
-            cache_write_1h_price: cacheWrite1h,
-            request_price: request === null ? null : request * multiplier,
-            image_input_price: imageInput,
-            image_output_price: imageOutput,
-            price_currency: "USD",
-            enable_groups: [groupName],
-            proxy_group_name: groupName,
-            group_ratio: multiplier,
-            tier_name: tierName,
-            evidence: "exact"
-          });
-        }
-      }
-    }
-    if (!data.length) throw new Error("Sidrune 模型广场价格数据为空");
-    return { data, group_ratio: groupRatio, sourceFormat: "sidrune-model-plaza" };
   }
 }
 
@@ -816,46 +892,23 @@ export class TrueSotaModelPricingStrategy extends ParsingStrategy {
   }
 
   parse(raw) {
-    const groups = new Map(raw.data.groups.map(group => [String(group?.id), group]));
-    const data = [];
+    // 字段映射全在 price-maps/true-sota.js 里，这里只负责调用和把失败报上去。
+    const { rows, unresolved } = applyPriceMap(trueSotaPriceMap, raw);
     const groupRatio = {};
-    const perMillion = value => {
-      const parsed = finitePrice(value);
-      return parsed === null ? null : parsed * 1_000_000;
+    for (const row of rows) groupRatio[row.proxy_group_name] = row.group_ratio;
+    if (!rows.length) throw new Error("TrueSOTA 模型价格数据为空");
+    return {
+      data: rows,
+      group_ratio: groupRatio,
+      sourceFormat: "true-sota-model-pricing",
+      ...(unresolved.length
+        ? {
+            incomplete: true,
+            unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+            unpricedModels: unresolved.map(entry => entry.model)
+          }
+        : {})
     };
-
-    for (const model of raw.data.models) {
-      const group = groups.get(String(model?.group_id));
-      const modelName = String(model?.name || "").trim();
-      const groupName = String(group?.name || group?.id || "").trim();
-      const multiplier = finitePrice(group?.rate_multiplier) ?? 1;
-      if (!modelName || !groupName) continue;
-      const input = perMillion(model.input_price);
-      const output = perMillion(model.output_price);
-      const cache = perMillion(model.cache_price);
-      if ([input, output, cache].every(value => value === null)) continue;
-      const scale = value => value === null ? null : value * multiplier;
-      const effectiveInput = scale(input);
-      const effectiveOutput = scale(output);
-      groupRatio[groupName] = multiplier;
-      data.push({
-        model_name: modelName,
-        model_display_name: modelName,
-        model_ratio: effectiveInput === null ? 0 : effectiveInput / SYSTEM_BASE_PRICE_PER_1M,
-        completion_ratio: effectiveInput > 0 && effectiveOutput !== null ? effectiveOutput / effectiveInput : 1,
-        input_price: effectiveInput,
-        output_price: effectiveOutput,
-        cache_read_price: scale(cache),
-        cache_write_price: null,
-        price_currency: "USD",
-        enable_groups: [groupName],
-        proxy_group_name: groupName,
-        group_ratio: multiplier,
-        evidence: "exact"
-      });
-    }
-    if (!data.length) throw new Error("TrueSOTA 模型价格数据为空");
-    return { data, group_ratio: groupRatio, sourceFormat: "true-sota-model-pricing" };
   }
 }
 
@@ -982,6 +1035,8 @@ export class ModelPlazaStrategy extends ParsingStrategy {
             unsupportedBillingModes.add(billingMode);
             continue;
           }
+          const mediaType = mediaTypeForPricing({ ...model, ...pricing, ...group }, { targetField });
+          const mediaSpecs = mediaSpecsOf(model) || mediaSpecsOf(pricing) || mediaSpecsOf(group);
           const multiplierForPrice = profile.nonTokenMultiplier(group, billingMode, multiplier);
           if (multiplierForPrice === null) {
             invalidPricingValues.add(`${modelName}:multiplier`);
@@ -1022,6 +1077,8 @@ export class ModelPlazaStrategy extends ParsingStrategy {
             enable_groups: [groupName],
             proxy_group_name: groupName,
             group_ratio: multiplier,
+            ...(mediaType ? { media_type: mediaType } : {}),
+            ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
             evidence: "exact"
           });
           continue;
@@ -1193,8 +1250,49 @@ export class AllInOneModelsStrategy extends ParsingStrategy {
           enable_groups: [],
           proxy_group_name: "",
           group_ratio: 1,
+          media_type: "image",
+          ...(mediaSpecsOf(model) ? { media_specs: mediaSpecsOf(model) } : {}),
           evidence: "exact"
         });
+        continue;
+      }
+      if (billingMode === "special") {
+        // 视频类模型只给 per_second_prices，key 是分辨率档，值是每秒单价。
+        const perSecond = model.per_second_prices && typeof model.per_second_prices === "object" && !Array.isArray(model.per_second_prices)
+          ? model.per_second_prices
+          : null;
+        if (perSecond) {
+          const specs = mediaSpecsOf(model);
+          let emitted = false;
+          for (const [label, value] of Object.entries(perSecond)) {
+            const price = parsePrice(value);
+            if (price === null || price <= 0) continue;
+            emitted = true;
+            data.push({
+              model_name: name,
+              model_display_name: displayName(model),
+              model_ratio: 0,
+              completion_ratio: 1,
+              input_price: null,
+              output_price: null,
+              cache_read_price: null,
+              cache_write_price: null,
+              cache_write_1h_price: null,
+              request_price: price,
+              price_currency: "CNY",
+              enable_groups: [],
+              proxy_group_name: "",
+              group_ratio: 1,
+              tier_name: String(label).trim(),
+              media_type: "video",
+              request_unit: "second",
+              ...(specs ? { media_specs: specs } : {}),
+              evidence: "exact"
+            });
+          }
+          if (emitted) continue;
+        }
+        unsupportedBillingModes.add(billingMode);
         continue;
       }
       if (!["token", "tiered"].includes(billingMode)) {
@@ -1253,6 +1351,8 @@ export class JijiModelPlazaStrategy extends ParsingStrategy {
         const output = applyRate(pricing.output_price);
         const request = applyRate(pricing.per_request_price);
         if (!model?.name || (input === null && request === null)) continue;
+        const mediaType = mediaTypeForPricing({ ...model, ...pricing, request_price: request });
+        const mediaSpecs = mediaSpecsOf(model) || mediaSpecsOf(pricing);
         data.push({
           model_name: String(model.name),
           model_display_name: String(model.name),
@@ -1267,6 +1367,8 @@ export class JijiModelPlazaStrategy extends ParsingStrategy {
           enable_groups: [groupName],
           proxy_group_name: groupName,
           group_ratio: rateMultiplier,
+          ...(mediaType ? { media_type: mediaType } : {}),
+          ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
           evidence: "exact"
         });
       }

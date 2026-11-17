@@ -144,7 +144,13 @@ export async function completeChat({ baseUrl, apiKey, model, messages, temperatu
   }, { signal, timeoutMs: timeoutMs || 60000 });
   const data = await response.json();
   const content = data?.choices?.[0]?.message?.content;
-  if (typeof content !== "string" || !content.trim()) throw new Error("模型响应缺少正文");
+  if (typeof content !== "string" || !content.trim()) {
+    // 推理模型会把预算全花在思考上，正文空但 finish_reason 是 length：分开报，好判断该调上限还是换模型。
+    if (data?.choices?.[0]?.finish_reason === "length") {
+      throw new Error("输出被推理过程占满，正文为空：调大输出上限或换关闭思考的模型");
+    }
+    throw new Error("模型响应缺少正文");
+  }
   return { content, usage: data.usage || null, response: data };
 }
 

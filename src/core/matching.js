@@ -108,10 +108,11 @@ export function buildModelMatchIndex(officialList = [], overrides = [], { canoni
   return index;
 }
 
-export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHING_RULES, index = buildModelMatchIndex(officialList)) {
+export function matchModel(proxyName, officialList = [], _legacyRules, index = buildModelMatchIndex(officialList)) {
+  // 保留旧调用方的 positional 参数，但用户设置不能改写项目匹配规则。
   const rawName = String(proxyName || "").trim().toLowerCase();
   const normalized = normalizeProxyModelName(rawName);
-  const activeRules = rules?.length ? rules : DEFAULT_MATCHING_RULES;
+  const activeRules = DEFAULT_MATCHING_RULES;
   // 规范模型优先：中转站随便写什么名字，只要归一后命中同一模型身份就统一。
   if (index.canonicalIndex && activeRules.some(rule => rule?.enabled)) {
     const canonical = resolveCanonicalModel(rawName, index.canonicalIndex);
@@ -158,7 +159,7 @@ export function matchModel(proxyName, officialList = [], rules = DEFAULT_MATCHIN
   return [];
 }
 
-export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], rules, index, canonicalIndex, llmMatches = {} } = {}) {
+export function matchModelWithOverrides(proxyName, officialList = [], { stationId = "", overrides = [], index, canonicalIndex, llmMatches = {} } = {}) {
   const matchingIndex = index || buildModelMatchIndex(officialList, overrides, { canonicalIndex, llmMatches });
   const normalized = normalizeProxyModelName(proxyName);
   const overrideId = matchingIndex.overridesByStation.get(stationId)?.get(normalized);
@@ -167,7 +168,7 @@ export function matchModelWithOverrides(proxyName, officialList = [], { stationI
 // 插件声明的拼写直接改写成规范 id，再走统一查表。
   const pluginTarget = matchingIndex.aliasesByStation.get(stationId)?.get(normalized);
   if (pluginTarget) {
-    const aliased = matchModel(pluginTarget, officialList, rules, matchingIndex);
+    const aliased = matchModel(pluginTarget, officialList, undefined, matchingIndex);
     if (aliased.length) return aliased.map(result => ({ ...result, rule: "插件拼写", ruleId: "plugin-alias", confidence: 0.95 }));
     const direct = matchingIndex.modelById.get(pluginTarget);
     if (direct) return [{ match: direct, rule: "插件拼写", ruleId: "plugin-alias", confidence: 0.95 }];
@@ -178,11 +179,11 @@ export function matchModelWithOverrides(proxyName, officialList = [], { stationI
     const llmMatch = matchingIndex.modelById.get(llmTarget);
     if (llmMatch) return [{ match: llmMatch, rule: "AI 判定", ruleId: "llm", confidence: 0.8 }];
   }
-  return matchModel(proxyName, officialList, rules, matchingIndex);
+  return matchModel(proxyName, officialList, undefined, matchingIndex);
 }
 
 
 
-export function matchOne(proxyName, officialList, rules) {
-  return matchModel(proxyName, officialList, rules)[0] || null;
+export function matchOne(proxyName, officialList, _legacyRules) {
+  return matchModel(proxyName, officialList, undefined)[0] || null;
 }
