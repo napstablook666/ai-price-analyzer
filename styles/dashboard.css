@@ -2,6 +2,17 @@
 .dashboard-topbar { position: relative; flex: 0 0 auto; min-height: 60px; padding-block: 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .dashboard-topbar .top-actions { flex-wrap: wrap; }
 .page-shell { display: flex; flex-direction: column; gap: 14px; width: min(1760px, 100%); flex: 1; height: auto; min-height: 0; margin: 0 auto; padding: 18px 24px 20px; overflow: hidden; }
+.media-mode-bar { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 auto; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-card); background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: 0 3px 10px #0f172a0b; }
+.media-mode-copy { display: grid; gap: 2px; min-width: 0; }
+.media-mode-copy .eyebrow { color: var(--text-3); font-size: 9px; letter-spacing: .08em; }
+.media-mode-copy strong { color: var(--text); font-size: 15px; }
+.media-mode-copy p { margin: 0; color: var(--text-3); font-size: 11px; }
+.media-mode-switch { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
+.media-mode-button { min-height: 34px; min-width: 72px; padding: 0 14px; border-radius: 6px; color: var(--text-2); background: transparent; font-size: 13px; font-weight: 650; }
+.media-mode-button:hover { color: var(--text); background: var(--surface); }
+.media-mode-button.is-active { color: var(--accent); background: var(--surface); box-shadow: 0 1px 3px #0f172a12; }
+.media-mode-video .billing-mode-tag { color: var(--accent); }
+
 .summary-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
 .summary-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .summary-strip:empty { display: none; }
@@ -203,9 +214,9 @@
 /* 月成本 + 混合单价合并列：金额与名次在上，价差与混合单价在下 */
 .cost-combined { display: grid; gap: 4px; min-width: 0; }
 .cost-combined-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.cost-amount { color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; border-radius: 3px; }
-.cost-amount:hover { color: var(--accent); }
-.cost-amount:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cost-amount { color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 实付月成本旁边的落档提示：充多少档、几折。 */
+.cost-paid-hint { min-width: 0; overflow: hidden; color: var(--text-3); font-size: 10px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
 .blended-line { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
 .blended-label { color: var(--text-3); font-size: 12px; }
 .blended-cost { color: var(--accent); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -220,7 +231,11 @@
 .comparison-pagination .button { min-height: 30px; font-size: 12.5px; }
 .page-size-field { display: inline-flex; align-items: center; gap: 5px; color: var(--text-2); font-size: 12.5px; }
 .page-size-field select { width: 60px; min-height: 30px; height: 30px; padding-left: 7px; font-size: 12.5px; background-position: calc(100% - 12px) 12px, calc(100% - 8px) 12px; }
-#comparison-page { min-width: 70px; color: var(--text-2); font-size: 12.5px; text-align: center; }
+.page-indicator { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); font-size: 12.5px; white-space: nowrap; }
+.page-indicator input { width: 52px; min-height: 30px; height: 30px; padding: 0 4px; font-size: 12.5px; font-weight: 600; color: var(--text); text-align: center; }
+.page-indicator input::-webkit-outer-spin-button, .page-indicator input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.page-indicator input { -moz-appearance: textfield; appearance: textfield; }
+.page-indicator .page-total { color: var(--text-2); }
 .empty-state { display: grid; place-items: center; align-content: center; flex: 1; min-height: 160px; padding: 24px; text-align: center; }
 .empty-icon { width: 24px; height: 24px; margin-bottom: 8px; color: var(--text-3); }
 .empty-state h3 { margin: 0; font-size: 15px; }
@@ -324,6 +339,9 @@
   .dashboard-topbar .button { min-height: 44px; }
   .page-shell { height: auto; }
   .comparison-mode-button { min-height: 44px; }
+  .media-mode-bar { align-items: stretch; flex-direction: column; gap: 8px; }
+  .media-mode-switch { width: 100%; overflow-x: auto; }
+  .media-mode-button { flex: 1 0 86px; min-height: 44px; }
   .toolbar-main, .toolbar-options { align-items: stretch; }
   .search-field { flex-basis: 100%; max-width: none; height: 44px; }
   .facet-menu { flex: 1 1 100%; }
@@ -342,7 +360,7 @@
   .comparison-panel { min-height: 380px; height: 68dvh; }
   .comparison-table tbody tr { grid-template-columns: 1fr; }
   .comparison-table td { grid-column: 1; }
-  .comparison-pagination .button, .page-size-field select { min-height: 44px; }
+  .comparison-pagination .button, .page-size-field select, .page-indicator input { min-height: 44px; height: 44px; }
   .comparison-pagination .page-size-field { flex-basis: 100%; justify-content: center; }
   .reference-time { display: none; }
   .checkin-item, .checkin-empty { align-items: flex-start; flex-direction: column; }
@@ -374,17 +392,28 @@
 .monthly-cost-popover[hidden] { display: none; }
 .monthly-cost-popover { position: fixed; z-index: 65; width: min(430px, calc(100vw - 16px)); max-height: min(72vh, 480px); overflow: auto; padding: 10px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: var(--radius-card); box-shadow: var(--shadow-pop); }
 .cell-chart.is-monthly-cost[data-monthly-cost-trigger] { cursor: pointer; }
+/* 长条只有 6px 高，往上往下各撑 8px 透明热区，不然停不稳也就停不久。 */
+.cell-chart.is-monthly-cost[data-monthly-cost-trigger]::before { content: ""; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; }
 .cell-chart.is-monthly-cost[data-monthly-cost-trigger]:hover .chart-bar { opacity: 0.82; }
 .monthly-cost-popover-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--text-2); font-size: 11px; }
 .monthly-cost-popover-heading strong { color: var(--text); font-size: 12px; }
 .monthly-cost-ranking-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 7px; }
 .monthly-cost-ranking-item { display: grid; gap: 4px; padding: 7px 8px; background: var(--surface-2); border-radius: 6px; }
-.monthly-cost-ranking-item.is-current { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.monthly-cost-ranking-item.is-current { position: relative; background: var(--row-tint); box-shadow: inset 0 0 0 1px var(--accent-line); }
+.monthly-cost-ranking-item.is-current::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 6px 0 0 6px; background: var(--accent); }
+.monthly-cost-ranking-item[data-monthly-cost-jump] { cursor: pointer; }
+.monthly-cost-ranking-item[data-monthly-cost-jump]:hover { background: var(--accent-soft); }
+.monthly-cost-ranking-item[data-monthly-cost-jump]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* 点名次卡片跳过去后，目标那一行连闪两下 */
+@keyframes dashboard-row-flash { 0%, 100% { background: var(--surface); } 50% { background: var(--accent-soft); } }
+.comparison-table tbody tr.is-flash td { animation: dashboard-row-flash .5s ease-in-out 2; }
 .monthly-cost-ranking-meta { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 6px; align-items: baseline; }
 .monthly-cost-ranking-position { color: var(--text-3); font: 500 11px var(--font-mono); }
 .monthly-cost-ranking-station { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .monthly-cost-ranking-cost { font: 600 12px var(--font-mono); white-space: nowrap; }
-.monthly-cost-ranking-group { margin-left: 40px; overflow: hidden; color: var(--text-3); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.monthly-cost-ranking-group { display: flex; align-items: center; gap: 6px; margin-left: 40px; overflow: hidden; color: var(--text-3); font-size: 10px; white-space: nowrap; }
+.monthly-cost-ranking-group-name { overflow: hidden; text-overflow: ellipsis; }
+.monthly-cost-ranking-current { flex: none; padding: 0 6px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font-size: 9px; font-weight: 600; line-height: 15px; letter-spacing: .04em; }
 .monthly-cost-ranking-list .cell-chart { max-width: none; flex: none; }
 .monthly-cost-ranking-empty { padding: 8px 0; color: var(--text-3); font-size: 12px; }
 /* 模型匹配详情：表格里只保留置信度，其余信息悬停或点击展开 */
@@ -411,3 +440,13 @@
 @media (max-width: 760px) {
   .monthly-cost-popover { width: min(360px, calc(100vw - 16px)); max-height: 60dvh; }
 }
+
+/* 主表里按次 / 按张报价复用的费用项小标签：折算、平衡点、你的单次、对比官方。 */
+.price-mini-pair .is-cheap { color: var(--ok); }
+.price-mini-pair .is-expensive { color: var(--danger); }
+.cost-amount-missing { color: var(--text-3); font-size: 12px; font-weight: 500; }
+.billing-mode-tag { margin-left: 2px; padding: 0 4px; border-radius: 4px; background: var(--surface-2); color: var(--text-3); font-size: 10px; font-weight: 600; }
+.unit-group-row th { padding: 6px 12px; border-top: 1px solid var(--line-strong); background: var(--surface-2); text-align: left; font-weight: 600; }
+.unit-group-label { color: var(--text-2); font-size: 12px; }
+.unit-group-note { margin-left: 8px; color: var(--text-3); font-size: 11px; font-weight: 400; }
+.tier-estimated { margin-left: 4px; color: var(--warn); font-size: 10px; }

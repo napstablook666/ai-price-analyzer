@@ -17,6 +17,15 @@ export function matchesModelQueries(modelText, queries) {
 }
 
 
+// 页码输入框解析：空值或非数字返回 null（留在原页），数字夹到 1..pageCount，返回零基页码。
+export function parsePageInput(raw, pageCount) {
+  const text = String(raw ?? "").trim();
+  const target = Math.trunc(Number(text));
+  if (!text || !Number.isFinite(target)) return null;
+  const total = Math.max(1, Math.trunc(Number(pageCount)) || 0);
+  return Math.min(Math.max(1, target), total) - 1;
+}
+
 export function paginateRows(rows, page, pageSize) {
   const size = Math.max(1, Math.trunc(Number(pageSize)) || 1);
   const pageCount = Math.ceil(rows.length / size);
@@ -57,40 +66,54 @@ export function monthlyCostModelKey(row) {
 
 export function buildMonthlyCostRankings(rows = []) {
   const byModel = new Map();
-  for (const row of rows) {
-    if (row?.stationCategory === "public" || row?.pricingUnavailable) continue;
-    const rawMonthlyCost = row?.monthlyCost;
-    if (rawMonthlyCost === null || rawMonthlyCost === undefined || rawMonthlyCost === "") continue;
+  rows.forEach((row, position) => {
+    if (row?.stationCategory === "public" || row?.pricingUnavailable) return;
+    // 有充值阶梯的站按落档后的实付金额排名，否则名次会和表里显示的金额对不上。
+    // 生图行的人民币成本单独算过一版，和按月 token 摊出来的不是同一个数，优先用它。
+    const rawMonthlyCost = row?.billingMode === "image"
+      ? (Number.isFinite(row?.imageMonthlyCostPaid) ? row.imageMonthlyCostPaid : row?.imageMonthlyCost)
+      : (Number.isFinite(row?.monthlyCostPaid) ? row.monthlyCostPaid : row?.monthlyCost);
+    if (rawMonthlyCost === null || rawMonthlyCost === undefined || rawMonthlyCost === "") return;
     const monthlyCost = Number(rawMonthlyCost);
     const key = monthlyCostModelKey(row);
-    if (!Number.isFinite(monthlyCost) || monthlyCost < 0 || !key) continue;
+    if (!Number.isFinite(monthlyCost) || monthlyCost < 0 || !key) return;
     if (!byModel.has(key)) byModel.set(key, []);
-    byModel.get(key).push({ row, monthlyCost });
-  }
+    // position 是这条报价在当前筛选结果里的下标，浮层点一下就能跳回那一页。
+    byModel.get(key).push({ row, monthlyCost, position });
+  });
   for (const [key, entries] of byModel) {
     entries.sort((left, right) => left.monthlyCost - right.monthlyCost);
-    let rank = 0;
-    byModel.set(key, entries.map((entry, index) => {
-      if (index === 0 || entry.monthlyCost !== entries[index - 1].monthlyCost) rank = index + 1;
-      return { ...entry, rank };
-    }));
+    // 名次就是列表里的第几条，同价也按先后顺序编号，不再并排成两个 #1。
+    byModel.set(key, entries.map((entry, index) => ({ ...entry, rank: index + 1 })));
   }
   return byModel;
 }
 
-export function monthlyCostRankingFor(row, rankings, { limit = 10 } = {}) {
+// 浮层里给出同模型的完整排名，不截断；浮现时由调用方把当前那条滚到可见区。
+export function monthlyCostRankingFor(row, rankings) {
   const entries = rankings?.get(monthlyCostModelKey(row)) || [];
-  const topLimit = Math.max(1, Math.trunc(Number(limit)) || 10);
   const current = entries.find(entry => entry.row === row);
   return {
     rank: current?.rank ?? null,
     total: entries.length,
     baseline: entries.at(-1)?.monthlyCost || 0,
-    top: entries.slice(0, topLimit)
+    entries
   };
 }
 // 付费与公益是两套数据集：站点、供应商、分组、模型筛选在另一种模式里不存在，
 // 沿用过去会被 sanitizeFiltersForRows 裁成空集合，报价被静默筛光。切模式时一起重置。
 export function modeSwitchFilters(filters = {}, defaultProviderFilter = []) {
   return { ...filters, search: "", stationId: "", provider: [...defaultProviderFilter], group: null, models: [] };
+}
+
+export function mediaModeSwitchFilters(filters = {}, mediaMode = "text", defaultProviderFilter = []) {
+  const next = modeSwitchFilters(filters, defaultProviderFilter);
+  const mode = ["text", "image", "video"].includes(mediaMode) ? mediaMode : "text";
+  return {
+    ...next,
+    provider: mode === "text" ? [...defaultProviderFilter] : null,
+    sortBy: mode === "text" ? "blendedUnitPrice" : "mediaUnitPrice",
+    sortSecondary: "diffPercent",
+    sortDirection: "asc"
+  };
 }

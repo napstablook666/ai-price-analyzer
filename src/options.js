@@ -1,4 +1,5 @@
-import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "./shared/schema.js";
+import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "./shared/schema.js";
+import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_SYNC_INTERVAL_OPTIONS, magpieSyncLabel } from "./core/magpie-usage.js";
 import { callService, escapeHtml, hydrateIcons, icon, onAssistProgress, onRefreshProgress, toast } from "./shared/ui.js";
 import { siteLogoUrl } from "./shared/site-icon.js";
 import { initCardCollapse } from "./shared/collapse.js";
@@ -842,22 +843,93 @@ function readUsageInputs() {
   ]));
 }
 
+function roundInput(value, digits) {
+  const factor = 10 ** digits;
+  return Math.round(value * factor) / factor;
+}
+
+// 输入框只显示有意义的小数位，别把 29.166666666666668 这种浮点尾巴摆到用户面前。
+function usageInputValue(usage, { field, million, percent }) {
+  const raw = Number(usage[field] || 0);
+  if (percent) return roundInput(raw * 100, 2);
+  if (million) return roundInput(raw / TOKENS_PER_MILLION, 4);
+  return Math.round(raw);
+}
+
 function writeUsageInputs(usage) {
-  for (const { field, id, million, percent } of USAGE_INPUTS) {
-    if (!Object.prototype.hasOwnProperty.call(usage, field)) continue;
-    $(`#${id}`).value = Number(usage[field] || 0) / (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1);
+  for (const item of USAGE_INPUTS) {
+    if (!Object.prototype.hasOwnProperty.call(usage, item.field)) continue;
+    $(`#${item.id}`).value = usageInputValue(usage, item);
   }
 }
 
 function syncUsagePreset() {
-  $("#usage-preset").value = usagePresetId(readUsageInputs());
+  $("#usage-preset").value = usagePresetId(readUsageInputs(), state.settings?.magpieSync);
+}
+
+function renderUsagePresetOptions() {
+  const select = $("#usage-preset");
+  if (!select) return;
+  const options = usagePresetOptions(state.settings?.magpieSync);
+  select.innerHTML = options.map(option => `<option value="${option.id}">${escapeHtml(option.label)}</option>`).join("");
 }
 
 function applyUsagePreset(id) {
   if (id === "custom") return;
-  const preset = USAGE_PRESETS.find(item => item.id === id);
-  if (preset) writeUsageInputs(preset.usage);
+  const usage = id === "baseline" ? usagePresetUsage("baseline") : usagePresetUsage(id, state.settings?.magpieSync);
+  if (usage) writeUsageInputs(usage);
   syncUsagePreset();
+}
+
+function renderMagpieUsageRow() {
+  const settings = state.settings || {};
+  const urlInput = $("#magpie-base-url");
+  if (urlInput && document.activeElement !== urlInput) urlInput.value = settings.magpieBaseUrl || "";
+  const interval = $("#magpie-sync-interval");
+  if (interval && document.activeElement !== interval) interval.value = String(settings.magpieSyncIntervalMinutes ?? DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES);
+  const status = $("#magpie-sync-status");
+  if (status) status.textContent = magpieSyncLabel(settings.magpieSync);
+}
+
+function fillMagpieIntervalOptions() {
+  const select = $("#magpie-sync-interval");
+  if (!select) return;
+  select.innerHTML = MAGPIE_SYNC_INTERVAL_OPTIONS.map(option => `<option value="${option.minutes}">${escapeHtml(option.label)}</option>`).join("");
+}
+
+async function saveMagpieInterval(minutes) {
+  try {
+    state.settings = await callService("SAVE_MAGPIE_PREFS", { intervalMinutes: minutes });
+    renderMagpieUsageRow();
+    toast(minutes ? `magpie 用量每 ${minutes / 60} 小时同步一次` : "已关闭 magpie 用量自动同步");
+  } catch (error) {
+    toast(`保存同步间隔失败：${error.message || error}`);
+    renderMagpieUsageRow();
+  }
+}
+
+// 同步成功后，如果当前口径正好是某个 magpie 预设，就把输入框换成新实测值。
+async function syncMagpieUsage() {
+  const button = $("#sync-magpie-usage");
+  const presetBefore = usagePresetId(readUsageInputs(), state.settings?.magpieSync);
+  button.disabled = true;
+  try {
+    state.settings = await callService("SYNC_MAGPIE_USAGE");
+    renderUsagePresetOptions();
+    renderMagpieUsageRow();
+    if (presetBefore === "recent30d" || presetBefore === "recent7d") {
+      const usage = usagePresetUsage(presetBefore, state.settings?.magpieSync);
+      if (usage) writeUsageInputs(usage);
+      scheduleSettingsSave();
+    }
+    syncUsagePreset();
+    const failed = state.settings?.magpieSync?.error;
+    toast(failed ? `同步失败：${failed}` : "已同步 magpie 用量");
+  } catch (error) {
+    toast(`同步失败：${error.message || error}`);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function renderSettings() {
@@ -865,14 +937,12 @@ function renderSettings() {
   $("#currency").value = settings.defaultCurrency;
   $("#exchange-rate").value = Number(settings.exchangeRate || DEFAULT_EXCHANGE_RATE).toFixed(4);
   $("#evidence-threshold").value = Number.isFinite(Number(settings.evidenceThreshold)) ? String(Number(settings.evidenceThreshold)) : "60";
+  renderUsagePresetOptions();
   writeUsageInputs(settings.usage);
   syncUsagePreset();
+  renderMagpieUsageRow();
   $("#show-unmatched").checked = settings.showUnmatched;
 
-  for (const rule of settings.matchingRules || []) {
-    const input = document.querySelector(`[data-matching-rule="${rule.id}"]`);
-    if (input) input.checked = Boolean(rule.enabled);
-  }
   const assistant = settings.modelAssistant || {};
   $("#llm-enabled").checked = Boolean(assistant.enabled);
   $("#llm-base-url").value = assistant.baseUrl || "";
@@ -929,10 +999,10 @@ function readSettings() {
     defaultCurrency: $("#currency").value,
 evidenceThreshold: Math.max(0, Math.min(100, Math.round(Number($("#evidence-threshold").value) || 0))),
     exchangeRate: Math.max(0.0001, Number($("#exchange-rate").value) || DEFAULT_EXCHANGE_RATE),
-    matchingRules: [...document.querySelectorAll("[data-matching-rule]")].map(input => ({ id: input.dataset.matchingRule, name: input.parentElement.textContent.trim(), enabled: input.checked })),
     usage: readUsageInputs(),
     showUnmatched: $("#show-unmatched").checked,
     modelAssistant: readAssistantSettings(),
+    magpieBaseUrl: $("#magpie-base-url").value.trim() || state.settings?.magpieBaseUrl,
   });
   // 密钥不参与设置归一，写进本机密钥区，不进导出文件。
   const assistantKey = $("#llm-api-key").value.trim();
@@ -958,6 +1028,55 @@ function currentConfigStation() {
   return state.stations.find(station => station.id === state.configStationId);
 }
 
+// 充值档位行用 DOM 拼，数值走 value 而不是拼字符串，避免用户输入进 HTML。
+function appendTierRow(tier = {}) {
+  const row = document.createElement("div");
+  row.className = "tier-row";
+  const amount = document.createElement("input");
+  amount.type = "number";
+  amount.min = "0";
+  amount.step = "any";
+  amount.className = "tier-amount";
+  amount.placeholder = "额度";
+  amount.setAttribute("aria-label", "档位额度");
+  if (Number(tier.amount) > 0) amount.value = String(tier.amount);
+  const discount = document.createElement("input");
+  discount.type = "number";
+  discount.min = "0";
+  discount.max = "1";
+  discount.step = "0.01";
+  discount.className = "tier-discount";
+  discount.placeholder = "折扣";
+  discount.setAttribute("aria-label", "档位折扣");
+  if (Number(tier.discount) > 0) discount.value = String(tier.discount);
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "icon-button danger-icon tier-remove";
+  remove.title = "删除这一档";
+  remove.setAttribute("aria-label", "删除这一档");
+  remove.innerHTML = icon("trash-2", { className: "icon" });
+  remove.addEventListener("click", () => row.remove());
+  row.append(amount, discount, remove);
+  $("#config-tier-rows").append(row);
+  hydrateIcons(row);
+}
+
+function renderTierRows(tiers = []) {
+  $("#config-tier-rows").replaceChildren();
+  for (const tier of Array.isArray(tiers) ? tiers : []) appendTierRow(tier);
+}
+
+// 空白行和非法值直接丢弃，排序去重交给 normalizeRechargeTiers。
+function collectTierRows() {
+  const rows = [...$("#config-tier-rows").querySelectorAll(".tier-row")];
+  return rows.map(row => ({
+    amount: Number(row.querySelector(".tier-amount").value),
+    discount: Number(row.querySelector(".tier-discount").value)
+  })).filter(tier =>
+    Number.isFinite(tier.amount) && tier.amount > 0 &&
+    Number.isFinite(tier.discount) && tier.discount > 0 && tier.discount <= 1);
+}
+
 function collectConfigStation() {
   const station = currentConfigStation();
   if (!station) return null;
@@ -973,7 +1092,9 @@ function collectConfigStation() {
     rechargeCredits: Number($("#config-recharge-credits").value) || 1,
     priceCurrencyVerified: $("#config-price-currency-verified").checked,
     priceCurrencyNote: $("#config-price-currency-note").value.trim(),
-    basePricePerMillion: nonNegativeNumber($("#config-base-price").value, 2)
+    basePricePerMillion: nonNegativeNumber($("#config-base-price").value, 2),
+    rechargeTiers: collectTierRows(),
+    billingProfile: { tokensPerRequest: nonNegativeNumber($("#config-tokens-per-request").value, 0), source: "manual" }
   };
 }
 
@@ -994,6 +1115,8 @@ function fillStationConfigDialog(station) {
   $("#config-price-currency-verified").checked = station.priceCurrencyVerified !== false;
   $("#config-price-currency-note").value = station.priceCurrencyNote || "";
   $("#config-base-price").value = nonNegativeNumber(station.basePricePerMillion, 2);
+  renderTierRows(station.rechargeTiers);
+  $("#config-tokens-per-request").value = Number(station.billingProfile?.tokensPerRequest) > 0 ? Number(station.billingProfile.tokensPerRequest) : 0;
   configRechargeRate();
   const origin = currentSiteOrigin(station.baseUrl);
   const isFastAiToken = ["https://fastaitoken.com", "https://www.fastaitoken.com"].includes(origin);
@@ -1035,7 +1158,10 @@ async function saveStationConfig() {
       rechargeRateVerified: collected.rechargeRmb > 0 && collected.rechargeCredits > 0,
       priceCurrencyVerified: collected.priceCurrencyVerified,
       priceCurrencyNote: collected.priceCurrencyNote,
-      basePricePerMillion: collected.basePricePerMillion
+      basePricePerMillion: collected.basePricePerMillion,
+      rechargeTiers: collected.rechargeTiers,
+      rechargeTiersVerified: collected.rechargeTiers.length > 0,
+      billingProfile: collected.billingProfile
     });
     await persistStations();
     renderStations();
@@ -1659,6 +1785,7 @@ $("#station-config-form").addEventListener("submit", event => {
   event.preventDefault();
   void saveStationConfig();
 });
+$("#config-tier-add").addEventListener("click", () => appendTierRow());
 $("#config-cancel").addEventListener("click", () => $("#station-config-dialog").close());
 $("#config-autofill").addEventListener("click", () => void autofillConfigStation());
 $("#config-test").addEventListener("click", () => void testConfigStation());
@@ -1672,6 +1799,9 @@ $("#config-recharge-currency").addEventListener("change", () => {
 
 $("#usage-preset").addEventListener("change", event => applyUsagePreset(event.target.value));
 for (const { id } of USAGE_INPUTS) $(`#${id}`).addEventListener("input", syncUsagePreset);
+$("#magpie-sync-interval").addEventListener("change", event => void saveMagpieInterval(Number(event.target.value)));
+$("#sync-magpie-usage").addEventListener("click", () => void syncMagpieUsage());
+fillMagpieIntervalOptions();
 
 $("#exchange-rate").addEventListener("input", refreshRechargeDisplays);
 $("#refresh-exchange-rate").addEventListener("click", () => refreshExchangeRate());
@@ -1803,8 +1933,16 @@ onRefreshProgress(progress => {
 });
 void load();
 
-// 徽章只写「失败」，具体原因放在行内第二行：整批超时和模型漏答要能一眼分开。
-const ASSIST_STATUS_LABELS = { pending: "待识别", accepted: "已接受", none: "清单里没有", invalid: "不存在的 id", failed: "失败", "no-candidates": "无候选" };
+// 徽章写结论本身，具体原因放在第二列：整批超时和模型漏答要能一眼分开。
+const ASSIST_STATUS_LABELS = { manual: "人工指定", pending: "待识别", accepted: "AI 已匹配", none: "判为不是", invalid: "不存在的 id", failed: "失败", ignored: "已忽略" };
+// 分区说明：每一区该做什么都不一样，写在这里免得用户对着列表发呆。
+const ASSIST_POOL_HINTS = {
+  all: "全部：每条都能点「指定」人工挑官方模型，指定后优先级最高，AI 再判也不会改。",
+  matched: "已匹配：已经归到官方模型的写法，AI 判的或你指定的。判错了就点「改指定」重挑一个，或点「撤销」清掉。",
+  unmatched: "未匹配：还没问过模型。点「识别当前未匹配」把它们发出去，也可以直接点「指定」自己挑。",
+  confirm: "待确认：试过但没成，模型判「不是」、请求报错、或者你忽略过的都在这儿。可以点「立即重试」，也可以人工指定一个官方模型。"
+};
+const ASSIST_REASON_LABELS = { timeout: "超时", error: "报错", unanswered: "漏答", "no-candidates": "规则层没有相似候选" };
 
 function setAssistantStatus(message, error = false) {
   const node = $("#llm-status");
@@ -1836,35 +1974,144 @@ function renderAssistantQueue(data) {
   if (!list) return;
   state.assistantRows = data.rows || [];
   state.assistantState = data;
-  const counts = data.summary || {};
+  // 失效条目是缓存里发不出去的旧账，有才显示清理按钮。
+  const purge = $("#llm-purge-orphans");
+  if (purge) {
+    const orphanCount = Number(data.orphans?.length) || 0;
+    purge.hidden = !orphanCount;
+    purge.title = orphanCount ? `清掉 ${orphanCount} 条已不在报价里的旧结论` : "";
+  }
+  // 顶部统计读分区聚合：三个数就是筛选按钮上的三个数，不再和列表对不上。
   $("#llm-cache-summary").textContent = data.configured
-    ? `已接受 ${counts.accepted || 0} · 判为没有 ${counts.none || 0} · 无效 ${counts.invalid || 0} · 失败 ${counts.failed || 0} · 无候选 ${data.noCandidates || 0}`
+    ? data.poolLabel || "队列是空的"
     : "先在模型服务里填好地址、密钥与模型，再打开启用开关。";
   const filter = state.assistantFilter || "all";
-  // 无候选的写法也要露头：它们不在判定队列里，只靠一个数字看不出来卡在哪。
-  const rows = state.assistantRows
-    .filter(row => filter === "all" || row.status === filter)
-    .sort((left, right) => Number(left.status === "no-candidates") - Number(right.status === "no-candidates"));
+  const rows = state.assistantRows.filter(row => filter === "all" || row.pool === filter);
+  const hint = $("#llm-filter-hint");
+  if (hint) hint.textContent = ASSIST_POOL_HINTS[filter] || "";
   if (!rows.length) {
     const empty = filter === "all"
-      ? "当前没有未匹配的模型写法，采集之后再来看。"
-      : filter === "no-candidates"
-        ? "没有卡在无候选的写法，规则已经能给每个未匹配写法找到候选。"
-        : "这个状态下没有条目。";
+      ? "比价表里没有待处理的模型写法，采集之后再来看。"
+      : filter === "matched"
+        ? "还没有已匹配的写法，识别完一批或者人工指定一个就会出现在这里。"
+        : filter === "unmatched"
+          ? "没有还在等识别的写法。"
+          : "没有待确认的写法。";
     list.innerHTML = `<p class="assistant-review-empty">${empty}</p>`;
     renderAssistantPagination({ page: 0, pageCount: 0 }, 0);
     return;
   }
   const page = paginateAssistant(rows);
   renderAssistantPagination(page, rows.length);
-  list.innerHTML = page.rows.map(row => `
-    <div class="assistant-review-row">
-      <span class="assistant-review-model">${escapeHtml(row.modelName)}</span>
-      <span class="assistant-review-target">${row.targetId ? escapeHtml(row.targetId) : row.failure ? escapeHtml(row.failure) : "—"}</span>
-      <span class="assistant-review-station">${escapeHtml(row.stationName || row.stationId)} · ${row.count} 条报价</span>
-      <span class="assistant-review-badge" data-status="${escapeHtml(row.status)}">${escapeHtml(ASSIST_STATUS_LABELS[row.status] || row.status)}</span>
-    </div>`).join("");
+  list.innerHTML = page.rows.map(row => {
+    const key = escapeHtml(row.key);
+    const actions = [];
+    // 每条都能人工指定：AI 判不动的、判错的、你不想等的，都从这里直接钉到官方模型。
+    actions.push(`<button class="button button-quiet button-small" type="button" data-pick="${key}">${row.manual ? "改指定" : "指定"}</button>`);
+    if (row.manual) {
+      actions.push(`<button class="button button-quiet button-small" type="button" data-unmanual="${key}">撤销人工</button>`);
+    } else if (row.pool === "matched") {
+      actions.push(`<button class="button button-quiet button-small" type="button" data-forget="${key}">撤销</button>`);
+    }
+    // 待确认里再给识别这一侧留出口：冷却中、报错、判过「不是」的都能被重新问或被忽略。
+    if (row.pool === "confirm") {
+      if (row.candidates > 0) actions.push(`<button class="button button-quiet button-small" type="button" data-retry="${key}">${row.cooling ? "立即重试" : "重试"}</button>`);
+      if (row.status === "none") actions.push(`<button class="button button-quiet button-small" type="button" data-ignore="${key}">忽略</button>`);
+      if (row.status === "ignored") actions.push(`<button class="button button-quiet button-small" type="button" data-unignore="${key}">取消忽略</button>`);
+    }
+    const target = row.manual
+      ? `人工 → ${escapeHtml(row.targetId)}`
+      : row.targetId
+        ? escapeHtml(row.targetId)
+        : row.failure
+          ? escapeHtml(row.failure)
+          : row.reason
+            ? escapeHtml(ASSIST_REASON_LABELS[row.reason] || row.reason)
+            : "—";
+    return `
+    <div class="assistant-review-row" data-pool="${escapeHtml(row.pool)}" data-key="${key}">
+      <span class="assistant-review-model">${escapeHtml(row.modelName)}${row.stale ? '<em class="assistant-review-stale">已失效</em>' : ""}</span>
+      <span class="assistant-review-target">${target}</span>
+      <span class="assistant-review-station">${escapeHtml(row.stationName || row.stationId)} · ${row.count ? `${row.count} 条报价` : "已不在当前报价里"}</span>
+      <span class="assistant-review-badge" data-status="${row.cooling ? "pending" : escapeHtml(row.status)}">${escapeHtml(row.cooling ? "冷却中" : ASSIST_STATUS_LABELS[row.status] || row.status)}</span>
+      <span class="assistant-review-action">${actions.join("")}</span>
+    </div>`;
+  }).join("");
   hydrateIcons(list);
+}
+
+// 人工指定：行内展开一个关键词搜索框，选中官方模型就立刻写成人工覆盖。
+// 输入时只重画结果区，不整表重渲染，否则每敲一个字输入框都会失焦。
+let assistantPickerTimer = 0;
+
+function assistantPickerResultsMarkup({ models = [], total = 0, query = "" } = {}, current = "") {
+  if (!models.length) {
+    return `<p class="assistant-picker-empty">${query ? `没有匹配「${escapeHtml(query)}」的官方模型` : "官方清单里没有模型，先到官方参考价刷新一次"}</p>`;
+  }
+  const options = models.map(model => {
+    const current_ = model.id === current ? '<em class="assistant-picker-current">当前</em>' : "";
+    const label = model.provider ? `${model.provider} · ${model.id}` : model.id;
+    return `<button class="assistant-picker-option" type="button" data-target="${escapeHtml(model.id)}" title="${escapeHtml(model.id)}"><span class="assistant-picker-name">${escapeHtml(model.displayName || model.id)}${current_}</span><span class="assistant-picker-id">${escapeHtml(label)}</span></button>`;
+  }).join("");
+  const more = total > models.length ? `<p class="assistant-picker-more">共 ${total} 个匹配，继续输入关键词缩小范围</p>` : "";
+  return options + more;
+}
+
+async function applyAssistantOverride(key, targetId) {
+  try {
+    renderAssistantQueue(await callService("SET_MODEL_ASSIST_OVERRIDE", { key, targetId }));
+    toast(targetId ? `已指定 ${targetId}` : "已撤销人工指定");
+    return true;
+  } catch (error) {
+    toast(error.message);
+    return false;
+  }
+}
+
+async function openAssistantPicker(button, row) {
+  const grid = button.closest(".assistant-review-row");
+  if (!grid) return;
+  if (grid.querySelector(".assistant-review-picker")) {
+    grid.querySelector(".assistant-review-picker").remove();
+    return;
+  }
+  for (const node of document.querySelectorAll(".assistant-review-picker")) node.remove();
+  const picker = document.createElement("div");
+  picker.className = "assistant-review-picker";
+  picker.innerHTML = `<input class="assistant-picker-input" type="search" autocomplete="off" placeholder="输入模型关键词，比如 claude sonnet" aria-label="按关键词搜索官方模型">
+    <p class="assistant-picker-status">读取官方模型清单…</p>
+    <div class="assistant-picker-results"></div>`;
+  grid.append(picker);
+  const input = picker.querySelector(".assistant-picker-input");
+  const status = picker.querySelector(".assistant-picker-status");
+  const results = picker.querySelector(".assistant-picker-results");
+  const run = async query => {
+    status.textContent = query ? `搜索「${query}」…` : "读取官方模型清单…";
+    try {
+      const data = await callService("GET_MODEL_ASSIST_CATALOG", { query, limit: 30 });
+      status.textContent = query
+        ? `${data.models.length} / ${data.total} 个官方模型匹配「${query}」`
+        : `共 ${data.total} 个官方模型，输入关键词缩小范围`;
+      results.innerHTML = assistantPickerResultsMarkup(data, row.targetId);
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  };
+  picker.addEventListener("click", async event => {
+    const option = event.target.closest("[data-target]");
+    if (!option) return;
+    option.disabled = true;
+    if (!await applyAssistantOverride(row.key, option.dataset.target)) option.disabled = false;
+  });
+  input.addEventListener("input", () => {
+    clearTimeout(assistantPickerTimer);
+    assistantPickerTimer = setTimeout(() => void run(input.value.trim()), 200);
+  });
+  input.addEventListener("keydown", event => {
+    if (event.key === "Escape") picker.remove();
+  });
+  input.focus();
+  await run("");
 }
 
 async function refreshAssistantState() {
@@ -1958,16 +2205,19 @@ $("#llm-models-refresh").addEventListener("click", async event => {
   }
 });
 
-async function runAssistant(button, force) {
+async function runAssistant(button, { force = false, keys = [] } = {}) {
   button.disabled = true;
   const label = button.innerHTML;
   button.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>识别中</span>`;
   try {
-    const result = await callService("RUN_MODEL_ASSIST", { force });
+    const result = await callService("RUN_MODEL_ASSIST", { force, keys });
     if (!result.pending) {
-      toast(result.reused ? `没有新模型要问，复用 ${result.reused} 条旧结论` : "队列是空的");
+      // 一句话说清为什么没问：没东西可问，还是都问过了。
+      if (!result.unmatched) toast("比价表里没有未匹配的写法，没有要问的");
+      else if (result.reused) toast(`待识别 0 条：${result.unmatched} 条写法都有结论了，想按新规则重问就点「全部重算」`);
+      else toast("待识别 0 条，没有要问的");
     } else {
-      const parts = [`问了 ${result.ranBatches} 批`, `接受 ${result.accepted}`, `判为没有 ${result.none}`, `无效 ${result.invalidAnswers}`];
+      const parts = [`问了 ${result.ranBatches} 批`, `接受 ${result.accepted}`, `判为没有 ${result.none}`];
       if (result.errors) parts.push(`失败 ${result.errors}${result.timeouts ? `（超时 ${result.timeouts}）` : ""}`);
       if (result.merged) parts.push(`合并 ${result.merged} 条同写法`);
       toast(parts.join("，"));
@@ -1982,8 +2232,8 @@ async function runAssistant(button, force) {
   }
 }
 
-$("#llm-run").addEventListener("click", event => runAssistant(event.currentTarget, false));
-$("#llm-run-force").addEventListener("click", event => runAssistant(event.currentTarget, true));
+$("#llm-run").addEventListener("click", event => runAssistant(event.currentTarget, { force: false }));
+$("#llm-run-force").addEventListener("click", event => runAssistant(event.currentTarget, { force: true }));
 
 $("#llm-clear").addEventListener("click", async event => {
   if (!confirm("清空全部 AI 判定缓存？下次识别会把所有模型重新问一遍。")) return;
@@ -2000,10 +2250,69 @@ $("#llm-clear").addEventListener("click", async event => {
   }
 });
 
+// 清掉缓存里已经发不出去的旧结论：报价里已经没有，模型那边也没判成。
+$("#llm-purge-orphans").addEventListener("click", async event => {
+  const button = event.currentTarget;
+  const count = Number(state.assistantState?.orphans?.length) || 0;
+  if (!confirm(`清掉 ${count} 条已不在报价里的旧结论？已生效的判定不会动。`)) return;
+  button.disabled = true;
+  try {
+    const result = await callService("PURGE_MODEL_ASSIST_ORPHANS");
+    toast(`清掉 ${result.removed || 0} 条`);
+    renderAssistantQueue(result);
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+// 行尾动作统一分发：人工指定/撤销人工、撤销 AI 判定、单条重试、忽略、取消忽略。
+$("#llm-review-list").addEventListener("click", async event => {
+  const button = event.target.closest("[data-pick], [data-unmanual], [data-forget], [data-retry], [data-ignore], [data-unignore]");
+  if (!button) return;
+  const kind = button.dataset.pick ? "pick"
+    : button.dataset.unmanual ? "unmanual"
+      : button.dataset.forget ? "forget"
+        : button.dataset.retry ? "retry"
+          : button.dataset.ignore ? "ignore" : "unignore";
+  const key = button.dataset[kind];
+  const row = (state.assistantRows || []).find(item => item.key === key);
+  const modelName = row?.modelName || "这条";
+  if (kind === "pick") {
+    await openAssistantPicker(button, row || { key, targetId: "" });
+    return;
+  }
+  if (kind === "unmanual" && !confirm(`撤销「${modelName}」的人工指定？它会回到 AI 判定或未匹配池。`)) return;
+  if (kind === "forget" && !confirm(`撤销「${modelName}」的 AI 判定？它会回到未匹配池。`)) return;
+  if (kind === "ignore" && !confirm(`忽略「${modelName}」？它不会再进识别队列，会留在待确认里显示已忽略。`)) return;
+  button.disabled = true;
+  try {
+    if (kind === "unmanual") {
+      await applyAssistantOverride(key, "");
+      return;
+    }
+    if (kind === "retry") {
+      // 只重问这一条：force 会跳过缓存，冷却期也不拦。
+      await runAssistant(button, { force: true, keys: [key] });
+      return;
+    }
+    const result = kind === "forget"
+      ? await callService("FORGET_MODEL_ASSIST_ENTRIES", { keys: [key] })
+      : await callService("SET_MODEL_ASSIST_IGNORED", { keys: [key], ignored: kind === "ignore" });
+    toast(kind === "forget" ? `已撤销 ${result.removed || 0} 条` : kind === "ignore" ? "已忽略这个写法" : "已取消忽略");
+    renderAssistantQueue(result);
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
 $("#llm-apply").addEventListener("click", async event => {
-  const accepted = (state.assistantRows || []).filter(row => row.status === "accepted");
+  const accepted = (state.assistantRows || []).filter(row => row.status === "accepted" && !row.manual);
   if (!accepted.length) {
-    toast("没有可转成人工确认的条目");
+    toast("没有 AI 判定可以转成人工确认");
     return;
   }
   if (!confirm(`把 ${accepted.length} 条 AI 判定写成人工确认？写完之后优先级最高，模型再判也不会改它。`)) return;

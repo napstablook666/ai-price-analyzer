@@ -47,7 +47,6 @@
             <li class="settings-subnav-group"><button type="button" class="settings-subnav-item" data-nav-jump="settings-panel"><span data-icon="calculator" class="icon"></span><span class="settings-subnav-label">成本估算设置</span></button>
               <ul class="settings-subnav is-third">
                 <li><button type="button" class="settings-subnav-item" data-nav-jump="usage-fieldset"><span data-icon="chart-column" class="icon"></span><span class="settings-subnav-label">估算月用量</span></button></li>
-                <li><button type="button" class="settings-subnav-item" data-nav-jump="matching-fieldset"><span data-icon="git-branch" class="icon"></span><span class="settings-subnav-label">模型匹配规则</span></button></li>
               </ul>
             </li>
           </ul>
@@ -125,17 +124,18 @@
 
 
         <section class="settings-view" id="settings-view-costs" role="tabpanel" aria-labelledby="settings-tab-costs" data-settings-view="costs" hidden>
-          <div class="view-heading"><div><h2>偏好与成本</h2><p>设置月用量、汇率、推荐口径和模型匹配规则。</p></div></div>
+          <div class="view-heading"><div><h2>偏好与成本</h2><p>设置月用量、汇率、推荐口径，模型匹配由项目规则自动完成。</p></div></div>
           <section class="panel settings-panel" id="settings-panel" data-nav-anchor="settings-panel" data-collapsible>
             <div class="panel-heading"><div><h2>成本估算设置</h2></div></div>
             <form id="settings-form" class="settings-form">
-              <div class="settings-row"><div class="settings-row-label"><label for="usage-preset">成本口径预设</label><small>决定月用量的取值来源，选自定义时使用下方字段</small></div><select id="usage-preset"><option value="measured">实测月用量</option><option value="recent30d">magpie-30天</option><option value="recent7d">magpie-7天</option><option value="baseline">基础估算（3000 万输入 / 600 万输出）</option><option value="custom">自定义</option></select></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="usage-preset">成本口径预设</label><small>决定月用量的取值来源，选自定义时使用下方字段</small></div><select id="usage-preset"><option value="recent30d">magpie-30天</option><option value="recent7d">magpie-7天</option><option value="baseline">基础估算（3000 万输入 / 600 万输出）</option><option value="custom">自定义</option></select></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="magpie-base-url">magpie 网关地址</label><small>只读本机网关的用量汇总，数据不出本机</small></div><input id="magpie-base-url" type="text" placeholder="http://127.0.0.1:3425" spellcheck="false"></div>
+              <div class="settings-row"><div class="settings-row-label"><label for="magpie-sync-interval">magpie 用量同步</label><small id="magpie-sync-status">还没同步过</small></div><div class="settings-row-controls"><select id="magpie-sync-interval"></select><button class="button button-quiet button-small" id="sync-magpie-usage" type="button"><span data-icon="refresh-cw" class="icon"></span><span>立即同步</span></button></div></div>
               <div class="settings-row"><div class="settings-row-label"><label for="currency">货币</label></div><select id="currency"><option value="CNY">人民币（CNY）</option><option value="USD">美元（USD）</option></select></div>
               <div class="settings-row"><div class="settings-row-label"><label for="exchange-rate">官方美元兑人民币汇率</label></div><div class="settings-row-controls"><input id="exchange-rate" type="number" min="0.0001" step="0.0001" required><button class="button button-quiet button-small" id="refresh-exchange-rate" type="button"><span data-icon="refresh-cw" class="icon"></span><span>从中国银行刷新</span></button></div></div>
               <div class="settings-row"><div class="settings-row-label"><label for="evidence-threshold">推荐门槛</label><small>匹配置信度低于该值的报价标「需核验」，不参与推荐</small></div><input id="evidence-threshold" type="number" min="0" max="100" step="5"></div>
-              <fieldset id="usage-fieldset" data-nav-anchor="usage-fieldset"><legend>估算月用量</legend><div class="usage-grid"><label><span>输入（M tokens）</span><input id="usage-input" type="number" min="0" step="0.01"></label><label><span>缓存读取（M tokens）</span><input id="usage-cache-read" type="number" min="0" step="0.01"></label><label><span>缓存写入（M tokens）</span><input id="usage-cache-write" type="number" min="0" step="0.01"></label><label><span>缓存写入（1h，M tokens）</span><input id="usage-cache-write-1h" type="number" min="0" step="0.01"></label><label><span>输出（M tokens）</span><input id="usage-output" type="number" min="0" step="0.01"></label><label><span>请求次数</span><input id="usage-requests" type="number" min="0" step="1"></label><label><span>高峰占比（%）</span><input id="usage-peak-share" type="number" min="0" max="100" step="1"></label><label><span>图像输入（M tokens）</span><input id="usage-image-input-tokens" type="number" min="0" step="0.01"></label><label><span>图像输出（M tokens）</span><input id="usage-image-output-tokens" type="number" min="0" step="0.01"></label><label><span>图像请求数</span><input id="usage-images" type="number" min="0" step="1"></label></div></fieldset>
+              <fieldset id="usage-fieldset" data-nav-anchor="usage-fieldset"><legend>估算月用量</legend><div class="usage-grid"><label><span>输入（M tokens）</span><input id="usage-input" type="number" min="0" step="0.01"></label><label><span>缓存读取（M tokens）</span><input id="usage-cache-read" type="number" min="0" step="0.01"></label><label><span>缓存写入（M tokens）</span><input id="usage-cache-write" type="number" min="0" step="0.01"></label><label><span>缓存写入（1h，M tokens）</span><input id="usage-cache-write-1h" type="number" min="0" step="0.01"></label><label><span>输出（M tokens）</span><input id="usage-output" type="number" min="0" step="0.01"></label><label><span>请求次数</span><input id="usage-requests" type="number" min="0" step="1"></label><label><span>高峰占比（%）</span><input id="usage-peak-share" type="number" min="0" max="100" step="1"></label><label><span>图像输入（M tokens）</span><input id="usage-image-input-tokens" type="number" min="0" step="0.01"></label><label><span>图像输出（M tokens）</span><input id="usage-image-output-tokens" type="number" min="0" step="0.01"></label><label><span>月出图张数</span><input id="usage-images" type="number" min="0" step="1"></label></div></fieldset>
               <div class="settings-row"><div class="settings-row-label"><label for="show-unmatched">默认显示未匹配模型</label><small>未匹配官方价的模型也进入报价表</small></div><label class="check-label"><input id="show-unmatched" type="checkbox"><span>启用</span></label></div>
-              <fieldset id="matching-fieldset" data-nav-anchor="matching-fieldset"><legend>模型匹配规则</legend><div class="matching-rules"><label class="check-label"><input data-matching-rule="exact" type="checkbox"><span>精确名称</span></label><label class="check-label"><input data-matching-rule="suffix" type="checkbox"><span>后缀 / 供应商</span></label><label class="check-label"><input data-matching-rule="ignore_version" type="checkbox"><span>忽略版本号</span></label><label class="check-label"><input data-matching-rule="fuzzy" type="checkbox"><span>模糊匹配</span></label></div></fieldset>
             </form>
           </section>
         </section>
@@ -153,11 +153,12 @@
             <div class="data-actions assistant-test-actions"><button class="button button-primary" id="llm-test" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试连接</span></button><p class="assistant-status" id="llm-status" role="status" aria-live="polite"></p></div>
           </section>
           <section class="panel" id="assistant-review" data-nav-anchor="assistant-review" data-collapsible>
-            <div class="panel-heading"><div><h2>判定队列</h2><p class="muted" id="llm-cache-summary">未匹配模型会按站点与写法去重后进入队列。</p></div></div>
+            <div class="panel-heading"><div><h2>判定队列</h2><p class="muted" id="llm-cache-summary">未匹配模型会按站点与写法去重后进入队列；已生效的判定留在这里，方便撤销。</p></div></div>
             <div class="data-actions assistant-review-actions">
               <button class="button button-primary" id="llm-run" type="button"><span data-icon="sparkles" class="icon"></span><span>识别当前未匹配</span></button>
               <button class="button button-quiet" id="llm-run-force" type="button"><span data-icon="refresh-cw" class="icon"></span><span>全部重算</span></button>
               <button class="button button-quiet" id="llm-apply" type="button"><span data-icon="check" class="icon"></span><span>接受的写成人工确认</span></button>
+              <button class="button button-quiet" id="llm-purge-orphans" type="button" hidden><span data-icon="trash-2" class="icon"></span><span>清理失效条目</span></button>
               <button class="button button-quiet" id="llm-clear" type="button"><span data-icon="trash-2" class="icon"></span><span>清空缓存</span></button>
             </div>
             <div class="assistant-progress" id="llm-progress" role="status" aria-live="polite" aria-atomic="true" hidden>
@@ -165,14 +166,13 @@
               <progress id="llm-progress-bar" max="1" value="0" aria-label="模型识别进度"></progress>
               <p class="assistant-progress-message" id="llm-progress-message"></p>
             </div>
-            <div class="assistant-review-filters" id="llm-filters" role="group" aria-label="按状态筛选">
+            <div class="assistant-review-filters" id="llm-filters" role="group" aria-label="按匹配状态筛选">
               <button type="button" class="assistant-filter" data-filter="all" aria-pressed="true">全部</button>
-              <button type="button" class="assistant-filter" data-filter="no-candidates" aria-pressed="false">无候选</button>
-              <button type="button" class="assistant-filter" data-filter="accepted" aria-pressed="false">已接受</button>
-              <button type="button" class="assistant-filter" data-filter="none" aria-pressed="false">判为没有</button>
-              <button type="button" class="assistant-filter" data-filter="invalid" aria-pressed="false">无效</button>
-              <button type="button" class="assistant-filter" data-filter="failed" aria-pressed="false">失败</button>
+              <button type="button" class="assistant-filter" data-filter="matched" aria-pressed="false">已匹配</button>
+              <button type="button" class="assistant-filter" data-filter="unmatched" aria-pressed="false">未匹配</button>
+              <button type="button" class="assistant-filter" data-filter="confirm" aria-pressed="false">待确认</button>
             </div>
+            <p class="assistant-review-hint" id="llm-filter-hint"></p>
             <div class="assistant-review-list" id="llm-review-list"></div>
             <nav class="assistant-pagination" id="llm-pagination" aria-label="判定队列分页" hidden>
               <label class="assistant-page-size"><span>每页</span><select id="llm-page-size" aria-label="每页显示数量"><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option></select><span>条</span></label>
@@ -255,6 +255,13 @@
         <label class="check-label wide"><input id="config-price-currency-verified" type="checkbox" checked><span>我已核实模型价格币种</span></label>
         <label class="wide"><span>核验备注</span><input id="config-price-currency-note" type="text" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>
       </div>
+      <fieldset class="station-tier-field">
+        <legend>充值档位（可选）</legend>
+        <p class="station-hint">额度填面值，折扣填「实付 ÷ 面值」，例如 2000 额度 / 0.60 表示付 1200 得 2000。留空则只看上面的充值比例。</p>
+        <div class="tier-rows" id="config-tier-rows"></div>
+        <button class="button button-quiet" id="config-tier-add" type="button"><span data-icon="plus" class="icon"></span><span>加一档</span></button>
+      </fieldset>
+      <label class="wide"><span>单次 token</span><input id="config-tokens-per-request" type="number" min="0" step="1" value="0"><small>按次计费模型折算单价时用。填站点实测的单次平均 token，0 表示用估算用量的平均值。</small></label>
       <p class="station-hint" id="config-station-hint"></p>
       <p class="station-price-warning" id="config-station-warning" role="alert" hidden></p>
       <div class="station-dialog-actions"><button class="button button-quiet" id="config-autofill" type="button"><span data-icon="wand-sparkles" class="icon"></span><span>智能填充</span></button><button class="button button-quiet" id="config-test" type="button"><span data-icon="plug-zap" class="icon"></span><span>测试连接</span></button><button class="button button-quiet" id="config-cancel" type="button">取消</button><button class="button button-primary" id="config-save" type="submit"><span data-icon="check" class="icon"></span><span>保存配置</span></button></div>
