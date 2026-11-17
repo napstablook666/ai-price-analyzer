@@ -65,9 +65,9 @@ The same model appears under a dozen names across relay stations, and each stati
 | Item | Requirement |
 | --- | --- |
 | Browser | Chrome, Edge, or any Chromium-based browser with Manifest V3 |
-| Extension version | `0.5.2` (see `manifest.json`) |
+| Extension version | `0.6.0` (see `manifest.json`) |
 | Node.js | Development and tests only, Node 20 or newer |
-| Permissions | `storage`, `scripting`, `tabs`, `alarms`, `cookies`, and `<all_urls>` host permission |
+| Permissions | `storage`, `scripting`, `tabs`, `alarms`, `cookies`, `declarativeNetRequest`, and `<all_urls>` host permission |
 
 `<all_urls>` is intentional: station domains come from plugins, so adding a station does not require a new permission grant. Page scripts are injected only into stations you added.
 
@@ -167,7 +167,7 @@ Full text: [docs/disclaimer.md](./docs/disclaimer.md).
 
 ## Release
 
-Git tags trigger releases. Sync the version with `npm run version:patch` (or `minor` / `major`), then push a tag such as `v0.5.2`. GitHub Actions publishes three files:
+Git tags trigger releases. Sync the version with `npm run version:patch` (or `minor` / `major`), then push a tag such as `v0.6.0`. `package.json`, `manifest.json`, and the tag name must agree; bump the hardcoded version in README and `docs/` in the same pass. GitHub Actions publishes three files:
 
 - `ai-relay-price-extension-v<version>.zip`: the loadable Chromium extension.
 - `ai-price-analyzer-v<version>-source.zip`: the source and plugin snapshot used for the build.
