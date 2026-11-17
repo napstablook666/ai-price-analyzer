@@ -107,13 +107,13 @@ test("dashboard drops the paid recommendation column and keeps one delta sort op
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const header = html.match(/<thead>[\s\S]*?<\/thead>/)?.[0] || "";
   assert.equal(header.includes(">推荐</th>"), false);
-  assert.match(header, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 混合单价<\/th>/);
-  assert.equal(header.includes(">混合单价</th>"), false);
+  assert.match(header, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 折算单价<\/th>/);
+  assert.equal(header.includes(">折算单价</th>"), false);
   const secondary = html.match(/<select id="sort-secondary">[\s\S]*?<\/select>/)?.[0] || "";
   assert.equal((secondary.match(/value="diffPercent"/g) || []).length, 1);
   assert.equal(script.includes('data-label="推荐"'), false);
-  assert.match(script, /data-label="月成本 · 混合单价"/);
-  assert.equal(script.includes('data-label="混合单价"'), false);
+  assert.match(script, /data-label="月成本 · 折算单价"/);
+  assert.equal(script.includes('data-label="折算单价"'), false);
   assert.equal(script.includes('class="delta-cell'), false);
 });
 
@@ -152,7 +152,7 @@ test("monthlyCostBarWidth uses one shared baseline and clamps overflow", () => {
   assert.ok(Math.abs(monthlyCostBarWidth(49.2392, 70.9523) - 49.2392 / 70.9523 * 100) < 1e-10);
 });
 
-test("monthly cost rankings use every filtered offer and keep the cheapest ten", () => {
+test("monthly cost rankings use every filtered offer and keep the whole ranking", () => {
   const rows = Array.from({ length: 12 }, (_, index) => ({
     canonicalModel: "model-a",
     monthlyCost: (12 - index) * 10,
@@ -169,16 +169,20 @@ test("monthly cost rankings use every filtered offer and keep the cheapest ten",
   assert.equal(highest.rank, 12);
   assert.equal(highest.total, 12);
   assert.equal(highest.baseline, 120);
-  assert.equal(highest.top.length, 10);
-  assert.deepEqual(highest.top.map(entry => entry.monthlyCost), [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+  // 浮层不截断：12 条全给，从最便宜排到最贵。
+  assert.equal(highest.entries.length, 12);
+  assert.deepEqual(highest.entries.map(entry => entry.monthlyCost), [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]);
+  // position 指回筛选结果里的下标，点卡片就靠它算页码。
+  assert.deepEqual(highest.entries.map(entry => entry.position), [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
+  assert.equal(highest.entries.at(-1).row, rows[0]);
   assert.equal(monthlyCostRankingFor(rows[11], rankings).rank, 1);
   const unavailable = monthlyCostRankingFor(rows[12], rankings);
   assert.equal(unavailable.rank, null);
   assert.equal(unavailable.total, 12);
   assert.equal(unavailable.baseline, 120);
-  assert.equal(unavailable.top.length, 10);
+  assert.equal(unavailable.entries.length, 12);
   assert.equal(monthlyCostRankingFor(rows[13], rankings).rank, 1);
-  assert.equal(monthlyCostRankingFor(rows[14], rankings).rank, 1);
+  assert.equal(monthlyCostRankingFor(rows[14], rankings).rank, 2);
   assert.equal(monthlyCostRankingFor(rows[14], rankings).total, 2);
   assert.equal(monthlyCostRankingFor(rows[14], rankings).baseline, 5);
   assert.equal(monthlyCostBarWidth(40, 100), 40);
@@ -195,13 +199,13 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.match(html, /class="price-head-key">费用项/);
   assert.match(html, /class="price-head-side">官方<\/span>/);
   assert.match(html, /class="price-head-side">中转<\/span>/);
-  assert.match(html, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 混合单价<\/th>/);
+  assert.match(html, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 折算单价<\/th>/);
   assert.match(html, /class="unit-hint-popover".*中转币/);
   assert.equal(html.includes('data-sort-keys="diffPercent" '), false);
   assert.equal(html.includes("thead-subcolumns"), false);
   assert.equal(html.includes("data-monthly-cost-scale"), false);
   assert.equal(html.includes("monthly-cost-ruler"), false);
-  assert.match(script, /<td colspan="3" data-label="单价 \/ 每 M tokens" class="price-cell is-section-start paid-only-column"/);
+  assert.match(script, /<td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"/);
   // 输入/输出保留两列对齐的主行，其余费用项压成一行小胶囊，行高不再随费用项数量线性增长。
   assert.match(script, /<div class="price-grid-row price-line-primary"><span class="price-key">/);
   assert.match(script, /class="price-grid-detail">\$\{cacheGroup\}\$\{otherChips\}/);
@@ -209,8 +213,8 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.match(script, /class="price-mini-pair"><span class="price-mini-official">/);
   // 官方和中转同价时不重复写两遍，省掉箭头，一排三个缓存胶囊才放得下
   assert.match(script, /if \(entry\.official && entry\.relay && officialText === relayText\)/);
-  assert.match(script, /<td data-label="月成本 · 混合单价" class="cost-combined-cell is-section-start paid-only-column"/);
-  assert.equal(script.includes('data-label="混合单价"'), false);
+  assert.match(script, /<td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"/);
+  assert.equal(script.includes('data-label="折算单价"'), false);
   assert.equal(script.includes('class="blended-cell'), false);
   assert.equal(script.includes('<td data-label="中转单价">'), false);
   assert.equal(script.includes("is-blended-unit-price"), false);
@@ -221,11 +225,32 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.match(script, /<div class="monthly-cost-popover" data-monthly-cost-panel/);
   assert.equal(script.includes('class="monthly-cost-rank"'), false);
   assert.match(script, /class="monthly-cost-ranking-list"/);
-  assert.match(script, /月成本最低前 \$\{top\.length\} 条/);
+  assert.match(script, /月成本排名 \$\{entries\.length\} 条/);
+  // 浮层列出同模型全部报价，打开时自动把当前那条滚到可见区。
+  assert.match(script, /const items = entries\.map\(entry =>/);
+  assert.match(script, /revealMonthlyCostCurrent\(panel\)/);
+  assert.match(script, /querySelector\("\.monthly-cost-ranking-item\.is-current"\)/);
   assert.match(script, /buildMonthlyCostRankings\(filtered\)/);
   assert.match(script, /monthlyCostRankingFor\(row, monthlyCostRankings\)/);
-  assert.match(script, /monthlyCostBarWidth\(row\.monthlyCost, ranking\.baseline\)/);
-  assert.match(script, /priceGridMarkup\(row, currency, officialQuotedPrices, monthlyCostChartMarkup\(row, currency, monthlyRanking\)\)/);
+  assert.match(script, /monthlyCostBarWidth\(paidMonthlyCost\(row\), ranking\.baseline\)/);
+  // 浮层只挂在长条上：金额只是文字，长条要停够 MONTHLY_COST_OPEN_DELAY 才弹。
+  assert.equal(script.includes('class="cost-amount" data-monthly-cost-trigger'), false);
+  assert.match(script, /function monthlyCostSummaryMarkup\(row, currency\) \{/);
+  assert.match(script, /const MONTHLY_COST_OPEN_DELAY = 2000;/);
+  assert.match(script, /trigger: Boolean\(ranking\.rank\)/);
+  assert.match(script, /setTimeout\(\(\) => openMonthlyCostPanel\(trigger\), MONTHLY_COST_OPEN_DELAY\)/);
+  assert.match(css, /\.cell-chart\.is-monthly-cost\[data-monthly-cost-trigger\]::before \{ content: ""; position: absolute; left: 0; right: 0; top: -8px; bottom: -8px; \}/);
+  // 点名次卡片跳到那条报价：卡片带 position，交给 jumpToMonthlyCostOffer 翻页并闪两下。
+  assert.match(script, /role="button" tabindex="0" data-monthly-cost-jump="\$\{entry\.position\}"/);
+  assert.match(script, /function jumpToMonthlyCostOffer\(position\)/);
+  assert.match(script, /state\.page = page;\s*\n\s*renderRows\(\);/);
+  assert.match(script, /row\.scrollIntoView\(\{ block: "center", behavior \}\);/);
+  assert.match(script, /row\.classList\.add\("is-flash"\);/);
+  assert.match(css, /\.comparison-table tbody tr\.is-flash td \{ animation: dashboard-row-flash/);
+  // 三类报价同一张表，单价单元格按 billingMode 分派，按 token 的仍走带柱状图的 priceGridMarkup。
+  assert.match(script, /if \(row\.billingMode === "request"\) return requestPriceGridMarkup\(row, currency, chartMarkup\);/);
+  assert.match(script, /if \(row\.billingMode === "image"\) return imagePriceGridMarkup\(row, currency, chartMarkup\);/);
+  assert.match(script, /return priceGridMarkup\(row, currency, officialQuotedPrices, chartMarkup\);/);
   assert.match(script, /<div class="cost-combined"><div class="cost-combined-main">/);
   assert.match(script, /<div class="cost-combined-main">.*<span class="delta-tag/);
   assert.match(script, /<span class="blended-line"><span class="blended-label">混合<\/span>/);
@@ -238,6 +263,12 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.equal(css.includes(".dashboard-heading"), false);
   assert.match(css, /\.dashboard-workspace:has\(\.dashboard-sidebar > \[data-collapsed="true"\]/);
   assert.match(css, /\.monthly-cost-ranking-list/);
+  // 当前报价在排名浮层里要能一眼认出来：底色 + 左侧色条 + 「当前」胶囊
+  assert.match(script, /const isCurrent = entryRow === row;/);
+  assert.match(script, /<span class="monthly-cost-ranking-current">当前<\/span>/);
+  assert.match(css, /\.monthly-cost-ranking-item\.is-current \{ position: relative; background: var\(--row-tint\)/);
+  assert.match(css, /\.monthly-cost-ranking-item\.is-current::before/);
+  assert.match(css, /\.monthly-cost-ranking-current \{/);
   assert.match(css, /\.monthly-cost-popover\[hidden\]/);
   assert.match(css, /\.floating-layer \{ position: fixed/);
   assert.match(css, /\.cell-chart\.is-monthly-cost/);

@@ -15,8 +15,12 @@ import {
   llmMatchesFromCache,
   overrideFromAssist,
   parseAssistResponse,
+  assistPoolOf,
+  buildAssistPool,
+  poolSummaryLabel,
   selectPendingEntries,
   spreadAssistResults,
+  summarizePool,
   suggestModelCandidates,
   summarizeCache
 } from "../src/core/llm-matching.js";
@@ -104,15 +108,24 @@ test("提示词带候选清单，也带输出协议", () => {
 
 test("解析接受、拒答与编造的 id", () => {
   const entries = entriesFor(["gpt5.5-turbo", "gemini-3.8-flash-2025-01"]);
-  const parsed = parseAssistResponse("```\n1 => gpt-5-5\n2 => none\n```", { entries });
+  const parsed = parseAssistResponse("```\n1 => gpt-5-5 92\n2 => none\n```", { entries });
   assert.equal(parsed.accepted.length, 2);
   assert.equal(parsed.accepted[0].status, "accepted");
   assert.equal(parsed.accepted[0].targetId, "gpt-5-5");
+  assert.equal(parsed.accepted[0].confidence, 0.92);
   assert.equal(parsed.accepted[1].status, "none");
+  // 不写分数的模型按 80 算，老习惯照样能用。
+  assert.equal(parseAssistResponse("1 => gpt-5-5", { entries }).accepted[0].status, "accepted");
+  // 分数不到线就是「不是」，id 对得上也不收。
+  const lowScore = parseAssistResponse("1 => gpt-5-5 40", { entries });
+  assert.equal(lowScore.accepted[0].status, "none");
+  assert.equal(lowScore.accepted[0].targetId, "");
 
+  // 编造的 id 候选里没有，同样记「不是」，结论不再分裂出第三种。
   const invented = parseAssistResponse("1 => gpt-9-ultra", { entries });
-  assert.equal(invented.accepted.length, 0);
-  assert.equal(invented.invalid[0].status, "invalid");
+  assert.equal(invented.accepted.length, 1);
+  assert.equal(invented.accepted[0].status, "none");
+  assert.equal(invented.invalid.length, 0);
 });
 
 test("同一指纹的结论不重复问模型", () => {
@@ -240,10 +253,10 @@ test("候选不同的写法不合并，各问各的", () => {
 });
 
 test("输出上限随批大小放大，空值退回默认批大小", () => {
-  assert.equal(assistMaxTokens(1), 276);
-  assert.equal(assistMaxTokens(5), 356);
+  assert.equal(assistMaxTokens(1), 1064);
+  assert.equal(assistMaxTokens(5), 1224);
   assert.ok(assistMaxTokens(20) > assistMaxTokens(5));
-  assert.equal(assistMaxTokens(0), 356);
+  assert.equal(assistMaxTokens(0), 1224);
   assert.deepEqual(spreadAssistResults([{ key: "a" }], new Map()), [{ key: "a" }]);
 });
 
@@ -257,4 +270,161 @@ test("失败原因写进缓存，超时和漏答分得开", () => {
   assert.equal(missing[entry.key].reason, "unanswered");
   assert.equal(assistFailureLabel(missing[entry.key]), "模型没答这条");
   assert.equal(assistFailureLabel({ status: "accepted" }), "");
+});
+
+test("已生效的判定留在池里，不会因为匹配成功就从列表里消失", () => {
+  // 这是「已接受 37 但筛选一片空」那个 bug 的回归：accepted 条目已不在 unmatched 里，
+  // 池子必须从缓存补回来，否则转人工确认按钮永远 0 条。
+  const cache = {
+    [cacheKey("s1", "gemini-3.8-flash")]: { stationId: "s1", modelName: "gemini-3.8-flash", targetId: "gemini-3-8-flash", status: "accepted", confidence: 0.8, attempts: 1, at: 1 },
+    [cacheKey("s1", "完全无关的模型")]: { stationId: "s1", modelName: "完全无关的模型", targetId: "", status: "none", attempts: 1, at: 2 }
+  };
+  const rows = [
+    { key: cacheKey("s1", "全新写法"), stationId: "s1", stationName: "中转 A", modelName: "全新写法", count: 3, candidates: 2, status: "pending" },
+    { key: cacheKey("s1", "另一个怪名"), stationId: "s1", stationName: "中转 A", modelName: "另一个怪名", count: 1, candidates: 0, status: "none", reason: "no-candidates" }
+  ];
+  const { pool } = buildAssistPool({
+    cache,
+    rows,
+    stationNameById: new Map([["s1", "中转 A"]]),
+    unmatchedKeys: new Set(rows.map(row => row.key))
+  });
+  assert.equal(pool.length, 4);
+  const active = pool.filter(entry => entry.pool === "matched");
+  assert.equal(active.length, 1);
+  assert.equal(active[0].targetId, "gemini-3-8-flash");
+  // 站点名从 stationNameById 补：已生效条目已经不在 unmatched 里，拿不到行的站点名。
+  assert.equal(active[0].stationName, "中转 A");
+  assert.deepEqual(summarizePool(pool).counts, { matched: 1, unmatched: 1, confirm: 2 });
+});
+
+test("失败按原因进待确认：超时和漏答分开计数，重试到顶单独标出来", () => {
+  const key = name => cacheKey("s1", name);
+  const cache = {
+    [key("超时的")]: { stationId: "s1", modelName: "超时的", status: "failed", reason: "timeout", attempts: 9 },
+    [key("漏答一次")]: { stationId: "s1", modelName: "漏答一次", status: "failed", reason: "unanswered", attempts: 1 },
+    [key("漏答到顶")]: { stationId: "s1", modelName: "漏答到顶", status: "failed", reason: "unanswered", attempts: ASSIST_MAX_ATTEMPTS }
+  };
+  // 报价还在的条目才有 count，没有 rows 会被当成下架出池。
+  const rows = Object.entries(cache).map(([key, entry]) => ({ key, stationId: entry.stationId, modelName: entry.modelName, count: 1, candidates: 1 }));
+  const { pool } = buildAssistPool({ cache, rows });
+  const byName = Object.fromEntries(pool.map(entry => [entry.modelName, entry.pool]));
+  // 报错的一律进待确认：超时是环境问题，但也算「问过了没成」。
+  assert.equal(byName["超时的"], "confirm");
+  assert.equal(byName["漏答一次"], "confirm");
+  assert.equal(byName["漏答到顶"], "confirm");
+  const summary = summarizePool(pool);
+  assert.deepEqual(summary.failures, { timeout: 1, error: 0, unanswered: 2 });
+  assert.equal(summary.settled.exhausted, 1);
+  assert.match(poolSummaryLabel(summary), /待确认 3/);
+});
+
+test("已生效的写法又出现在未匹配里，标成失效而不是静默重复", () => {
+  const key = cacheKey("s1", "gemini-3.8-flash");
+  const cache = { [key]: { stationId: "s1", modelName: "gemini-3.8-flash", targetId: "已下架的id", status: "accepted", attempts: 1 } };
+  const rows = [{ key, stationId: "s1", stationName: "中转 A", modelName: "gemini-3.8-flash", count: 2, candidates: 3, status: "pending" }];
+  const { pool } = buildAssistPool({ cache, rows, unmatchedKeys: new Set([key]) });
+  assert.equal(pool.length, 1);
+  assert.equal(pool[0].pool, "matched");
+  assert.equal(pool[0].stale, true);
+  assert.equal(summarizePool(pool).stale, 1);
+});
+
+test("超时进入冷却期，冷却没到不再重发，到期自动回来", () => {
+  const entry = entriesFor(["gpt5.5-turbo"])[0];
+  const cooling = {
+    [entry.key]: { stationId: "s1", modelName: "gpt5.5-turbo", status: "failed", reason: "timeout", attempts: 1, nextRetryAt: Date.now() + 60_000, fingerprint: "旧指纹", referencesFetchedAt: 100 }
+  };
+  assert.equal(selectPendingEntries({ cache: cooling, entries: [entry], referencesFetchedAt: 100 }).pending.length, 0);
+  const rows = Object.entries(cooling).map(([key, entry]) => ({ key, stationId: entry.stationId, modelName: entry.modelName, count: 1, candidates: 1 }));
+  const { pool } = buildAssistPool({ cache: cooling, rows });
+  assert.equal(pool[0].cooling, true);
+  assert.equal(summarizePool(pool).cooling, 1);
+
+  const expired = {
+    [entry.key]: { ...cooling[entry.key], nextRetryAt: Date.now() - 1000 }
+  };
+  assert.equal(selectPendingEntries({ cache: expired, entries: [entry], referencesFetchedAt: 100 }).pending.length, 1);
+});
+
+test("超时记下冷却到期时间，漏答不记", () => {
+  const entry = entriesFor(["gpt5.5-turbo"])[0];
+  const timedOut = applyAssistResults({}, [], { notAsked: [{ ...entry, reason: "timeout" }] });
+  assert.ok(timedOut[entry.key].nextRetryAt > Date.now());
+  const missed = applyAssistResults({}, [], { notAsked: [{ ...entry, reason: "unanswered" }] });
+  assert.equal(missed[entry.key].nextRetryAt, 0);
+});
+
+test("报价里消失的待判条目出池，定过论的不出", () => {
+  const key = name => cacheKey("s1", name);
+  const cache = {
+    [key("下架的")]: { stationId: "s1", modelName: "下架的", status: "none", targetId: "" },
+    [key("放弃的")]: { stationId: "s1", modelName: "放弃的", status: "failed", reason: "unanswered", attempts: 9 },
+    [key("接受过的")]: { stationId: "s1", modelName: "接受过的", status: "accepted", targetId: "gpt-5-5" }
+  };
+  const { pool, orphans } = buildAssistPool({ cache });
+  assert.deepEqual(orphans.map(item => item.modelName), ["放弃的"]);
+  assert.deepEqual(pool.map(item => item.modelName).sort(), ["下架的", "接受过的"].sort());
+  assert.equal(summarizePool(pool, orphans).orphans, 1);
+});
+
+test("三区分法：没问过是未匹配，试过没成是待确认，归位了是已匹配", () => {
+  assert.equal(assistPoolOf({}), "unmatched");
+  assert.equal(assistPoolOf({ status: "pending", attempts: 0 }), "unmatched");
+  assert.equal(assistPoolOf({ status: "none" }), "confirm");
+  assert.equal(assistPoolOf({ status: "failed", reason: "error", attempts: 1 }), "confirm");
+  assert.equal(assistPoolOf({ status: "failed", reason: "timeout", attempts: 9 }), "confirm");
+  assert.equal(assistPoolOf({ status: "ignored" }), "confirm");
+  assert.equal(assistPoolOf({ status: "invalid" }), "confirm");
+  assert.equal(assistPoolOf({ status: "accepted", targetId: "gpt-5-5" }), "matched");
+  // 人工指定压过一切：哪怕 AI 判了「不是」，写过覆盖就算已匹配。
+  assert.equal(assistPoolOf({ status: "none", manual: true, targetId: "gpt-5-5" }), "matched");
+});
+
+test("人工指定的写法进池，目标以覆盖为准，AI 结论不再挡路", () => {
+  const key = cacheKey("s1", "gemini-3.8-flash");
+  const cache = { [key]: { stationId: "s1", modelName: "gemini-3.8-flash", targetId: "", status: "none", attempts: 2 } };
+  const rows = [{ key, stationId: "s1", stationName: "中转 A", modelName: "gemini-3.8-flash", count: 4, candidates: 3, status: "none" }];
+  const { pool } = buildAssistPool({ cache, rows, overrides: [{ stationId: "s1", modelName: "gemini-3.8-flash", officialModelId: "gemini-3-8-flash" }] });
+  assert.equal(pool.length, 1);
+  assert.equal(pool[0].pool, "matched");
+  assert.equal(pool[0].manual, true);
+  assert.equal(pool[0].targetId, "gemini-3-8-flash");
+  assert.equal(summarizePool(pool).counts.matched, 1);
+});
+
+test("只有人工指定、没有 AI 结论、报价也下架的写法照样留在队列里", () => {
+  const { pool, orphans } = buildAssistPool({
+    cache: {},
+    rows: [],
+    stationNameById: new Map([["s2", "中转 B"]]),
+    overrides: [{ stationId: "s2", modelName: "claude 3.5 sonnet", officialModelId: "claude-sonnet-4-5" }]
+  });
+  assert.equal(orphans.length, 0);
+  assert.equal(pool.length, 1);
+  assert.equal(pool[0].pool, "matched");
+  assert.equal(pool[0].stationName, "中转 B");
+  assert.equal(pool[0].status, "manual");
+  assert.equal(pool[0].targetId, "claude-sonnet-4-5");
+});
+
+test("人工指定过的写法即使报价下架也不出池，撤销才有地方点", () => {
+  const key = cacheKey("s1", "怪名字");
+  const cache = { [key]: { stationId: "s1", modelName: "怪名字", status: "failed", reason: "error", attempts: 1 } };
+  const { pool, orphans } = buildAssistPool({ cache, overrides: [{ stationId: "s1", modelName: "怪名字", officialModelId: "gpt-5-5" }] });
+  assert.equal(orphans.length, 0);
+  assert.equal(pool.length, 1);
+  assert.equal(pool[0].manual, true);
+});
+
+test("忽略的写法留在定论里，清单刷新也不复活", () => {
+  const entry = entriesFor(["gpt5.5-turbo"])[0];
+  const cache = { [entry.key]: { stationId: "s1", modelName: "gpt5.5-turbo", status: "ignored", fingerprint: "完全不同的指纹" } };
+  assert.equal(selectPendingEntries({ cache, entries: [entry], referencesFetchedAt: 100 }).pending.length, 0);
+  const { pool, orphans } = buildAssistPool({ cache });
+  assert.equal(orphans.length, 0);
+  assert.equal(pool[0].pool, "confirm");
+  const summary = summarizePool(pool, orphans);
+  assert.equal(summary.settled.ignored, 1);
+  assert.match(poolSummaryLabel(summary), /待确认 1/);
 });

@@ -10,12 +10,13 @@ import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEY
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationStatus, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, getTierShares, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
-import { createDashboardIndex, matchesModelQueries, modeSwitchFilters, paginateRows, rowBandClasses } from "../src/dashboard-index.js";
+import { createDashboardIndex, matchesModelQueries, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
-import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, USAGE_PRESETS, usagePresetId } from "../src/shared/schema.js";
+import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
+import { fetchMagpieUsage, magpieSyncLabel, mergeGatewayUsage, monthlyUsageFromGateway, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../src/core/magpie-usage.js";
 import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
 import {
@@ -198,6 +199,41 @@ const centosFixture = {
       enable_groups: ["default"],
       billing_mode: "tiered_expr",
       billing_expr: "tier(\"standard\", p * 1 + c * 2)"
+    },
+    {
+      model_name: "centos-tiered-bounded",
+      quota_type: 0,
+      model_ratio: 37.5,
+      completion_ratio: 1,
+      enable_groups: ["default"],
+      billing_mode: "tiered_expr",
+      billing_expr: "len <= 32768 ? tier(\"输入<=32k\", p * 4 + c * 18) : tier(\"32k<输入<=200k\", p * 6 + c * 22)"
+    },
+    {
+      model_name: "centos-tiered-request",
+      quota_type: 1,
+      model_price: 0.08,
+      enable_groups: ["default"],
+      billing_mode: "tiered_expr",
+      billing_expr: "tier(\"request\", fixed(0.08))"
+    },
+    {
+      model_name: "centos-tiered-image",
+      quota_type: 1,
+      model_price: 0.014,
+      enable_groups: ["default"],
+      supported_endpoint_types: ["image-generation"],
+      billing_mode: "tiered_expr",
+      billing_expr: "tier(\"image\", fixed(0.014)) * image_count"
+    },
+    {
+      model_name: "centos-tiered-night",
+      quota_type: 0,
+      model_ratio: 37.5,
+      completion_ratio: 3,
+      enable_groups: ["default"],
+      billing_mode: "tiered_expr",
+      billing_expr: "(tier(\"base\", p * 3 + c * 9)) * (hour(\"Asia/Shanghai\") >= 22 || hour(\"Asia/Shanghai\") < 8 ? 0.5 : 1)"
     }
   ]
 };
@@ -228,7 +264,13 @@ const allInOneFixture = {
         ]
       },
       { model_id: "all-per-request", billing_mode: "per_request", per_request_price: 0.05 },
-      { model_id: "all-missing", billing_mode: "token" }
+      { model_id: "all-missing", billing_mode: "token" },
+      {
+        model_id: "all-video-model",
+        billing_mode: "special",
+        category: "video",
+        per_second_prices: { "480P": 0.3, "768P": 0.35 }
+      }
     ]
   }
 };
@@ -961,18 +1003,20 @@ test("calculates token workload per million, not per token", () => {
   assert.equal(workloadCost({ cacheWrite1h: 0.5 }, { cacheWrite1h: 1_000_000 }), 0.5);
 });
 
-test("uses the measured monthly workload as the default usage", () => {
+test("uses the recent 30-day workload as the default usage", () => {
   const settings = normalizeSettings();
   assert.deepEqual(settings.usage, DEFAULT_MONTHLY_USAGE);
-  assert.equal(settings.usage.input, 382.95 * TOKENS_PER_MILLION);
-  assert.equal(settings.usage.cacheRead, 2946.28 * TOKENS_PER_MILLION);
-  assert.equal(settings.usage.output, 30.74 * TOKENS_PER_MILLION);
+  assert.equal(settings.usage.input, 326.81 * TOKENS_PER_MILLION);
+  assert.equal(settings.usage.cacheRead, 4434.31 * TOKENS_PER_MILLION);
+  assert.equal(settings.usage.output, 28.98 * TOKENS_PER_MILLION);
+  assert.equal(settings.usage.cacheWrite, 1.91 * TOKENS_PER_MILLION);
   assert.equal(settings.usage.cacheWrite1h, 0);
-  assert.equal(USAGE_PRESETS.find(preset => preset.id === "measured").usage.requests, 45494);
+  assert.equal(usagePresetUsage("recent30d").requests, 54378);
 });
-test("ships recent 7-day and 30-day measured usage presets", () => {
-  const recent7d = USAGE_PRESETS.find(preset => preset.id === "recent7d").usage;
-  const recent30d = USAGE_PRESETS.find(preset => preset.id === "recent30d").usage;
+test("ships recent 7-day and 30-day usage presets without a measured one", () => {
+  const recent7d = usagePresetUsage("recent7d");
+  const recent30d = usagePresetUsage("recent30d");
+  assert.equal(usagePresetOptions().some(option => option.id === "measured"), false);
   assert.equal(recent7d.requests, 32567);
   assert.equal(recent7d.cacheRead, 2077.49 * TOKENS_PER_MILLION);
   assert.equal(recent30d.requests, 54378);
@@ -981,11 +1025,13 @@ test("ships recent 7-day and 30-day measured usage presets", () => {
   assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...recent30d }), "recent30d");
 });
 
-test("migrates old usage presets to the measured monthly workload", () => {
+test("migrates old and retired usage presets to the current default", () => {
   const legacyUsages = [
     { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.5 },
     { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 },
-    { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 }
+    { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 },
+    // 已下线的「实测月用量」预设，保存过它的设置要被迁到当前默认。
+    { requests: 45494, input: 382.95 * TOKENS_PER_MILLION, cacheRead: 2946.28 * TOKENS_PER_MILLION, output: 30.74 * TOKENS_PER_MILLION, cacheWrite: 0, cacheWrite1h: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 }
   ];
   for (const usage of legacyUsages) assert.deepEqual(normalizeSettings({ usage }).usage, { ...DEFAULT_MONTHLY_USAGE, peakShare: usage.peakShare });
   assert.equal(normalizeSettings({ usage: { ...DEFAULT_MONTHLY_USAGE, input: TOKENS_PER_MILLION } }).usage.input, TOKENS_PER_MILLION);
@@ -994,10 +1040,116 @@ test("migrates old usage presets to the measured monthly workload", () => {
 test("matches usage presets regardless of peak share", () => {
   const usage = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.3 };
   assert.equal(usagePresetId(usage), "baseline");
-  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE }), "measured");
-  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, peakShare: 0.5 }), "measured");
+  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE }), "recent30d");
+  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, peakShare: 0.5 }), "recent30d");
   assert.equal(usagePresetId({ ...usage, input: 900_000 }), "custom");
 });
+test("converts a magpie usage window into monthly volume", () => {
+  const payload = { calls: 1200, input: 3_000_000, cache_read: 9_000_000, cache_write: 1_000_000, output: 500_000 };
+  assert.deepEqual(monthlyUsageFromGateway(payload, 30), { requests: 1200, input: 3_000_000, cacheRead: 9_000_000, cacheWrite: 1_000_000, output: 500_000 });
+  const week = monthlyUsageFromGateway(payload, 7);
+  assert.equal(week.requests, Math.round(1200 * 30 / 7));
+  assert.equal(week.input, 3_000_000 * 30 / 7);
+  assert.deepEqual(monthlyUsageFromGateway({}, 30), { requests: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0 });
+  assert.deepEqual(monthlyUsageFromGateway({ calls: -5, input: "abc" }, 30), { requests: 0, input: 0, cacheRead: 0, cacheWrite: 0, output: 0 });
+});
+
+test("keeps user-entered fields when merging gateway usage", () => {
+  const current = { ...DEFAULT_MONTHLY_USAGE, peakShare: 0.5, imageInputTokens: 1_000_000 };
+  const merged = mergeGatewayUsage(current, { requests: 10, input: 1, cacheRead: 2, cacheWrite: 3, output: 4 });
+  assert.equal(merged.requests, 10);
+  assert.equal(merged.input, 1);
+  assert.equal(merged.peakShare, 0.5);
+  assert.equal(merged.imageInputTokens, 1_000_000);
+});
+
+test("only accepts loopback magpie gateway addresses", () => {
+  assert.equal(normalizeMagpieBaseUrl("http://127.0.0.1:3425"), "http://127.0.0.1:3425");
+  assert.equal(normalizeMagpieBaseUrl("http://localhost:3425/foo"), "http://localhost:3425");
+  assert.equal(normalizeMagpieBaseUrl("https://example.com"), "http://127.0.0.1:3425");
+  assert.equal(normalizeMagpieBaseUrl("ftp://127.0.0.1:3425"), "http://127.0.0.1:3425");
+  assert.equal(normalizeMagpieBaseUrl(""), "http://127.0.0.1:3425");
+  assert.equal(normalizeMagpieBaseUrl("not a url"), "http://127.0.0.1:3425");
+});
+
+test("normalizes the magpie sync interval", () => {
+  assert.equal(normalizeMagpieSyncInterval(0), 0);
+  assert.equal(normalizeMagpieSyncInterval("1440"), 1440);
+  assert.equal(normalizeMagpieSyncInterval(7), 360);
+  assert.equal(normalizeMagpieSyncInterval(undefined), 360);
+});
+
+test("fetches magpie usage and reports a readable error when the gateway is down", async () => {
+  const okFetch = async (url) => {
+    assert.match(url, /\/v1\/magpie\/usage\?period=30d$/);
+    return { ok: true, status: 200, json: async () => ({ calls: 100, input: 2_000_000, cache_read: 0, cache_write: 0, output: 0 }) };
+  };
+  const result = await fetchMagpieUsage({ fetchImpl: okFetch, period: "30d", days: 30 });
+  assert.equal(result.usage.requests, 100);
+  assert.equal(result.usage.input, 2_000_000);
+  assert.equal(result.window.days, 30);
+
+  await assert.rejects(
+    () => fetchMagpieUsage({ fetchImpl: async () => { throw new TypeError("Failed to fetch"); } }),
+    /连不上本机 magpie 网关/
+  );
+  await assert.rejects(
+    () => fetchMagpieUsage({ fetchImpl: async () => ({ ok: false, status: 404 }) }),
+    /magpie 网关返回 404/
+  );
+  await assert.rejects(
+    () => fetchMagpieUsage({ fetchImpl: async () => ({ ok: true, status: 200, json: async () => { throw new Error("bad"); } }) }),
+    /不是 JSON/
+  );
+});
+
+test("uses synced magpie numbers for the presets and falls back to the builtin snapshot", () => {
+  const magpieSync = normalizeMagpieSyncState({
+    recent30d: { usage: { requests: 999, input: 5_000_000, cacheRead: 0, cacheWrite: 0, output: 0 }, syncedAt: 1_700_000_000_000 }
+  });
+  assert.equal(usagePresetUsage("recent30d", magpieSync).requests, 999);
+  assert.equal(usagePresetUsage("recent7d", magpieSync).requests, 32567);
+  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...usagePresetUsage("recent30d", magpieSync) }, magpieSync), "recent30d");
+  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...usagePresetUsage("recent30d", magpieSync) }), "custom");
+  assert.match(usagePresetOptions(magpieSync).find(option => option.id === "recent30d").label, /同步/);
+  assert.match(usagePresetOptions().find(option => option.id === "recent7d").label, /内置快照/);
+});
+
+// 回归：点「立即同步」后输入框回填的是取整到 4 位小数的百万值，读回来和网关原始值差几百个 token。
+// 之前用严格相等判定，一同步就掉成「自定义」。
+test("keeps the magpie preset selected after the inputs are rounded for display", () => {
+  const T = TOKENS_PER_MILLION;
+  const magpieSync = normalizeMagpieSyncState({
+    recent30d: { usage: { requests: 36085, input: 373_945_123, cacheRead: 1_741_243_900, cacheWrite: 907_000, output: 17_251_100 }, syncedAt: 1_700_000_000_000 },
+    recent7d: { usage: { requests: 103_161, input: 1_280_047_662, cacheRead: 4_331_021_734, cacheWrite: 787_928, output: 50_436_651 }, syncedAt: 1_700_000_000_000 }
+  });
+  const asDisplayed = usage => {
+    const rounded = { ...usage, requests: Math.round(usage.requests) };
+    for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output"]) {
+      rounded[field] = Math.round((usage[field] / T) * 1e4) / 1e4 * T;
+    }
+    return rounded;
+  };
+  for (const id of ["recent30d", "recent7d"]) {
+    const measured = usagePresetUsage(id, magpieSync);
+    assert.equal(usagePresetId(asDisplayed(measured), magpieSync), id);
+    // 用户真的改了一项，仍然要判成自定义。
+    assert.equal(usagePresetId({ ...asDisplayed(measured), input: measured.input + 5 * T }, magpieSync), "custom");
+  }
+});
+
+test("drops an empty magpie sync state and keeps the last good numbers", () => {
+  assert.equal(normalizeMagpieSyncState(null), null);
+  assert.equal(normalizeMagpieSyncState({ error: "boom" }), null);
+  const state = normalizeMagpieSyncState({ error: "boom", attemptedAt: 5, recent30d: { usage: { requests: 7 }, syncedAt: 9 } });
+  assert.equal(state.error, "boom");
+  assert.equal(state.recent30d.usage.requests, 7);
+  assert.equal(normalizeSettings({ magpieSync: state }).magpieSync.recent30d.usage.requests, 7);
+  assert.equal(normalizeSettings({}).magpieSync, null);
+  assert.match(magpieSyncLabel({ error: "boom" }), /上次同步失败：boom/);
+  assert.equal(magpieSyncLabel(null), "还没同步过");
+});
+
 
 test("normalizes the official exchange-rate override", () => {
   assert.equal(normalizeSettings({ exchangeRate: 7.25 }).exchangeRate, 7.25);
@@ -1314,6 +1466,42 @@ test("reads the response body returned by the page bridge", async () => {
   const snapshot = await collectStationInput({ id: "station-page-endpoint", name: "Page endpoint", baseUrl: "https://relay.example", mode: "page", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, { pageFetch });
   assert.equal(requests.length, 2);
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
+});
+
+// 站点偶尔一次握手失败就抛 TypeError: Failed to fetch，这一站不该直接记成失败。
+test("retries a station after a transient network failure", async () => {
+  let calls = 0;
+  const pageFetch = Object.assign(async () => {
+    calls += 1;
+    if (calls === 1) throw new TypeError("Failed to fetch");
+    return response(pqhFixture);
+  }, { supportsCapture: true });
+  const snapshot = await collectStationInput({ id: "station-flaky", name: "Flaky", baseUrl: "https://relay.example", mode: "page" }, { pageFetch, retryDelayMs: 0 });
+  assert.equal(snapshot.status, "success");
+  assert.equal(calls, 2);
+});
+
+test("does not retry a station that answered with an auth failure", async () => {
+  let calls = 0;
+  const pageFetch = Object.assign(async () => {
+    calls += 1;
+    return { ok: false, status: 401, body: { message: "未授权" } };
+  }, { supportsCapture: true });
+  await assert.rejects(collectStationInput({ id: "station-unauthorized", name: "Unauthorized", baseUrl: "https://relay.example", mode: "page", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, { pageFetch }));
+  assert.equal(calls, 2);
+});
+
+test("reports an unreachable station in plain Chinese after exhausting retries", async () => {
+  let calls = 0;
+  const pageFetch = Object.assign(async () => {
+    calls += 1;
+    throw new TypeError("Failed to fetch");
+  }, { supportsCapture: true });
+  await assert.rejects(
+    collectStationInput({ id: "station-down", name: "Down", baseUrl: "https://relay.example", mode: "page", adapter: { endpoint: "/pricing", method: "GET", responseFormat: "auto" } }, { pageFetch, retryDelayMs: 0 }),
+    /Down 网络请求失败/
+  );
+  assert.equal(calls, 6);
 });
 
 test("collects CodeGo pricing catalog from its pricing page URL", async () => {
@@ -1838,7 +2026,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addProviderStationPresets(current, PROVIDER_REGISTRY, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -1856,7 +2044,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   assert.equal(fuckEveryone.priceCurrencyVerified, true);
   assert.equal(normalizeStation(fuckEveryone).rechargeRateVerified, false);
   const killAi = added.find(station => station.id === "killai");
-  assert.equal(killAi.mode, "page");
+  assert.equal(killAi.mode, "direct");
   assert.equal(killAi.rechargeRmb, 1);
   assert.equal(killAi.rechargeCurrency, "CNY");
   assert.equal(killAi.rechargeCredits, 1);
@@ -1864,6 +2052,14 @@ test("injects every registry preset and forwards the exchange rate", () => {
   assert.equal(killAi.priceCurrency, "USD");
   assert.equal(killAi.priceCurrencyVerified, true);
   assert.equal(normalizeStation(killAi).rechargeRateVerified, false);
+  const maolao = added.find(station => station.id === "maolaoapi");
+  assert.equal(maolao.rechargeRmb, 1.03);
+  assert.equal(maolao.rechargeCredits, 1);
+  assert.equal(maolao.rechargeRateVerified, true);
+  assert.equal(maolao.priceCurrency, "CREDITS");
+  assert.deepEqual(normalizeStation(maolao).rechargeTiers.map(tier => [tier.amount, tier.discount]), [
+    [10, 1], [20, 1], [50, 1], [100, 1], [200, 0.98], [500, 0.95], [1000, 0.9]
+  ]);
 });
 test("allocates a unique preset id when an existing station uses the provider id", () => {
   const stations = addProviderStationPresets([{ id: "dddai", baseUrl: "https://other.example" }], PROVIDER_REGISTRY);
@@ -1972,6 +2168,24 @@ test("normalizes Hepingan channel prices from an authenticated page capture", as
   pageFetch.supportsCapture = true;
   const snapshot = await collectStationInput(station, { pageFetch });
   assert.equal(captureCount, 1);
+  const collection = resolveStationCollection(station);
+  assert.equal(collection.request.credentials, "include");
+  assert.equal(collection.request.pageAuth.storageKey, "auth_token");
+  assert.equal(collection.request.pageAuth.header, "Authorization");
+  assert.equal(collection.request.pageAuth.scheme, "Bearer");
+  assert.deepEqual(collection.request.pageAuth.sessionFailureStatuses, [401]);
+  assert.deepEqual(collection.request.pageAuth.refresh, {
+    endpoint: "/api/v1/auth/refresh",
+    credentials: "same-origin",
+    requestTokenKey: "refresh_token",
+    responsePath: "data",
+    accessTokenKey: "access_token",
+    refreshTokenStorageKey: "refresh_token",
+    refreshTokenKey: "refresh_token",
+    expiresInKey: "expires_in",
+    expiresAtStorageKey: "token_expires_at",
+    statuses: [401]
+  });
   assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.data[0].model_name, "gpt-4o");
   assert.equal(snapshot.normalized.data[0].input_price, 1);
@@ -2551,8 +2765,11 @@ test("normalizes Sidrune model-plaza public pricing", () => {
   assert.ok(Math.abs(defaultModel.cache_read_price - 0.4) < 1e-12);
   assert.equal(promoModel.input_price, 3);
   assert.equal(promoModel.group_ratio, 1.5);
-  assert.equal(imageModel.tier_name, "1K");
-  assert.ok(Math.abs(imageModel.request_price - 0.225) < 1e-12);
+  // 按张的价落在 image_price 上，走 media_type 分榜；request_price 只留按次计费的站点。
+  assert.equal(imageModel.size_tier, "1K");
+  assert.equal(imageModel.media_type, "image");
+  assert.ok(Math.abs(imageModel.image_price - 0.225) < 1e-12);
+  assert.equal(imageModel.request_price, null);
 });
 
 test("reads native fetch JSON bodies before normalizing", async () => {
@@ -2727,17 +2944,17 @@ test("collects SevenAI public model-plaza intervals as comparable CREDITS", asyn
   assert.deepEqual(blankGroupRate.unpricedModels, ["GROK:grok-4.5:default"]);
 });
 
-test("adapts KillAI pricing through the logged-in page", async () => {
+test("adapts KillAI pricing to a cookie session without a page", async () => {
   const preset = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], PROVIDER_REGISTRY)
     .find(station => station.baseUrl === "https://api.killai.cc/pricing");
   assert.ok(preset);
-  assert.equal(preset.mode, "page");
+  assert.equal(preset.mode, "direct");
   assert.equal(preset.priceCurrency, "USD");
   assert.equal(preset.priceCurrencyVerified, true);
   assert.equal(preset.rechargeRateVerified, false);
 
   const adapter = inferStationAdapter({ baseUrl: preset.baseUrl });
-  assert.equal(adapter.mode, "page");
+  assert.equal(adapter.mode, "direct");
   assert.equal(adapter.endpoint, "/api/pricing");
   assert.equal(adapter.method, "GET");
   assert.equal(adapter.responseFormat, "pqh");
@@ -2748,11 +2965,19 @@ test("adapts KillAI pricing through the logged-in page", async () => {
     auth: { type: "bearer", token: "must-not-be-sent" }
   });
   assert.equal(prepared.baseUrl, "https://api.killai.cc/pricing");
-  assert.equal(prepared.mode, "page");
+  assert.equal(prepared.mode, "direct");
   assert.equal(prepared.auth.type, "none");
   assert.equal(prepared.priceCurrency, "USD");
   assert.equal(prepared.priceCurrencyVerified, true);
   assert.equal(prepared.rechargeRateVerified, false);
+
+  const resolved = resolveStationCollection({ id: "station-killai", name: "KillAI", baseUrl: "https://api.killai.cc/pricing" });
+  assert.equal(resolved.request.pageAuth, null);
+  assert.equal(resolved.request.credentials, "omit");
+  assert.equal(resolved.request.cookieAuth.cookieName, "new_api_refresh");
+  assert.equal(resolved.request.cookieAuth.refreshPath, "/api/user/auth/refresh");
+  assert.equal(resolved.request.cookieAuth.accessTokenPath, "data.access_token");
+  assert.equal(resolved.request.cookieAuth.expiresAtPath, "data.access_expires_at");
 
   let request;
   const snapshot = await collectStationInput({
@@ -2761,33 +2986,14 @@ test("adapts KillAI pricing through the logged-in page", async () => {
     baseUrl: "https://api.killai.cc/pricing",
     auth: { type: "bearer", token: "must-not-be-sent" }
   }, {
-    pageFetch: async value => {
-      request = value;
+    fetchImpl: async (url, options) => {
+      request = { url, ...options };
       return response(killAiPricingFixture);
     }
   });
   assert.equal(request.url, "https://api.killai.cc/api/pricing");
   assert.equal(request.headers.Authorization, undefined);
-  assert.equal(request.pageAuth.source, "localStorage");
-  assert.equal(request.pageAuth.storageKey, "auth_token");
-  assert.equal(request.pageAuth.header, "Authorization");
-  assert.equal(request.pageAuth.scheme, "Bearer");
-  assert.equal(request.pageAuth.refresh.endpoint, "/api/user/auth/refresh");
-  assert.equal(request.pageAuth.refresh.cookieOnly, true);
-  assert.equal(request.pageAuth.refresh.responsePath, "data");
   assert.equal(snapshot.status, "success");
-  assert.equal(snapshot.normalized.sourceFormat, "new-api-pricing");
-  assert.equal(snapshot.normalized.data[0].price_currency, "USD");
-  assert.equal(snapshot.normalized.group_ratio["ChatGPT Pro"], 0.16);
-  const standard = snapshot.normalized.data.find(row => row.tier_name === "standard");
-  const longContext = snapshot.normalized.data.find(row => row.tier_name === "long_context");
-  assert.ok(standard);
-  assert.ok(longContext);
-  assert.ok(Math.abs(standard.input_price - 0.16) < 1e-12);
-  assert.ok(Math.abs(standard.output_price - 0.8) < 1e-12);
-  assert.ok(Math.abs(longContext.input_price - 0.32) < 1e-12);
-  assert.equal(standard.proxy_group_name, "ChatGPT Pro");
-  assert.equal(snapshot.priceCurrencyVerified, true);
 
   const station = { ...preset, id: "station-killai-unverified" };
   const comparisonSnapshot = { ...snapshot, stationId: station.id };
@@ -2870,6 +3076,12 @@ test("adapts all-in-one.icu page auth and token/tiered pricing", async () => {
   assert.equal(perRequest.request_price, 0.05);
   assert.equal(perRequest.input_price, null);
   assert.equal(perRequest.output_price, null);
+  // special = 视频按秒计价，每个分辨率档一行
+  const video = snapshot.normalized.data.filter(row => row.model_name === "all-video-model");
+  assert.deepEqual(video.map(row => [row.tier_name, row.request_price, row.media_type]), [
+    ["480P", 0.3, "video"], ["768P", 0.35, "video"]
+  ]);
+  assert.equal(video.every(row => row.input_price === null), true);
   assert.equal(snapshot.normalized.unsupportedBillingModes, undefined);
   assert.equal(snapshot.normalized.invalidPricingValues, undefined);
   assert.deepEqual(snapshot.normalized.unpricedModels, ["all-missing:default"]);
@@ -2881,6 +3093,16 @@ test("keeps all-in-one invalid prices in partial diagnostics", () => {
   const normalized = normalizePricingPayload(payload, "all-in-one-models");
   assert.equal(normalized.incomplete, true);
   assert.deepEqual(normalized.invalidPricingValues, ["all-invalid:default"]);
+  assert.deepEqual(normalized.data, []);
+});
+
+test("reports all-in-one special models that carry no per-second prices", () => {
+  const normalized = normalizePricingPayload({
+    code: 0,
+    data: { list: [{ model_id: "all-special-empty", billing_mode: "special", per_second_prices: { "2K": 0 } }] }
+  }, "all-in-one-models");
+  assert.equal(normalized.incomplete, true);
+  assert.deepEqual(normalized.unsupportedBillingModes, ["special"]);
   assert.deepEqual(normalized.data, []);
 });
 
@@ -2940,14 +3162,14 @@ test("adapts the TokenFlux pricing API and station preset", async () => {
   assert.equal(request.init.method, "GET");
   assert.equal(request.init.credentials, "omit");
   assert.equal(request.init.headers.Authorization, undefined);
-  assert.equal(snapshot.status, "partial");
+  assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
   assert.deepEqual(snapshot.normalized.group_ratio, {
     default: 1, Gork: 0.5, MIMO: 0.5, "Codex号池": 0.2,
     "Claude Code 特惠": 0.2, "绘图模型": 1, "[稳定]Codex号池": 0.2, "[特价]Codex号池": 0.2
   });
-  assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["tiered_expr"]);
-  assert.equal(snapshot.normalized.incomplete, true);
+  assert.equal(snapshot.normalized.unsupportedBillingModes, undefined);
+  assert.equal(snapshot.normalized.incomplete, undefined);
 
   const flash = snapshot.normalized.data.find(row => row.model_name === "deepseek-v4-flash");
   assert.ok(flash);
@@ -2959,8 +3181,25 @@ test("adapts the TokenFlux pricing API and station preset", async () => {
   assert.equal(flash.proxy_group_name, "default");
   assert.equal(flash.group_ratio, 1);
 
-  const tiered = snapshot.normalized.data.find(row => row.model_name === "gpt-5.6-latitude");
-  assert.equal(tiered, undefined);
+  const tiered = snapshot.normalized.data.filter(row => row.model_name === "gpt-5.6-latitude");
+  assert.equal(tiered.length, 4);
+  const standard = tiered.find(row => row.proxy_group_name === "default" && row.tier_name === "standard");
+  assert.ok(standard);
+  assert.equal(standard.input_price, 5);
+  assert.equal(standard.output_price, 30);
+  assert.equal(standard.cache_read_price, 0.5);
+  assert.equal(standard.cache_write_price, 6.25);
+  assert.equal(standard.min_tokens, 0);
+  assert.equal(standard.max_tokens, 272000);
+  const longContext = tiered.find(row => row.proxy_group_name === "default" && row.tier_name === "long_context");
+  assert.ok(longContext);
+  assert.equal(longContext.input_price, 10);
+  assert.equal(longContext.min_tokens, 272001);
+  assert.equal(longContext.max_tokens, undefined);
+  const pooled = tiered.find(row => row.proxy_group_name === "Codex号池" && row.tier_name === "standard");
+  assert.ok(pooled);
+  assert.equal(pooled.input_price, 1);
+  assert.equal(Number(pooled.output_price.toFixed(6)), 6);
 
   const image = snapshot.normalized.data.find(row => row.model_name === "gpt-image-2.5");
   assert.ok(image);
@@ -3020,10 +3259,10 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   assert.equal(request.init.credentials, "omit");
   assert.equal(request.init.headers.Authorization, undefined);
   assert.equal(request.init.headers["X-API-Key"], undefined);
-  assert.equal(snapshot.status, "partial");
+  assert.equal(snapshot.status, "success");
   assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
-  assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["tiered_expr"]);
-  assert.equal(snapshot.normalized.incomplete, true);
+  assert.equal(snapshot.normalized.unsupportedBillingModes, undefined);
+  assert.equal(snapshot.normalized.incomplete, undefined);
 
   const token = snapshot.normalized.data.find(row => row.model_name === "centos-token");
   assert.ok(token);
@@ -3053,7 +3292,37 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   assert.equal(image.request_price, null);
   assert.equal(image.input_price, null);
   assert.equal(image.output_price, null);
-  assert.equal(snapshot.normalized.data.some(row => row.model_name === "centos-tiered"), false);
+  // tiered_expr 现在能解析：系数档、长度分档、按次、按张、时段折扣各走一条路径。
+  const tiered = snapshot.normalized.data.filter(row => row.model_name === "centos-tiered");
+  assert.equal(tiered.length, 1);
+  assert.equal(tiered[0].tier_name, "standard");
+  assert.equal(tiered[0].input_price, 1);
+  assert.equal(tiered[0].output_price, 2);
+  assert.equal(tiered[0].min_tokens, undefined);
+  assert.equal(tiered[0].max_tokens, undefined);
+
+  const bounded = snapshot.normalized.data.filter(row => row.model_name === "centos-tiered-bounded");
+  assert.deepEqual(bounded.map(row => [row.tier_name, row.input_price, row.min_tokens, row.max_tokens]), [
+    ["输入<=32k", 4, 0, 32768],
+    ["32k<输入<=200k", 6, 32769, undefined]
+  ]);
+
+  const perRequest = snapshot.normalized.data.filter(row => row.model_name === "centos-tiered-request");
+  assert.equal(perRequest.length, 1);
+  assert.equal(perRequest[0].request_price, 0.08);
+  assert.equal(perRequest[0].input_price, null);
+
+  const perImage = snapshot.normalized.data.filter(row => row.model_name === "centos-tiered-image");
+  assert.equal(perImage.length, 1);
+  assert.equal(perImage[0].image_price, 0.014);
+  assert.equal(perImage[0].request_price, null);
+  assert.equal(perImage[0].media_type, "image");
+
+  const night = snapshot.normalized.data.filter(row => row.model_name === "centos-tiered-night");
+  assert.equal(night.length, 1);
+  assert.equal(night[0].input_price, 3);
+  assert.equal(night[0].tier_time_discount, 0.5);
+  assert.match(night[0].tier_time_condition, /hour\("Asia\/Shanghai"\) >= 22/);
 
   assert.equal(snapshot.rechargeRateVerified, false);
   const comparisonStation = normalizeStation({
@@ -3087,6 +3356,70 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   assert.equal(addProviderStationPresets([], [providerById("centos")]).length, 1);
   const conflict = addProviderStationPresets([{ id: "centos", baseUrl: "https://relay.example" }], [providerById("centos")]);
   assert.equal(conflict[1].id, "centos-2");
+});
+
+test("adapts maolaoapi's public pricing API and its recharge tiers", async () => {
+  const fixture = {
+    success: true,
+    pricing_version: "maolao-fixture",
+    group_ratio: { default: 1, "Codex-Pro": 0.4 },
+    usable_group: { default: "默认分组", "Codex-Pro": "Codex-Pro" },
+    data: [
+      { model_name: "maolao-token", quota_type: 0, model_ratio: 1, completion_ratio: 4, model_price: 0, enable_groups: ["default"] },
+      {
+        model_name: "maolao-tiered",
+        quota_type: 0,
+        model_ratio: 0,
+        completion_ratio: 1,
+        model_price: 0,
+        enable_groups: ["default"],
+        billing_mode: "tiered_expr",
+        billing_expr: 'len < 200000 ? tier("标准费率", p * 2 + c * 6) : tier("长上下文", p * 4 + c * 12)'
+      }
+    ]
+  };
+
+  const provider = providerForStation({ baseUrl: "https://maolaoapi.com/pricing" });
+  assert.equal(provider.id, "maolaoapi");
+  assert.equal(providerForStation({ baseUrl: "https://maolaoapi.com/console/topup" }).id, "maolaoapi");
+  assert.equal(providerForStation({ baseUrl: "https://maolaoapi.com/docs" }), null);
+
+  const prepared = prepareStationInput({ baseUrl: "https://maolaoapi.com/pricing", auth: { type: "api-key", token: "must-not-be-sent" } });
+  assert.equal(prepared.mode, "direct");
+  assert.deepEqual(prepared.auth, { type: "none" });
+  assert.equal(prepared.adapter.endpoint, "/api/pricing");
+  assert.equal(prepared.adapter.responseFormat, "tokenflux");
+  assert.equal(prepared.priceCurrency, "CREDITS");
+  assert.equal(prepared.priceCurrencyVerified, true);
+  assert.equal(prepared.rechargeRateVerified, true);
+  const presetStation = normalizeStation(addProviderStationPresets([], [providerById("maolaoapi")])[0]);
+  assert.equal(presetStation.rechargeRate, 1.03);
+  assert.deepEqual(presetStation.rechargeTiers.map(tier => [tier.amount, tier.discount]), [
+    [10, 1], [20, 1], [50, 1], [100, 1], [200, 0.98], [500, 0.95], [1000, 0.9]
+  ]);
+
+  let request;
+  const snapshot = await collectStationInput({ id: "station-maolao", baseUrl: "https://maolaoapi.com/pricing" }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response(fixture);
+    }
+  });
+  assert.equal(request.url, "https://maolaoapi.com/api/pricing");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(request.init.headers.Authorization, undefined);
+  assert.equal(snapshot.status, "success");
+
+  const token = snapshot.normalized.data.find(row => row.model_name === "maolao-token");
+  assert.equal(token.input_price, 1);
+  assert.equal(token.output_price, 4);
+  assert.equal(token.price_currency, "CREDITS");
+  // 长度分档的 billing_expr 拆成两行，标准档按 p*2 / c*6 折算。
+  const tiered = snapshot.normalized.data.filter(row => row.model_name === "maolao-tiered");
+  assert.deepEqual(tiered.map(row => [row.tier_name, row.input_price, row.output_price, row.max_tokens]), [
+    ["标准费率", 2, 6, 200000],
+    ["长上下文", 4, 12, undefined]
+  ]);
 });
 
 test("adapts WindHub's verified public pricing contract and keeps anonymous requests", async () => {
@@ -3391,7 +3724,7 @@ test("scopes confirmed model overrides by station", () => {
   assert.deepEqual(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-b", overrides: override }), []);
 });
 
-test("indexed model matcher preserves rule priority, suffixes, versions, fuzzy matches, and override scope", () => {
+test("indexed model matcher ignores legacy rule settings and keeps override scope", () => {
   const official = [
     { id: "openai/gpt-4o", name: "openai/gpt-4o", aliases: ["gpt-4o"] },
     { id: "duplicate-gpt-4o", name: "gpt-4o" },
@@ -3400,21 +3733,21 @@ test("indexed model matcher preserves rule priority, suffixes, versions, fuzzy m
   ];
   const overrides = [{ stationId: "station-a", modelName: "relay-sonnet", officialModelId: "anthropic/claude-3.7-sonnet" }];
   const index = buildModelMatchIndex(official, overrides, { canonicalIndex: null });
-  const rules = [
-    { id: "exact", enabled: true },
+  const legacyRules = [
+    { id: "exact", enabled: false },
     { id: "suffix", enabled: true },
     { id: "ignore_version", enabled: true },
     { id: "fuzzy", enabled: true }
   ];
-  const cases = [
-    ["gpt-4o", [["openai/gpt-4o", "exact"], ["duplicate-gpt-4o", "exact"]]],
-    ["custom-claude-3.7-sonnet", [["anthropic/claude-3.7-sonnet", "suffix"]]],
-    ["gemini-2.0-flash-20260220", [["google/gemini-2.0-flash", "ignore_version"]]],
-    ["xclaude-3.7-sonnetx", [["anthropic/claude-3.7-sonnet", "fuzzy"]]]
-  ];
-  for (const [name, expected] of cases) {
-    assert.deepEqual(matchModel(name, official, rules, index).map(({ match, ruleId }) => [match.id, ruleId]), expected);
-  }
+
+  assert.deepEqual(matchModel("gpt-4o", official, legacyRules, index).map(({ match, ruleId }) => [match.id, ruleId]), [
+    ["openai/gpt-4o", "exact"],
+    ["duplicate-gpt-4o", "exact"]
+  ]);
+  assert.deepEqual(matchModel("custom-claude-3.7-sonnet", official, legacyRules, index), []);
+  assert.deepEqual(matchModel("gemini-2.0-flash-20260220", official, legacyRules, index), []);
+  assert.deepEqual(matchModel("xclaude-3.7-sonnetx", official, legacyRules, index), []);
+  assert.deepEqual(normalizeSettings({ matchingRules: legacyRules }).matchingRules, legacyRules);
   assert.equal(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-a", overrides, index })[0].ruleId, "manual");
   assert.deepEqual(matchModelWithOverrides("relay-sonnet", official, { stationId: "station-b", overrides, index }), []);
 });
@@ -3441,7 +3774,7 @@ test("canonical layer unifies relay spellings before the legacy rules", () => {
     assert.equal(result.canonical.id, canonicalKey(expected));
   }
   assert.deepEqual(matchModel("unknown-relay-model", official, rules, index), []);
-  assert.deepEqual(matchModel("GLM-5.3", official, [{ id: "exact", enabled: false }], index), []);
+  assert.equal(matchModel("GLM-5.3", official, [{ id: "exact", enabled: false }], index)[0].ruleId, "canonical");
 });
 
 test("canonical helpers normalize paths, decorations, and vendor prefixes", () => {
@@ -3459,6 +3792,20 @@ test("pagination keeps every quote reachable while bounding each page", () => {
   assert.deepEqual(pages.flatMap(page => page.rows), rows);
   assert.equal(paginateRows(rows, 99, 100).page, 2);
   assert.deepEqual(paginateRows([], 0, 100), { page: 0, pageCount: 0, rows: [] });
+});
+
+test("page jump input accepts typed pages and clamps them into range", () => {
+  assert.equal(parsePageInput("3", 59), 2);
+  assert.equal(parsePageInput(" 12 ", 59), 11);
+  assert.equal(parsePageInput("999", 59), 58);
+  assert.equal(parsePageInput("0", 59), 0);
+  assert.equal(parsePageInput("-4", 59), 0);
+  assert.equal(parsePageInput("2.7", 59), 1);
+  assert.equal(parsePageInput("", 59), null);
+  assert.equal(parsePageInput("   ", 59), null);
+  assert.equal(parsePageInput("abc", 59), null);
+  assert.equal(parsePageInput(null, 59), null);
+  assert.equal(parsePageInput("5", 0), 0);
 });
 
 test("reads the newest usable snapshot per station and keeps station reads indexed", async () => {
@@ -4053,6 +4400,49 @@ test("closes a temporary FastAIToken tab when page loading fails", async () => {
   };
   await assert.rejects(findOrOpenPageTab(tabs, { baseUrl: "https://fastaitoken.com/available-channels" }), /tab lookup failed/);
   assert.deepEqual(removed, [42]);
+});
+
+// 站点一次导航失败时 Chrome 会停在错误页上，注入前要重载一次，不然只会报
+// `Frame with ID 0 is showing error page`，用户看不出是网络问题。
+test("reloads a temporary tab that landed on a Chrome error page", async () => {
+  const listeners = [];
+  let reloads = 0;
+  const tabs = {
+    query: async () => [],
+    create: async () => ({ id: 46, status: "loading" }),
+    get: async () => reloads
+      ? { id: 46, url: "https://fastaitoken.com/available-channels", status: "complete" }
+      : { id: 46, url: "chrome-error://chromewebdata/", status: "complete" },
+    reload: async tabId => {
+      reloads += 1;
+      for (const listener of [...listeners]) listener(tabId, { status: "complete" });
+    },
+    remove: async () => {},
+    onUpdated: { addListener: listener => listeners.push(listener), removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { baseUrl: "https://fastaitoken.com/available-channels", mode: "page" });
+  assert.equal(reloads, 1);
+  assert.equal(result.temporary, true);
+  assert.equal(result.tab.url, "https://fastaitoken.com/available-channels");
+});
+
+test("reports an unreachable site and closes the tab when the error page persists", async () => {
+  const listeners = [];
+  const removed = [];
+  const tabs = {
+    query: async () => [],
+    create: async () => ({ id: 47, status: "loading" }),
+    get: async tabId => ({ id: tabId, url: "chrome-error://chromewebdata/", status: "complete" }),
+    reload: async tabId => {
+      for (const listener of [...listeners]) listener(tabId, { status: "complete" });
+    },
+    remove: async tabId => removed.push(tabId),
+    onUpdated: { addListener: listener => listeners.push(listener), removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  await assert.rejects(findOrOpenPageTab(tabs, { baseUrl: "https://all-in-one.icu/#/tenant/models", mode: "page" }), /采集页面加载失败/);
+  assert.deepEqual(removed, [47]);
 });
 
 
@@ -4712,11 +5102,41 @@ test("provides configurable dashboard pagination and back-to-top controls", () =
   assert.match(css, /\.comparison-pagination\s*\{[^}]*flex-wrap:\s*wrap/);
   assert.match(source, /paginateRows\(filtered, state\.page, Number\(\$\("#page-size"\)\.value\) \|\| PAGE_SIZE\)/);
   assert.match(source, /\$\("#page-size"\)\.addEventListener\("change"/);
+  // 页码本身就是输入框：第 [1] / 59 页，不再单独放「跳至」框。
+  assert.match(html, /id="comparison-page-input" type="number"/);
+  assert.match(html, /class="page-indicator"[^>]*>.*?<span>第<\/span>.*?id="comparison-page-input"/);
+  assert.match(html, /id="comparison-page-total"/);
+  assert.doesNotMatch(html, /page-jump-field/);
+  assert.match(source, /\$\("#comparison-page-total"\)\.textContent = String\(Math\.max\(1, page\.pageCount\)\)/);
+  assert.match(source, /\$\("#comparison-page-input"\)\.addEventListener\("change", commitPageInput\)/);
+  assert.match(source, /input\.max = String\(Math\.max\(1, state\.pageCount\)\)/);
+  assert.match(source, /\$\("#comparison-page-input"\)\.addEventListener\("blur", commitPageInput\)/);
+  assert.match(source, /event\.key === "Enter"/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /parsePageInput\(\$\("#comparison-page-input"\)\.value, state\.pageCount\)/);
   assert.match(html, /id="back-to-top"[^>]*aria-label="回到顶部"/);
   assert.match(html, /id="back-to-top"[^>]*>.*?data-icon="arrow-up"/);
   assert.match(icon("arrow-up"), /<path d="M12 19V5"\/>/);
   assert.match(source, /window\.addEventListener\("scroll"/);
   assert.match(source, /backToTop\.addEventListener\("click"/);
+});
+
+test("every data-icon used by the pages resolves to its own glyph", () => {
+  const fallback = icon("circle-help");
+  const missing = [];
+  for (const page of ["dashboard.html", "options.html"]) {
+    const html = readFileSync(new URL(`../${page}`, import.meta.url), "utf8");
+    for (const [, name] of html.matchAll(/data-icon="([^"]+)"/g)) {
+      if (name !== "circle-help" && icon(name) === fallback) missing.push(`${page}:${name}`);
+    }
+  }
+  for (const file of ["../src/dashboard.js", "../src/options.js"]) {
+    const source = readFileSync(new URL(file, import.meta.url), "utf8");
+    for (const [, name] of source.matchAll(/icon\("([^"]+)"/g)) {
+      if (name !== "circle-help" && icon(name) === fallback) missing.push(`${file}:${name}`);
+    }
+  }
+  assert.deepEqual([...new Set(missing)], []);
 });
 
 test("pages the model-assist review queue with the shared pager", () => {

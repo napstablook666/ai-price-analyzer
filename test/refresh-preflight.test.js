@@ -425,7 +425,7 @@ test("GET_DASHBOARD compares false and missing recharge verification at 1:1", as
 test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, and does not collect or write snapshots", async () => {
   const stations = [
     { id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" },
-    { id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" },
+    { id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" },
     { id: "aiapi", name: "AIAPI", baseUrl: "https://cn.aiapi.bot/dashboard/model-prices", enabled: true, mode: "page" },
     { id: "cun", name: "CUN", baseUrl: "https://cun.ai/pricing", enabled: true, mode: "page" },
     { id: "custom-page", name: "Custom page", baseUrl: "https://custom-page.example/pricing", enabled: true, mode: "page" },
@@ -437,7 +437,7 @@ test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, 
     existingTabs: [{ id: 7, url: "https://cun.ai/pricing", status: "complete" }],
     pageResponses: {
       "www.fastaitoken.com": { ok: true, status: 200, body: { data: [{ model_name: "probe-only" }] } },
-      "api.killai.cc": { ok: false, status: 401, body: { message: "Unauthorized" } },
+      "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } },
       "cn.aiapi.bot": { ok: false, status: 503, body: { message: "gateway unavailable" } },
       "cun.ai": { ok: true, status: 200, body: { data: [] } }
     }
@@ -445,7 +445,7 @@ test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, 
     const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
     const byId = new Map(preflight.results.map(result => [result.stationId, result]));
     assert.equal(byId.get("fastai").status, "ready");
-    assert.equal(byId.get("killai").status, "needsLogin");
+    assert.equal(byId.get("hepingan").status, "needsLogin");
     assert.equal(byId.get("aiapi").status, "uncertain");
     assert.equal(byId.get("cun").status, "ready");
     assert.equal(byId.get("cun").tabId, 7);
@@ -456,10 +456,10 @@ test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, 
     assert.equal(worker.created.length, 3);
     assert.equal(worker.pageRequests.length, 4);
     assert.ok(worker.pageRequests.every(request => request.method === "GET" && request.body === undefined));
-    assert.equal(worker.pageRequests.find(request => request.url.includes("killai.cc")).pageAuth.refresh, undefined);
+    assert.equal(worker.pageRequests.find(request => request.url.includes("api.hepingan.top")).pageAuth.refresh, undefined);
     assert.equal(worker.created.some(tab => tab.url.includes("dddai.dev") || tab.url.includes("cun.ai")), false);
     assert.equal(worker.removed.includes(7), false);
-    assert.equal(byId.get("killai").tabId, worker.created[1].id);
+    assert.equal(byId.get("hepingan").tabId, worker.created[1].id);
     assert.equal(byId.get("aiapi").tabId, worker.created[2].id);
     assert.deepEqual([...stores.snapshots.values()], beforeSnapshots);
     assert.equal(worker.runtimeMessages.some(message => message.type === "REFRESH_PROGRESS"), false);
@@ -531,10 +531,10 @@ test("warns scheduled check-in failures without escaping the alarm event", async
   assert.match(String(warnings[0][0]), /定时签到失败/);
 });
 test("stale preflight cleans a temporary tab invalidated before loading completes", { concurrency: false }, async () => {
-  const station = { id: "early-race-page", name: "Early race page", category: "paid", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
+  const station = { id: "early-race-page", name: "Early race page", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
   await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
     deferTabLoad: true,
-    pageResponses: { "api.killai.cc": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } }
+    pageResponses: { "api.hepingan.top": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } }
   }, async worker => {
     const staleRequest = worker.send("REFRESH_PREFLIGHT");
     await waitFor(() => worker.created.length === 1);
@@ -574,10 +574,10 @@ test("stale preflight does not close a reused temporary tab", { concurrency: fal
   let requestCount = 0;
   let releaseProbe;
   const probe = new Promise(resolve => { releaseProbe = resolve; });
-  const station = { id: "reuse-page", name: "Reused temporary tab", category: "paid", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
+  const station = { id: "reuse-page", name: "Reused temporary tab", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
   await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
     pageResponseHandlers: {
-      "api.killai.cc": () => {
+      "api.hepingan.top": () => {
         requestCount += 1;
         return requestCount === 1 ? probe : { ok: true, status: 200, body: { data: [{ model_name: "new-preflight" }] } };
       }
@@ -639,9 +639,9 @@ test("REFRESH_ALL requires live explicit confirmation, rejects expired or cancel
 test("stale async preflight cannot republish after a comparison-mode change", async () => {
   let releaseProbe;
   const probe = new Promise(resolve => { releaseProbe = resolve; });
-  const station = { id: "race-page", name: "Race page", category: "paid", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
+  const station = { id: "race-page", name: "Race page", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
   await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-    pageResponseHandlers: { "api.killai.cc": () => probe }
+    pageResponseHandlers: { "api.hepingan.top": () => probe }
   }, async worker => {
     const staleRequest = worker.send("REFRESH_PREFLIGHT");
     await waitFor(() => worker.pageRequests.length === 1);
@@ -769,14 +769,14 @@ test("concurrent REFRESH_ALL requests cannot consume one confirmation twice", as
 });
 
 test("tab removal clears preflight ownership before a same-id user tab is reused", async () => {
-  const station = { id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
-  await withWorker({ stations: [station] }, { pageResponses: { "api.killai.cc": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
+  const station = { id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
+  await withWorker({ stations: [station] }, { pageResponses: { "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
     const tabId = first.results[0].tabId;
     assert.ok(Number.isInteger(tabId));
     worker.removeUserTab(tabId);
     worker.addUserTab({ id: tabId, url: station.baseUrl, status: "complete" });
-    worker.pageResponses["api.killai.cc"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
+    worker.pageResponses["api.hepingan.top"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
 
     const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
     assert.equal(second.results[0].status, "ready");
@@ -786,14 +786,14 @@ test("tab removal clears preflight ownership before a same-id user tab is reused
 });
 
 test("restored tab ownership is cleared when a tab closes while the worker is cold", async () => {
-  const station = { id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" };
-  await withWorker({ stations: [station] }, { pageResponses: { "api.killai.cc": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
+  const station = { id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
+  await withWorker({ stations: [station] }, { pageResponses: { "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
     const tabId = first.results[0].tabId;
     await worker.reboot();
     await worker.removeUserTab(tabId);
     worker.addUserTab({ id: tabId, url: station.baseUrl, status: "complete" });
-    worker.pageResponses["api.killai.cc"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
+    worker.pageResponses["api.hepingan.top"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
 
     const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
     assert.equal(second.results[0].status, "ready");
@@ -826,20 +826,20 @@ test("REFRESH_ALL collects from the prepared station state validated at confirma
 });
 
 test("restores preflight confirmation and temporary tab ownership after a service-worker restart", async () => {
-  const stations = [{ id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/model-plaza?embedded=1", enabled: true, mode: "page" }];
-  await withWorker({ stations }, { pageResponses: { "api.killai.cc": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
+  const stations = [{ id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" }];
+  await withWorker({ stations }, { pageResponses: { "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
     responseData(await worker.send("GET_DASHBOARD"));
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    const killAiTab = first.results.find(result => result.stationId === "killai").tabId;
+    const killAiTab = first.results.find(result => result.stationId === "hepingan").tabId;
     assert.ok(Number.isInteger(killAiTab));
 
     await worker.reboot();
     const dashboard = responseData(await worker.send("GET_DASHBOARD"));
     assert.equal(dashboard.refreshPreflight.token, first.token);
 
-    worker.pageResponses["api.killai.cc"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
+    worker.pageResponses["api.hepingan.top"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
     const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    assert.equal(second.results.find(result => result.stationId === "killai").status, "ready");
+    assert.equal(second.results.find(result => result.stationId === "hepingan").status, "ready");
     assert.ok(worker.removed.includes(killAiTab));
   });
 });
