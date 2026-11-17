@@ -17,7 +17,7 @@
   <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-%E5%9C%A8%E7%BA%BF-4F46E5?style=flat-square" alt="在线文档"></a>
 </p>
 
-同一个模型在几十家中转站有十几种写法，充值比例、分组倍率、缓存价各算各的，翻价目页比价既慢又容易算错。AI Price Analyzer 是 Chromium Manifest V3 扩展：从你添加的站点采集价目，把站内写法收敛到统一的模型身份，再按你填的用量算出月成本和相对官方价的差距。没有服务端，没有打包器，仓库根目录加载进浏览器就能跑。
+同一个模型在几十家中转站有十几种写法，充值比例、分组倍率、缓存价各算各的，翻价目页比价既慢又容易算错。AI Price Analyzer 是 Chromium Manifest V3 扩展：从你添加的站点采集价目，把站内写法收敛到统一的模型身份，再按你填的用量算出月成本和相对基准价的差距。没有服务端，没有打包器，仓库根目录加载进浏览器就能跑。
 
 ## 预览
 

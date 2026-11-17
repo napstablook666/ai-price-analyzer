@@ -16,7 +16,7 @@
       <span class="brand-copy"><span class="brand-overline">MODEL ATLAS</span><strong>价格对比</strong></span>
     </a>
     <nav class="top-actions" aria-label="页面操作">
-      <span class="system-readout" id="freshness-readout"><span class="status-dot" id="connection-dot"></span><span id="last-updated">尚未刷新</span><span class="readout-sep" id="freshness-sep" aria-hidden="true" hidden>·</span><span class="reference-status" id="reference-pill" hidden><span class="status-dot" id="reference-dot"></span><span id="reference-status">官方价未加载</span><span class="reference-time" id="reference-note"></span></span></span>
+      <span class="system-readout" id="freshness-readout"><span class="status-dot" id="connection-dot"></span><span id="last-updated">尚未刷新</span><span class="readout-sep" id="freshness-sep" aria-hidden="true" hidden>·</span><span class="reference-status" id="reference-pill" hidden><span class="status-dot" id="reference-dot"></span><span id="reference-status">基准价未加载</span><span class="reference-time" id="reference-note"></span></span></span>
       <div class="comparison-mode" role="group" aria-label="比较来源">
         <button class="comparison-mode-button is-active" type="button" data-comparison-mode="paid" aria-pressed="true">付费中转站</button>
         <button class="comparison-mode-button" type="button" data-comparison-mode="public" aria-pressed="false">公益站</button>
@@ -95,12 +95,12 @@
             <section class="toolbar-section" aria-labelledby="toolbar-sort-title">
               <h3 id="toolbar-sort-title">排序</h3>
               <div class="sort-grid">
-                <label class="select-field sort-field"><span class="sr-only">排序方式</span><span data-icon="arrow-down-up" class="icon"></span><select id="sort-by"><option value="groupName">分组</option><option value="provider" data-paid-only="true">官方源</option><option value="model">模型名称</option><option value="monthlyCost" data-paid-only="true">月成本</option><option value="blendedUnitPrice" data-paid-only="true" data-media-modes="text" selected>折算单价</option><option value="mediaUnitPrice" data-paid-only="true" data-media-modes="image video">单位价格</option><option value="diffPercent" data-paid-only="true">价差</option><option value="confidenceScore">匹配置信度</option></select></label>
+                <label class="select-field sort-field"><span class="sr-only">排序方式</span><span data-icon="arrow-down-up" class="icon"></span><select id="sort-by"><option value="groupName">分组</option><option value="provider" data-paid-only="true">供应商</option><option value="model">模型名称</option><option value="monthlyCost" data-paid-only="true">月成本</option><option value="blendedUnitPrice" data-paid-only="true" data-media-modes="text" selected>折算单价</option><option value="mediaUnitPrice" data-paid-only="true" data-media-modes="image video">单位价格</option><option value="diffPercent" data-paid-only="true">价差</option><option value="confidenceScore">匹配置信度</option></select></label>
                 <label class="select-field direction-field"><span class="sr-only">排序方向</span><select id="sort-direction"><option value="asc" selected>升序</option><option value="desc">降序</option></select></label>
                 <label class="secondary-sort"><span>次级排序</span><select id="sort-secondary"><option value="diffPercent" data-paid-only="true" selected>价差</option><option value="model">模型名称</option><option value="monthlyCost" data-paid-only="true">月成本</option><option value="confidenceScore">匹配置信度</option><option value="none">不使用</option></select></label>
               </div>
             </section>
-            <div class="toolbar-actions"><button class="button button-quiet paid-only-control" id="fetch-references" type="button"><span data-icon="external-link" class="icon"></span><span>更新官方价</span></button><button class="button button-quiet" id="reset-filters" type="button" title="重置筛选"><span data-icon="x" class="icon"></span><span>重置</span></button></div>
+            <div class="toolbar-actions"><button class="button button-quiet paid-only-control" id="fetch-references" type="button"><span data-icon="external-link" class="icon"></span><span>更新基准价</span></button><button class="button button-quiet" id="reset-filters" type="button" title="重置筛选"><span data-icon="x" class="icon"></span><span>重置</span></button></div>
           </div>
           <details class="facet-menu model-filter-menu compare-row" id="model-filter-menu" open><summary><span data-icon="sliders-horizontal" class="icon"></span><span id="model-filter-label">模型对比</span></summary><div class="facet-menu-body model-filter-body"><div class="model-filter-inputs" id="model-filter-inputs" role="group" aria-labelledby="model-filter-label"></div><div class="model-filter-actions"><button class="model-filter-add" id="model-filter-add" type="button" aria-label="添加筛选框" title="添加筛选框"><span data-icon="plus" class="icon"></span><span>添加筛选框</span></button><button class="model-filter-remove-box" id="model-filter-remove-box" type="button" aria-label="移除最后一个筛选框" title="移除最后一个筛选框" hidden><span data-icon="x" class="icon"></span></button></div></div></details>
           <div class="toolbar-options"><label class="check-label paid-only-control"><input id="show-unmatched" type="checkbox"><span>显示未匹配</span></label><p class="comparison-mode-note" id="comparison-mode-note" role="status" aria-live="polite"></p><div id="station-errors" class="station-errors" role="status" aria-live="polite" hidden></div></div>
@@ -117,8 +117,8 @@
               <th scope="col" data-sort-keys="groupName">中转站</th>
               <th scope="col" colspan="3" class="paid-only-column price-key-heading is-section-start">
                 <span class="price-head">
-                  <span class="price-head-key">费用项<details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong id="price-unit-title">价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。按 token 计费的模型，这里每个数字是每 1M tokens 消耗的中转币数量；按次计费的模型显示单次价并折算成同样的每 1M 口径；按张计费的模型显示元/张。官方和中转两列始终是同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></span>
-                  <span class="price-head-side">官方</span>
+                  <span class="price-head-key">费用项<details class="unit-hint"><summary class="unit-hint-trigger" title="价格单位：中转币" aria-label="价格单位说明"><span data-icon="circle-help" class="icon"></span></summary><div class="unit-hint-popover"><strong id="price-unit-title">价格单位 · 中转币（CR）</strong><p>中转币是站点内部的计费额度，要按本站的充值比例（充值金额 ÷ 到账中转币）才能换成人民币。按 token 计费的模型，这里每个数字是每 1M tokens 消耗的中转币数量；按次计费的模型显示单次价并折算成同样的每 1M 口径；按张计费的模型显示元/张。基准和中转两列始终是同一口径，所以省掉 CR 字样只留数值。</p><p>月成本是按默认用量估算的人民币金额，和中转币不是同一个单位。</p></div></details></span>
+                  <span class="price-head-side">基准</span>
                   <span class="price-head-side">中转</span>
                 </span>
               </th>

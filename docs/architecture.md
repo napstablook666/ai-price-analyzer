@@ -10,7 +10,7 @@
   ↓  响应解析          core/adapters.js  normalizeEndpoint + responseFormat 分支
 快照（每站一份）      { stationId, models: [{ model_name, price… }], capturedAt }
   ↓
-官方参考价            core/openrouter.js  parseOpenRouterData（OpenRouter 模型目录）
+基准参考价            core/openrouter.js  parseOpenRouterData（OpenRouter 模型目录）
   ↓
 匹配                  core/matching.js  matchModelWithOverrides
   ↓
@@ -19,15 +19,15 @@
 界面                  dashboard.js / dashboard-pricing.js
 ```
 
-消息入口在 `src/service-worker.js`：`REFRESH_ALL` / `REFRESH_STATION` 采集，`FETCH_REFERENCES` 拉官方价，`GET_DASHBOARD` 出比价数据，`ADAPT_STATION` 识别站点地址。
+消息入口在 `src/service-worker.js`：`REFRESH_ALL` / `REFRESH_STATION` 采集，`FETCH_REFERENCES` 拉基准价，`GET_DASHBOARD` 出比价数据，`ADAPT_STATION` 识别站点地址。
 
 ## 统一模型是怎么做到的
 
 同一个模型在各站叫法不同（`GLM-5.3` / `z-ai/glm-5.3` / `glm-5.3:thinking`），靠三层收敛，不需要人工维护映射表：
 
 1. **规范模型层** `core/canonical.js` + `core/canonical-table.js`
-   表由 `canonical/build.mjs` 生成，入口集合直接靠齐 OpenRouter 的模型列表：每个 OpenRouter 模型一个规范 id（`glm-5-3`），名称与拼写以 OpenRouter 为准，models.dev 的厂商原生写法并进来当别名；OpenRouter 没有的模型不进表（匹配不到官方价格，留着只会白占体积）。查表时先归一：取 id 末段、去 `:free` `@eu` `-v1` `-日期` 这类装饰、小写、空格与 `.` `_` 统一成 `-`。
-   → `matchModel` 里作为最高优先级的 `canonical` 规则，把站内写法和官方模型对上。
+   表由 `canonical/build.mjs` 生成，入口集合直接靠齐 OpenRouter 的模型列表：每个 OpenRouter 模型一个规范 id（`glm-5-3`），名称与拼写以 OpenRouter 为准，models.dev 的厂商原生写法并进来当别名；OpenRouter 没有的模型不进表（匹配不到基准价格，留着只会白占体积）。查表时先归一：取 id 末段、去 `:free` `@eu` `-v1` `-日期` 这类装饰、小写、空格与 `.` `_` 统一成 `-`。
+   → `matchModel` 里作为最高优先级的 `canonical` 规则，把站内写法和基准模型对上。
 2. **插件别名** `plugins/<id>/models.json`
    自动归一还是认错时，插件自己声明 `"站内写法": "规范模型 id"`，只影响这个站。
 3. **人工覆盖** `modelMatchOverrides`
@@ -39,8 +39,8 @@
 按次计价的站（`quota_type` = 1，`model_price` 是「一次」的价）不能直接塞进按 token 的混合单价里，否则会把按次成本摊进 token 分母，得出一个没有意义的数。约定如下：
 
 - **标模式不分表**：`core/pricing.js` 给每条报价打 `billingMode`（`token` / `request` / `image`），三类都进同一张主表，展示时按模式换算法。用户明确要求不要拆成独立区块：分开放很丑，合起来只是算法不一样。
-- **单价单元格分派**：`dashboard.js` 的 `priceCellMarkup` 按 `billingMode` 选渲染器 —— `priceGridMarkup`（按 token，两行费用项加柱状图）、`requestPriceGridMarkup`（按次，单次价加折算 / 平衡点 / 你的单次）、`imagePriceGridMarkup`（按张，站内元/张对官方元/张加折合）。中转站列用 `billingModeTagMarkup` 补「按次」「按张」小标签。
-- **按张计费**：站点只报了 `image_price`（元/张）、没有任何 token 维度的价时判成 `image`。这种报价的 token 成本恒为 0，摊进混合单价会显示成 `¥0.0000` 加「低 100%」，所以不参与混合单价和价差，用「站内元/张」对「官方元/张」比，官方值取 OpenRouter `pricing.image` 乘汇率；没填图像请求数时不算月成本，只提示去填。
+- **单价单元格分派**：`dashboard.js` 的 `priceCellMarkup` 按 `billingMode` 选渲染器 —— `priceGridMarkup`（按 token，两行费用项加柱状图）、`requestPriceGridMarkup`（按次，单次价加折算 / 平衡点 / 你的单次）、`imagePriceGridMarkup`（按张，站内元/张对基准元/张加折合）。中转站列用 `billingModeTagMarkup` 补「按次」「按张」小标签。
+- **按张计费**：站点只报了 `image_price`（元/张）、没有任何 token 维度的价时判成 `image`。这种报价的 token 成本恒为 0，摊进混合单价会显示成 `¥0.0000` 加「低 100%」，所以不参与混合单价和价差，用「站内元/张」对「基准元/张」比，基准值取 OpenRouter `pricing.image` 乘汇率；没填图像请求数时不算月成本，只提示去填。
 - **折算**：`requestUnitPriceOf(requestRmb, tokensPerRequest)` 把单次价摊成每百万 token 价，分母是「一次请求平均多少 token」。这个值优先取站点自己配置的 `billingProfile.tokensPerRequest`，没配就退回全局估算用量，并在界面上标「估算」。
 - **与按量比的可比性**：折算后按次也落在元/1M，可以和按量报价同列排序（`unitPriceSortValue` 用 `requestUnitPrice`）。按张是元/张，量纲不同，排序时置 `null` 落末尾。
 - **平衡点**：`breakEvenTokens` = 同模型按量报价的单价换算出的临界单次 token 数。一次跑得比它长，同组按量报价更便宜。

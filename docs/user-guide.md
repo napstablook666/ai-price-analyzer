@@ -21,7 +21,7 @@ npm run docs:build    # 产物在 docs/.vitepress/dist
 - [采集价格](./guide/collection.md)
 - [价格对比](./guide/dashboard.md)
 - [成本与推荐](./guide/cost.md)
-- [官方参考价](./guide/official-prices.md)
+- [基准参考价](./guide/openrouter-prices.md)
 - [每日签到](./guide/checkin.md)
 
 ## 配置

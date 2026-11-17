@@ -60,7 +60,7 @@ normalizedModelName = modelName.toLowerCase()
 
 ## 人工覆盖
 
-在站点行的「模型」列上点选，从候选里挑一个官方模型，就写进 `modelMatchOverrides`：
+在站点行的「模型」列上点选，从候选里挑一个基准模型，就写进 `modelMatchOverrides`：
 
 ```js
 { stationId: "s2api", modelName: "claude 3.5 sonnet (20241022)", officialModelId: "claude-3-5-sonnet" }
@@ -71,11 +71,11 @@ normalizedModelName = modelName.toLowerCase()
 ## 调优顺序
 1. 先看有多少行未匹配，超过两三成再动手。
 2. 配好模型服务后在判定队列跑一次「识别当前未匹配」，接受的结果会写成人工确认。
-3. 剩下的高频模型在判定队列点行尾「修改」，输入模型关键词，从官方清单里挑一条就写成人工覆盖，不用手打 id。
+3. 剩下的高频模型在判定队列点行尾「修改」，输入模型关键词，从基准清单里挑一条就写成人工覆盖，不用手打 id。
 4. 如果发现固定规则误合并或误拆分，记录原始模型名并反馈项目规则。
 
 ## 相关
 
 - [站点字段](./station-fields)
-- [官方参考价](../guide/official-prices)
+- [基准参考价](../guide/openrouter-prices)
 - [规范模型表](../development/canonical)
