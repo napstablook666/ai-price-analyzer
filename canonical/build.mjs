@@ -126,15 +126,19 @@ export function buildCanonicalTable(modelsDev, openRouter) {
     const rawId = String(model?.id || "");
     if (!rawId) continue;
     const slug = String(model?.canonical_slug || "");
-    const group = groupOf(canonicalKey(slug || rawId));
+    // 浮动别名（~vendor/x-latest）不另立身份：归到 alias_target 指向的正式模型，供应商取目标的厂商。
+    const aliasTarget = String(model?.alias_target?.slug || "").trim();
+    const identity = aliasTarget || slug || rawId;
+    const group = groupOf(canonicalKey(identity));
     group.openrouter = true;
-    if (!group.orSpelling) group.orSpelling = bareSpelling(slug || rawId);
-    if (!group.orName) group.orName = String(model?.name || "").replace(/^[^:]+:\s*/, "");
+    if (!group.orSpelling) group.orSpelling = bareSpelling(identity);
+    // 浮动条目只写「Latest」这类名字，正式名字留给目标条目。
+    if (!group.orName && !aliasTarget) group.orName = String(model?.name || "").replace(/^[^:]+:\s*/, "");
     bump(group.spellings, bareSpelling(rawId));
     if (slug) bump(group.spellings, bareSpelling(slug));
     bump(group.raw, rawId);
-    if (model?.name) bump(group.names, String(model.name).replace(/^[^:]+:\s*/, ""));
-    const vendor = vendorOf(rawId);
+    if (model?.name && !aliasTarget) bump(group.names, String(model.name).replace(/^[^:]+:\s*/, ""));
+    const vendor = vendorOf(identity);
     if (vendor) bump(group.vendors, vendor);
     group.providers.add("openrouter");
     if (Number.isFinite(Number(model?.context_length))) group.limits.push({ context: Number(model.context_length), output: 0 });

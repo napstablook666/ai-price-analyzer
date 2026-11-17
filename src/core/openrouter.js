@@ -18,23 +18,72 @@ function aliasesOf(id, name, canonicalSlug) {
   return [...new Set([id, shortId, name, canonicalSlug].filter(Boolean).map(String).map(value => value.toLowerCase()))];
 }
 
+// OpenRouter 的浮动别名条目（~vendor/x-latest）不是独立模型：alias_target.slug 指向它当前落地的正式模型。
+// 供应商要取目标的厂商，不然界面会冒出 ~anthropic 这类分组。
+function aliasTargetOf(model) {
+  return String(model?.alias_target?.slug || "").trim();
+}
+
+// 浮动别名的目标是同一列表里的正式条目时，把它的拼写收集起来，统一并进目标行；返回 target -> 拼写集合。
+function floatingSpellingsOf(data) {
+  const present = new Set();
+  for (const model of data) {
+    const id = String(model?.id || "").trim();
+    if (id && !aliasTargetOf(model)) present.add(id);
+  }
+  const spellings = new Map();
+  for (const model of data) {
+    const target = aliasTargetOf(model);
+    if (!target || !present.has(target)) continue;
+    const bucket = spellings.get(target) || new Set();
+    for (const alias of aliasesOf(String(model?.id || "").trim(), model?.name, model?.canonical_slug)) bucket.add(alias);
+    spellings.set(target, bucket);
+  }
+  return spellings;
+}
+
+// 正式条目身份原样用 id；目标不在列表里的浮动条目顶替目标的身份。
+function identityOf(model) {
+  const rawId = String(model?.id || "").trim();
+  const target = aliasTargetOf(model);
+  const id = target || rawId;
+  const aliases = target && target !== rawId
+    ? [...new Set([...aliasesOf(target, model?.name, model?.canonical_slug), ...aliasesOf(rawId, model?.name, model?.canonical_slug)])]
+    : aliasesOf(id, model?.name, model?.canonical_slug);
+  return { id, aliases };
+}
+
+function foldFloatingAliases(rows, byId, floating) {
+  for (const [target, spellings] of floating) {
+    const row = byId.get(target);
+    if (row) row.aliases = [...new Set([...row.aliases, ...spellings])];
+  }
+  return rows;
+}
+
 export function parseOpenRouterData(json) {
   if (!json || !Array.isArray(json.data)) return [];
-  return json.data.flatMap(model => {
+  const floating = floatingSpellingsOf(json.data);
+  const rows = [];
+  const byId = new Map();
+  for (const model of json.data) {
+    const target = aliasTargetOf(model);
+    // 目标正式条目会自己出一行，价格不丢；浮动条目跳过，拼写最后统一并进去。
+    if (target && floating.has(target)) continue;
+    const { id, aliases } = identityOf(model);
     const pricing = model.pricing || {};
     const input = pricePerMillion(pricing.prompt);
     const output = pricePerMillion(pricing.completion);
     const imageOutput = pricePerMillion(pricing.image_output ?? pricing.image_token);
     const imagePrice = pricePerRequest(pricing.image);
     const request = pricePerRequest(pricing.request);
-    if (input === null && output === null && imageOutput === null && imagePrice === null && request === null) return [];
-    const id = String(model.id || "").trim();
+    if (input === null && output === null && imageOutput === null && imagePrice === null && request === null) continue;
     const modalities = model.architecture?.output_modalities;
-    return [{
+    const row = {
       id: id || model.name,
       name: id || model.name,
       display_name: model.name || id,
-      aliases: aliasesOf(id, model.name, model.canonical_slug),
+      aliases,
       provider: id.split("/")[0] || "OpenRouter",
       input: input ?? 0,
       output: output ?? 0,
@@ -45,22 +94,30 @@ export function parseOpenRouterData(json) {
       imagePrice,
       isImageModel: Array.isArray(modalities) && modalities.includes("image"),
       price_currency: "USD"
-    }];
-  });
+    };
+    rows.push(row);
+    if (!byId.has(row.id)) byId.set(row.id, row);
+  }
+  return foldFloatingAliases(rows, byId, floating);
 }
 
 // 生图专用模型列表：58 个模型只出现在 /images/models，/models 里没有。
 // 这些条目的价格在 endpoint 上，模型本身只提供身份信息。
 export function parseImageModels(json) {
   if (!json || !Array.isArray(json.data)) return [];
-  return json.data.flatMap(model => {
-    const id = String(model.id || "").trim();
-    if (!id) return [];
-    return [{
+  const floating = floatingSpellingsOf(json.data);
+  const rows = [];
+  const byId = new Map();
+  for (const model of json.data) {
+    const target = aliasTargetOf(model);
+    if (target && floating.has(target)) continue;
+    const { id, aliases } = identityOf(model);
+    if (!id) continue;
+    const row = {
       id,
       name: id,
       display_name: model.name || id,
-      aliases: aliasesOf(id, model.name, model.canonical_slug),
+      aliases,
       provider: id.split("/")[0] || "OpenRouter",
       input: 0,
       output: 0,
@@ -72,8 +129,11 @@ export function parseImageModels(json) {
       isImageModel: true,
       imageOnly: true,
       price_currency: "USD"
-    }];
-  });
+    };
+    rows.push(row);
+    if (!byId.has(id)) byId.set(id, row);
+  }
+  return foldFloatingAliases(rows, byId, floating);
 }
 
 // 只认 output_image。输入侧的 input_text / input_image 不参与出图比价。
@@ -171,6 +231,12 @@ function mergeImageModels(models, imageModels) {
   return missing.length ? [...models, ...missing] : models;
 }
 
+// 旧缓存里可能躺着 ~vendor/x-latest 的浮动别名条目（id 或 provider 带波浪号）。它们从来不是独立模型，读出来先丢掉。
+export function dropFloatingModels(models) {
+  if (!Array.isArray(models)) return [];
+  return models.filter(model => !String(model?.id || "").startsWith("~") && !String(model?.provider || "").startsWith("~"));
+}
+
 function htmlText(value) {
   return String(value || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim();
 }
@@ -219,7 +285,8 @@ export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.no
   } else {
     result.warnings.push(imageResult.reason?.message || "OpenRouter 图价不可用");
   }
-  result.models = mergeImageModels(result.models, result.imageModels);
+  // 出手前统一清一遍：缓存里的旧浮动别名不该漏进 references.models，否则供应商栏又会冒出 ~vendor 分组。
+  result.models = dropFloatingModels(mergeImageModels(result.models, result.imageModels));
   if (result.models.length || rateResult.status === "fulfilled") result.fetchedAt = now;
   return result;
 }

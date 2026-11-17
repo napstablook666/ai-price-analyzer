@@ -12,10 +12,16 @@ import { IMAGE_UNIT_LABELS, IMAGE_UNIT_SUFFIXES, mediaUnitLabel, mediaUnitRank }
 
 // 供应商不写死名单：默认全选（null）。用户改过就记进 localStorage 的 JSON，下次打开沿用。
 const PROVIDER_FILTER_STORE = "model-atlas:provider-filter";
+// 更早存下的分组名可能带着 ~ 前缀（~deepseek 这类浮动别名分组）。它已经不是供应商了，读的时候并回正牌名字。
+function normalizeStoredProvider(value) {
+  return String(value || "").trim().replace(/^~+/, "").trim();
+}
 function readProviderFilter() {
   try {
     const stored = JSON.parse(localStorage.getItem(PROVIDER_FILTER_STORE) || "null");
-    return Array.isArray(stored) ? stored.filter(value => typeof value === "string" && value) : null;
+    if (!Array.isArray(stored)) return null;
+    const kept = stored.filter(value => typeof value === "string" && value);
+    return [...new Set(kept.map(normalizeStoredProvider).filter(Boolean))];
   } catch { return null; }
 }
 function saveProviderFilter(selection) {
@@ -30,7 +36,7 @@ function readProviderFavorite() {
   try {
     const stored = JSON.parse(localStorage.getItem(PROVIDER_FAVORITE_STORE) || "null");
     if (!Array.isArray(stored)) return [];
-    return [...new Set(stored.filter(value => typeof value === "string" && value))];
+    return [...new Set(stored.filter(value => typeof value === "string" && value).map(normalizeStoredProvider).filter(Boolean))];
   } catch { return []; }
 }
 function saveProviderFavorite(values) {
@@ -1221,15 +1227,14 @@ function renderRefreshPreflight(preflight = state.refreshPreflight) {
   cancel.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
 }
 
-function render(data) {
+function render(data, { preservePage = false } = {}) {
   state.data = data;
   state.refreshInProgress = Boolean(data.refreshInProgress);
   state.comparisonMode = data.settings?.comparisonMode === "public" ? "public" : "paid";
   state.mediaMode = mediaModeOf(state.mediaMode);
   state.refreshPreflight = data.refreshPreflight || null;
   renderRefreshPreflight();
-  state.page = 0;
-  pageFilterKey = null;
+if (!preservePage) { state.page = 0; pageFilterKey = null; }
   const allComparisons = data.comparisons || [];
   state.unclassifiedMediaCount = flattenComparisonRows(allComparisons)
     .filter(row => normalizeMediaType(row.mediaType ?? row.media_type) === "unknown").length;
@@ -1274,8 +1279,8 @@ function render(data) {
   hydrateIcons();
 }
 
-async function load() {
-  try { render(await callService("GET_DASHBOARD")); }
+async function load({ preservePage = false } = {}) {
+  try { render(await callService("GET_DASHBOARD"), { preservePage }); }
   catch (error) { toast(error.message); }
 }
 
@@ -1947,12 +1952,12 @@ window.addEventListener("message", event => {
 });
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
-  if (message?.type === "CHECKIN_UPDATED") load();
+  if (message?.type === "CHECKIN_UPDATED") load({ preservePage: true });
 });
 onRefreshProgress(renderRefreshProgress);
 load();
 
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) load();
+  if (!document.hidden) load({ preservePage: true });
 });

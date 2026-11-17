@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides } from "../src/core/matching.js";
 import { registerSiteProvider, resetProviderRegistry, modelAliasesForStation } from "../src/core/provider-registry.js";
+import { buildCanonicalTable } from "../canonical/build.mjs";
 
 const official = [
   { id: "glm-5-3", name: "GLM-5.3", canonicalSlug: "glm-5-3" },
@@ -51,4 +52,16 @@ test("站点插件的 models.json 别名进入匹配链路", () => {
   assert.equal(results[0].ruleId, "plugin-alias");
   assert.equal(results[0].match.id, "glm-5-3");
   resetProviderRegistry();
+});
+
+test("规范模型表不给浮动别名单独的 ~ 供应商", () => {
+  const { models } = buildCanonicalTable({}, { data: [
+    { id: "anthropic/claude-sonnet-5.5", name: "Anthropic: Claude Sonnet 5.5", canonical_slug: "anthropic/claude-sonnet-5.5" },
+    { id: "~anthropic/claude-sonnet-latest", name: "Anthropic: Claude Sonnet Latest", canonical_slug: "~anthropic/claude-sonnet-latest", alias_target: { slug: "anthropic/claude-sonnet-5.5" } }
+  ] });
+  assert.equal(models.length, 1);
+  assert.equal(models[0].id, "claude-sonnet-5-5");
+  assert.equal(models[0].vendor, "anthropic");
+  assert.ok(models[0].aliases.includes("~anthropic/claude-sonnet-latest"));
+  assert.ok(!models.some(model => String(model.vendor).startsWith("~")));
 });

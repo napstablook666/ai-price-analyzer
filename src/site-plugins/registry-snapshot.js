@@ -107,7 +107,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "soleapi",
       "name": "SoleAPI",
       "version": "0.8.0",
-      "description": "按具体模型页地址添加",
+      "description": "公开模型价格接口直接采，按 Credits 计价（1 Credit = ¥1）",
       "hosts": [
         "soleapi.com"
       ],
@@ -209,7 +209,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "jiji",
       "name": "吉吉模型市场",
       "version": "0.8.0",
-      "description": "带 token 的模型市场，按站点地址添加",
+      "description": "模型市场接口要登录态，插件用你浏览器里的吉吉登录 token 直连采集",
       "hosts": [
         "jiji.cc"
       ],
@@ -229,7 +229,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "stellaisle",
       "name": "飓星API",
       "version": "0.8.0",
-      "description": "公开 /api/pricing 直连采集，90 个模型 × 17 个渠道分组",
+      "description": "公开 /api/pricing 直连采集，90 个模型，站点不公开模型与渠道分组的对应关系，只采基准价",
       "hosts": [
         "token.stellaisle.com"
       ],

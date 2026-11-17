@@ -149,19 +149,21 @@ test("分组在 enable_groups 里但 group_ratio 没有倍率时不出行", () =
   assert.equal(result.unresolved[0].model, "ghost-group");
 });
 
-test("enable_groups 全空且 map 打开 emptyMeansAll 时，分组从 group_ratio 的键反推", () => {
+test("enable_groups 全空时只出站内基准价，不拿 group_ratio 的键给每个模型编分组", () => {
   const payload = {
     success: true,
     group_ratio: { "gpt-plus": 0.14, "gpt 稳定分组": 0.25 },
     data: [{ model_name: "gpt-5.4", quota_type: 0, model_ratio: 2, completion_ratio: 3, enable_groups: [] }]
   };
   const rows = applyPriceMap(stellaislePriceMap, payload, { parseTiers: parseBillingTiers }).rows;
+  // 站点不公开「模型 ↔ 分组」，就按倍率 1 出一条基准价，多编一行都是编。
   assert.deepEqual(rows.map(row => [row.proxy_group_name, row.group_ratio, row.input_price]), [
-    ["gpt-plus", 0.14, 0.28],
-    ["gpt 稳定分组", 0.25, 0.5]
+    ["站内基准价", 1, 2]
   ]);
-  // 同一份报文交给没开这个开关的 map，一条价都出不来——开关只对声明它的站点生效。
-  assert.equal(rowsOf(payload).rows.length, 0);
+  // 没声明 unlisted 的 map 照旧把这条记进 unresolved，不静默丢也不瞎猜。
+  const fallback = rowsOf(payload);
+  assert.equal(fallback.rows.length, 0);
+  assert.equal(fallback.unresolved.length, 1);
 });
 
 // ---- CheapRouter：和 TokenFlux 形状完全不同的第二份站点 ----

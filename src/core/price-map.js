@@ -464,12 +464,16 @@ function groupSelection(map, raw, item) {
   const ratioTable = readPath(raw, spec.ratioPath || "/group_ratio");
   const listed = readPath(item, spec.listPath || "enable_groups");
   let groups = (Array.isArray(listed) ? listed : [listed]).map(value => String(value ?? "").trim()).filter(Boolean);
-  // 有的站每条的 enable_groups 是空数组（New API 语义 = 该模型在所有分组可用），
-  // 分组清单只能从倍率表的键反推。开关挂在 map 上，别的站不受影响。
-  if (!groups.length && spec.emptyMeansAll && ratioTable && typeof ratioTable === "object") {
-    groups = Object.keys(ratioTable);
+  // 有的站每条的 enable_groups 是空数组，定价页也只报基准价、不说是哪个分组在卖。
+  // 这时候拿倍率表的键乘一遍，等于给每个模型编出十几个它根本不在的分组。
+  // 站点没说的就不编：按倍率 1 出一条基准价，分组名用 map 声明的占位符。
+  if (!groups.length) {
+    const unlisted = spec.unlisted;
+    if (!unlisted) return [];
+    const group = (typeof unlisted === "string" ? unlisted : String(unlisted.group ?? "")).trim();
+    const ratio = typeof unlisted === "object" && Number.isFinite(unlisted.ratio) ? unlisted.ratio : 1;
+    return group ? [{ group, ratio }] : [];
   }
-  if (!groups.length) return [];
   if (!ratioTable || typeof ratioTable !== "object") return groups.map(group => ({ group, ratio: 1 }));
   const usable = readPath(raw, spec.usablePath || "/usable_group");
   const usableKeys = usable && typeof usable === "object" && !Array.isArray(usable) ? Object.keys(usable) : null;

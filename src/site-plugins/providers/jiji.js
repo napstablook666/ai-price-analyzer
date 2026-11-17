@@ -9,6 +9,39 @@ const MODEL_API = "/extension/api/model-market";
 const MODEL_PATHS = new Set(["/", MODEL_PAGE, LEGACY_MODEL_PAGE, MODEL_API].map(normalizePath));
 const isModelPath = path => MODEL_PATHS.has(normalizePath(path));
 
+// 充值口径（2026-11-17 实测，登录态 /api/v1/payment/checkout-info + /purchase 页面实付）：
+//   快捷金额 10/20/50/100/200/500/1000/2000/5000 元；点 20 → 支付金额 ¥20.00 → 余额 +$20.00
+//   balance_recharge_multiplier = 1、recharge_bonus_tiers = []、recharge_fee_rate = 0
+//   支付宝单笔 5–2000 元，Stripe 单笔 50–5000 元
+//   模型报价是 USD/1M tokens × 分组倍率（0.15–4.0），所以 1 元 = 1 美元额度，折算比例 1:1
+const preset = {
+  id: "jiji",
+  name: HOST,
+  baseUrl: `https://${HOST}${MODEL_PAGE}`,
+  rechargeRmb: 1,
+  rechargeCredits: 1,
+  rechargeRateVerified: true,
+  rechargeRateNote: "2026-11-17 实测：充 20 元实付 ¥20.00、余额 +$20.00；接口 balance_recharge_multiplier=1、无加赠档（recharge_bonus_tiers 为空）、无手续费。模型报价按 USD/1M tokens × 分组倍率，因此 1 元 = 1 美元额度。",
+  rechargeTiers: [
+    { amount: 10, discount: 1 },
+    { amount: 20, discount: 1 },
+    { amount: 50, discount: 1 },
+    { amount: 100, discount: 1 },
+    { amount: 200, discount: 1 },
+    { amount: 500, discount: 1 },
+    { amount: 1000, discount: 1 },
+    { amount: 2000, discount: 1 },
+    { amount: 5000, discount: 1 }
+  ],
+  priceCurrency: "USD",
+  priceCurrencyVerified: true,
+  priceCurrencyNote: "模型市场按分组倍率折算，币种 USD/1M tokens；分组倍率跨度 0.15–4.0（Codex Cheap 0.185、Codex SVIP 0.55、Claude Code Max 1.5）。",
+  enabled: true,
+  mode: "page",
+  auth: { type: "none" },
+  adapter: { kind: "jiji", endpoint: `https://${HOST}${MODEL_API}`, method: "GET", responseFormat: "auto" }
+};
+
 function requestConfig(value) {
   const url = value instanceof URL ? value : stationContext({ baseUrl: value }).url;
   if (!url || normalizeHostname(url.hostname) !== HOST || !isModelPath(url.pathname)) return null;
@@ -37,6 +70,7 @@ const pluginSource = {
   matches: ({ hostname, path }) => hostname === HOST && isModelPath(path),
   prepareMatches: ({ hostname, path }) => hostname === HOST && isModelPath(path),
   prepare,
+  preset,
   mode: "direct",
   openTemporaryPage: true,
   rationale: "通过吉吉模型市场 API 直连采集",

@@ -601,7 +601,7 @@ export class WindHubPricingStrategy extends TokenFluxPricingStrategy {
   }
 }
 
-// Star API 的报文和 WindHub 同构，只是分组清单要自己从倍率表反推（见 price-maps/stellaisle.js）。
+// Star API 的报文和 WindHub 同构，分组根本不公开模型 ↔ 分组的对应，只出基准价（见 price-maps/stellaisle.js）。
 export class StellaislePricingStrategy extends WindHubPricingStrategy {
   get priceMap() { return stellaislePriceMap; }
 

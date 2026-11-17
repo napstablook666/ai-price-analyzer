@@ -3,7 +3,7 @@ import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
-import { parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
+import { dropFloatingModels, fetchReferences, parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
 import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, WINDHUB_PRICING_ENDPOINT, PROVIDER_REGISTRY, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
@@ -994,6 +994,41 @@ test("parses OpenRouter token and image prices", () => {
   assert.equal(model.price_currency, "USD");
 });
 
+test("OpenRouter 浮动别名折回目标模型，不另开 ~ 供应商", () => {
+  const rows = parseOpenRouterData({ data: [
+    { id: "anthropic/claude-sonnet-5.5", name: "Anthropic: Claude Sonnet 5.5", canonical_slug: "anthropic/claude-sonnet-5.5", pricing: { prompt: "0.000003", completion: "0.000015" } },
+    { id: "~anthropic/claude-sonnet-latest", name: "Anthropic: Claude Sonnet Latest", canonical_slug: "~anthropic/claude-sonnet-latest", alias_target: { slug: "anthropic/claude-sonnet-5.5" }, pricing: { prompt: "0.000003", completion: "0.000015" } }
+  ] });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].id, "anthropic/claude-sonnet-5.5");
+  assert.equal(rows[0].provider, "anthropic");
+  assert.equal(rows[0].input, 3);
+  assert.ok(rows[0].aliases.includes("~anthropic/claude-sonnet-latest"));
+});
+
+test("目标不在列表里的浮动别名顶替目标身份", () => {
+  const [row] = parseOpenRouterData({ data: [{
+    id: "~deepseek/deepseek-latest",
+    name: "DeepSeek Latest",
+    alias_target: { slug: "deepseek/deepseek-v4" },
+    pricing: { prompt: "0.0000003", completion: "0.0000012" }
+  }] });
+  assert.equal(row.id, "deepseek/deepseek-v4");
+  assert.equal(row.provider, "deepseek");
+  assert.equal(row.input, 0.3);
+  assert.ok(row.aliases.includes("~deepseek/deepseek-latest"));
+});
+
+test("旧缓存里的浮动别名读出来就丢掉", async () => {
+  const stale = [
+    { id: "~deepseek/deepseek-latest", provider: "~deepseek", input: 1, output: 2, price_currency: "USD" },
+    { id: "deepseek/deepseek-v4", provider: "deepseek", input: 1, output: 2, price_currency: "USD" }
+  ];
+  assert.deepEqual(dropFloatingModels(stale).map(model => model.id), ["deepseek/deepseek-v4"]);
+  // 网络挂了回落到缓存时也要清一遍，不然供应商栏会继续留着 ~deepseek。
+  const result = await fetchReferences({ fetchImpl: () => Promise.reject(new Error("offline")), cache: { models: stale } });
+  assert.deepEqual(result.models.map(model => model.id), ["deepseek/deepseek-v4"]);
+});
 
 test("maps OpenRouter USD credits to the unified CREDITS benchmark", () => {
   const [official] = parseOpenRouterData({ data: [{
@@ -2054,7 +2089,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addProviderStationPresets(current, PROVIDER_REGISTRY, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi", "stellaisle", "stellaisle-carpool", "relayrouter"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi", "stellaisle", "stellaisle-carpool", "relayrouter", "jiji", "soleapi"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -5432,7 +5467,7 @@ test("bulk uninstall removes registry records, local plugins, and their stations
     tabs: { onUpdated: { addListener() {}, removeListener() {} }, onRemoved: { addListener() {}, removeListener() {} } }
   };
   try {
-    const { installPlugins, uninstallPlugins } = await import(`../src/service-worker.js?uninstall-bulk=${Date.now()}`);
+    const { installPlugins, uninstallPlugin, uninstallPlugins } = await import(`../src/service-worker.js?uninstall-bulk=${Date.now()}`);
     const installed = await installPlugins(["true-sota"]);
     assert.deepEqual(installed.installed, ["true-sota"]);
     assert.equal(stationRows.length, 1);
@@ -5442,6 +5477,16 @@ test("bulk uninstall removes registry records, local plugins, and their stations
     assert.equal(stationRows.length, 0);
     assert.equal(removed.registry.entries.find(item => item.id === "true-sota")?.installed, false);
     assert.equal(kv.get("settings").pluginRegistry.installed["true-sota"], undefined);
+
+    // 单条移除要把工作区原样交回界面：少了它，页面拿不到新状态就不重绘，看起来像没删掉。
+    await installPlugins(["true-sota"]);
+    const single = await uninstallPlugin("true-sota");
+    assert.ok(single && typeof single === "object", "uninstallPlugin 必须返回工作区状态");
+    assert.ok(Array.isArray(single.catalog), "工作区要带 catalog，界面靠它重绘已安装列表");
+    assert.equal(single.registry.entries.find(item => item.id === "true-sota")?.installed, false);
+    assert.deepEqual(single.removed, ["true-sota"]);
+    assert.equal(kv.get("settings").pluginRegistry.installed["true-sota"], undefined);
+    assert.equal(stationRows.length, 0);
 
     await assert.rejects(uninstallPlugins([]), /没有选中要移除的插件/);
   } finally {
@@ -5462,6 +5507,8 @@ const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url)
   assert.match(options, /applyRangeSelection\(state\.registryOrder, state\.registryAnchorId, id, check\.checked, state\.registrySelected, isSelectable\)/);
   assert.match(options, /applyRangeSelection\(state\.installedOrder, state\.installedAnchorId, id, check\.checked, state\.installedSelected, isSelectable\)/);
   assert.match(options, /callService\("UNINSTALL_PLUGINS", \{ ids \}\)/);
+  // 移除不再弹确认框：点垃圾桶就删，批次同样直接提交。
+  assert.doesNotMatch(options, /window\.confirm\(`移除/);
   assert.match(worker, /case "UNINSTALL_PLUGINS": return uninstallPlugins\(message\.ids\)/);
   assert.match(html, /id="installed-select-all" type="checkbox"/);
   assert.match(html, /id="uninstall-selected-plugins"[^>]*disabled/);

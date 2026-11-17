@@ -16,6 +16,6 @@ import { tokenfluxPriceMap } from "./tokenflux.js";
 export const stellaisleCarpoolPriceMap = {
   ...tokenfluxPriceMap,
   source: "stellaisle-carpool",
-  // 这里的分组清单由策略逐条写进 enable_groups，不需要从倍率表反推。
-  groups: { ...tokenfluxPriceMap.groups, emptyMeansAll: false }
+  // 这里的分组清单由策略逐条写进 enable_groups，用不上 unlisted 兜底。
+  groups: tokenfluxPriceMap.groups
 };

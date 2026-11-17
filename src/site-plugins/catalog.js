@@ -55,7 +55,7 @@ export const SITE_PLUGIN_CATALOG = [
   entry("killai", "KillAI", "api.killai.cc", "page", () => ({ sitePlugin: killaiPlugin }), { paths: ["/pricing","/model-plaza"], description: "New API 价格，支持会话刷新" }),
   entry("fuck-everyone", "fuck-everyone.com", "fuck-everyone.com", "direct", () => ({ sitePlugin: fuckEveryonePlugin }), { paths: ["/model-plaza"], description: "公开模型广场，直连采集" }),
   entry("cun", "CUN.AI", "cun.ai", "page", () => ({ sitePlugin: cunPlugin }), { paths: ["/","/pricing"], description: "复用登录态读取价格 API" }),
-  entry("soleapi", "SoleAPI", "soleapi.com", "direct", () => ({ sitePlugin: soleapiPlugin }), { addable: false, description: "按具体模型页地址添加" }),
+  entry("soleapi", "SoleAPI", "soleapi.com", "direct", () => ({ sitePlugin: soleapiPlugin }), { description: "公开模型价格接口直接采，按 Credits 计价（1 Credit = ¥1）" }),
   entry("dddai", "dddai.dev", "dddai.dev", "direct", () => ({ sitePlugin: dddaiPlugin }), { paths: ["/","/pricing"], description: "公开模型价格 API" }),
   entry("liuguang", "liuguang.ai", "liuguang.ai", "direct", () => ({ sitePlugin: liuguangPlugin }), { paths: ["/","/pricing"], description: "公开模型价格 API" }),
   entry("public-pricing", "公开价格 API", "nomissapi.com", "direct", () => ({ sitePlugin: publicPricingPlugin }), { hosts: ["nomissapi.com","yorhamc.com","token123.cfd"], addable: false, description: "通用公开价格适配，按站点地址添加" }),
@@ -65,9 +65,9 @@ export const SITE_PLUGIN_CATALOG = [
   entry("fastaitoken", "fastaitoken.com", "fastaitoken.com", "page", () => ({ sitePlugin: fastaitokenPlugin }), { description: "读取当前账号的可用渠道" }),
   entry("nexavlinks", "NexaVlinks", "nexavlinks.com", "page", () => ({ sitePlugin: nexavlinksPlugin }), { description: "读取当前账号的模型渠道" }),
   entry("cheaprouter", "CheapRouter", "cheaprouter.cc", "direct", () => ({ sitePlugin: cheaprouterPlugin }), { paths: ["/models"], description: "公开模型价格 API" }),
-  entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { addable: false, description: "带 token 的模型市场，按站点地址添加" }),
+  entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { description: "模型市场接口要登录态，插件用你浏览器里的吉吉登录 token 直连采集" }),
   entry("maolaoapi", "maolaoapi.com", "maolaoapi.com", "direct", () => ({ sitePlugin: maolaoapiPlugin }), { paths: ["/pricing","/","/console/topup"], description: "公开定价 API，直连采集；充值 1.03 元/额度，200/500/1000 档另有折扣" }),
-  entry("stellaisle", "飓星API", "token.stellaisle.com", "direct", () => ({ sitePlugin: stellaislePlugin }), { paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，90 个模型 × 17 个渠道分组" }),
+  entry("stellaisle", "飓星API", "token.stellaisle.com", "direct", () => ({ sitePlugin: stellaislePlugin }), { paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，90 个模型，站点不公开模型与渠道分组的对应关系，只采基准价" }),
   entry("relayrouter", "RelayRouter", "relayrouter.app", "direct", () => ({ sitePlugin: relayrouterPlugin }), { hosts: ["www.relayrouter.app","relayrouter.app"], paths: ["/pricing","/console/topup","/"], description: "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）" }),
   entry("stellaisle-carpool", "飓星API 拼车", "token.stellaisle.com", "page", () => ({ sitePlugin: stellaisleCarpoolPlugin }), { paths: ["/carpool-market"], description: "登录后读 /api/carpool-market 的座位清单，用座位价除以期间额度当折扣，折算站内模型价" })
 ];
