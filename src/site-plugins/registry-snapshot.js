@@ -226,6 +226,27 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
+      "id": "stellaisle",
+      "name": "飓星API",
+      "version": "0.6.0",
+      "description": "公开 /api/pricing 直连采集，90 个模型 × 17 个渠道分组",
+      "hosts": [
+        "token.stellaisle.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "relayrouter",
+      "name": "RelayRouter",
+      "version": "0.6.0",
+      "description": "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）",
+      "hosts": [
+        "www.relayrouter.app",
+        "relayrouter.app"
+      ],
+      "needsCode": true
+    },
+    {
       "id": "site-checkin",
       "name": "站点签到插件",
       "version": "1.1.0",

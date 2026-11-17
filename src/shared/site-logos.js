@@ -18,10 +18,12 @@ export const SITE_LOGOS = {
   "nexavlinks": "icons/sites/nexavlinks.png",
   "nodeai": "icons/sites/nodeai.png",
   "public-pricing": "icons/sites/public-pricing.png",
+  "relayrouter": "icons/sites/relayrouter.svg",
   "sevenai": "icons/sites/sevenai.png",
   "sidrune": "icons/sites/sidrune.svg",
   "site-checkin": "icons/sites/site-checkin.svg",
   "soleapi": "icons/sites/soleapi.svg",
+  "stellaisle": "icons/sites/stellaisle.png",
   "tokenflux": "icons/sites/tokenflux.png",
   "true-sota": "icons/sites/true-sota.svg",
   "windhub": "icons/sites/windhub.png"

@@ -1,0 +1,402 @@
+{
+  "success": true,
+  "data": [
+    {
+      "model_name": "claude-opus-5-5",
+      "description": "claude-opus-5-5 是 Anthropic 全新旗舰大模型，拥有百万级上下文，自适应思考不可关闭，Agent 与代码能力突出，速度更快、定价更低，适合复杂长任务。",
+      "show_image_upload": 1,
+      "tags": "对话,工具,识图",
+      "model_type": "对话",
+      "vendor_id": 55,
+      "quota_type": 0,
+      "model_ratio": 2,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.05,
+      "cache_creation_5m_ratio": 1.25,
+      "cache_creation_1h_ratio": 2,
+      "enable_groups": [
+        "AWS-Bedrock-2",
+        "AWS-Claude-2",
+        "AWS-Claude-3",
+        "Anthropic-Claude-1",
+        "Azure-Claude-1",
+        "Claude-Code-1",
+        "Claude-Code-2",
+        "Claude-Code-3",
+        "Kiro-Claude-1"
+      ],
+      "supported_endpoint_types": [
+        "anthropic",
+        "openai"
+      ],
+      "created_time": 1790133533,
+      "usage_count": 40343739970,
+      "translations": {
+        "es": {
+          "description": "claude-opus-5-5 es el nuevo modelo insignia de Anthropic, con millones de contexto, pensamiento adaptativo no desactivable, capacidades destacadas de agente y código, más rápido y con precios más bajos, adecuado para tareas largas y complejas.",
+          "model_type": "Diálogo",
+          "对话": "Diálogo",
+          "工具": "Herramientas",
+          "识图": "识图"
+        },
+        "zh": {
+          "对话": "对话",
+          "工具": "工具",
+          "识图": "识图",
+          "description": "claude-opus-5-5 是 Anthropic 全新旗舰大模型，拥有百万级上下文，自适应思考不可关闭，Agent 与代码能力突出，速度更快、定价更低，适合复杂长任务。",
+          "model_type": "对话"
+        },
+        "en": {
+          "model_type": "Conversation",
+          "对话": "Conversation",
+          "工具": "Tool",
+          "识图": "Image Recognition",
+          "description": "Claude-opus-5-5 is Anthropic's new flagship large model, featuring millions of context, adaptive thinking that cannot be turned off, outstanding agent and coding capabilities, faster speed, and lower pricing, suitable for complex long tasks."
+        },
+        "ja": {
+          "工具": "ツール",
+          "识图": "画像認識",
+          "description": "claude-opus-5-5 は Anthropic の新しいフラッグシップ大モデルで、百万レベルのコンテキストを持ち、適応的思考をオフにできず、エージェントとコードの能力が際立っており、速度が速く、価格が低く、複雑な長期タスクに適しています。",
+          "model_type": "対話",
+          "对话": "対話"
+        },
+        "de": {
+          "对话": "Konversation",
+          "工具": "Werkzeuge",
+          "识图": "Bildverarbeitung",
+          "description": "claude-opus-5-5 ist das neue Flaggschiff-Modell von Anthropic mit Millionen von Kontexten, nicht deaktivierbarem adaptivem Denken, herausragenden Agenten- und Programmierfähigkeiten, schnellerer Geschwindigkeit und niedrigeren Preisen, geeignet für komplexe Langaufgaben.",
+          "model_type": "Konversation"
+        },
+        "ru": {
+          "工具": "Инструменты",
+          "识图": "Распознавание изображений",
+          "description": "claude-opus-5-5 — это новый флагманский большой модель от Anthropic, обладающий миллионами контекстов, с адаптивным мышлением, которое нельзя отключить, выдающимися возможностями в области агентов и кода, более высокой скоростью и более низкими ценами, подходящий для сложных долгих задач.",
+          "model_type": "Диалог",
+          "对话": "Диалог"
+        },
+        "ko": {
+          "工具": "도구",
+          "识图": "이미지 인식",
+          "description": "claude-opus-5-5는 Anthropic의 새로운 플래그십 대형 모델로, 백만 수준의 컨텍스트를 가지고 있으며, 적응형 사고 기능을 끌 수 없고, 에이전트 및 코드 능력이 뛰어나며, 더 빠르고 더 저렴한 가격으로 복잡한 긴 작업에 적합합니다.",
+          "model_type": "대화",
+          "对话": "대화"
+        }
+      },
+      "type": 0,
+      "available": true
+    },
+    {
+      "model_name": "gpt-6.1-sol",
+      "description": "GPT-6.1-Sol 是 OpenAI 推出的 GPT-6 Sol 升级版推理模型，在智能体编程、计算机操作与专业复杂任务上能力贴近旗舰 GPT-6 Astra",
+      "show_image_upload": 1,
+      "tags": "对话,工具,识图,思考",
+      "model_type": "对话",
+      "vendor_id": 52,
+      "quota_type": 0,
+      "model_ratio": 1,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.05,
+      "cache_creation_ratio": 1.25,
+      "cache_creation_12h_ratio": 2.5,
+      "enable_groups": [
+        "AWS-Gpt-1",
+        "Azure-Gpt-3",
+        "Azure-Gpt-4",
+        "Azure-Gpt-5",
+        "Azure-Gpt-6",
+        "Codex-Gpt-1",
+        "Codex-Gpt-2",
+        "Codex-Gpt-3",
+        "Openai-Gpt-1",
+        "Openai-Gpt-2"
+      ],
+      "supported_endpoint_types": [
+        "openai",
+        "openai-response"
+      ],
+      "step_ratios": [
+        {
+          "step_size": 272000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 1,
+          "completion_step_ratio": 1,
+          "cache_step_ratio": 1,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        },
+        {
+          "step_size": 1000000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 2,
+          "completion_step_ratio": 1.5,
+          "cache_step_ratio": 2,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        }
+      ],
+      "created_time": 1790739472,
+      "usage_count": 23247438396,
+      "translations": {
+        "en": {
+          "思考": "Thinking",
+          "description": "GPT-6.1-Sol is an upgraded reasoning model of GPT-6 Sol launched by OpenAI, with capabilities close to flagship GPT-6 Astra in agent programming, computer operations, and professional complex tasks.",
+          "model_type": "Conversation",
+          "对话": "Conversation",
+          "工具": "Tools",
+          "识图": "Image Recognition"
+        },
+        "es": {
+          "工具": "Herramientas",
+          "识图": "Reconocimiento de imágenes",
+          "思考": "Pensamiento",
+          "description": "GPT-6.1-Sol es el modelo de razonamiento mejorado de GPT-6 Sol lanzado por OpenAI, con capacidades cercanas al modelo insignia GPT-6 Astra en programación de agentes, operaciones informáticas y tareas complejas profesionales.",
+          "model_type": "Diálogo",
+          "对话": "Diálogo"
+        },
+        "ko": {
+          "对话": "대화",
+          "工具": "도구",
+          "识图": "이미지 인식",
+          "思考": "사고",
+          "description": "GPT-6.1-Sol은 OpenAI에서 출시한 GPT-6 Sol 업그레이드 버전 추론 모델로, 지능형 에이전트 프로그래밍, 컴퓨터 작업 및 전문 복잡한 작업에서 플래그십 GPT-6 Astra에 가까운 능력을 가지고 있습니다.",
+          "model_type": "대화"
+        },
+        "ja": {
+          "对话": "対話",
+          "工具": "ツール",
+          "识图": "画像認識",
+          "思考": "思考",
+          "description": "GPT-6.1-Sol は OpenAI が提供する GPT-6 Sol のアップグレード版推論モデルで、エージェントプログラミング、コンピュータ操作、専門的な複雑なタスクにおいてフラッグシップ GPT-6 Astra に近い能力を持っています",
+          "model_type": "対話"
+        },
+        "de": {
+          "description": "GPT-6.1-Sol ist ein von OpenAI eingeführtes Upgrade-Modell des GPT-6 Sol, das in der Programmierung von Agenten, Computeroperationen und bei komplexen Fachaufgaben nahe an den Fähigkeiten des Flaggschiffs GPT-6 Astra liegt.",
+          "model_type": "Gespräch",
+          "对话": "Gespräch",
+          "工具": "Werkzeuge",
+          "识图": "Bildverarbeitung",
+          "思考": "Denken"
+        },
+        "ru": {
+          "工具": "Инструменты",
+          "识图": "识图",
+          "思考": "思考",
+          "description": "GPT-6.1-Sol — это обновленная версия модели вывода GPT-6 Sol, выпущенная OpenAI, обладающая возможностями, близкими к флагманскому GPT-6 Astra в области программирования агентов, компьютерных операций и профессиональных сложных задач.",
+          "model_type": "Диалог",
+          "对话": "Диалог"
+        },
+        "zh": {
+          "对话": "对话",
+          "工具": "工具",
+          "识图": "识图",
+          "思考": "思考",
+          "description": "GPT-6.1-Sol 是 OpenAI 推出的 GPT-6 Sol 升级版推理模型，在智能体编程、计算机操作与专业复杂任务上能力贴近旗舰 GPT-6 Astra",
+          "model_type": "对话"
+        }
+      },
+      "type": 0,
+      "available": true
+    },
+    {
+      "model_name": "gpt-image-2-c",
+      "description": "gpt-image-2-c,支持返回url，base64,支持1k图片生成，gpt-image-2分组支持1k、2k、4k。暂不支持n参数",
+      "show_image_upload": 1,
+      "tags": "绘画",
+      "model_type": "图像",
+      "vendor_id": 93,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.12,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "Gpt-Image-1",
+        "Gpt-Image-2",
+        "Gpt-Image-3"
+      ],
+      "supported_endpoint_types": [
+        "openai-绘图",
+        "openai-编辑"
+      ],
+      "sort_order": 258,
+      "created_time": 1785206173,
+      "usage_count": 10707377961,
+      "translations": {
+        "ko": {
+          "model_type": "이미지",
+          "绘画": "그림",
+          "description": "gpt-image-2-c, URL 및 base64 반환 지원, 1k 이미지 생성 지원, gpt-image-2 그룹은 1k, 2k, 4k를 지원합니다. n 매개변수는 현재 지원되지 않습니다."
+        },
+        "zh": {
+          "绘画": "绘画",
+          "description": "gpt-image-2-c，支持返回url，base64，支持1k图片生成，gpt-image-2分组支持1k、2k、4k。暂不支持n参数",
+          "model_type": "图像"
+        },
+        "en": {
+          "description": "gpt-image-2-c, supports returning url, base64, supports 1k image generation, gpt-image-2 group supports 1k, 2k, 4k. n parameter not supported yet",
+          "model_type": "Image",
+          "绘画": "Painting"
+        },
+        "ru": {
+          "description": "gpt-image-2-c, поддержка возврата url, base64, поддержка генерации изображений 1k, группа gpt-image-2 поддерживает 1k, 2k, 4k. Временно не поддерживается параметр n",
+          "model_type": "Изображение",
+          "绘画": "Рисование"
+        },
+        "ja": {
+          "绘画": "絵画",
+          "description": "gpt-image-2-c、URLとbase64の返却をサポートし、1k画像生成をサポート、gpt-image-2グループは1k、2k、4kをサポートします。nパラメータは現在サポートされていません。",
+          "model_type": "画像"
+        },
+        "de": {
+          "description": "gpt-image-2-c, unterstützt die Rückgabe von URL, base64, unterstützt die Generierung von 1k Bildern, gpt-image-2 Gruppen unterstützen 1k, 2k, 4k. n-Parameter werden vorerst nicht unterstützt",
+          "model_type": "Bild",
+          "绘画": "Malerei"
+        },
+        "es": {
+          "description": "gpt-image-2-c, admite devolver url, base64, admite generación de imágenes de 1k, el grupo gpt-image-2 admite 1k, 2k, 4k. No se admite el parámetro n por el momento.",
+          "model_type": "Imagen",
+          "绘画": "Pintura"
+        }
+      },
+      "type": 1,
+      "available": true
+    },
+    {
+      "model_name": "wan3.0-video",
+      "description": "万相3.0是 all-in-one 视频生成模型，统一支持参考、编辑、复刻、驱动等多种创作功能，四模态全能参考，最长支持30秒视频生成，可解析文件、网页及复杂图片。生产级角色一致性保持，音画真实，带来身临其境的视听冲击力。",
+      "show_image_upload": 1,
+      "tags": "异步,视频,首尾帧",
+      "model_type": "音视频",
+      "vendor_id": 96,
+      "quota_type": 1,
+      "model_ratio": 5,
+      "model_price": 0.01,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "Alibaba-video-1",
+        "Alibaba-video-2"
+      ],
+      "supported_endpoint_types": [
+        "Wan video generation"
+      ],
+      "sort_order": 760,
+      "created_time": 1788440018,
+      "usage_count": 1139018490,
+      "translations": {
+        "de": {
+          "model_type": "Audio-Video",
+          "异步": "Asynchron",
+          "视频": "Video",
+          "首尾帧": "Erste und letzte Frame",
+          "description": "Wanxiang 3.0 ist ein All-in-One-Videogenerierungsmodell, das verschiedene kreative Funktionen wie Referenzierung, Bearbeitung, Nachbildung und Ansteuerung einheitlich unterstützt. Es bietet umfassende Referenzen in vier Modalitäten und unterstützt die Generierung von Videos mit einer maximalen Länge von 30 Sekunden. Es kann Dateien, Webseiten und komplexe Bilder analysieren. Produktionsgradige Konsistenz der Charaktere wird aufrechterhalten, die Audio- und Bildqualität ist realistisch und bietet ein immersives audiovisuelles Erlebnis."
+        },
+        "en": {
+          "视频": "Video",
+          "首尾帧": "First and Last Frame",
+          "description": "Wangxiang 3.0 is an all-in-one video generation model that uniformly supports various creative functions such as reference, editing, replication, and driving. It offers comprehensive reference across four modalities, supports video generation of up to 30 seconds, and can parse files, web pages, and complex images. It maintains production-level character consistency, with realistic audio and visuals, delivering an immersive audiovisual impact.",
+          "model_type": "Audio and Video",
+          "异步": "Asynchronous"
+        },
+        "es": {
+          "异步": "Asíncrono",
+          "视频": "Video",
+          "首尾帧": "Fotogramas inicial y final",
+          "description": "Wanxiang 3.0 es un modelo de generación de video todo en uno, que soporta de manera unificada múltiples funciones creativas como referencia, edición, replicación y conducción. Referencia multimodal completa, soporta generación de video de hasta 30 segundos, puede analizar archivos, páginas web e imágenes complejas. Mantiene la consistencia de personajes a nivel de producción, con audio y video realistas, brindando una experiencia audiovisual inmersiva.",
+          "model_type": "Audio y video"
+        },
+        "ja": {
+          "异步": "非同期",
+          "视频": "ビデオ",
+          "首尾帧": "開始フレームと終了フレーム",
+          "description": "万相3.0はオールインワンのビデオ生成モデルで、参考、編集、複製、駆動などの多様な創作機能を統一してサポートします。四つのモダリティを全て参照し、最長30秒のビデオ生成をサポートし、ファイル、ウェブページ、複雑な画像を解析できます。生産レベルのキャラクターの一貫性を保持し、音と映像がリアルで、没入感のある視聴体験を提供します。",
+          "model_type": "音声ビデオ"
+        },
+        "ru": {
+          "异步": "Асинхронный",
+          "视频": "Видео",
+          "首尾帧": "Первый и последний кадр",
+          "description": "Wanxiang 3.0 — это универсальная модель генерации видео, которая поддерживает различные функции создания, такие как ссылки, редактирование, копирование и управление. Она предлагает полную поддержку четырех модальностей и может генерировать видео длительностью до 30 секунд, а также обрабатывать файлы, веб-страницы и сложные изображения. Поддерживается согласованность персонажей на производственном уровне, звук и изображение реалистичны, что создает эффект погружения в аудиовизуальный опыт.",
+          "model_type": "Аудио и видео"
+        },
+        "zh": {
+          "model_type": "音视频",
+          "异步": "异步",
+          "视频": "视频",
+          "首尾帧": "首尾帧",
+          "description": "万相3.0是 all-in-one 视频生成模型，统一支持参考、编辑、复刻、驱动等多种创作功能，四模态全能参考，最长支持30秒视频生成，可解析文件、网页及复杂图片。生产级角色一致性保持，音画真实，带来身临其境的视听冲击力。"
+        },
+        "ko": {
+          "description": "만상 3.0은 올인원 비디오 생성 모델로, 참고, 편집, 복제, 구동 등 다양한 창작 기능을 통합 지원합니다. 사중 모드의 전천후 참고가 가능하며, 최대 30초 비디오 생성이 지원됩니다. 파일, 웹페이지 및 복잡한 이미지를 해석할 수 있습니다. 생산 수준의 캐릭터 일관성을 유지하며, 음향과 영상이 사실적이며 몰입감 있는 시청각 충격을 제공합니다.",
+          "model_type": "음비디오",
+          "异步": "비동기",
+          "视频": "비디오",
+          "首尾帧": "첫 마지막 프레임"
+        }
+      },
+      "video_resolution_ratios": {
+        "1080p": 20,
+        "480p": 5,
+        "720p": 10
+      },
+      "type": 1,
+      "available": true
+    }
+  ],
+  "group_ratio": {
+    "AWS-Bedrock-2": 0.58824,
+    "AWS-Claude-2": 0.88236,
+    "AWS-Claude-3": 1.1,
+    "AWS-Gpt-1": 0.29412,
+    "Alibaba-video-1": 0.65,
+    "Alibaba-video-2": 0.7,
+    "Anthropic-Claude-1": 1.1,
+    "Azure-Claude-1": 0.44118,
+    "Azure-Gpt-3": 0.22,
+    "Azure-Gpt-4": 0.44,
+    "Azure-Gpt-5": 0.6,
+    "Azure-Gpt-6": 0.9,
+    "Claude-Code-1": 0.17647,
+    "Claude-Code-2": 0.29412,
+    "Claude-Code-3": 0.45,
+    "Codex-Gpt-1": 0.03677,
+    "Codex-Gpt-2": 0.05883,
+    "Codex-Gpt-3": 0.07353,
+    "Gpt-Image-1": 0.07353,
+    "Gpt-Image-2": 0.09192,
+    "Gpt-Image-3": 0.13787,
+    "Kiro-Claude-1": 0.08824,
+    "Openai-Gpt-1": 0.58824,
+    "Openai-Gpt-2": 0.7353
+  },
+  "usable_group": {
+    "AWS-Bedrock-2": "AWS-Bedrock-2",
+    "AWS-Claude-2": "AWS-Claude-2",
+    "AWS-Claude-3": "AWS-Claude-3",
+    "AWS-Gpt-1": "AWS-Gpt-1",
+    "Alibaba-video-1": "Alibaba-video-1",
+    "Alibaba-video-2": "Alibaba-video-2",
+    "Anthropic-Claude-1": "Anthropic-Claude-1",
+    "Azure-Claude-1": "Azure-Claude-1",
+    "Azure-Gpt-3": "Azure-Gpt-3",
+    "Azure-Gpt-4": "Azure-Gpt-4",
+    "Azure-Gpt-5": "Azure-Gpt-5",
+    "Azure-Gpt-6": "Azure-Gpt-6",
+    "Claude-Code-1": "Claude-Code-1",
+    "Claude-Code-2": "Claude-Code-2",
+    "Claude-Code-3": "Claude-Code-3",
+    "Codex-Gpt-1": "Codex-Gpt-1",
+    "Codex-Gpt-2": "Codex-Gpt-2",
+    "Codex-Gpt-3": "Codex-Gpt-3",
+    "Gpt-Image-1": "Gpt-Image-1",
+    "Gpt-Image-2": "Gpt-Image-2",
+    "Gpt-Image-3": "Gpt-Image-3",
+    "Kiro-Claude-1": "Kiro-Claude-1",
+    "Openai-Gpt-1": "Openai-Gpt-1",
+    "Openai-Gpt-2": "Openai-Gpt-2"
+  }
+}

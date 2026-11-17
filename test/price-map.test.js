@@ -4,9 +4,11 @@ import { readFileSync } from "node:fs";
 
 import { applyPriceMap, evalExpression, readPath, shapeFingerprint, shapeSkeleton } from "../src/core/price-map.js";
 import { tokenfluxPriceMap } from "../src/core/price-maps/tokenflux.js";
+import { stellaislePriceMap } from "../src/core/price-maps/stellaisle.js";
 import { cheapRouterPriceMap } from "../src/core/price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "../src/core/price-maps/true-sota.js";
 import { sidrunePriceMap } from "../src/core/price-maps/sidrune.js";
+import { relayRouterPriceMap } from "../src/core/price-maps/relayrouter.js";
 import { parseBillingTiers } from "../src/core/normalizers.js";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/tokenflux-pricing.json", import.meta.url), "utf8"));
@@ -145,6 +147,21 @@ test("分组在 enable_groups 里但 group_ratio 没有倍率时不出行", () =
   assert.equal(result.rows.length, 0);
   assert.equal(result.unresolved.length, 1);
   assert.equal(result.unresolved[0].model, "ghost-group");
+});
+
+test("enable_groups 全空且 map 打开 emptyMeansAll 时，分组从 group_ratio 的键反推", () => {
+  const payload = {
+    success: true,
+    group_ratio: { "gpt-plus": 0.14, "gpt 稳定分组": 0.25 },
+    data: [{ model_name: "gpt-5.4", quota_type: 0, model_ratio: 2, completion_ratio: 3, enable_groups: [] }]
+  };
+  const rows = applyPriceMap(stellaislePriceMap, payload, { parseTiers: parseBillingTiers }).rows;
+  assert.deepEqual(rows.map(row => [row.proxy_group_name, row.group_ratio, row.input_price]), [
+    ["gpt-plus", 0.14, 0.28],
+    ["gpt 稳定分组", 0.25, 0.5]
+  ]);
+  // 同一份报文交给没开这个开关的 map，一条价都出不来——开关只对声明它的站点生效。
+  assert.equal(rowsOf(payload).rows.length, 0);
 });
 
 // ---- CheapRouter：和 TokenFlux 形状完全不同的第二份站点 ----
@@ -310,4 +327,60 @@ test("Sidrune 出图模型按 1K/2K/4K 各出一行，价落在 image_price 上"
     assert.equal(row.request_price, null, "按张的价不能落到按次字段上");
     assert.equal(row.input_price, null);
   }
+});
+
+const relayFixture = JSON.parse(readFileSync(new URL("./fixtures/relayrouter-pricing.json", import.meta.url), "utf8"));
+
+function relayRows(payload = relayFixture) {
+  return applyPriceMap(relayRouterPriceMap, payload, { parseTiers: parseBillingTiers });
+}
+
+function relayRow(model, group, payload = relayFixture) {
+  const found = relayRows(payload).rows.find(row => row.model_name === model && row.proxy_group_name === group);
+  assert.ok(found, `没找到 ${model} / ${group} 这一行`);
+  return found;
+}
+
+test("RelayRouter 缓存写读 5 分钟倍率，1 小时写单独成列", () => {
+  // 2（模型倍率）× 2（每倍率 2 美元/M）× 1.1（分组倍率）= 4.4
+  const row = relayRow("claude-opus-5-5", "Anthropic-Claude-1");
+  assert.equal(row.input_price, 4.4);
+  assert.equal(row.output_price, 22);
+  assert.equal(row.cache_read_price, 0.22);
+  assert.equal(row.cache_write_price, 5.5, "5.5 = 4.4 × 1.25，站点只发 cache_creation_5m_ratio");
+  assert.equal(row.cache_write_1h_price, 8.8, "8.8 = 4.4 × 2");
+  assert.equal(row.request_price, null);
+});
+
+test("RelayRouter 老字段 cache_creation_ratio 仍能兜住缓存写价", () => {
+  const payload = {
+    success: true,
+    group_ratio: { "A-1": 1 },
+    data: [{ model_name: "legacy-claude", quota_type: 0, model_ratio: 1, completion_ratio: 5, cache_ratio: 0.1, cache_creation_ratio: 3, enable_groups: ["A-1"], supported_endpoint_types: ["openai"] }]
+  };
+  const row = relayRow("legacy-claude", "A-1", payload);
+  assert.equal(row.cache_write_price, 6, "2 × 3，没有 5m 字段时回落到老字段");
+  assert.equal(row.cache_write_1h_price, undefined);
+});
+
+test("RelayRouter 的长上下文分档按 step_ratios 展开，档内倍率整段生效", () => {
+  const rows = relayRows().rows.filter(row => row.model_name === "gpt-6.1-sol" && row.proxy_group_name === "Openai-Gpt-1");
+  assert.equal(rows.length, 2);
+  assert.deepEqual(rows.map(row => [row.min_tokens, row.max_tokens]), [[0, 272000], [272000, 1000000]]);
+  // 1 × 2 × 0.58824 = 1.17648；第二档 prompt_step_ratio 2，输出再乘 completion_step_ratio 1.5。
+  assert.equal(rows[0].input_price, 1.17648);
+  assert.equal(rows[0].output_price, 5.8824);
+  assert.equal(rows[1].input_price, 2.35296);
+  assert.equal(rows[1].output_price, 8.8236);
+});
+
+test("RelayRouter 按次计价模型只出按次价，并带上媒体类型", () => {
+  const row = relayRow("gpt-image-2-c", "Gpt-Image-1");
+  assert.equal(row.request_price, 0.0088236, "0.12 × 0.07353 的分组倍率");
+  assert.equal(row.input_price, null);
+  assert.equal(row.output_price, null);
+  assert.equal(row.media_type, "image");
+  const video = relayRow("wan3.0-video", "Alibaba-video-1");
+  assert.equal(video.request_price, 0.0065);
+  assert.equal(video.media_type, "video");
 });

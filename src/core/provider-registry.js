@@ -15,6 +15,8 @@ export const TOKENFLUX_PRICING_ENDPOINT = "/api/pricing";
 export const CENTOS_PRICING_ENDPOINT = "/api/pricing";
 export const MAOLAO_PRICING_ENDPOINT = "/api/pricing";
 export const WINDHUB_PRICING_ENDPOINT = "/api/pricing";
+export const STELLAISLE_PRICING_ENDPOINT = "/api/pricing";
+export const RELAYROUTER_PRICING_ENDPOINT = "/api/pricing";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";

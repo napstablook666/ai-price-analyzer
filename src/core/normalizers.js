@@ -2,9 +2,11 @@ import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { applyPriceMap } from "./price-map.js";
 import { tokenfluxPriceMap } from "./price-maps/tokenflux.js";
+import { stellaislePriceMap } from "./price-maps/stellaisle.js";
 import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "./price-maps/true-sota.js";
 import { sidrunePriceMap } from "./price-maps/sidrune.js";
+import { relayRouterPriceMap } from "./price-maps/relayrouter.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
@@ -421,6 +423,8 @@ export class PqhPricingStrategy extends ParsingStrategy {
 
 
 export class TokenFluxPricingStrategy extends ParsingStrategy {
+  // 同形状的站点只是换一份字段映射，子类覆盖这个 getter 就行。
+  get priceMap() { return tokenfluxPriceMap; }
   canParse(raw, options = {}) {
     return options.responseFormat === "tokenflux" && raw?.success === true &&
       Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
@@ -428,7 +432,7 @@ export class TokenFluxPricingStrategy extends ParsingStrategy {
 
   parse(raw) {
     // 字段映射全在 price-maps/tokenflux.js 里，这里只负责调用和把失败报上去。
-    const { rows, unresolved } = applyPriceMap(tokenfluxPriceMap, raw, { parseTiers: parseBillingTiers });
+    const { rows, unresolved } = applyPriceMap(this.priceMap, raw, { parseTiers: parseBillingTiers });
     const groupRatio = Object.fromEntries(Object.entries(raw.group_ratio)
       .map(([group, value]) => [group, finitePrice(value)])
       .filter(([, value]) => value !== null));
@@ -478,6 +482,39 @@ export class WindHubPricingStrategy extends TokenFluxPricingStrategy {
         };
       })
     };
+  }
+}
+
+// Star API 的报文和 WindHub 同构，只是分组清单要自己从倍率表反推（见 price-maps/stellaisle.js）。
+export class StellaislePricingStrategy extends WindHubPricingStrategy {
+  get priceMap() { return stellaislePriceMap; }
+
+  canParse(raw, options = {}) {
+    return options.responseFormat === "stellaisle" && raw?.success === true &&
+      Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
+  }
+
+  parse(raw) {
+    const normalized = super.parse(raw);
+    return {
+      ...normalized,
+      sourceFormat: "stellaisle",
+      // 父类那句报错写着 WindHub，换到这家就自相矛盾了。
+      ...(normalized.data.length ? {} : { error: "Star API 公开定价数据为空或格式无效" })
+    };
+  }
+}
+// RelayRouter 的报文和 TokenFlux 同构，只是字段名换了一套（见 price-maps/relayrouter.js）。
+export class RelayRouterPricingStrategy extends TokenFluxPricingStrategy {
+  get priceMap() { return relayRouterPriceMap; }
+
+  canParse(raw, options = {}) {
+    return options.responseFormat === "relayrouter" && raw?.success === true &&
+      Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
+  }
+
+  parse(raw) {
+    return { ...super.parse(raw), sourceFormat: "relayrouter" };
   }
 }
 function unwrapTrpcPayload(raw) {
@@ -1456,6 +1493,8 @@ registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
 registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("windhub", () => new WindHubPricingStrategy());
+registerResponseFormatHandler("stellaisle", () => new StellaislePricingStrategy());
+registerResponseFormatHandler("relayrouter", () => new RelayRouterPricingStrategy());
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
 registerResponseFormatHandler("all-in-one-models", () => new AllInOneModelsStrategy());

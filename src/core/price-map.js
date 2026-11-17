@@ -182,26 +182,45 @@ export function evalExpression(source, scope = {}) {
 }
 
 // 表达式里的标识符一律按「模型条目上的路径」解析，所以 `model_ratio` 和
-// `image_billing_rule.ratio` 都能写进同一个表达式。
-function scopeOf(item) {
+// `image_billing_rule.ratio` 都能写进同一个表达式。给了父级记录时，档位对象上
+// 取不到的字段回落到父级——分档里只写各档系数、模型倍率留在外面的站点常用这个写法。
+function scopeOf(...frames) {
+  const lookup = key => {
+    for (const frame of frames) {
+      if (!frame || typeof frame !== "object") continue;
+      const value = readPath(frame, key);
+      if (value !== undefined && value !== null && value !== "") return value;
+    }
+    return undefined;
+  };
   return new Proxy({}, {
-    get: (_, key) => (typeof key === "string" ? readPath(item, key) : undefined),
+    get: (_, key) => (typeof key === "string" ? lookup(key) : undefined),
     // 让 hasOwnProperty 对这个代理也成立，标识符白名单才查得到键；
-    // 取值仍然只走上面那个 get，不会摸到任何原型方法。
-    getOwnPropertyDescriptor: (_, key) => (typeof key === "string" && readPath(item, key) !== undefined
+    // 取值仍然只走上面那个 lookup，不会摸到任何原型方法。
+    getOwnPropertyDescriptor: (_, key) => (typeof key === "string" && lookup(key) !== undefined
       ? { value: undefined, writable: false, enumerable: true, configurable: true }
       : undefined),
     has: () => true
   });
 }
 
-export function evalOnItem(source, item) {
+export function evalOnItem(source, item, fallback) {
   try {
-    return evalExpression(source, scopeOf(item));
+    return evalExpression(source, scopeOf(item, fallback));
   } catch (error) {
     if (error instanceof PriceMapError) return null;
     throw error;
   }
+}
+// 一份价可以写成链：前一条算不出来（站点换过字段名、老模型只发旧字段）就试下一条。
+// 链上全是 null 才返回 null，保证「没报价」和「报 0 价」分得开。
+export function evalChain(source, item, fallback) {
+  const sources = Array.isArray(source) ? source : [source];
+  for (const candidate of sources) {
+    const value = evalOnItem(candidate, item, fallback);
+    if (value !== null) return value;
+  }
+  return null;
 }
 
 // ---------- 结构指纹 ----------
@@ -315,43 +334,65 @@ function sizeTiersOf(spec, item) {
     .filter(Boolean);
 }
 
+// 档位名要短：`≤272K`、`272K–1M` 这种，比 272000 好读，也不占表格宽度。
+function compactTokens(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "";
+  if (number >= 1e6) return `${Number((number / 1e6).toFixed(2))}M`;
+  if (number >= 1e3) return `${Number((number / 1e3).toFixed(1))}K`;
+  return String(number);
+}
 // 上下文长度分档。档位数组里每一项都是独立的计价单元，表达式对着该项求值，
 // 和规则本身用的是同一套语法：spec 上写 input / output / cacheRead / cacheWrite。
-// 数组缺失或全空就退回单档，用规则自己的表达式对着整条记录求值。
+// 档位对象上取不到的字段回落到整条记录，所以「每档只给系数、模型倍率留在外面」
+// 这种写法也能直接算。数组缺失或全空就退回单档，用规则自己的表达式求值。
 function tokenCells(rule, item) {
   const spec = rule.tiers;
   const raw = spec ? readPath(item, spec.path) : null;
   if (Array.isArray(raw) && raw.length) {
     const cells = [];
+    // 站点只给上限的分档（step_ratios 的 step_size）要自己补下限：上一档的上限。
+    let lowerBound;
     for (const entry of raw) {
       if (!entry || typeof entry !== "object") continue;
-      const input = spec.input ? evalOnItem(spec.input, entry) : null;
-      const output = spec.output ? evalOnItem(spec.output, entry) : null;
+      const input = spec.input ? evalChain(spec.input, entry, item) : null;
+      const output = spec.output ? evalChain(spec.output, entry, item) : null;
+      const upper = spec.upperField ? Number(readPath(entry, spec.upperField)) : NaN;
+      const hasUpper = Number.isFinite(upper) && upper > 0;
+      const previousBound = lowerBound;
+      const minTokens = spec.minField ? readPath(entry, spec.minField)
+        : hasUpper ? previousBound ?? 0 : undefined;
+      const maxTokens = spec.maxField ? readPath(entry, spec.maxField)
+        : hasUpper ? upper : undefined;
+      if (hasUpper) lowerBound = upper;
       // 一档里入价出价都没有，说明这档没报价，跳过而不是补 0。
       if (input === null && output === null) continue;
+      const name = spec.nameField ? String(readPath(entry, spec.nameField) ?? "").trim()
+        : hasUpper ? `${previousBound ? `${compactTokens(previousBound)}–` : "≤"}${compactTokens(upper)}`
+          : "";
       cells.push({
         input,
         output,
-        cacheRead: spec.cacheRead ? evalOnItem(spec.cacheRead, entry) : null,
-        cacheWrite: spec.cacheWrite ? evalOnItem(spec.cacheWrite, entry) : null,
-        cacheWrite1h: spec.cacheWrite1h ? evalOnItem(spec.cacheWrite1h, entry) : null,
-        imageInput: spec.imageInput ? evalOnItem(spec.imageInput, entry) : null,
-        imageOutput: spec.imageOutput ? evalOnItem(spec.imageOutput, entry) : null,
-        name: spec.nameField ? String(readPath(entry, spec.nameField) ?? "").trim() : "",
-        minTokens: spec.minField ? readPath(entry, spec.minField) : undefined,
-        maxTokens: spec.maxField ? readPath(entry, spec.maxField) : undefined
+        cacheRead: spec.cacheRead ? evalChain(spec.cacheRead, entry, item) : null,
+        cacheWrite: spec.cacheWrite ? evalChain(spec.cacheWrite, entry, item) : null,
+        cacheWrite1h: spec.cacheWrite1h ? evalChain(spec.cacheWrite1h, entry, item) : null,
+        imageInput: spec.imageInput ? evalChain(spec.imageInput, entry, item) : null,
+        imageOutput: spec.imageOutput ? evalChain(spec.imageOutput, entry, item) : null,
+        name,
+        minTokens,
+        maxTokens
       });
     }
     if (cells.length) return cells;
   }
   return [{
-    input: evalOnItem(rule.input, item),
-    output: rule.output ? evalOnItem(rule.output, item) : null,
-    cacheRead: rule.cacheRead ? evalOnItem(rule.cacheRead, item) : null,
-    cacheWrite: rule.cacheWrite ? evalOnItem(rule.cacheWrite, item) : null,
-    cacheWrite1h: rule.cacheWrite1h ? evalOnItem(rule.cacheWrite1h, item) : null,
-    imageInput: rule.imageInput ? evalOnItem(rule.imageInput, item) : null,
-    imageOutput: rule.imageOutput ? evalOnItem(rule.imageOutput, item) : null,
+    input: evalChain(rule.input, item),
+    output: rule.output ? evalChain(rule.output, item) : null,
+    cacheRead: rule.cacheRead ? evalChain(rule.cacheRead, item) : null,
+    cacheWrite: rule.cacheWrite ? evalChain(rule.cacheWrite, item) : null,
+    cacheWrite1h: rule.cacheWrite1h ? evalChain(rule.cacheWrite1h, item) : null,
+    imageInput: rule.imageInput ? evalChain(rule.imageInput, item) : null,
+    imageOutput: rule.imageOutput ? evalChain(rule.imageOutput, item) : null,
     name: "",
     minTokens: undefined,
     maxTokens: undefined
@@ -420,10 +461,15 @@ function groupSelection(map, raw, item) {
     }
     return selected;
   }
-  const listed = readPath(item, spec.listPath || "enable_groups");
-  const groups = (Array.isArray(listed) ? listed : [listed]).map(value => String(value ?? "").trim()).filter(Boolean);
-  if (!groups.length) return [];
   const ratioTable = readPath(raw, spec.ratioPath || "/group_ratio");
+  const listed = readPath(item, spec.listPath || "enable_groups");
+  let groups = (Array.isArray(listed) ? listed : [listed]).map(value => String(value ?? "").trim()).filter(Boolean);
+  // 有的站每条的 enable_groups 是空数组（New API 语义 = 该模型在所有分组可用），
+  // 分组清单只能从倍率表的键反推。开关挂在 map 上，别的站不受影响。
+  if (!groups.length && spec.emptyMeansAll && ratioTable && typeof ratioTable === "object") {
+    groups = Object.keys(ratioTable);
+  }
+  if (!groups.length) return [];
   if (!ratioTable || typeof ratioTable !== "object") return groups.map(group => ({ group, ratio: 1 }));
   const usable = readPath(raw, spec.usablePath || "/usable_group");
   const usableKeys = usable && typeof usable === "object" && !Array.isArray(usable) ? Object.keys(usable) : null;
@@ -519,7 +565,7 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
     }
 
     if (rule.kind === "request") {
-      const price = evalOnItem(rule.price, item);
+      const price = evalChain(rule.price, item);
       const unit = resolveUnit(rule.unit, item);
       const tierAmounts = sizeTiersOf(rule.sizeTiers, item)
         .map(tier => ({ name: tier.name, amount: tier.price !== null ? tier.price : price === null ? null : price * tier.factor }))

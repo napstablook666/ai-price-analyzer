@@ -21,5 +21,7 @@ export const SITE_PLUGIN_ORDER = [
   "nexavlinks",
   "cheaprouter",
   "jiji",
-  "maolaoapi"
+  "maolaoapi",
+  "stellaisle",
+  "relayrouter"
 ];
