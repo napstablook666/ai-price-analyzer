@@ -1,0 +1,338 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "groups": [
+      {
+        "id": 57,
+        "name": "Claude",
+        "platform": "anthropic",
+        "rate_multiplier": 2.2,
+        "peak_rate_enabled": false,
+        "peak_start": "",
+        "peak_end": "",
+        "peak_rate_multiplier": 1,
+        "image_rate_multiplier": 1,
+        "video_rate_multiplier": 1
+      },
+      {
+        "id": 1,
+        "name": "Claude（kiro）",
+        "platform": "anthropic",
+        "channel_id": 3,
+        "rate_multiplier": 1,
+        "peak_rate_enabled": false,
+        "peak_start": "",
+        "peak_end": "",
+        "peak_rate_multiplier": 1,
+        "image_rate_multiplier": 1,
+        "video_rate_multiplier": 1
+      },
+      {
+        "id": 74,
+        "name": "全模型",
+        "platform": "composite",
+        "channel_id": 3,
+        "rate_multiplier": 2,
+        "peak_rate_enabled": false,
+        "peak_start": "",
+        "peak_end": "",
+        "peak_rate_multiplier": 1,
+        "image_rate_multiplier": 1,
+        "video_rate_multiplier": 1
+      },
+      {
+        "id": 79,
+        "name": "生图",
+        "platform": "composite",
+        "rate_multiplier": 1,
+        "peak_rate_enabled": false,
+        "peak_start": "",
+        "peak_end": "",
+        "peak_rate_multiplier": 1,
+        "image_rate_multiplier": 1,
+        "video_rate_multiplier": 1
+      },
+      {
+        "id": 53,
+        "name": "GPT",
+        "platform": "openai",
+        "channel_id": 3,
+        "rate_multiplier": 1,
+        "peak_rate_enabled": false,
+        "peak_start": "",
+        "peak_end": "",
+        "peak_rate_multiplier": 1,
+        "image_rate_multiplier": 1,
+        "video_rate_multiplier": 1
+      },
+      {
+        "id": 2,
+        "name": "官方GPT",
+        "platform": "openai",
+        "rate_multiplier": 1,
+        "peak_rate_enabled": false,
+        "peak_start": "",
+        "peak_end": "",
+        "peak_rate_multiplier": 1,
+        "image_rate_multiplier": 1,
+        "video_rate_multiplier": 1
+      }
+    ],
+    "models": [
+      {
+        "name": "claude-fable-5",
+        "platform": "anthropic",
+        "group_id": 57,
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_price": 0.000001,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "token",
+          "input_price": 0.00001,
+          "output_price": 0.00005,
+          "cache_write_price": 0.0000125,
+          "cache_read_price": 0.000001,
+          "image_input_price": 0,
+          "image_output_price": 0,
+          "per_request_price": null,
+          "intervals": []
+        }
+      },
+      {
+        "name": "claude-haiku-4-5",
+        "platform": "anthropic",
+        "group_id": 57,
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_price": 1e-7,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "token",
+          "input_price": 0.000001,
+          "output_price": 0.000005,
+          "cache_write_price": 0.00000125,
+          "cache_read_price": 1e-7,
+          "image_input_price": 0,
+          "image_output_price": 0,
+          "per_request_price": null,
+          "intervals": []
+        }
+      },
+      {
+        "name": "claude-haiku-4-5",
+        "platform": "anthropic",
+        "group_id": 1,
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_price": 1e-7,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "token",
+          "input_price": 0.000001,
+          "output_price": 0.000005,
+          "cache_write_price": 0.00000125,
+          "cache_read_price": 1e-7,
+          "image_input_price": 0,
+          "image_output_price": 0,
+          "per_request_price": null,
+          "intervals": []
+        }
+      },
+      {
+        "name": "claude-haiku-4-5",
+        "platform": "anthropic",
+        "group_id": 74,
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_price": 1e-7,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "token",
+          "input_price": 0.000001,
+          "output_price": 0.000005,
+          "cache_write_price": 0.00000125,
+          "cache_read_price": 1e-7,
+          "image_input_price": 0,
+          "image_output_price": 0,
+          "per_request_price": null,
+          "intervals": []
+        }
+      },
+      {
+        "name": "gpt-image-2",
+        "platform": "openai",
+        "group_id": 79,
+        "input_price": null,
+        "output_price": null,
+        "cache_price": null,
+        "protocols": [
+          "openai_chat",
+          "openai_responses"
+        ],
+        "pricing": {
+          "billing_mode": "image",
+          "input_price": null,
+          "output_price": null,
+          "cache_write_price": null,
+          "cache_read_price": null,
+          "image_input_price": null,
+          "image_output_price": null,
+          "per_request_price": 0.15,
+          "intervals": []
+        }
+      },
+      {
+        "name": "gpt-image-2",
+        "platform": "openai",
+        "group_id": 53,
+        "input_price": null,
+        "output_price": null,
+        "cache_price": null,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "image",
+          "input_price": null,
+          "output_price": null,
+          "cache_write_price": null,
+          "cache_read_price": null,
+          "image_input_price": null,
+          "image_output_price": null,
+          "per_request_price": 0.15,
+          "intervals": []
+        }
+      },
+      {
+        "name": "gpt-image-1",
+        "platform": "openai",
+        "group_id": 2,
+        "input_price": null,
+        "output_price": null,
+        "cache_price": null,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "image",
+          "input_price": null,
+          "output_price": null,
+          "cache_write_price": null,
+          "cache_read_price": null,
+          "image_input_price": null,
+          "image_output_price": null,
+          "per_request_price": null,
+          "intervals": [
+            {
+              "min_tokens": 0,
+              "max_tokens": null,
+              "tier_label": "1K",
+              "input_price": null,
+              "output_price": null,
+              "cache_write_price": null,
+              "cache_read_price": null,
+              "per_request_price": 0.134
+            },
+            {
+              "min_tokens": 0,
+              "max_tokens": null,
+              "tier_label": "2K",
+              "input_price": null,
+              "output_price": null,
+              "cache_write_price": null,
+              "cache_read_price": null,
+              "per_request_price": 0.201
+            },
+            {
+              "min_tokens": 0,
+              "max_tokens": null,
+              "tier_label": "4K",
+              "input_price": null,
+              "output_price": null,
+              "cache_write_price": null,
+              "cache_read_price": null,
+              "per_request_price": 0.268
+            }
+          ]
+        }
+      },
+      {
+        "name": "gpt-image-2",
+        "platform": "openai",
+        "group_id": 2,
+        "input_price": null,
+        "output_price": null,
+        "cache_price": null,
+        "protocols": [
+          "openai_chat",
+          "openai_responses",
+          "anthropic"
+        ],
+        "pricing": {
+          "billing_mode": "image",
+          "input_price": null,
+          "output_price": null,
+          "cache_write_price": null,
+          "cache_read_price": null,
+          "image_input_price": null,
+          "image_output_price": null,
+          "per_request_price": null,
+          "intervals": [
+            {
+              "min_tokens": 0,
+              "max_tokens": null,
+              "tier_label": "1K",
+              "input_price": null,
+              "output_price": null,
+              "cache_write_price": null,
+              "cache_read_price": null,
+              "per_request_price": 0.134
+            },
+            {
+              "min_tokens": 0,
+              "max_tokens": null,
+              "tier_label": "2K",
+              "input_price": null,
+              "output_price": null,
+              "cache_write_price": null,
+              "cache_read_price": null,
+              "per_request_price": 0.201
+            },
+            {
+              "min_tokens": 0,
+              "max_tokens": null,
+              "tier_label": "4K",
+              "input_price": null,
+              "output_price": null,
+              "cache_write_price": null,
+              "cache_read_price": null,
+              "per_request_price": 0.268
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

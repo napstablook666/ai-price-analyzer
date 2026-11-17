@@ -1,0 +1,303 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "enabled": true,
+    "items": [
+      {
+        "model": "codex-auto-review",
+        "display_name": "codex-auto-review",
+        "platform": "openai",
+        "billing_mode": "token",
+        "group": {
+          "name": "Codex促销分组-不降智",
+          "rate_multiplier": 0.15,
+          "rate_source": "group_default",
+          "description": "Codex促销分组-Pro特价号池，不降智",
+          "sort_order": 0
+        },
+        "available_group_count": 4,
+        "official_pricing": {
+          "input_per_mtok_usd": 0.19999999999999998,
+          "output_per_mtok_usd": 1.2,
+          "cache_write_per_mtok_usd": 0.25,
+          "cache_read_per_mtok_usd": 0.02,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": true
+        },
+        "effective_pricing_usd": {
+          "input_per_mtok_usd": 0.03,
+          "output_per_mtok_usd": 0.18,
+          "cache_write_per_mtok_usd": 0.0375,
+          "cache_read_per_mtok_usd": 0.003,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": false
+        },
+        "comparison": {
+          "savings_percent": 0.85,
+          "is_cheaper_than_official": true
+        },
+        "pricing_details": {
+          "supports_prompt_caching": true,
+          "has_long_context_multiplier": true,
+          "long_context_input_threshold": 272000,
+          "intervals": [
+            {
+              "min_tokens": 0,
+              "max_tokens": 272000,
+              "tier_label": "≤272K",
+              "input_per_mtok_usd": 0.03,
+              "output_per_mtok_usd": 0.18,
+              "cache_write_per_mtok_usd": 0.0375,
+              "cache_read_per_mtok_usd": 0.003,
+              "per_request_usd": null,
+              "per_image_usd": null
+            },
+            {
+              "min_tokens": 272000,
+              "max_tokens": null,
+              "tier_label": ">272K",
+              "input_per_mtok_usd": 0.06,
+              "output_per_mtok_usd": 0.26999999999999996,
+              "cache_write_per_mtok_usd": 0.075,
+              "cache_read_per_mtok_usd": 0.006,
+              "per_request_usd": null,
+              "per_image_usd": null
+            }
+          ],
+          "media_tiers": [],
+          "media_unit": ""
+        },
+        "context_window": 922000
+      },
+      {
+        "model": "claude-haiku-4-5-20251001",
+        "display_name": "claude-haiku-4-5-20251001",
+        "platform": "anthropic",
+        "billing_mode": "token",
+        "group": {
+          "name": "Claude促销分组",
+          "rate_multiplier": 0.5,
+          "rate_source": "group_default",
+          "description": "Claude-Kiro企业90%高缓高智商",
+          "sort_order": 1
+        },
+        "available_group_count": 2,
+        "official_pricing": {
+          "input_per_mtok_usd": 1,
+          "output_per_mtok_usd": 5,
+          "cache_write_per_mtok_usd": 1.25,
+          "cache_read_per_mtok_usd": 0.09999999999999999,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": true
+        },
+        "effective_pricing_usd": {
+          "input_per_mtok_usd": 0.5,
+          "output_per_mtok_usd": 2.5,
+          "cache_write_per_mtok_usd": 0.625,
+          "cache_read_per_mtok_usd": 0.049999999999999996,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": false
+        },
+        "comparison": {
+          "savings_percent": 0.5,
+          "is_cheaper_than_official": true
+        },
+        "pricing_details": {
+          "supports_prompt_caching": true,
+          "has_long_context_multiplier": false,
+          "long_context_input_threshold": 0,
+          "intervals": [],
+          "media_tiers": [],
+          "media_unit": ""
+        },
+        "context_window": 200000
+      },
+      {
+        "model": "kimi-k3.1-pro",
+        "display_name": "kimi-k3.1-pro",
+        "platform": "openai",
+        "billing_mode": "token",
+        "group": {
+          "name": "国模按量付费分组",
+          "rate_multiplier": 0.5,
+          "rate_source": "group_default",
+          "description": "模型包括deepseek-v4.1-flash、glm-5.3、glm-5.3-flash、kimi-k3、kimi-k3.1-pro",
+          "sort_order": 0
+        },
+        "available_group_count": 1,
+        "official_pricing": {
+          "input_per_mtok_usd": 2,
+          "output_per_mtok_usd": 10,
+          "cache_write_per_mtok_usd": 2,
+          "cache_read_per_mtok_usd": 0.19999999999999998,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": true
+        },
+        "effective_pricing_usd": {
+          "input_per_mtok_usd": 4,
+          "output_per_mtok_usd": 20,
+          "cache_write_per_mtok_usd": 0.5,
+          "cache_read_per_mtok_usd": 0.5,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": false
+        },
+        "comparison": {
+          "savings_percent": -1,
+          "is_cheaper_than_official": false
+        },
+        "pricing_details": {
+          "supports_prompt_caching": true,
+          "has_long_context_multiplier": false,
+          "long_context_input_threshold": 0,
+          "intervals": [],
+          "media_tiers": [],
+          "media_unit": ""
+        },
+        "context_window": 1048576
+      },
+      {
+        "model": "gpt-image-2",
+        "display_name": "gpt-image-2",
+        "platform": "openai",
+        "billing_mode": "image",
+        "group": {
+          "name": "Codex促销分组-不降智",
+          "rate_multiplier": 0.4,
+          "rate_source": "group_default",
+          "description": "Codex促销分组-Pro特价号池，不降智",
+          "sort_order": 0
+        },
+        "available_group_count": 4,
+        "official_pricing": {
+          "input_per_mtok_usd": 5,
+          "output_per_mtok_usd": null,
+          "cache_write_per_mtok_usd": null,
+          "cache_read_per_mtok_usd": 1.25,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": true
+        },
+        "effective_pricing_usd": {
+          "input_per_mtok_usd": null,
+          "output_per_mtok_usd": null,
+          "cache_write_per_mtok_usd": null,
+          "cache_read_per_mtok_usd": null,
+          "per_request_usd": null,
+          "per_image_usd": 0.05360000000000001,
+          "per_second_usd": null,
+          "has_reference": false
+        },
+        "comparison": {
+          "savings_percent": null,
+          "is_cheaper_than_official": false
+        },
+        "pricing_details": {
+          "supports_prompt_caching": false,
+          "has_long_context_multiplier": false,
+          "long_context_input_threshold": 0,
+          "intervals": [],
+          "media_tiers": [
+            {
+              "tier": "1K",
+              "official_usd": null,
+              "effective_usd": 0.05360000000000001,
+              "is_default_tier": false
+            },
+            {
+              "tier": "2K",
+              "official_usd": null,
+              "effective_usd": 0.05360000000000001,
+              "is_default_tier": true
+            },
+            {
+              "tier": "4K",
+              "official_usd": null,
+              "effective_usd": 0.05360000000000001,
+              "is_default_tier": false
+            }
+          ],
+          "media_unit": "image"
+        }
+      },
+      {
+        "model": "gpt-image-2.5-flare",
+        "display_name": "gpt-image-2.5-flare",
+        "platform": "openai",
+        "billing_mode": "image",
+        "group": {
+          "name": "GPT官Key分组",
+          "rate_multiplier": 0.4,
+          "rate_source": "group_default",
+          "description": "官Key企业级，99%缓，可以用Luna",
+          "sort_order": 0
+        },
+        "available_group_count": 4,
+        "official_pricing": {
+          "input_per_mtok_usd": 5,
+          "output_per_mtok_usd": null,
+          "cache_write_per_mtok_usd": null,
+          "cache_read_per_mtok_usd": 1.25,
+          "per_request_usd": null,
+          "per_image_usd": null,
+          "per_second_usd": null,
+          "has_reference": true
+        },
+        "effective_pricing_usd": {
+          "input_per_mtok_usd": null,
+          "output_per_mtok_usd": null,
+          "cache_write_per_mtok_usd": null,
+          "cache_read_per_mtok_usd": null,
+          "per_request_usd": null,
+          "per_image_usd": 0.05360000000000001,
+          "per_second_usd": null,
+          "has_reference": false
+        },
+        "comparison": {
+          "savings_percent": null,
+          "is_cheaper_than_official": false
+        },
+        "pricing_details": {
+          "supports_prompt_caching": false,
+          "has_long_context_multiplier": false,
+          "long_context_input_threshold": 0,
+          "intervals": [],
+          "media_tiers": [
+            {
+              "tier": "1K",
+              "official_usd": null,
+              "effective_usd": 0.05360000000000001,
+              "is_default_tier": false
+            },
+            {
+              "tier": "2K",
+              "official_usd": null,
+              "effective_usd": 0.05360000000000001,
+              "is_default_tier": true
+            },
+            {
+              "tier": "4K",
+              "official_usd": null,
+              "effective_usd": 0.05360000000000001,
+              "is_default_tier": false
+            }
+          ],
+          "media_unit": "image"
+        }
+      }
+    ]
+  }
+}

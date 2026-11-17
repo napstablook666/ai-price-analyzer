@@ -1,0 +1,333 @@
+{
+  "success": true,
+  "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+  "group_ratio": {
+    "Claude Code 特惠": 0.2,
+    "Codex号池": 0.2,
+    "Gork": 0.5,
+    "MIMO": 0.5,
+    "[特价]Codex号池": 0.2,
+    "[稳定]Codex号池": 0.2,
+    "default": 1,
+    "绘图模型": 1
+  },
+  "usable_group": {
+    "Claude Code 特惠": "kiro版，支持opus，超高缓存命中，支持OpenClaw",
+    "Codex号池": "",
+    "Gork": "",
+    "MIMO": "小米MIMO大模型",
+    "[特价]Codex号池": "不稳定且动态调价",
+    "[稳定]Codex号池": "支持Codex全系列模型",
+    "default": "默认分组",
+    "绘图模型": "绘图系列模型"
+  },
+  "auto_groups": [
+    "Codex号池"
+  ],
+  "supported_endpoint": {
+    "anthropic": {
+      "path": "/v1/messages",
+      "method": "POST"
+    },
+    "gemini": {
+      "path": "/v1beta/models/{model}:generateContent",
+      "method": "POST"
+    },
+    "image-generation": {
+      "path": "/v1/images/generations",
+      "method": "POST"
+    },
+    "openai": {
+      "path": "/v1/chat/completions",
+      "method": "POST"
+    },
+    "openai-alpha-search": {
+      "path": "/v1/alpha/search",
+      "method": "POST"
+    },
+    "openai-response": {
+      "path": "/v1/responses",
+      "method": "POST"
+    },
+    "openai-response-compact": {
+      "path": "/v1/responses/compact",
+      "method": "POST"
+    }
+  },
+  "vendors": [
+    {
+      "id": 13,
+      "name": "Neon"
+    },
+    {
+      "id": 19,
+      "name": "xAI",
+      "icon": "XAI"
+    },
+    {
+      "id": 11,
+      "name": "讯飞",
+      "icon": "Spark.Color"
+    },
+    {
+      "id": 1,
+      "name": "OpenAI",
+      "icon": "OpenAI"
+    },
+    {
+      "id": 8,
+      "name": "Venice AI",
+      "icon": "VeniceAI"
+    },
+    {
+      "id": 9,
+      "name": "OpenCode Zen",
+      "icon": "OpenCode"
+    },
+    {
+      "id": 10,
+      "name": "Qiniu"
+    },
+    {
+      "id": 20,
+      "name": "Moonshot",
+      "icon": "Moonshot"
+    },
+    {
+      "id": 4,
+      "name": "NanoGPT"
+    },
+    {
+      "id": 5,
+      "name": "Vivgrid"
+    },
+    {
+      "id": 12,
+      "name": "Xiaomi MiMo",
+      "icon": "XiaomiMiMo"
+    },
+    {
+      "id": 14,
+      "name": "Xiaomi Token Plan (Singapore)"
+    },
+    {
+      "id": 15,
+      "name": "LLM Gateway"
+    },
+    {
+      "id": 2,
+      "name": "Anthropic",
+      "icon": "Claude.Color"
+    },
+    {
+      "id": 3,
+      "name": "DeepSeek",
+      "icon": "DeepSeek.Color"
+    },
+    {
+      "id": 6,
+      "name": "QiHang"
+    },
+    {
+      "id": 7,
+      "name": "Helicone"
+    },
+    {
+      "id": 16,
+      "name": "Xiaomi"
+    },
+    {
+      "id": 17,
+      "name": "UnoRouter"
+    },
+    {
+      "id": 18,
+      "name": "阿里巴巴",
+      "icon": "Qwen.Color"
+    }
+  ],
+  "data": [
+    {
+      "model_name": "claude-opus-4-7",
+      "description": "Claude Opus 4.7 is an AI model provided by venice.",
+      "icon": "Claude.Color",
+      "tags": "Reasoning,Tools,Files,Vision,1M",
+      "vendor_id": 2,
+      "quota_type": 0,
+      "model_ratio": 2.5,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.1,
+      "create_cache_ratio": 1.25,
+      "enable_groups": [
+        "default",
+        "Claude Code 特惠"
+      ],
+      "supported_endpoint_types": [
+        "anthropic",
+        "openai"
+      ]
+    },
+    {
+      "model_name": "gpt-6-astra",
+      "vendor_id": 1,
+      "quota_type": 0,
+      "model_ratio": 5,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.1,
+      "enable_groups": [
+        "[特价]Codex号池",
+        "[稳定]Codex号池",
+        "绘图模型",
+        "测试专用",
+        "default",
+        "Codex号池"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ],
+      "billing_mode": "tiered_expr",
+      "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 10 + cr * 1 + cc * 12.5 + c * 50) : tier(\"272k_plus\", p * 20 + cr * 2 + cc * 25 + c * 75)"
+    },
+    {
+      "model_name": "gpt-image-2",
+      "description": "gpt-image-2 is an AI model provided by openai.",
+      "icon": "OpenAI.Color",
+      "tags": "Files,Vision",
+      "vendor_id": 1,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.06,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "default",
+        "绘图模型"
+      ],
+      "supported_endpoint_types": [
+        "image-generation"
+      ],
+      "image_billing_rule": {
+        "enabled": true,
+        "match_type": "exact",
+        "size_path": "size",
+        "quality_path": "quality",
+        "unknown_policy": "default",
+        "resolution_tiers": [
+          {
+            "name": "1K",
+            "max_long_edge": 1920,
+            "max_pixels": 2000000,
+            "ratio": 1
+          },
+          {
+            "name": "2K",
+            "max_long_edge": 2560,
+            "max_pixels": 3686400,
+            "ratio": 1.67
+          },
+          {
+            "name": "4K",
+            "max_long_edge": 3840,
+            "max_pixels": 8294400,
+            "ratio": 2.34
+          }
+        ],
+        "match_pattern": "gpt-image-2"
+      }
+    },
+    {
+      "model_name": "gpt-image-2.5",
+      "vendor_id": 1,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.1,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "default",
+        "绘图模型"
+      ],
+      "supported_endpoint_types": [
+        "image-generation"
+      ]
+    },
+    {
+      "model_name": "gpt-image-2.5-sunburst",
+      "vendor_id": 1,
+      "quota_type": 0,
+      "model_ratio": 37.5,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 2,
+      "enable_groups": [
+        "default",
+        "绘图模型"
+      ],
+      "supported_endpoint_types": [
+        "image-generation"
+      ]
+    },
+    {
+      "model_name": "gpt-5.6-luna",
+      "vendor_id": 1,
+      "quota_type": 0,
+      "model_ratio": 0.35,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 6,
+      "cache_ratio": 0.1,
+      "enable_groups": [
+        "测试专用",
+        "绘图模型",
+        "default",
+        "[稳定]Codex号池",
+        "Codex号池",
+        "[特价]Codex号池"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ],
+      "billing_mode": "tiered_expr",
+      "billing_expr": "len <= 272000 ? tier(\"standard\", p * 1 + c * 6 + cr * 0.1 + cc * 1.25) : tier(\"long_context\", p * 2 + c * 9 + cr * 0.2 + cc * 2.5)"
+    },
+    {
+      "model_name": "wan2.7-i2v",
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 1,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "default"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ],
+      "billing_usage_schema": {
+        "resolution": {
+          "enum": [
+            "480P",
+            "720P",
+            "1080P"
+          ],
+          "description": {
+            "en": "Requested output video resolution.",
+            "zh": "请求的输出视频分辨率。"
+          }
+        },
+        "seconds": {
+          "type": "number",
+          "unit": "second",
+          "description": {
+            "en": "Requested video duration in seconds.",
+            "zh": "请求的视频时长，单位为秒。"
+          }
+        }
+      }
+    }
+  ]
+}

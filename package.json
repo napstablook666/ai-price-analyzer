@@ -18,7 +18,8 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "test": "node --test test/core.test.js test/checkin.test.js test/refresh-preflight.test.js test/site-plugins.test.js test/plugin-build.test.js test/plugin-registry.test.js test/model-identity.test.js test/pricing-standard.test.js test/merge-offers-chart.test.js test/llm-matching.test.js test/update-check.test.js"
+    "test": "node --test test/billing-tiers.test.js test/core.test.js test/checkin.test.js test/refresh-preflight.test.js test/site-plugins.test.js test/plugin-build.test.js test/plugin-registry.test.js test/model-identity.test.js test/pricing-standard.test.js test/image-billing.test.js test/price-map.test.js test/merge-offers-chart.test.js test/llm-matching.test.js test/update-check.test.js test/media-comparison.test.js",
+    "audit:stations": "node scripts/station-audit.mjs"
   },
   "devDependencies": {
     "vitepress": "^1.6.4"
