@@ -12,6 +12,22 @@ const preset = {
   adapter: { endpoint: HEPINGAN_CHANNELS_ENDPOINT, method: "GET", responseFormat: "auto" }
 };
 
+// 站点的 auth_token 24 小时过期，过期后前端拿 localStorage 里的 refresh_token 调
+// /api/v1/auth/refresh 换一对新的（refresh_token 每次都会轮换）。这里照同一套续期，
+// 第一次登录过后扩展自己就能续上，不用再让用户回站点重新登录。
+const pageAuth = localStoragePageAuth("auth_token", "Authorization", "未找到 Hepingan 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401], {
+  endpoint: "/api/v1/auth/refresh",
+  credentials: "same-origin",
+  requestTokenKey: "refresh_token",
+  responsePath: "data",
+  accessTokenKey: "access_token",
+  refreshTokenStorageKey: "refresh_token",
+  refreshTokenKey: "refresh_token",
+  expiresInKey: "expires_in",
+  expiresAtStorageKey: "token_expires_at",
+  statuses: [401]
+});
+
 const pluginSource = {
   id: "hepingan",
   host: "api.hepingan.top",
@@ -26,11 +42,11 @@ const pluginSource = {
   }),
   mode: "page",
   openTemporaryPage: true,
-  rationale: "Hepingan 复用当前 Chrome 配置文件的持久登录态，首次使用需先登录一次",
+  rationale: "Hepingan 复用当前 Chrome 配置文件的登录态，token 过期后用 refresh_token 自动续期，首次使用需登录一次",
   preset,
   request: requestPolicy(() => HEPINGAN_CHANNELS_ENDPOINT, {
     credentials: "include",
-    pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 Hepingan 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401])
+    pageAuth
   })
 };
 
