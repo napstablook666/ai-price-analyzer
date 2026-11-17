@@ -56,9 +56,12 @@ jobs:
           tar -c --exclude=./.git --exclude=./dist . | tar -x -C dist/source
           tar -c --exclude=.git -C plugins . | tar -x -C dist/source/plugins
           (
+          (
             cd dist/source
+            # update.bat / update.ps1 只进包，不进 update.json 的文件表：扩展不去写自己。
             zip -qr "../../dist/ai-relay-price-extension-${version}.zip" \
-              manifest.json dashboard.html options.html styles.css styles icons src
+              manifest.json dashboard.html options.html styles.css styles icons src \
+              update.bat update.ps1
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )
           # 校验文件里只写文件名：两个包上传后都落在 release 根目录，写成 dist/... 会让下载方 sha256sum -c 找不到文件。
@@ -66,6 +69,20 @@ jobs:
             cd dist
             sha256sum "ai-relay-price-extension-${version}.zip" "../ai-price-analyzer-${version}-source.zip" | sed 's#\.\./##' > SHA256SUMS.txt
           )
+
+      - name: Build signed update.json
+        shell: bash
+        env:
+          SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME}"
+          node scripts/build-update-manifest.mjs \
+            --source dist/source \
+            --zip "dist/ai-relay-price-extension-${version}.zip" \
+            --version "$version" \
+            --url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${version}/ai-relay-price-extension-${version}.zip" \
+            --out dist/update.json
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -76,3 +93,5 @@ jobs:
             dist/ai-relay-price-extension-${{ github.ref_name }}.zip
             ai-price-analyzer-${{ github.ref_name }}-source.zip
             dist/SHA256SUMS.txt
+            dist/update.json
+            dist/source/update.ps1

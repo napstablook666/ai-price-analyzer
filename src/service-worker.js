@@ -12,24 +12,28 @@ import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedCheckinSpe
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { runWithConcurrency, withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
-import { fetchReferences } from "./core/openrouter.js";
+import { dropFloatingModels, fetchReferences } from "./core/openrouter.js";
 import { buildComparisonRows, buildStationIndexes, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
 import { normalizeProxyModelName } from "./core/matching.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
+import { buildSettingsExport, parseSettingsExport } from "./core/settings-transfer.js";
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
 import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_RETRIES, ASSIST_RETRY_DELAY_MS, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPool, buildAssistPrompt, cacheKey, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, poolSummaryLabel, selectPendingEntries, spreadAssistResults, summarizeCache, summarizePool } from "./core/llm-matching.js";
 import { checkinPresetsFromSpecs, matchCheckinPreset, normalizeCheckinRecord, normalizeCheckinSession, performCheckin, readPageToken } from "./core/checkin.js";
 import { MAGPIE_USAGE_WINDOWS, fetchMagpieUsage, normalizeMagpieSyncInterval } from "./core/magpie-usage.js";
-import { checkForUpdate } from "./core/update-check.js";
+import { checkForUpdate, isNewerVersion } from "./core/update-check.js";
 
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
 const CHECKIN_ALARM_NAME = "checkin-stations";
 const CHECKIN_LOGIN_ALARM_NAME = "checkin-login";
 const UPDATE_ALARM_NAME = "update-check";
+const MARKER_WATCH_ALARM_NAME = "update-marker-watch";
+const MARKER_FILE_NAME = "update-marker.json";
+const MARKER_WATCH_PERIOD_MINUTES = 1;
 const UPDATE_STATE_KEY = "update-state";
 const MAGPIE_USAGE_ALARM_NAME = "magpie-usage";
 const CHECKIN_LOGIN_WATCH_LIMIT = 12;
@@ -249,7 +253,9 @@ function errorSnapshot(station, error, previous) {
 
 async function refreshReferences(force = false) {
   const cache = await getValue("references", {});
-  if (!force && cache.fetchedAt && Date.now() - cache.fetchedAt < 24 * 60 * 60 * 1000) return cache;
+  // 旧缓存里留着 ~vendor 浮动别名时不再按 24 小时有效期直接返回：重拉一次，供应商分组才会立即清干净。
+  const legacy = dropFloatingModels(cache.models).length !== (Array.isArray(cache.models) ? cache.models.length : 0);
+  if (!force && !legacy && cache.fetchedAt && Date.now() - cache.fetchedAt < 24 * 60 * 60 * 1000) return cache;
   const result = await fetchReferences({ cache });
   await setValue("references", result);
   return result;
@@ -793,6 +799,30 @@ async function scheduleUpdateAlarm() {
   chrome.alarms.create(UPDATE_ALARM_NAME, { periodInMinutes: settings.updateIntervalMinutes });
 }
 
+// update.bat 覆盖完目录会在扩展根写一个 marker，扩展没人替它重启。这里每分钟问一次，
+// 读到比自己新的版本就写一条记录再自重启，用户不用回到 chrome://extensions 点刷新。
+async function watchUpdateMarker() {
+  let marker;
+  try {
+    const url = `${chrome.runtime.getURL(MARKER_FILE_NAME)}?t=${Date.now()}`;
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) return;
+    marker = await response.json();
+  } catch {
+    return;
+  }
+  const version = typeof marker?.version === "string" ? marker.version.trim() : "";
+  if (!version) return;
+  const current = chrome.runtime.getManifest().version;
+  if (!isNewerVersion(version, current)) return;
+  await chrome.storage.local.set({ "self-update": { version, at: Date.now(), source: "bat" } });
+  chrome.runtime.reload();
+}
+
+function scheduleMarkerWatchAlarm() {
+  chrome.alarms.create(MARKER_WATCH_ALARM_NAME, { periodInMinutes: MARKER_WATCH_PERIOD_MINUTES });
+}
+
 async function saveUpdatePrefs(input = {}) {
   const current = await getSettings();
   const next = normalizeSettings({
@@ -1156,6 +1186,26 @@ async function saveComparisonMode(mode) {
   await setValue("settings", normalizeSettings({ ...current, comparisonMode: nextMode }));
   await invalidation;
   return dashboard();
+}
+
+async function exportSettingsForFile() {
+  return buildSettingsExport({ settings: await getSettings(), stations: await getStations() });
+}
+
+// 导入只认「用户填的东西」：插件来源这几项留在本机，横向覆盖会把已装插件清空。
+async function importSettingsFromFile(payload) {
+  const incoming = parseSettingsExport(payload);
+  const current = await getSettings();
+  await setValue("settings", normalizeSettings({
+    ...incoming.settings,
+    devMode: current.devMode,
+    pluginInstallMigrated: current.pluginInstallMigrated,
+    localPlugins: current.localPlugins,
+    pluginRegistry: current.pluginRegistry
+  }));
+  await putStations(incoming.stations);
+  await invalidateRefreshPreflight();
+  return { settings: await settingsForUi(), stations: incoming.stations.length };
 }
 
 async function saveSettings(rawInput = {}) {
@@ -1806,11 +1856,11 @@ export async function installPlugins(ids) {
   });
 }
 
-async function uninstallPlugin(id) {
+// 单条移除：uninstallPlugins 返回的就是工作区状态（带 removed），直接原样交给界面重绘。
+export async function uninstallPlugin(id) {
   const pluginId = String(id || "").trim();
   if (!pluginId) throw new Error("插件不存在");
-  const { workspace } = await uninstallPlugins([pluginId]);
-  return workspace;
+  return uninstallPlugins([pluginId]);
 }
 
 // 批量移除：一次加锁、一次落库，把仓库安装记录与本地插件一起清掉，并删掉挂在它们下面的站点。
@@ -1889,6 +1939,8 @@ async function handle(message, sender) {
     case "CHECK_UPDATE": return runUpdateCheck({ force: true });
     case "SAVE_UPDATE_PREFS": return saveUpdatePrefs(message);
     case "SAVE_SETTINGS": return saveSettings(message.settings, message);
+    case "EXPORT_SETTINGS": return exportSettingsForFile();
+    case "IMPORT_SETTINGS": return importSettingsFromFile(message.payload);
     case "SAVE_MAGPIE_PREFS": return saveMagpieUsagePrefs(message);
     case "SYNC_MAGPIE_USAGE": return runMagpieUsageSync({ force: true });
     case "TEST_MODEL_CONNECTION": return testModelAssistant(message.config || {});
@@ -2023,12 +2075,14 @@ chrome.tabs?.onRemoved?.addListener(tabId => {
 chrome.runtime.onInstalled.addListener(() => {
   scheduleCheckinAlarm();
   scheduleUpdateAlarm();
+  scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
   ensureWorkspacePlugins({ force: true });
 });
 chrome.runtime.onStartup.addListener(() => {
   scheduleCheckinAlarm();
   scheduleUpdateAlarm();
+  scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
   ensureWorkspacePlugins({ force: true });
 });
@@ -2036,5 +2090,6 @@ chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === CHECKIN_ALARM_NAME) return checkinAll({ claim: true, autoOnly: true }).catch(error => console.warn("[AI比价] 定时签到失败", error));
   if (alarm.name === CHECKIN_LOGIN_ALARM_NAME) return watchCheckinLogin().catch(error => console.warn("[AI比价] 签到登录探测失败", error));
   if (alarm.name === UPDATE_ALARM_NAME) return runUpdateCheck().catch(error => console.warn("[AI比价] 检查更新失败", error));
+  if (alarm.name === MARKER_WATCH_ALARM_NAME) return watchUpdateMarker().catch(error => console.warn("[AI比价] 检查更新标记失败", error));
   if (alarm.name === MAGPIE_USAGE_ALARM_NAME) return runMagpieUsageSync().catch(error => console.warn("[AI比价] 同步 magpie 用量失败", error));
 });

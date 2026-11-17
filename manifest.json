@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AI 中转站价格对比",
-  "version": "0.8.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApht9+r/rkJPu9IB+eCKH48bXsILwV0GjMq815cjy0ZGAhWdTkCnD+GWNc1tkiNWmze0t94xKuvx4j0xfJw3mLZSGwHIDM1q8wSzIyGQR8o49PJWX7oYP3WVOe1BQM3uQVXtvQzLQBGcnqVJJye7k3BGf4tBkaiVTd4lYmru9UwInDo+agLAmbbQ3cTDm6m7HX2tbn1KLc6HM8z0+3FR/PPClV26qGbzWzpslp5zEvwRal01ctQCnw19PyIlpStjUcPhxqjYr+C77Z+lgE6Aph1jxFNJGHyc8+cLcSK/1tm6Q/jf7niH6u0iUj0puhW9ZtmB9gpX4yMaBAhW9QnzHMQIDAQAB",
+  "version": "0.9.0",
   "description": "定时采集多家 AI 中转站、OpenRouter 官方参考价并进行同模型对比。",
   "icons": {
     "16": "icons/icon-16.png",
@@ -9,8 +10,17 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["alarms", "scripting", "tabs", "storage", "cookies", "declarativeNetRequest"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "alarms",
+    "scripting",
+    "tabs",
+    "storage",
+    "cookies",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "src/service-worker.js",
     "type": "module"
@@ -30,13 +40,21 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content-bridge.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content-bridge.js"
+      ],
       "run_at": "document_start"
     },
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/page-bridge.js"],
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/page-bridge.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN"
     }

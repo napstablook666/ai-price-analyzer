@@ -73,10 +73,10 @@
 
       <div class="settings-content">
         <section class="settings-view" id="settings-view-installed" role="tabpanel" aria-labelledby="settings-tab-installed" data-settings-view="installed">
-          <div class="view-heading"><div><h2>已安装插件</h2><p>插件就是站点适配器，装好即把它的站点加入工作区；凭据与开关在插件行里配置。</p></div><div class="view-heading-actions"><span id="station-count" class="station-count">0</span><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div></div>
+          <div class="view-heading"><div><h2>已安装插件</h2><p>插件就是站点适配器。多数插件装好就把站点加进工作区；标着「按地址添加」的要自己粘一条站点地址。凭据与开关在插件行里配置。</p></div><div class="view-heading-actions"><span id="station-count" class="station-count">0</span><button class="button button-quiet" id="add-station-top" type="button"><span data-icon="plus" class="icon"></span><span>添加站点</span></button></div></div>
           <section class="plugin-manager" id="plugin-installed" data-nav-anchor="plugin-installed" aria-labelledby="plugin-installed-title">
             <div class="plugin-manager-head">
-              <div><h3 id="plugin-installed-title">已安装插件</h3><p>装好即把站点加入工作区；展开插件行配置站点开关与凭据。</p></div>
+              <div><h3 id="plugin-installed-title">已安装插件</h3><p>展开插件行配置站点开关与凭据；「按地址添加」的插件在行里就能开添加站点。</p></div>
             </div>
             <div class="plugin-toolbar plugin-toolbar-installed">
               <label class="plugin-search"><span data-icon="search" class="icon"></span><span class="sr-only">搜索已安装插件</span><input id="plugin-installed-search" type="search" placeholder="搜索插件、域名、站点名" autocomplete="off"></label>
@@ -211,6 +211,13 @@
                 <div class="about-row-label"><span>更新渠道</span><small>稳定版只提示正式发布，每个版本含预发布</small></div>
                 <div class="about-row-control"><div class="segmented" role="group" aria-label="更新渠道"><button type="button" data-update-channel="stable">稳定版</button><button type="button" data-update-channel="prerelease">每个版本</button></div></div>
               </div>
+              <div class="about-row">
+                <div class="about-row-label"><span>一键更新</span><small id="about-self-update-hint">未绑定扩展目录，只能去 GitHub 手动下载</small><div class="about-notes" id="about-self-update-progress" role="status" aria-live="polite"></div></div>
+                <div class="about-row-control">
+                  <button class="button button-quiet button-small" id="about-bind-dir" type="button"><span data-icon="folder-open" class="icon"></span><span>绑定目录</span></button>
+                  <button class="button button-primary button-small" id="about-install-update" type="button" hidden><span data-icon="download" class="icon"></span><span>立即更新</span></button>
+                </div>
+              </div>
             </div>
           </section>
           <section class="panel about-panel" id="about-links" data-nav-anchor="about-links">
@@ -226,6 +233,13 @@
             <div class="panel-heading"><div><h2>本地数据</h2><p class="muted">站点、报价快照与设置存在本机扩展存储；密钥只进会话存储，不进导出文件。</p></div></div>
             <div class="about-list">
               <div class="about-row"><div class="about-row-label"><span>扩展存储用量</span><small>chrome.storage.local</small></div><div class="about-row-control"><span class="about-value" id="about-storage-usage">—</span></div></div>
+              <div class="about-row">
+                <div class="about-row-label"><span>配置迁移</span><small>站点和设置导出成 JSON；密钥不写进文件，导入后重填</small></div>
+                <div class="about-row-control">
+                  <button class="button button-quiet button-small" id="about-export-settings" type="button"><span data-icon="download" class="icon"></span><span>导出</span></button>
+                  <button class="button button-quiet button-small" id="about-import-settings" type="button"><span data-icon="upload" class="icon"></span><span>导入</span></button>
+                </div>
+              </div>
               <div class="about-row"><div class="about-row-label"><span>卸载与禁用</span><small>在浏览器扩展管理页操作</small></div><div class="about-row-control"><span class="about-value">chrome://extensions</span></div></div>
             </div>
           </section>

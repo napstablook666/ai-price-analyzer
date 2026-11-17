@@ -29,3 +29,6 @@ Thumbs.db
 /docs/.vitepress/dist/
 /docs/.vitepress/cache/
 /.tmp/
+
+# 本地键材料（生成 manifest.key 与签名私钥，不进仓库）
+/keys/

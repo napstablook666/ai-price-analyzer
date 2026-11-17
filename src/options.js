@@ -7,6 +7,8 @@ import { initTopMenu } from "./shared/menu.js";
 import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 import { paginateRows } from "./dashboard-index.js";
+import { canSelfUpdate, fetchUpdateManifest } from "./core/self-update.js";
+import { applyUpdate, isExtensionDirectory, restoreBackup } from "./core/self-update-apply.js";
 
 const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
 const $ = selector => document.querySelector(selector);
@@ -167,7 +169,7 @@ function pluginRow(plugin, actions = "", { stations, selectable = false } = {}) 
   const source = pluginSourceKey(plugin);
   const count = Number(plugin.stationCount) || 0;
   const expanded = state.expandedInstalledId === String(plugin.id);
-  const badges = pluginSourceBadge(plugin);
+  const badges = [pluginSourceBadge(plugin), plugin.addable ? "" : `<span class="station-badge">按地址添加</span>`].join("");
   const meta = [plugin.version ? `v${escapeHtml(plugin.version)}` : "", count ? `${count} 个站点` : "未添加站点"].filter(Boolean).join(" · ");
   const hosts = (plugin.hosts?.length ? plugin.hosts : [plugin.host]).filter(Boolean);
   return `<section class="plugin-entry${expanded ? " is-expanded" : ""}">
@@ -187,6 +189,7 @@ function pluginRow(plugin, actions = "", { stations, selectable = false } = {}) 
       description: plugin.description,
       rows: [
         ["插件 id", plugin.id],
+        ["添加方式", plugin.addable ? "装好即加入工作区" : "按站点地址添加"],
         ["采集方式", PLUGIN_MODE_LABELS[plugin.mode] || ""],
         ["认证", plugin.authLabel || ""],
         ["分类", PLUGIN_CATEGORY_LABELS[plugin.category] || plugin.category || ""],
@@ -200,7 +203,10 @@ function pluginRow(plugin, actions = "", { stations, selectable = false } = {}) 
 
 function pluginInstalledActions(plugin) {
   const parts = [];
+  const count = Number(plugin.stationCount) || 0;
   if (plugin.addable && !plugin.added) parts.push(`<button class="button button-quiet button-small" data-plugin-add="${escapeHtml(plugin.id)}" type="button">添加站点</button>`);
+  // addable:false 的插件装好不会自己长出站点（吉吉、SoleAPI 这类要在地址里带 token），给个入口直接把添加站点打开。
+  if (plugin.addable === false && !count && plugin.host) parts.push(`<button class="button button-quiet button-small" data-plugin-address="${escapeHtml(plugin.id)}" data-plugin-host="${escapeHtml(plugin.host)}" type="button" title="按站点地址添加">按地址添加</button>`);
   if (plugin.removable !== false) parts.push(`<button class="icon-button danger-icon" data-plugin-uninstall="${escapeHtml(plugin.id)}" type="button" title="移除插件" aria-label="移除插件">${icon("trash-2", { className: "icon" })}</button>`);
   return parts.join("");
 }
@@ -462,7 +468,6 @@ function updateInstalledSelection() {
 async function uninstallSelectedPlugins() {
   const ids = [...state.installedSelected].filter(id => state.installedSelectable.has(id));
   if (!ids.length) return;
-  if (!window.confirm(`移除所选 ${ids.length} 个插件？它们下面已添加的站点会一起删掉，需要时重新装插件再加回来。`)) return;
   const button = $("#uninstall-selected-plugins");
   const original = button.innerHTML;
   button.disabled = true;
@@ -641,7 +646,6 @@ async function installSelectedPlugins() {
 
 async function uninstallPluginVersion(pluginId) {
   const plugin = (state.pluginWorkspace?.catalog || []).find(item => item.id === pluginId);
-  if (!window.confirm(`移除插件「${plugin?.name || pluginId}」？它下面已添加的站点会一起删掉，需要时重新装插件再加回来。`)) return;
   try {
     const workspace = await callService("UNINSTALL_PLUGIN", { id: pluginId });
     applyPluginWorkspace(workspace);
@@ -1316,6 +1320,7 @@ function renderAbout() {
   syncSegmented("data-update-auto", value => value === (update.autoCheck === false ? "off" : "on"));
   syncSegmented("data-update-interval", value => Number(value) === Number(update.intervalMinutes || 360));
   syncSegmented("data-update-channel", value => value === (update.channel || "stable"));
+  renderSelfUpdate();
 }
 
 async function renderStorageUsage() {
@@ -1366,6 +1371,163 @@ async function saveUpdatePrefs(patch) {
     toast(error.message);
   }
 }
+const SELF_UPDATE_DB = "apa-self-update";
+const SELF_UPDATE_STORE = "handles";
+const SELF_UPDATE_HANDLE_KEY = "extension-dir";
+
+function selfUpdateDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SELF_UPDATE_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(SELF_UPDATE_STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function readUpdateDirectory() {
+  try {
+    const db = await selfUpdateDb();
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction(SELF_UPDATE_STORE, "readonly").objectStore(SELF_UPDATE_STORE).get(SELF_UPDATE_HANDLE_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function writeUpdateDirectory(handle) {
+  const db = await selfUpdateDb();
+  await new Promise((resolve, reject) => {
+    const request = db.transaction(SELF_UPDATE_STORE, "readwrite").objectStore(SELF_UPDATE_STORE).put(handle, SELF_UPDATE_HANDLE_KEY);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function bindUpdateDirectory() {
+  if (!window.showDirectoryPicker) {
+    toast("这个浏览器不支持目录写入，请用 update.bat 更新");
+    return;
+  }
+  let handle;
+  try {
+    handle = await window.showDirectoryPicker({ id: "apa-extension-dir", mode: "readwrite", startIn: "documents" });
+  } catch {
+    return;
+  }
+  if (!(await isExtensionDirectory(handle))) {
+    toast("这个目录里没有 manifest.json，不是扩展目录");
+    return;
+  }
+  await writeUpdateDirectory(handle);
+  state.updateDirectoryHandle = handle;
+  renderSelfUpdate();
+  toast("已绑定扩展目录");
+}
+
+async function installUpdateNow() {
+  const button = $("#about-install-update");
+  const progress = $("#about-self-update-progress");
+  const directory = state.updateDirectoryHandle || (await readUpdateDirectory());
+  const say = text => { if (progress) progress.textContent = text; };
+  if (!directory) {
+    toast("先绑定扩展目录");
+    return;
+  }
+  if (button) button.disabled = true;
+  let backup = null;
+  try {
+    say("正在读取更新清单…");
+    const manifest = await fetchUpdateManifest();
+    const currentVersion = state.update?.currentVersion || chrome.runtime.getManifest().version;
+    if (!canSelfUpdate(currentVersion, manifest)) {
+      say("");
+      toast("当前版本太旧，需要手动下载一次");
+      return;
+    }
+    say("正在下载更新包…");
+    const response = await fetch(manifest.zip.url, { cache: "no-store" });
+    if (!response.ok) throw new Error(`下载更新包失败：HTTP ${response.status}`);
+    const zipBytes = new Uint8Array(await response.arrayBuffer());
+    say("正在校验…");
+    const result = await applyUpdate({
+      dirHandle: directory,
+      zipBuffer: zipBytes,
+      manifest,
+      onProgress: ({ done, total }) => say(`正在写入 ${Math.min(done + 1, total)}/${total}…`),
+      onBackup: value => { backup = value; }
+    });
+    await chrome.storage.local.set({ "self-update": { version: manifest.version, at: Date.now() } });
+    say(`已写入 ${result.written.length} 个文件，正在重启扩展…`);
+    chrome.runtime.reload();
+  } catch (error) {
+    // 中途写坏就地把旧的 manifest 和 service worker 放回去，别留一个加载不起来的目录。
+    if (backup) await restoreBackup(directory, backup);
+    say("");
+    toast(`更新失败：${error.message}`);
+    if (button) button.disabled = false;
+  }
+}
+
+function renderSelfUpdate() {
+  const hint = $("#about-self-update-hint");
+  const bind = $("#about-bind-dir");
+  const install = $("#about-install-update");
+  if (!hint || !bind || !install) return;
+  const bound = Boolean(state.updateDirectoryHandle);
+  const pending = state.update?.lastCheck?.status === "update" ? state.update.lastCheck.latestVersion : "";
+  bind.textContent = bound ? "重新绑定" : "绑定目录";
+  hint.textContent = bound
+    ? "已绑定扩展目录，检查到新版本时可以在这里直接更新"
+    : "未绑定扩展目录，只能去 GitHub 手动下载";
+  install.hidden = !(bound && pending);
+}
+
+// 目录句柄存在本页 IndexedDB 里，重启浏览器后仍是同一条记录，不需要重新授权。
+(async () => {
+  state.updateDirectoryHandle = await readUpdateDirectory();
+  renderSelfUpdate();
+  const stored = (await chrome.storage.local.get("self-update"))["self-update"];
+  if (!stored) return;
+  await chrome.storage.local.remove("self-update");
+  toast(`已更新到 v${stored.version}`);
+})();
+
+async function exportSettingsFile() {
+  try {
+    const payload = await callService("EXPORT_SETTINGS");
+    const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `ai-price-analyzer-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast("配置已导出");
+  } catch (error) {
+    toast(`导出失败：${error.message}`);
+  }
+}
+
+function pickSettingsFile() {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json,.json";
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      await callService("IMPORT_SETTINGS", { payload: await file.text() });
+      toast("配置已导入，密钥要重新填一次");
+      await load();
+    } catch (error) {
+      toast(`导入失败：${error.message}`);
+    }
+  });
+  input.click();
+}
+
 async function load() {
   try {
     const [data, pluginWorkspace] = await Promise.all([callService("GET_DASHBOARD"), callService("GET_PLUGIN_WORKSPACE")]);
@@ -1507,12 +1669,12 @@ function resetStationDialog() {
   button.querySelector("span:last-child").textContent = "分析站点";
 }
 
-function openStationDialog(siteUrl = "", sourceTabId) {
+function openStationDialog(siteUrl = "", sourceTabId, { analyze = true } = {}) {
   activateSettingsView("stations");
   resetStationDialog();
   $("#new-station-url").value = siteUrl;
   $("#add-station-dialog").showModal();
-  if (siteUrl) void analyzeStation(siteUrl, sourceTabId);
+  if (siteUrl && analyze) void analyzeStation(siteUrl, sourceTabId);
 }
 
 function commitStationPreview() {
@@ -1581,6 +1743,22 @@ $("#settings-view-about")?.addEventListener("click", event => {
     checkUpdateNow();
     return;
   }
+  if (event.target.closest("#about-bind-dir")) {
+    bindUpdateDirectory();
+    return;
+  }
+  if (event.target.closest("#about-install-update")) {
+    installUpdateNow();
+    return;
+  }
+  if (event.target.closest("#about-export-settings")) {
+    exportSettingsFile();
+    return;
+  }
+  if (event.target.closest("#about-import-settings")) {
+    pickSettingsFile();
+    return;
+  }
   if (event.target.closest("#about-open-release")) {
     window.open(state.update?.lastCheck?.releaseUrl || "https://github.com/napstablook666/ai-price-analyzer/releases", "_blank", "noopener,noreferrer");
   }
@@ -1641,6 +1819,11 @@ $("#plugin-installed-list").addEventListener("click", event => {
   const addButton = event.target.closest("[data-plugin-add]");
   if (addButton) {
     addPluginSite(addButton.dataset.pluginAdd);
+    return;
+  }
+  const addressButton = event.target.closest("[data-plugin-address]");
+  if (addressButton) {
+    openStationDialog(`https://${addressButton.dataset.pluginHost}/`, undefined, { analyze: false });
     return;
   }
   const removeButton = event.target.closest("[data-plugin-uninstall]");
