@@ -10,7 +10,20 @@ import { providerIconMarkup, providerLogoFor } from "./shared/provider-icons.js"
 import { siteIconMarkup } from "./shared/site-icon.js";
 import { IMAGE_UNIT_LABELS, IMAGE_UNIT_SUFFIXES, mediaUnitLabel, mediaUnitRank } from "./core/image-billing.js";
 
-const DEFAULT_PROVIDER_FILTER = ["anthropic", "deepseek", "openai", "z-ai"];
+// 供应商不写死名单：默认全选（null）。用户改过就记进 localStorage 的 JSON，下次打开沿用。
+const PROVIDER_FILTER_STORE = "model-atlas:provider-filter";
+function readProviderFilter() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PROVIDER_FILTER_STORE) || "null");
+    return Array.isArray(stored) ? stored.filter(value => typeof value === "string" && value) : null;
+  } catch { return null; }
+}
+function saveProviderFilter(selection) {
+  try {
+    if (Array.isArray(selection)) localStorage.setItem(PROVIDER_FILTER_STORE, JSON.stringify(selection));
+    else localStorage.removeItem(PROVIDER_FILTER_STORE);
+  } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
+}
 const PAGE_SIZE = 20;
 const state = {
   data: null,
@@ -28,7 +41,7 @@ const state = {
   refreshInProgress: false,
   refreshPreflight: null,
   preflightLoading: false,
-  filters: { search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER, group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
+  filters: { search: "", stationId: "", provider: readProviderFilter(), group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
   stationIndexes: new Map(),
   refreshStationIds: new Set(),
   refreshStationQuery: "",
@@ -258,6 +271,12 @@ function filterFacetOptions(key) {
   }
   const noMatches = container.querySelector("[data-no-matches]");
   if (noMatches) noMatches.hidden = !query || matches > 0;
+}
+// 勾满等于全选，记 null：以后新增的供应商自动带上，不用再手动补勾。
+function facetSelection(key) {
+  const options = [...document.querySelectorAll(`#${key}-filters input[data-facet-key]`)];
+  const checked = options.filter(option => option.checked).map(option => option.value);
+  return checked.length === options.length ? null : checked;
 }
 function renderFacetFilters(rows) {
   for (const key of state.comparisonMode === "public" ? ["group"] : ["provider", "group"]) {
@@ -549,12 +568,14 @@ function sanitizeFiltersForRows(rows) {
   for (const key of ["provider", "group"]) {
     if (!Array.isArray(state.filters[key])) continue;
     const values = new Set(rows.map(row => key === "provider" ? row.provider : row.groupName));
-    state.filters[key] = state.filters[key].filter(value => values.has(value));
+    const kept = state.filters[key].filter(value => values.has(value));
+    // 记住的选项在当前数据集里一个都不存在时退回全选，否则表会被筛空又看不出原因。
+    state.filters[key] = kept.length || !state.filters[key].length ? kept : null;
   }
 }
 // 切模式时先清掉上一种模式的筛选和模型对比框，再交给 render 重新派生下拉项。
 function resetFiltersForModeSwitch() {
-  state.filters = modeSwitchFilters(state.filters, DEFAULT_PROVIDER_FILTER);
+  state.filters = modeSwitchFilters(state.filters, readProviderFilter());
   state.page = 0;
   modelFilterBoxCount = MODEL_FILTER_BOXES;
   saveModelFilterBoxCount();
@@ -563,7 +584,7 @@ function resetFiltersForModeSwitch() {
 }
 
 function resetFiltersForMediaMode() {
-  state.filters = mediaModeSwitchFilters(state.filters, state.mediaMode, DEFAULT_PROVIDER_FILTER);
+  state.filters = mediaModeSwitchFilters(state.filters, state.mediaMode, readProviderFilter());
   state.page = 0;
   modelFilterBoxCount = MODEL_FILTER_BOXES;
   saveModelFilterBoxCount();
@@ -1128,7 +1149,8 @@ document.addEventListener("change", event => {
   const input = event.target.closest("input[data-facet-key]");
   if (!input) return;
   const key = input.dataset.facetKey;
-  state.filters[key] = [...document.querySelectorAll(`#${key}-filters input[data-facet-key]:checked`)].map(option => option.value);
+  state.filters[key] = facetSelection(key);
+  if (key === "provider") saveProviderFilter(state.filters[key]);
   renderFacetFilters(state.rows);
   renderRows();
 });
@@ -1275,6 +1297,7 @@ document.addEventListener("click", event => {
   if (!button) return;
   const key = button.dataset.facetKey;
   state.filters[key] = button.dataset.facetAction === "all" ? null : [];
+  if (key === "provider") saveProviderFilter(state.filters[key]);
   renderFacetFilters(state.rows);
   renderRows();
 });
@@ -1282,7 +1305,8 @@ $("#sort-by").addEventListener("change", event => { state.filters.sortBy = event
 $("#sort-secondary").addEventListener("change", event => { state.filters.sortSecondary = event.target.value; renderRows(); });
 $("#sort-direction").addEventListener("change", event => { state.filters.sortDirection = event.target.value; renderRows(); });
 $("#reset-filters").addEventListener("click", () => {
-resetFiltersForModeSwitch();
+  saveProviderFilter(null);
+  resetFiltersForModeSwitch();
   state.filters = { ...state.filters, showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" };
   renderModelFilter();
   renderStationFilter(state.rows);

@@ -102,16 +102,17 @@ export function monthlyCostRankingFor(row, rankings) {
 }
 // 付费与公益是两套数据集：站点、供应商、分组、模型筛选在另一种模式里不存在，
 // 沿用过去会被 sanitizeFiltersForRows 裁成空集合，报价被静默筛光。切模式时一起重置。
-export function modeSwitchFilters(filters = {}, defaultProviderFilter = []) {
-  return { ...filters, search: "", stationId: "", provider: [...defaultProviderFilter], group: null, models: [] };
+// providerFilter 传 null 表示全选；具体值由 dashboard 从 localStorage 的记忆里取，代码里不写死名单。
+export function modeSwitchFilters(filters = {}, providerFilter = null) {
+  return { ...filters, search: "", stationId: "", provider: Array.isArray(providerFilter) ? [...providerFilter] : null, group: null, models: [] };
 }
 
-export function mediaModeSwitchFilters(filters = {}, mediaMode = "text", defaultProviderFilter = []) {
-  const next = modeSwitchFilters(filters, defaultProviderFilter);
+export function mediaModeSwitchFilters(filters = {}, mediaMode = "text", providerFilter = null) {
+  const next = modeSwitchFilters(filters, providerFilter);
   const mode = ["text", "image", "video"].includes(mediaMode) ? mediaMode : "text";
   return {
     ...next,
-    provider: mode === "text" ? [...defaultProviderFilter] : null,
+    provider: mode === "text" ? next.provider : null,
     sortBy: mode === "text" ? "blendedUnitPrice" : "mediaUnitPrice",
     sortSecondary: "diffPercent",
     sortDirection: "asc"

@@ -5057,11 +5057,15 @@ test("normalizes dashboard comparison mode with paid as the default", () => {
   assert.equal(normalizeSettings({ comparisonMode: "invalid" }).comparisonMode, "paid");
 });
 
-test("defaults provider filters to Anthropic, DeepSeek, OpenAI, and z-ai", () => {
+test("defaults provider filters to every provider and remembers the selection", () => {
   const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
-  assert.match(source, /const DEFAULT_PROVIDER_FILTER = \["anthropic", "deepseek", "openai", "z-ai"\]/);
-  assert.match(source, /filters: \{ search: "", stationId: "", provider: DEFAULT_PROVIDER_FILTER/);
-  assert.equal((source.match(/modeSwitchFilters\(state\.filters, DEFAULT_PROVIDER_FILTER\)/g) || []).length, 1);
+  assert.doesNotMatch(source, /DEFAULT_PROVIDER_FILTER/);
+  assert.match(source, /filters: \{ search: "", stationId: "", provider: readProviderFilter\(\)/);
+  assert.match(source, /const PROVIDER_FILTER_STORE = "model-atlas:provider-filter"/);
+  assert.match(source, /if \(key === "provider"\) saveProviderFilter\(state\.filters\[key\]\)/);
+  assert.match(source, /checked\.length === options\.length \? null : checked/);
+  assert.equal((source.match(/modeSwitchFilters\(state\.filters, readProviderFilter\(\)\)/g) || []).length, 1);
+  assert.match(source, /mediaModeSwitchFilters\(state\.filters, state\.mediaMode, readProviderFilter\(\)\)/);
 });
 
 test("mode switches drop filters that only exist in the other dataset", () => {
