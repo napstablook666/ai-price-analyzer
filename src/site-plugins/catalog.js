@@ -22,6 +22,7 @@ import { sitePlugin as fastaitokenPlugin } from "./providers/fastaitoken.js";
 import { sitePlugin as nexavlinksPlugin } from "./providers/nexavlinks.js";
 import { sitePlugin as cheaprouterPlugin } from "./providers/cheaprouter.js";
 import { sitePlugin as jijiPlugin } from "./providers/jiji.js";
+import { sitePlugin as maolaoapiPlugin } from "./providers/maolaoapi.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -55,13 +56,14 @@ export const SITE_PLUGIN_CATALOG = [
   entry("dddai", "dddai.dev", "dddai.dev", "direct", () => ({ sitePlugin: dddaiPlugin }), { paths: ["/","/pricing"], description: "公开模型价格 API" }),
   entry("liuguang", "liuguang.ai", "liuguang.ai", "direct", () => ({ sitePlugin: liuguangPlugin }), { paths: ["/","/pricing"], description: "公开模型价格 API" }),
   entry("public-pricing", "公开价格 API", "nomissapi.com", "direct", () => ({ sitePlugin: publicPricingPlugin }), { hosts: ["nomissapi.com","yorhamc.com","token123.cfd"], addable: false, description: "通用公开价格适配，按站点地址添加" }),
-  entry("hepingan", "hepingan.top", "api.hepingan.top", "page", () => ({ sitePlugin: hepinganPlugin }), { paths: ["/available-channels"], description: "复用当前浏览器持久登录态" }),
+  entry("hepingan", "hepingan.top", "api.hepingan.top", "page", () => ({ sitePlugin: hepinganPlugin }), { paths: ["/available-channels"], description: "复用浏览器登录态，过期自动续期" }),
   entry("all-in-one", "all-in-one.icu", "all-in-one.icu", "page", () => ({ sitePlugin: allInOnePlugin }), { paths: ["/tenant/models"], description: "租户模型价格，页面会话采集" }),
   entry("aiapi", "AIAPI", "cn.aiapi.bot", "page", () => ({ sitePlugin: aiapiPlugin }), { paths: ["/dashboard/model-prices"], description: "模型目录与价格，页面会话采集" }),
   entry("fastaitoken", "fastaitoken.com", "fastaitoken.com", "page", () => ({ sitePlugin: fastaitokenPlugin }), { description: "读取当前账号的可用渠道" }),
   entry("nexavlinks", "NexaVlinks", "nexavlinks.com", "page", () => ({ sitePlugin: nexavlinksPlugin }), { description: "读取当前账号的模型渠道" }),
   entry("cheaprouter", "CheapRouter", "cheaprouter.cc", "direct", () => ({ sitePlugin: cheaprouterPlugin }), { paths: ["/models"], description: "公开模型价格 API" }),
-  entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { addable: false, description: "带 token 的模型市场，按站点地址添加" })
+  entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { addable: false, description: "带 token 的模型市场，按站点地址添加" }),
+  entry("maolaoapi", "maolaoapi.com", "maolaoapi.com", "direct", () => ({ sitePlugin: maolaoapiPlugin }), { paths: ["/pricing","/","/console/topup"], description: "公开定价 API，直连采集；充值 1.03 元/额度，200/500/1000 档另有折扣" })
 ];
 
 export function sitePluginById(id) {

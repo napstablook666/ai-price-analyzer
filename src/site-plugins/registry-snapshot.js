@@ -149,7 +149,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "hepingan",
       "name": "hepingan.top",
       "version": "0.5.2",
-      "description": "复用当前浏览器持久登录态",
+      "description": "复用浏览器登录态，过期自动续期",
       "hosts": [
         "api.hepingan.top"
       ],
@@ -212,6 +212,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "description": "带 token 的模型市场，按站点地址添加",
       "hosts": [
         "jiji.cc"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "maolaoapi",
+      "name": "maolaoapi.com",
+      "version": "0.5.2",
+      "description": "公开定价 API，直连采集；充值 1.03 元/额度，200/500/1000 档另有折扣",
+      "hosts": [
+        "maolaoapi.com"
       ],
       "needsCode": true
     },
