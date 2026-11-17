@@ -3,7 +3,7 @@
 // 需要自定义采集代码的站点在仓库里标 needsCode: true，只能随扩展发布。
 
 import { requestPolicy } from "./provider-registry.js";
-import { normalizeRechargeTiers } from "../shared/recharge-tiers.js";
+import { normalizeRechargePlans, normalizeRechargeTiers } from "../shared/recharge-tiers.js";
 import { isSupportedResponseFormat, RESPONSE_FORMAT_DEFINITIONS } from "./response-formats.js";
 
 export const PLUGIN_REGISTRY_SCHEMA_VERSION = 1;
@@ -24,7 +24,7 @@ const CREDENTIALS = new Set(["omit", "include", "same-origin"]);
 const CHECKIN_FIELDS = ["canClaim", "streak", "rewardAmount", "bonusPercent", "totalClaimed", "lastClaim"];
 
 const PRESET_NUMBER_FIELDS = ["rechargeRmb", "rechargeCredits", "basePricePerMillion"];
-const PRESET_RATE_FIELDS = ["rechargeRateVerified", "priceCurrencyVerified"];
+const PRESET_RATE_FIELDS = ["rechargeRateVerified", "priceCurrencyVerified", "rechargePlansVerified"];
 
 function fail(message) {
   throw new Error(message);
@@ -96,6 +96,12 @@ function normalizePreset(raw) {
     const tiers = normalizeRechargeTiers(raw.rechargeTiers);
     if (tiers.length !== raw.rechargeTiers.length) fail("插件字段 preset.rechargeTiers 含非法档位（amount>0，0<discount<=1）");
     if (tiers.length) preset.rechargeTiers = tiers;
+  }
+  if (raw.rechargePlans !== undefined) {
+    if (!Array.isArray(raw.rechargePlans)) fail("插件字段 preset.rechargePlans 必须是数组");
+    const plans = normalizeRechargePlans(raw.rechargePlans);
+    if (plans.length !== raw.rechargePlans.length) fail("插件字段 preset.rechargePlans 含非法方案（amount>0）");
+    if (plans.length) preset.rechargePlans = plans;
   }
   for (const field of ["priceCurrency", "priceCurrencyNote", "rechargeRateNote"]) {
     if (raw[field] === undefined) continue;

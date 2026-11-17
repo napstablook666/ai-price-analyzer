@@ -29,7 +29,8 @@
             <input class="facet-search refresh-station-search" id="refresh-station-search" type="search" placeholder="搜索站点" aria-label="搜索要刷新的站点" autocomplete="off">
             <div class="facet-options refresh-station-options" id="refresh-station-options" role="group" aria-label="选择要刷新的站点"></div>
             <span class="facet-empty" id="refresh-station-empty" hidden>无匹配站点</span>
-            <div class="facet-menu-actions refresh-station-tools"><button id="refresh-station-select-all" type="button">选择当前结果</button><button id="refresh-station-clear" type="button">清空</button></div>
+            <p class="refresh-station-hint">Shift 点第二行，连选这一段</p>
+            <div class="facet-menu-actions refresh-station-tools"><button id="refresh-station-select-all" type="button" title="选中当前搜索结果（没搜索就是全部启用站点）">全选</button><button id="refresh-station-clear" type="button" title="清空所有勾选">清空</button></div>
             <button class="button button-primary refresh-station-submit" id="refresh-station" type="button" disabled><span data-icon="refresh-cw" class="icon"></span><span>刷新已选站点</span></button>
           </div>
         </details>

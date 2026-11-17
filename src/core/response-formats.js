@@ -11,6 +11,7 @@ const definitions = {
   "tokenflux": { label: "TokenFlux 定价", explicit: true, strategy: "tokenflux" },
   "windhub": { label: "WindHub 公开定价", explicit: true, strategy: "windhub" },
   "stellaisle": { label: "Star API 公开定价", explicit: true, strategy: "stellaisle" },
+  "stellaisle-carpool": { label: "Star API 拼车市场", explicit: true, strategy: "stellaisle-carpool" },
   "relayrouter": { label: "RelayRouter 定价", explicit: true, strategy: "relayrouter" },
 };
 

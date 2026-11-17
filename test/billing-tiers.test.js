@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
 import { buildComparisonRows, requestUnitPriceOf, resolveRechargeTier } from "../src/core/pricing.js";
 
+import { normalizeRechargePlans } from "../src/shared/recharge-tiers.js";
+import { parseBillingTiers } from "../src/core/normalizers.js";
 // 橘子站 2026-11-16 实测的 11 档（/api/user/aff → data.amount_options + data.discount）。
 const JUZIAI_TIERS = [
   { amount: 1, discount: 0.75 },
@@ -61,6 +63,27 @@ function offerNamed(comparisons, modelName) {
   }
   return null;
 }
+
+test("normalizes recharge plans without turning subscriptions into top-up tiers", () => {
+  assert.deepEqual(normalizeRechargePlans([
+    { kind: "subscription", amount: 98, credits: 120, currency: "CNY", period: "week", accumulates: false, verified: true },
+    { kind: "topup", amount: 500, credits: 500, currency: "USD", discount: 0.88, availability: "manual" },
+    { kind: "topup", amount: 0, credits: 10 },
+    { kind: "topup", amount: 10, discount: 2 }
+  ]), [
+    { kind: "subscription", amount: 98, credits: 120, currency: "CNY", availability: "unknown", period: "week", recurring: false, accumulates: false, verified: true },
+    { kind: "topup", amount: 500, credits: 500, discount: 0.88, currency: "USD", availability: "manual", recurring: false, accumulates: false, verified: false }
+  ]);
+});
+
+test("preserves a time condition as a verifiable billing rule", () => {
+  const [tier] = parseBillingTiers('(tier("night", p * 3 + c * 9)) * (hour("Asia/Shanghai") >= 22 || hour("Asia/Shanghai") < 8 ? 0.5 : 1)');
+  assert.equal(tier.input, 3);
+  assert.equal(tier.timeDiscount, 0.5);
+  assert.equal(tier.billingConditions[0].type, "time");
+  assert.equal(tier.billingConditions[0].fallback_multiplier, 1);
+  assert.match(tier.billingConditions[0].expression, /hour\("Asia\/Shanghai"\) >= 22/);
+});
 
 test("picks the cheapest single recharge tier that covers the spend", () => {
   assert.equal(resolveRechargeTier([], 100), null);

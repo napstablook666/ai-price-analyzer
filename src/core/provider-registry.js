@@ -16,6 +16,7 @@ export const CENTOS_PRICING_ENDPOINT = "/api/pricing";
 export const MAOLAO_PRICING_ENDPOINT = "/api/pricing";
 export const WINDHUB_PRICING_ENDPOINT = "/api/pricing";
 export const STELLAISLE_PRICING_ENDPOINT = "/api/pricing";
+export const STELLAISLE_CARPOOL_ENDPOINT = "/api/carpool-market?availability=available&page=1&page_size=100&subscription_exact=false";
 export const RELAYROUTER_PRICING_ENDPOINT = "/api/pricing";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
@@ -105,7 +106,9 @@ export function requestPolicy(endpoint, options = {}) {
     pageAuth: options.pageAuth || null,
     cookieAuth: options.cookieAuth || null,
     preflight: options.preflight || null,
-    skipCapture: options.skipCapture === true
+    skipCapture: options.skipCapture === true,
+    // 主报文之外还要取的接口（比如价格在 /api/pricing、分组在另一个市场接口）。
+    aux: Array.isArray(options.aux) ? options.aux : []
   };
 }
 
@@ -182,7 +185,11 @@ export function resetProviderRegistry() {
 export function providerForStation(station = {}, { forPrepare = false } = {}) {
   const context = stationContext(station);
   if (!context.url) return null;
-  return PROVIDER_REGISTRY.find(provider => (forPrepare ? provider.prepareMatches || provider.matches : provider.matches)(context, station)) || null;
+  // 精确匹配优先：一个域名能挂多个插件（模型广场和拼车市场就是这种），
+  // 只有路径全都对不上时才走插件的 prepareMatches 兜底，免得 A 插件的 prepare 改掉 B 插件的站点。
+  const exact = PROVIDER_REGISTRY.find(provider => provider.matches(context, station));
+  if (exact || !forPrepare) return exact || null;
+  return PROVIDER_REGISTRY.find(provider => provider.prepareMatches && provider.prepareMatches(context, station)) || null;
 }
 
 // 插件自带的模型拼写适配：站点把 glm-5.3 写成别的样子时，由插件自己声明映射。
@@ -206,7 +213,8 @@ export function providerById(id) {
 }
 
 export function prepareStationInput(stationInput = {}) {
-  const provider = providerForStation(stationInput, { forPrepare: true });
+  // 站点记着插件 id 就以它为准：同域名的另一个插件可能先把路径认走。
+  const provider = providerById(stationInput.pluginId) || providerForStation(stationInput, { forPrepare: true });
   const prepared = provider?.prepare ? provider.prepare(stationInput, stationContext(stationInput)) : stationInput;
   const priceCurrency = provider?.preservePriceCurrency && prepared.priceCurrency ? prepared.priceCurrency : "CREDITS";
   return { ...prepared, priceCurrency, priceCurrencyVerified: true, rechargeRateVerified: provider?.preserveRechargeRateVerification ? prepared.rechargeRateVerified !== false : true };

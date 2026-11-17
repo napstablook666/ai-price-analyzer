@@ -24,6 +24,7 @@ export const SITE_LOGOS = {
   "site-checkin": "icons/sites/site-checkin.svg",
   "soleapi": "icons/sites/soleapi.svg",
   "stellaisle": "icons/sites/stellaisle.png",
+  "stellaisle-carpool": "icons/sites/stellaisle-carpool.png",
   "tokenflux": "icons/sites/tokenflux.png",
   "true-sota": "icons/sites/true-sota.svg",
   "windhub": "icons/sites/windhub.png"

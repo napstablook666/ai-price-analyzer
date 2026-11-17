@@ -23,5 +23,6 @@ export const SITE_PLUGIN_ORDER = [
   "jiji",
   "maolaoapi",
   "stellaisle",
-  "relayrouter"
+  "relayrouter",
+  "stellaisle-carpool"
 ];

@@ -25,6 +25,12 @@ const preset = {
     { amount: 500, discount: 0.95 },
     { amount: 1000, discount: 0.9 }
   ],
+  rechargePlansVerified: true,
+  rechargePlans: [
+    { kind: "subscription", amount: 98, credits: 120, currency: "CNY", availability: "self_service", period: "week", accumulates: false, verified: true, note: "按周刷新，不累计" },
+    { kind: "subscription", amount: 188, credits: 240, currency: "CNY", availability: "self_service", period: "week", accumulates: false, verified: true, note: "按周刷新，不累计" },
+    { kind: "subscription", amount: 358, credits: 480, currency: "CNY", availability: "self_service", period: "week", accumulates: false, verified: true, note: "按周刷新，不累计" }
+  ],
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
   priceCurrencyNote: "",

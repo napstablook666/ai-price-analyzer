@@ -3,6 +3,7 @@ import { mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { applyPriceMap } from "./price-map.js";
 import { tokenfluxPriceMap } from "./price-maps/tokenflux.js";
 import { stellaislePriceMap } from "./price-maps/stellaisle.js";
+import { stellaisleCarpoolPriceMap } from "./price-maps/stellaisle-carpool.js";
 import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "./price-maps/true-sota.js";
 import { sidrunePriceMap } from "./price-maps/sidrune.js";
@@ -10,7 +11,7 @@ import { relayRouterPriceMap } from "./price-maps/relayrouter.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
-export const NORMALIZATION_VERSION = 25;
+export const NORMALIZATION_VERSION = 26;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -51,6 +52,102 @@ const perMillion = value => {
 
 
 
+const BILLING_UNIT_ALIASES = Object.freeze({
+  token: "token",
+  tokens: "token",
+  "per_token": "token",
+  "per_1m_tokens": "token",
+  request: "request",
+  per_request: "request",
+  call: "request",
+  image: "image",
+  image_generation: "image",
+  per_image: "image",
+  second: "second",
+  seconds: "second",
+  per_second: "second",
+  minute: "minute",
+  minutes: "minute",
+  per_minute: "minute",
+  character: "character",
+  characters: "character",
+  per_character: "character"
+});
+
+function billingUnitOf(item, prices) {
+  const explicit = item?.billing_unit ?? item?.billingUnit ?? item?.request_unit ?? item?.unit;
+  const explicitUnit = BILLING_UNIT_ALIASES[String(explicit ?? "").trim().toLowerCase()];
+  if (explicitUnit) return explicitUnit;
+  const mediaType = String(item?.media_type || item?.mediaType || "").trim().toLowerCase();
+  if (mediaType === "image" || mediaType === "video" || mediaType === "audio") return "image";
+  if (Number(prices.request_price) > 0) return "request";
+  if (Number(prices.image_price) > 0) return "image";
+  if (["input_price", "output_price", "cache_read_price", "cache_write_price", "cache_write_1h_price"].some(field => Number.isFinite(prices[field]))) return "token";
+  return "unknown";
+}
+
+function billingBasisOf(unit) {
+  return {
+    token: "per_1m_tokens",
+    request: "per_request",
+    image: "per_image",
+    second: "per_second",
+    minute: "per_minute",
+    character: "per_character"
+  }[unit] || "unknown";
+}
+
+function normalizeBillingConditions(value) {
+  const source = Array.isArray(value) ? value : value && typeof value === "object" ? [value] : value ? [{ expression: value }] : [];
+  return source.map(entry => {
+    const raw = entry && typeof entry === "object" && !Array.isArray(entry) ? entry : { expression: entry };
+    const expression = String(raw.expression ?? raw.condition ?? raw.time_condition ?? "").trim();
+    const timezone = String(raw.timezone ?? raw.time_zone ?? "").trim();
+    const start = String(raw.start ?? raw.start_time ?? "").trim();
+    const end = String(raw.end ?? raw.end_time ?? "").trim();
+    const multiplierValue = raw.multiplier ?? raw.discount ?? raw.factor;
+    const fallbackValue = raw.fallback_multiplier ?? raw.fallbackMultiplier;
+    const multiplier = multiplierValue === undefined || multiplierValue === null || multiplierValue === "" ? null : finitePrice(multiplierValue);
+    const fallbackMultiplier = fallbackValue === undefined || fallbackValue === null || fallbackValue === "" ? null : finitePrice(fallbackValue);
+    if (!expression && !timezone && !start && !end && multiplier === null && fallbackMultiplier === null) return null;
+    const type = ["time", "time-window", "usage", "context"].includes(raw.type || raw.kind) ? (raw.type || raw.kind) : "time";
+    return {
+      type,
+      ...(expression ? { expression } : {}),
+      ...(timezone ? { timezone } : {}),
+      ...(start ? { start } : {}),
+      ...(end ? { end } : {}),
+      ...(multiplier === null ? {} : { multiplier }),
+      ...(fallbackMultiplier === null ? {} : { fallback_multiplier: fallbackMultiplier })
+    };
+  }).filter(Boolean);
+}
+
+function billingConditionsOf(item) {
+  const explicit = item?.billing_conditions ?? item?.billingConditions ?? item?.time_conditions ?? item?.timeConditions;
+  const conditions = normalizeBillingConditions(explicit);
+  const legacyCondition = String(item?.tier_time_condition || "").trim();
+  const legacyDiscount = finitePrice(item?.tier_time_discount);
+  if (legacyCondition && legacyDiscount !== null && !conditions.some(condition => condition.expression === legacyCondition && condition.multiplier === legacyDiscount)) {
+    conditions.push({ type: "time", expression: legacyCondition, multiplier: legacyDiscount, fallback_multiplier: 1 });
+  }
+  const peakEnabled = item?.peak_rate_enabled === true;
+  const peakStart = String(item?.peak_start || "").trim();
+  const peakEnd = String(item?.peak_end || "").trim();
+  const peakMultiplier = finitePrice(item?.peak_rate_multiplier);
+  if (peakEnabled && peakStart && peakEnd && peakMultiplier !== null) {
+    conditions.push({
+      type: "time-window",
+      ...(item?.timezone ? { timezone: String(item.timezone).trim() } : {}),
+      start: peakStart,
+      end: peakEnd,
+      multiplier: peakMultiplier,
+      fallback_multiplier: 1
+    });
+  }
+  return conditions;
+}
+
 export function cleanPricingRows(rows, options = {}) {
   return (Array.isArray(rows) ? rows : []).map(item => {
     const rawModelRatio = item.model_ratio ?? item.ratio ?? item.input_ratio;
@@ -64,6 +161,10 @@ export function cleanPricingRows(rows, options = {}) {
     const imageInputPrice = priceValues.image_input_price;
     const imageOutputPrice = priceValues.image_output_price;
     const imagePrice = priceValues.image_price;
+    const billingUnit = billingUnitOf(item, priceValues);
+    const billingConditions = billingConditionsOf(item);
+    const minTokens = finitePrice(item.min_tokens);
+    const maxTokens = finitePrice(item.max_tokens);
     const hasModelRatio = rawModelRatio !== undefined && rawModelRatio !== null && rawModelRatio !== "" && finitePrice(rawModelRatio) !== null;
     const hasPrice = PRICE_FIELD_DEFINITIONS.some(field => priceValues[field.normalized] !== null);
     const mediaType = mediaTypeForPricing({ ...item, image_price: imagePrice });
@@ -79,6 +180,12 @@ export function cleanPricingRows(rows, options = {}) {
       enable_groups: item.enable_groups || item.groups || [],
       proxy_group_name: item.proxy_group_name || item.group_name || "",
       tier_name: item.tier_name || item.tier || "",
+      billing_unit: billingUnit,
+      billing_basis: billingBasisOf(billingUnit),
+      ...(item.request_unit ? { request_unit: String(item.request_unit).trim().toLowerCase() } : {}),
+      ...(minTokens === null ? {} : { min_tokens: minTokens }),
+      ...(maxTokens === null ? {} : { max_tokens: maxTokens }),
+      ...(billingConditions.length ? { billing_conditions: billingConditions } : {}),
       // 出图/视频的规格档（1K / 2K / 4K）单独一列，不混进按长度分档的 tier_name。
       ...(item.size_tier ? { size_tier: String(item.size_tier).trim() } : {}),
       evidence: item.evidence || "provider_payload",
@@ -96,7 +203,7 @@ export class ParsingStrategy {
 const TIER_CALL_PATTERN = /tier\s*\(/gi;
 // len <= N / p <= N 这类长度条件决定档位区间，hour(...) 之类的时间条件不算。
 const TIER_BOUNDARY_PATTERN = /(?:^|[^a-z0-9_])(?:len|length|tokens?|input_tokens?|p)\s*(<=|<|>=|>)\s*(\d+(?:\.\d+)?)\s*$/i;
-const TIER_TIME_DISCOUNT_PATTERN = /\*\s*\(\s*(hour\s*\([^)]*\)[^?]*)\?\s*(\d+(?:\.\d+)?)\s*:\s*1\s*\)/i;
+const TIER_TIME_RULE_PATTERN = /\*\s*\(\s*(.*?)\?\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*\)/i;
 
 function balancedSpan(source, start) {
   let depth = 1;
@@ -297,11 +404,20 @@ export function parseBillingTiers(expression) {
       maxInclusive
     });
   }
-  const timeDiscount = expression.match(TIER_TIME_DISCOUNT_PATTERN);
+  const timeDiscount = expression.match(TIER_TIME_RULE_PATTERN);
   if (timeDiscount) {
+    const timeCondition = timeDiscount[1].trim();
+    const multiplier = Number(timeDiscount[2]);
+    const fallbackMultiplier = Number(timeDiscount[3]);
     for (const tier of tiers) {
-      tier.timeDiscount = Number(timeDiscount[2]);
-      tier.timeCondition = timeDiscount[1].trim();
+      tier.timeDiscount = multiplier;
+      tier.timeCondition = timeCondition;
+      tier.billingConditions = [{
+        type: "time",
+        expression: timeCondition,
+        multiplier,
+        fallback_multiplier: fallbackMultiplier
+      }];
     }
   }
   // 只有出现长度条件时才补区间下界，否则普通单档模型不该凭空多出 min_tokens。
@@ -501,6 +617,110 @@ export class StellaislePricingStrategy extends WindHubPricingStrategy {
       sourceFormat: "stellaisle",
       // 父类那句报错写着 WindHub，换到这家就自相矛盾了。
       ...(normalized.data.length ? {} : { error: "Star API 公开定价数据为空或格式无效" })
+    };
+  }
+}
+
+// 拼车中心（/api/carpool-market）单独一套报文：一份座位清单，模型字段只有名字。
+// 价格要靠站点自己的 /api/pricing 当辅助报文（requestPolicy 的 aux），
+// 座位折扣当分组倍率用，一辆车一个分组。
+function carpoolSeatFactor(listing) {
+  const price = Number(listing?.seat_price_minor) / 100;
+  const weeklyUsd = Number(listing?.seat_quota_usd);
+  const days = Number(listing?.remaining_days);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  if (!Number.isFinite(weeklyUsd) || weeklyUsd <= 0) return null;
+  if (!Number.isFinite(days) || days <= 0) return null;
+  // 期间额度 = 每周额度 × 剩余周数；额度按 1 元 = 1 美元额度计价。
+  const factor = price / (weeklyUsd * days / 7);
+  return Number.isFinite(factor) && factor > 0 ? factor : null;
+}
+
+export class StellaisleCarpoolPricingStrategy extends ParsingStrategy {
+  canParse(raw, options = {}) {
+    return options.responseFormat === "stellaisle-carpool" && raw?.success === true &&
+      Array.isArray(raw?.data?.data);
+  }
+
+  parse(raw) {
+    const listings = (raw.data.data || []).filter(listing => listing && typeof listing === "object");
+    const pricing = raw.__aux?.pricing;
+    if (!pricing || !Array.isArray(pricing.data)) {
+      return { data: [], group_ratio: {}, sourceFormat: "stellaisle-carpool", error: "拼车缺少站点定价报文，无法折算单价" };
+    }
+
+    // 一辆车一个分组名；同名车靠 id 区分，否则倍率表会互相覆盖。
+    const groups = new Map();
+    const taken = new Set();
+    const unresolved = [];
+    for (const listing of listings) {
+      const factor = carpoolSeatFactor(listing);
+      const models = (Array.isArray(listing.models) ? listing.models : []).map(model => String(model || "").trim()).filter(Boolean);
+      const base = `拼车 · ${String(listing.name || "").trim() || `#${listing.id}`}`;
+      if (factor === null || !models.length) {
+        unresolved.push({ model: base, reason: factor === null ? "座位价或额度缺失，算不出折算" : "这条拼车没有模型清单" });
+        continue;
+      }
+      let group = base;
+      if (taken.has(group)) group = `${base} #${listing.id}`;
+      taken.add(group);
+      groups.set(group, { factor, models });
+    }
+    if (!groups.size) {
+      return { data: [], group_ratio: {}, sourceFormat: "stellaisle-carpool", error: "拼车市场当前没有可折算的座位" };
+    }
+
+    const groupRatio = Object.fromEntries([...groups].map(([group, entry]) => [group, entry.factor]));
+    const groupsByModel = new Map();
+    for (const [group, entry] of groups) {
+      for (const model of entry.models) {
+        if (!groupsByModel.has(model)) groupsByModel.set(model, []);
+        groupsByModel.get(model).push(group);
+      }
+    }
+
+    const items = pricing.data
+      .filter(item => groupsByModel.has(String(item?.model_name || "").trim()))
+      .map(item => ({
+        ...item,
+        // 拼车分组的清单由座位决定，不跟站点渠道的 enable_groups 混在一起。
+        enable_groups: groupsByModel.get(String(item.model_name).trim())
+      }));
+    if (!items.length) {
+      return { data: [], group_ratio: {}, sourceFormat: "stellaisle-carpool", error: "拼车座位上的模型在定价表里都找不到" };
+    }
+
+    const vendors = new Map((Array.isArray(pricing.vendors) ? pricing.vendors : [])
+      .map(vendor => [String(vendor?.id), String(vendor?.name || vendor?.id || "").trim()]));
+    const { rows, unresolved: pricingUnresolved } = applyPriceMap(
+      stellaisleCarpoolPriceMap,
+      { success: true, data: items, group_ratio: groupRatio },
+      { parseTiers: parseBillingTiers }
+    );
+    const sourceByModel = new Map(items.map(item => [String(item.model_name), item]));
+    const data = rows.map(row => {
+      const source = sourceByModel.get(row.model_name) || {};
+      return {
+        ...row,
+        // 额度计价，1 元充值换 1 美元额度（站点 price=1 / quota_per_unit=500000）。
+        price_currency: "CREDITS",
+        vendor_id: source.vendor_id ?? null,
+        vendor: vendors.get(String(source.vendor_id)) || String(source.owner_by || "").trim()
+      };
+    });
+    const failed = [...unresolved, ...pricingUnresolved];
+    return {
+      data,
+      group_ratio: groupRatio,
+      sourceFormat: "stellaisle-carpool",
+      ...(failed.length
+        ? {
+            incomplete: true,
+            unsupportedBillingModes: [...new Set(failed.map(entry => entry.reason))].sort(),
+            unpricedModels: failed.map(entry => entry.model)
+          }
+        : {}),
+      ...(data.length ? {} : { error: "拼车座位折算不出价格" })
     };
   }
 }
@@ -1075,6 +1295,7 @@ export class ModelPlazaStrategy extends ParsingStrategy {
           const mediaType = mediaTypeForPricing({ ...model, ...pricing, ...group }, { targetField });
           const mediaSpecs = mediaSpecsOf(model) || mediaSpecsOf(pricing) || mediaSpecsOf(group);
           const multiplierForPrice = profile.nonTokenMultiplier(group, billingMode, multiplier);
+          const billingConditions = billingConditionsOf({ ...group, ...model, ...pricing });
           if (multiplierForPrice === null) {
             invalidPricingValues.add(`${modelName}:multiplier`);
             continue;
@@ -1116,6 +1337,7 @@ export class ModelPlazaStrategy extends ParsingStrategy {
             group_ratio: multiplier,
             ...(mediaType ? { media_type: mediaType } : {}),
             ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
+            ...(billingConditions.length ? { billing_conditions: billingConditions } : {}),
             evidence: "exact"
           });
           continue;
@@ -1136,6 +1358,7 @@ export class ModelPlazaStrategy extends ParsingStrategy {
           const output = price("output_price");
           const cacheRead = price("cache_read_price");
           const cacheWrite = price("cache_write_price");
+          const billingConditions = billingConditionsOf({ ...group, ...model, ...pricing, ...(interval || {}) });
           const cacheWrite1h = price("cache_write_1h_price");
           if ([input, output, cacheRead, cacheWrite, cacheWrite1h].every(value => value === null)) {
             unpricedModels.add(unpricedTierKey);
@@ -1158,6 +1381,7 @@ export class ModelPlazaStrategy extends ParsingStrategy {
             proxy_group_name: groupName,
             group_ratio: multiplier,
             ...(tierLabel ? { tier_name: tierLabel } : {}),
+            ...(billingConditions.length ? { billing_conditions: billingConditions } : {}),
             evidence: "exact"
           });
         }
@@ -1494,6 +1718,7 @@ registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("windhub", () => new WindHubPricingStrategy());
 registerResponseFormatHandler("stellaisle", () => new StellaislePricingStrategy());
+registerResponseFormatHandler("stellaisle-carpool", () => new StellaisleCarpoolPricingStrategy());
 registerResponseFormatHandler("relayrouter", () => new RelayRouterPricingStrategy());
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));

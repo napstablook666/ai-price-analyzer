@@ -595,6 +595,34 @@ test("adds and collects TrueSOTA public model pricing", async () => {
   assert.equal(snapshot.normalized.group_ratio.GPT, 1.5);
 });
 
+test("adds two plugins that share one host but live on different paths", () => {
+  const pricing = addProviderStationPresets([], [providerById("stellaisle")]);
+  assert.equal(pricing.length, 1);
+  const both = addProviderStationPresets(pricing, [providerById("stellaisle-carpool")]);
+  assert.equal(both.length, 2);
+  assert.equal(both[1].id, "stellaisle-carpool");
+  assert.equal(both[1].baseUrl, "https://token.stellaisle.com/carpool-market");
+  // 再跑一遍不重复加
+  assert.equal(addProviderStationPresets(both, [providerById("stellaisle"), providerById("stellaisle-carpool")]), both);
+});
+
+test("prepares a shared-host station with the plugin it was created from", () => {
+  // 一个域名两个插件：插件 id 比路径更可信，别让先注册的那个把站点改到自己的接口上。
+  const prepared = prepareStationInput({
+    id: "stellaisle-carpool",
+    pluginId: "stellaisle-carpool",
+    baseUrl: "https://token.stellaisle.com/pricing",
+    adapter: { kind: "stellaisle", endpoint: "/api/pricing", method: "GET", responseFormat: "stellaisle" }
+  });
+  assert.equal(prepared.baseUrl, "https://token.stellaisle.com/carpool-market");
+  assert.equal(prepared.mode, "page");
+  assert.equal(prepared.adapter.kind, "stellaisle-carpool");
+  assert.match(prepared.adapter.endpoint, /^\/api\/carpool-market\?/);
+  // 没写插件 id 的老站点仍按路径认插件。
+  assert.equal(providerForStation({ baseUrl: "https://token.stellaisle.com/pricing" }).id, "stellaisle");
+  assert.equal(providerForStation({ baseUrl: "https://token.stellaisle.com/carpool-market" }).id, "stellaisle-carpool");
+});
+
 test("collects AIAPI prices through its logged-in model page", async () => {
   const station = {
     id: "station-aiapi",
@@ -2026,7 +2054,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addProviderStationPresets(current, PROVIDER_REGISTRY, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi", "stellaisle", "relayrouter"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi", "stellaisle", "stellaisle-carpool", "relayrouter"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -5016,6 +5044,12 @@ test("refreshes searchable multi-selected dashboard stations", () => {
   assert.match(source, /callService\("REFRESH_STATION", \{ stationIds \}\)/);
   assert.match(source, /data-refresh-station-id/);
   assert.match(source, /refreshStationQuery/);
+  // Shift 范围多选：点击时挡掉 label 的默认勾选，自己按起点到目标行整段写；清空要把起点一起丢掉。
+  assert.match(source, /event\.shiftKey && anchorIndex >= 0 && targetIndex >= 0/);
+  assert.match(source, /state\.refreshStationAnchor = input\.value/);
+  assert.match(source, /state\.refreshStationIds\.clear\(\)/);
+  assert.match(source, /state\.refreshStationAnchor = null/);
+  assert.match(html, /id="refresh-station-clear"/);
 });
 
 test("opens site and settings inside the dashboard topbar", () => {

@@ -557,7 +557,8 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
             tier_name: tier.name,
             ...(tier.minTokens !== null && tier.minTokens !== undefined ? { min_tokens: tier.minTokens } : {}),
             ...(tier.maxTokens !== null && tier.maxTokens !== undefined ? { max_tokens: tier.maxTokens } : {}),
-            ...(tier.timeDiscount ? { tier_time_discount: tier.timeDiscount, tier_time_condition: tier.timeCondition } : {})
+            ...(tier.timeDiscount !== undefined ? { tier_time_discount: tier.timeDiscount, tier_time_condition: tier.timeCondition } : {}),
+            ...(tier.billingConditions?.length ? { billing_conditions: tier.billingConditions } : {})
           });
         }
       }

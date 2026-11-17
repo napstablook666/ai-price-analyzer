@@ -140,9 +140,13 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
       const options = { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency };
       const payload = typeof response.json === "function" ? await readResponse(response) : response.body;
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
-      const normalized = typeof payload === "string"
+      // 主价格之外还要取的报文（拼车市场就是这种：座位在 /api/carpool-market，
+      // 单价在 /api/pricing），拿不到不算采集失败。
+      const enriched = typeof payload === "string" ? payload
+        : await attachAuxiliary(station, payload, requestStrategy, { fetchImpl, pageFetch });
+      const normalized = typeof enriched === "string"
         ? { sourceFormat: "text", data: [], group_ratio: {}, error: "响应不是 JSON" }
-        : normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", options);
+        : normalizePricingPayload(enriched, station.adapter?.responseFormat || "auto", options);
       if (station.mode === "page" && pageFetch) {
         const priceFields = NORMALIZED_PRICE_FIELDS;
         if (!normalized.data.length) throw new Error("页面响应未生成可用价格数据");
@@ -158,6 +162,33 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
 
   if (firstEmptySnapshot) return firstEmptySnapshot;
   throw lastError || new Error(`${station.name} 请求失败`);
+}
+
+// 站点可能把价格和分组拆在两个接口里：飓星API 的拼车中心就是一个例子，
+// 座位清单在 /api/carpool-market，模型单价还在 /api/pricing。
+// 辅助报文挂在 __aux 上交给响应格式处理器；拿不到就跳过，不拖垮主采集。
+async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetch }) {
+  const specs = Array.isArray(strategy?.aux) ? strategy.aux : [];
+  if (!specs.length || !payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const auxiliary = {};
+  for (const spec of specs) {
+    const key = String(spec?.key || "").trim();
+    const endpoint = String(spec?.endpoint || "").trim();
+    if (!key || !endpoint) continue;
+    try {
+      const url = new URL(endpoint, station.baseUrl).toString();
+      const request = buildStationRequest(station, url, { ...strategy, ...spec });
+      const response = station.mode === "page" && pageFetch
+        ? await pageFetch(request.pageRequest)
+        : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: request.credentials });
+      if (!response || response.ok === false || (response.status && response.status >= 400)) continue;
+      const body = typeof response.json === "function" ? await readResponse(response) : response.body;
+      if (body && typeof body === "object" && !Array.isArray(body)) auxiliary[key] = body;
+    } catch {
+      // 辅助接口失败就当作没有：主价格还在。
+    }
+  }
+  return Object.keys(auxiliary).length ? { ...payload, __aux: auxiliary } : payload;
 }
 
 export function createPageFetch(sendMessage) {

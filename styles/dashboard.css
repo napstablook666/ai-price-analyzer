@@ -235,8 +235,8 @@
 .cost-combined { display: grid; gap: 4px; min-width: 0; }
 .cost-combined-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .cost-amount { color: var(--text); font-size: 17px; font-weight: 700; line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
-/* 实付月成本旁边的落档提示：充多少档、几折。 */
-.cost-paid-hint { min-width: 0; overflow: hidden; color: var(--text-3); font-size: 10px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+/* 站点格「分组」下面的落档提示：充哪个档、几折。 */
+.station-recharge-hint { min-width: 0; max-width: 100%; overflow: hidden; color: var(--text-3); font-size: 11px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
 .blended-line { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
 .blended-label { color: var(--text-3); font-size: 12px; }
 .blended-cost { color: var(--accent); font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -267,11 +267,12 @@
 .refresh-station-heading span { color: var(--text-2); font-size: 12px; }
 .refresh-station-search { width: 100%; margin: 0; }
 .refresh-station-options { max-height: min(300px, 40vh); overflow-y: auto; }
-.refresh-station-option { min-height: 34px; padding: 6px 8px; }
+.refresh-station-option { min-height: 34px; padding: 6px 8px; user-select: none; }
 .refresh-station-option[hidden] { display: none; }
 .refresh-station-option span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .refresh-station-option small { margin-left: auto; color: var(--text-3); font-size: 11px; }
 .refresh-station-option:has(input:disabled) { cursor: default; opacity: .55; }
+.refresh-station-hint { margin: -2px 0 0; color: var(--text-3); font-size: 11px; }
 .refresh-station-tools { justify-content: space-between; margin: 0; }
 .refresh-station-submit { width: 100%; }
 .checkin-body { width: min(340px, calc(100vw - 24px)); }

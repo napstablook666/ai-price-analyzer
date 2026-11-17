@@ -11,6 +11,10 @@ const preset = {
   rechargeCredits: 1,
   rechargeRateVerified: true,
   rechargeRateNote: "站点 FAQ：充值按 1:1 折算美元额度，1 元 = 1 美元额度。单笔 500 美元以上 8.8 折要找管理员，Codex 套餐有效倍率最低 0.13，两者都不能自助购买。",
+  rechargePlansVerified: true,
+  rechargePlans: [
+    { kind: "topup", amount: 500, credits: 500, currency: "USD", discount: 0.88, availability: "manual", verified: true, note: "单笔 500 美元以上需管理员处理，不能自助购买" }
+  ],
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
   priceCurrencyNote: "额度计价，1 元充值换 1 美元额度",

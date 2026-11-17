@@ -61,6 +61,8 @@ const state = {
   filters: { search: "", stationId: "", provider: readProviderFilter(), group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
   stationIndexes: new Map(),
   refreshStationIds: new Set(),
+  // Shift 连选的起点。普通点一下就把起点挪到这行，Shift 点则从起点连到这一行。
+  refreshStationAnchor: null,
   refreshStationQuery: "",
   refreshStationOptionsKey: ""
 };
@@ -244,6 +246,18 @@ function selectedRefreshStationIds() {
   const enabledIds = new Set((state.data?.stations || []).filter(station => station.enabled === true).map(station => station.id));
   return [...state.refreshStationIds].filter(id => enabledIds.has(id));
 }
+// 当前搜索下能看到、能勾的行，顺序即 DOM 顺序，Shift 连选按这个顺序取段。
+function refreshStationRowInputs() {
+  return [...document.querySelectorAll("#refresh-station-options .refresh-station-option")]
+    .filter(option => !option.hidden)
+    .map(option => option.querySelector("input[data-refresh-station-id]"))
+    .filter(input => input && !input.disabled);
+}
+function setRefreshStationSelected(input, selected) {
+  input.checked = selected;
+  if (selected) state.refreshStationIds.add(input.value);
+  else state.refreshStationIds.delete(input.value);
+}
 function updateRefreshStationButton() {
   const button = $("#refresh-station");
   const count = selectedRefreshStationIds().length;
@@ -258,7 +272,17 @@ function filterRefreshStationOptions() {
     option.hidden = !option.textContent.toLowerCase().includes(query);
     if (!option.hidden) matches += 1;
   }
+  // 起点被筛掉时连选就没有意义了，丢掉它，下一次点选重新定起点。
+  if (state.refreshStationAnchor && !refreshStationRowInputs().some(input => input.value === state.refreshStationAnchor)) state.refreshStationAnchor = null;
   $("#refresh-station-empty").hidden = matches > 0;
+}
+// 勾选状态只认 state.refreshStationIds，界面这边统一按它对齐。
+function syncRefreshStationInputs() {
+  const enabledIds = new Set((state.data?.stations || []).filter(station => station.enabled === true).map(station => station.id));
+  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) {
+    input.checked = state.refreshStationIds.has(input.value);
+    input.disabled = !enabledIds.has(input.value);
+  }
 }
 function renderRefreshStationOptions() {
   const stations = state.data?.stations || [];
@@ -269,10 +293,7 @@ function renderRefreshStationOptions() {
     $("#refresh-station-options").innerHTML = stations.map(station => `<label class="facet-option refresh-station-option"><input type="checkbox" data-refresh-station-id value="${escapeHtml(station.id)}"${state.refreshStationIds.has(station.id) ? " checked" : ""}${station.enabled === true ? "" : " disabled"}>${siteIconMarkup(station.pluginId, station.name || station.id, { size: 15 })}<span>${escapeHtml(station.name || station.id)}</span>${station.enabled === true ? "" : "<small>未启用</small>"}</label>`).join("");
     state.refreshStationOptionsKey = optionsKey;
   }
-  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) {
-    input.checked = state.refreshStationIds.has(input.value);
-    input.disabled = !enabledIds.has(input.value);
-  }
+  syncRefreshStationInputs();
   filterRefreshStationOptions();
   updateRefreshStationButton();
 }
@@ -975,7 +996,7 @@ function renderRows() {
     const unitGroup = groupedByUnit ? unitGroupMarkup(row, previousRow, index === 0) : "";
     return `${unitGroup}<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
-      <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span></div></td>
+      <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span>${rechargeTierMarkup(row)}</div></td>
       <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking))}</td>
       <td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, monthlyRanking, deltaClass, deltaLabel)}</td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
@@ -1046,13 +1067,16 @@ function paidMonthlyCost(row) {
 // 金额只是显示，浮层只挂在下面那根长条上，免得鼠标扫过金额就弹东西。
 function monthlyCostSummaryMarkup(row, currency) {
   const amount = formatPrice(paidMonthlyCost(row), row.costCurrency || currency);
-  const plan = row.billingMode === "image" ? row.imageRechargePlan : row.rechargePlan;
-  const tierHint = plan
-    ? `<small class="cost-paid-hint" title="按估算月用量自动落档">充 ${formatPrice(plan.amount, "CNY", 2)} 档 ${plan.discount.toFixed(2)} 折</small>`
-    : "";
   const noUsage = row.billingMode === "image" && !Number.isFinite(paidMonthlyCost(row)) && row.stationCategory !== "public";
   if (noUsage) return `<strong class="cost-amount cost-amount-missing">填出图张数</strong>`;
-  return `<strong class="cost-amount">${amount}</strong>${tierHint}`;
+  return `<strong class="cost-amount">${amount}</strong>`;
+}
+
+// 充值阶梯是站点规则，不是这一行的价格：提示挂在站点格的「分组」下面。
+function rechargeTierMarkup(row) {
+  const plan = row.billingMode === "image" ? row.imageRechargePlan : row.rechargePlan;
+  if (!plan) return "";
+  return `<span class="station-recharge-hint" title="按估算月用量自动落档">充 ${formatPrice(plan.amount, "CNY", 2)} 档 ${plan.discount.toFixed(2)} 折</span>`;
 }
 // 长条只做同模型月成本相对比较，放在单价单元格底部；名次和价差仍在月成本列。
 function monthlyCostRankTitle(row, currency, { rank, total, baseline }) {
@@ -1627,24 +1651,41 @@ $("#refresh-station-search").addEventListener("input", event => {
   state.refreshStationQuery = event.target.value;
   filterRefreshStationOptions();
 });
-$("#refresh-station-options").addEventListener("change", event => {
-  const input = event.target.closest("input[data-refresh-station-id]");
-  if (!input) return;
-  if (input.checked) state.refreshStationIds.add(input.value);
-  else state.refreshStationIds.delete(input.value);
+// 勾选自己接管：挡掉默认行为，按「这一行本来想变成什么」一次性写完整段。
+// 这样点方框、点文字、按空格、Shift 连选都走同一条路径，不用分别补丁。
+$("#refresh-station-options").addEventListener("click", event => {
+  const option = event.target.closest(".refresh-station-option");
+  if (!option || option.hidden) return;
+  const input = option.querySelector("input[data-refresh-station-id]");
+  if (!input || input.disabled) return;
+  event.preventDefault();
+  // 直接点方框时，Chrome 在派发 click 之前就把 checked 翻好了，读 input.checked 会得到反的意图；
+  // 以选择集为准算目标状态，点方框和点文字两条路径就一致了。
+  const selected = !state.refreshStationIds.has(input.value);
+  const rows = refreshStationRowInputs();
+  const anchorIndex = rows.findIndex(row => row.value === state.refreshStationAnchor);
+  const targetIndex = rows.indexOf(input);
+  if (event.shiftKey && anchorIndex >= 0 && targetIndex >= 0 && anchorIndex !== targetIndex) {
+    // 从起点连到这一行，方向跟着这一行的新状态走：点未选的就是整段选上，点已选的就是整段取消。
+    const [from, to] = anchorIndex < targetIndex ? [anchorIndex, targetIndex] : [targetIndex, anchorIndex];
+    for (let index = from; index <= to; index += 1) setRefreshStationSelected(rows[index], selected);
+  } else {
+    setRefreshStationSelected(input, selected);
+    state.refreshStationAnchor = input.value;
+  }
   updateRefreshStationButton();
+  // 取消默认行为后 Chrome 会把 checked 翻回点击前的值，正好盖掉刚写下的状态，等这一轮派发结束再对齐。
+  setTimeout(syncRefreshStationInputs, 0);
 });
 $("#refresh-station-select-all").addEventListener("click", () => {
-  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) {
-    if (input.disabled || input.closest("label").hidden) continue;
-    input.checked = true;
-    state.refreshStationIds.add(input.value);
-  }
+  for (const input of refreshStationRowInputs()) setRefreshStationSelected(input, true);
+  state.refreshStationAnchor = null;
   updateRefreshStationButton();
 });
 $("#refresh-station-clear").addEventListener("click", () => {
   state.refreshStationIds.clear();
-  for (const input of document.querySelectorAll("#refresh-station-options input[data-refresh-station-id]")) input.checked = false;
+  state.refreshStationAnchor = null;
+  syncRefreshStationInputs();
   updateRefreshStationButton();
 });
 $("#refresh-station").addEventListener("click", async event => {
