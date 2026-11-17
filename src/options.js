@@ -1815,7 +1815,7 @@ async function refreshExchangeRate() {
     $("#exchange-rate").value = rate.toFixed(4);
     scheduleSettingsSave();
     refreshRechargeDisplays();
-    toast(`官方汇率已更新：${rate.toFixed(4)}`);
+    toast(`汇率已更新：${rate.toFixed(4)}`);
   } catch (error) {
     toast(error.message);
   } finally {
@@ -1937,10 +1937,10 @@ void load();
 const ASSIST_STATUS_LABELS = { manual: "人工指定", pending: "待识别", accepted: "AI 已匹配", none: "判为不是", invalid: "不存在的 id", failed: "失败", ignored: "已忽略" };
 // 分区说明：每一区该做什么都不一样，写在这里免得用户对着列表发呆。
 const ASSIST_POOL_HINTS = {
-  all: "全部：每条都能点「指定」人工挑官方模型，指定后优先级最高，AI 再判也不会改。",
-  matched: "已匹配：已经归到官方模型的写法，AI 判的或你指定的。判错了就点「改指定」重挑一个，或点「撤销」清掉。",
+  all: "全部：每条都能点「指定」人工挑基准模型，指定后优先级最高，AI 再判也不会改。",
+  matched: "已匹配：已经归到基准模型的写法，AI 判的或你指定的。判错了就点「改指定」重挑一个，或点「撤销」清掉。",
   unmatched: "未匹配：还没问过模型。点「识别当前未匹配」把它们发出去，也可以直接点「指定」自己挑。",
-  confirm: "待确认：试过但没成，模型判「不是」、请求报错、或者你忽略过的都在这儿。可以点「立即重试」，也可以人工指定一个官方模型。"
+  confirm: "待确认：试过但没成，模型判「不是」、请求报错、或者你忽略过的都在这儿。可以点「立即重试」，也可以人工指定一个基准模型。"
 };
 const ASSIST_REASON_LABELS = { timeout: "超时", error: "报错", unanswered: "漏答", "no-candidates": "规则层没有相似候选" };
 
@@ -2006,7 +2006,7 @@ function renderAssistantQueue(data) {
   list.innerHTML = page.rows.map(row => {
     const key = escapeHtml(row.key);
     const actions = [];
-    // 每条都能人工指定：AI 判不动的、判错的、你不想等的，都从这里直接钉到官方模型。
+    // 每条都能人工指定：AI 判不动的、判错的、你不想等的，都从这里直接钉到基准模型。
     actions.push(`<button class="button button-quiet button-small" type="button" data-pick="${key}">${row.manual ? "改指定" : "指定"}</button>`);
     if (row.manual) {
       actions.push(`<button class="button button-quiet button-small" type="button" data-unmanual="${key}">撤销人工</button>`);
@@ -2040,13 +2040,13 @@ function renderAssistantQueue(data) {
   hydrateIcons(list);
 }
 
-// 人工指定：行内展开一个关键词搜索框，选中官方模型就立刻写成人工覆盖。
+// 人工指定：行内展开一个关键词搜索框，选中基准模型就立刻写成人工覆盖。
 // 输入时只重画结果区，不整表重渲染，否则每敲一个字输入框都会失焦。
 let assistantPickerTimer = 0;
 
 function assistantPickerResultsMarkup({ models = [], total = 0, query = "" } = {}, current = "") {
   if (!models.length) {
-    return `<p class="assistant-picker-empty">${query ? `没有匹配「${escapeHtml(query)}」的官方模型` : "官方清单里没有模型，先到官方参考价刷新一次"}</p>`;
+    return `<p class="assistant-picker-empty">${query ? `没有匹配「${escapeHtml(query)}」的基准模型` : "基准清单里没有模型，先到基准参考价刷新一次"}</p>`;
   }
   const options = models.map(model => {
     const current_ = model.id === current ? '<em class="assistant-picker-current">当前</em>' : "";
@@ -2078,20 +2078,20 @@ async function openAssistantPicker(button, row) {
   for (const node of document.querySelectorAll(".assistant-review-picker")) node.remove();
   const picker = document.createElement("div");
   picker.className = "assistant-review-picker";
-  picker.innerHTML = `<input class="assistant-picker-input" type="search" autocomplete="off" placeholder="输入模型关键词，比如 claude sonnet" aria-label="按关键词搜索官方模型">
-    <p class="assistant-picker-status">读取官方模型清单…</p>
+  picker.innerHTML = `<input class="assistant-picker-input" type="search" autocomplete="off" placeholder="输入模型关键词，比如 claude sonnet" aria-label="按关键词搜索基准模型">
+    <p class="assistant-picker-status">读取基准模型清单…</p>
     <div class="assistant-picker-results"></div>`;
   grid.append(picker);
   const input = picker.querySelector(".assistant-picker-input");
   const status = picker.querySelector(".assistant-picker-status");
   const results = picker.querySelector(".assistant-picker-results");
   const run = async query => {
-    status.textContent = query ? `搜索「${query}」…` : "读取官方模型清单…";
+    status.textContent = query ? `搜索「${query}」…` : "读取基准模型清单…";
     try {
       const data = await callService("GET_MODEL_ASSIST_CATALOG", { query, limit: 30 });
       status.textContent = query
-        ? `${data.models.length} / ${data.total} 个官方模型匹配「${query}」`
-        : `共 ${data.total} 个官方模型，输入关键词缩小范围`;
+        ? `${data.models.length} / ${data.total} 个基准模型匹配「${query}」`
+        : `共 ${data.total} 个基准模型，输入关键词缩小范围`;
       results.innerHTML = assistantPickerResultsMarkup(data, row.targetId);
     } catch (error) {
       status.textContent = error.message;

@@ -116,7 +116,7 @@ function imagePriceGridMarkup(row, currency, chartMarkup = "") {
     : "—";
   const chips = [
     `<span class="price-mini"><span class="price-mini-key">折合</span><span class="price-mini-pair"><span class="price-mini-relay">${perImage}</span></span></span>`,
-    `<span class="price-mini"><span class="price-mini-key">对比官方</span><span class="price-mini-pair"><span class="price-mini-relay ${gapClass}">${gapLabel}</span></span></span>`,
+    `<span class="price-mini"><span class="price-mini-key">对比基准</span><span class="price-mini-pair"><span class="price-mini-relay ${gapClass}">${gapLabel}</span></span></span>`,
     `<span class="price-mini"><span class="price-mini-key">单位</span><span class="price-mini-pair">${escapeHtml(unit)}</span></span>`
   ].join("");
   return `<div class="price-grid"><div class="price-grid-row price-line-primary"><span class="price-key">每张</span><span class="price-value">${officialText}</span><span class="price-value">${relayText}</span></div><div class="price-grid-detail">${chips}</div></div>${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
@@ -189,12 +189,12 @@ function renderSummary(rows) {
     ["数据状态", String(needsReview), reviewNote]
   ] : state.mediaMode === "text" ? [
     ["覆盖模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
-    ["官方匹配", String(matched.length), `${matchRate}% 有官方参考价`],
+    ["基准匹配", String(matched.length), `${matchRate}% 有基准参考价`],
     ["首选方案", String(recommended), "同模型推荐"],
     ["需核验", String(needsReview), reviewNote]
   ] : [
     [`${MEDIA_MODE_LABELS[state.mediaMode]}模型`, String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
-    ["官方匹配", String(matched.length), `${matchRate}% 有官方参考价`],
+    ["基准匹配", String(matched.length), `${matchRate}% 有基准参考价`],
     ["可比报价", String(comparable.length), state.mediaMode === "image" ? "同单位或可折合到元/张" : "按次报价已折算成元/1M"],
     ["需核验", String(needsReview), reviewNote]
   ];
@@ -207,7 +207,7 @@ function renderStationFilter(rows) {
   const stations = [...stationsById.entries()];
   const selectedName = stations.find(([id]) => id === current)?.[1];
   $("#station-filter-label").textContent = selectedName || "全部中转站";
-  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}>${siteIconMarkup(state.stationById.get(id)?.pluginId, name, { size: 15 })}<span>${escapeHtml(name)}</span>${state.stationIndexes.get(id) ? `<span class="facet-metric" title="本站混合单价 / 官方混合单价的中位数（样本 ${state.stationIndexes.get(id).sampleSize} 个模型）">×${(state.stationIndexes.get(id).median).toFixed(2)}</span>` : ""}</label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
+  $("#station-filters").innerHTML = `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value=""${current ? "" : " checked"}><span>全部中转站</span></label>${stations.map(([id, name]) => `<label class="facet-option"><input type="radio" name="station-filter" data-station-filter value="${escapeHtml(id)}"${id === current ? " checked" : ""}>${siteIconMarkup(state.stationById.get(id)?.pluginId, name, { size: 15 })}<span>${escapeHtml(name)}</span>${state.stationIndexes.get(id) ? `<span class="facet-metric" title="本站混合单价 / 基准混合单价的中位数（样本 ${state.stationIndexes.get(id).sampleSize} 个模型）">×${(state.stationIndexes.get(id).median).toFixed(2)}</span>` : ""}</label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`;
   filterFacetOptions("station");
 }
 function selectedRefreshStationIds() {
@@ -383,7 +383,7 @@ function unitGroupMarkup(row, previousRow, force = false) {
   const label = mediaUnitLabel(unit, "未标单位");
   const tier = row.mediaUnit === "image" && row.imageTierText ? row.imageTierText : "";
   const note = tier === "规格未标注"
-    ? `<span class="unit-group-note">站内没标尺寸，不能和官方具名档直接比</span>`
+    ? `<span class="unit-group-note">站内没标尺寸，不能和基准具名档直接比</span>`
     : tier ? `<span class="unit-group-note">${escapeHtml(tier)}</span>` : "";
   const suffix = continues ? `<span class="unit-group-note">（续）</span>` : "";
   return `<tr class="unit-group-row"><th colspan="7" scope="colgroup"><span class="unit-group-label">${escapeHtml(label)}</span>${note}${suffix}</th></tr>`;
@@ -399,7 +399,7 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
   const officialSource = officialQuotedPrices || row.officialPrices || null;
   const officialBlocked = row.stationCategory === "public";
   const officialLines = officialSource && !officialBlocked ? dashboardPriceLines(officialSource, row, true).filter(([, value]) => value !== null && value !== undefined) : [];
-  const officialNote = officialBlocked ? "公益站仅与公益站比较" : officialLines.length ? null : row.officialName ? "官方价格未收录" : "无官方匹配价";
+  const officialNote = officialBlocked ? "公益站仅与公益站比较" : officialLines.length ? null : row.officialName ? "基准价格未收录" : "无基准匹配价";
   const relayNote = relayLines.length ? null : "中转价格未收录";
   if (!relayLines.length && !officialLines.length) return `<span class="price-empty">${relayNote || officialNote}</span>`;
   const grid = new Map();
@@ -418,7 +418,7 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
     ? cell => formatSourcePrice(cell.value, row.officialCurrency || "CREDITS", cell.precise ? 6 : 4)
     : cell => formatPrice(cell.value, currency, cell.precise ? 6 : 4);
   const relayFormat = cell => formatSourcePrice(cell.value, row.sourceCurrency, cell.precise ? 6 : 4);
-  // 官方和中转同口径，同一费用项直接比大小上色：中转更贵标红，更便宜标绿。
+  // 基准和中转同口径，同一费用项直接比大小上色：中转更贵标红，更便宜标绿。
   const toneOf = entry => {
     const dir = priceEntryTone(entry);
     if (dir === "neutral") return null;
@@ -426,11 +426,11 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
   };
   const toneClass = tone => tone ? ` is-${tone.dir}` : "";
   const toneMark = tone => tone ? `<span class="price-tone-mark" aria-hidden="true">${tone.dir === "up" ? "▲" : "▼"}</span>` : "";
-  const toneTitle = tone => tone ? ` · 比官方${tone.dir === "up" ? "贵" : "便宜"} ${tone.percent}%` : "";
+  const toneTitle = tone => tone ? ` · 比基准${tone.dir === "up" ? "贵" : "便宜"} ${tone.percent}%` : "";
   const cellMarkup = (cell, format, tone = null) => cell
     ? `<span class="price-value${cell.estimated ? " is-estimated" : ""}${toneClass(tone)}"${cell.estimated ? ' title="估算值"' : ""}>${toneMark(tone)}${cell.estimated ? "≈ " : ""}${format(cell)}</span>`
     : `<span class="price-value price-value-missing">—</span>`;
-  // 输入/输出是常看的，留成对齐的两行；其余费用项压成一行「官方 → 中转」，行高不再随费用项数量增长。
+  // 输入/输出是常看的，留成对齐的两行；其余费用项压成一行「基准 → 中转」，行高不再随费用项数量增长。
   const primaryKeys = ["输入", "输出"];
   const cacheLabels = new Map([["缓存读", "读"], ["缓存写", "写"], ["缓存写入（1h）", "1h"]]);
   const entries = [...grid.values()];
@@ -440,13 +440,13 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
     return `<div class="price-grid-row price-line-primary"><span class="price-key">${escapeHtml(entry.base)}</span>${cellMarkup(entry.official, officialFormat)}${relayCell}</div>`;
   }).join("");
   const miniText = (cell, format) => cell ? `${cell.estimated ? "≈" : ""}${format(cell)}` : "—";
-  // 一个费用项压缩成「官方 → 中转」，完整文字放 title，鼠标悬停能看全
+  // 一个费用项压缩成「基准 → 中转」，完整文字放 title，鼠标悬停能看全
   const chip = (label, entry) => {
     const officialText = miniText(entry.official, officialFormat);
     const relayText = miniText(entry.relay, relayFormat);
     const tone = toneOf(entry);
-    const title = `${entry.base} · 官方 ${officialText} / 中转 ${relayText}${toneTitle(tone)}`;
-    // 官方和中转同价时只留一个数，箭头省掉，一排三个缓存项才放得下
+    const title = `${entry.base} · 基准 ${officialText} / 中转 ${relayText}${toneTitle(tone)}`;
+    // 基准和中转同价时只留一个数，箭头省掉，一排三个缓存项才放得下
     if (entry.official && entry.relay && officialText === relayText) {
       return `<span class="price-mini" title="${escapeHtml(title)}"><span class="price-mini-key">${escapeHtml(label)}</span><span class="price-mini-pair"><span class="price-mini-relay">${escapeHtml(relayText)}</span></span></span>`;
     }
@@ -458,7 +458,7 @@ function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") 
     : "";
   const otherEntries = entries.filter(entry => !primaryKeys.includes(entry.base) && !cacheLabels.has(entry.base));
   const otherChips = otherEntries.map(entry => chip(entry.base, entry)).join("");
-  // 「官方价格未收录」这类说明并到同一行末尾，不再单独占一行
+  // 「基准价格未收录」这类说明并到同一行末尾，不再单独占一行
   const notes = [officialNote, relayNote].filter(Boolean).map(note => `<span class="price-mini-note">${note}</span>`).join("");
   const detailRow = cacheGroup || otherChips || notes ? `<div class="price-grid-detail">${cacheGroup}${otherChips}${notes}</div>` : "";
   return `<div class="price-grid">${primaryRows}${detailRow}</div>${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
@@ -494,7 +494,7 @@ function renderComparisonMode() {
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
   }
-  $("#comparison-mode-note").textContent = isPublic ? "公益站模式：仅显示公益站报价；价格单位为站点积分/额度，默认比例 1:1。" : "付费中转站模式：保留官方价格、月成本和推荐逻辑。";
+  $("#comparison-mode-note").textContent = isPublic ? "公益站模式：仅显示公益站报价；价格单位为站点积分/额度，默认比例 1:1。" : "付费中转站模式：保留基准价格、月成本和推荐逻辑。";
   $("#provider-filters").closest("details").hidden = isPublic;
   for (const element of document.querySelectorAll(".paid-only-control, .paid-only-column, [data-paid-only='true']")) element.hidden = isPublic;
   for (const element of document.querySelectorAll(".public-only-column")) element.hidden = !isPublic;
@@ -575,9 +575,9 @@ function modelMatchMarkup(row, currency) {
   const candidates = Array.isArray(row.officialCandidates) ? row.officialCandidates : [];
   const confidence = Math.max(0, Math.min(100, Math.round(Number(row.confidenceScore) || 0)));
   const hasOfficial = Boolean(row.officialName);
-  const officialName = hasOfficial ? row.officialName : "没有对应的官方目录记录";
+  const officialName = hasOfficial ? row.officialName : "没有对应的基准目录记录";
   const provider = row.provider && row.provider !== "未匹配" ? row.provider : "未匹配";
-  const rule = row.matchRule || (hasOfficial ? "官方匹配" : "未匹配");
+  const rule = row.matchRule || (hasOfficial ? "基准匹配" : "未匹配");
   const candidateItems = candidates.map(candidate => {
     const name = candidate.name || "未命名候选";
     const cost = Number.isFinite(candidate.monthlyCost) ? formatPrice(candidate.monthlyCost, currency, 2) : "—";
@@ -586,8 +586,8 @@ function modelMatchMarkup(row, currency) {
       : "—";
     return `<div class="candidate-item"><span class="candidate-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span><span class="candidate-cost">${cost}</span><span class="candidate-delta">${delta}</span></div>`;
   }).join("");
-  const candidatesMarkup = candidateItems ? `<div class="match-candidates"><div class="match-detail-heading">官方候选（${candidates.length}）</div><div class="candidate-list">${candidateItems}</div></div>` : "";
-  return `<details class="model-match-details"><summary class="confidence-tag" aria-label="匹配置信度 ${confidence}%，查看官方匹配详情">${confidence}%</summary><div class="model-match-popover" aria-label="官方匹配详情"><div class="match-detail-primary"><span class="match-detail-label">官方模型</span><strong>${escapeHtml(officialName)}</strong></div><div class="match-detail-line"><span>供应商</span><span>${escapeHtml(provider)}</span></div><div class="match-detail-line"><span>匹配规则</span><span>${escapeHtml(rule)}</span></div><div class="match-detail-line"><span>置信度</span><span>${confidence}%</span></div>${candidatesMarkup}</div></details>`;
+  const candidatesMarkup = candidateItems ? `<div class="match-candidates"><div class="match-detail-heading">基准候选（${candidates.length}）</div><div class="candidate-list">${candidateItems}</div></div>` : "";
+  return `<details class="model-match-details"><summary class="confidence-tag" aria-label="匹配置信度 ${confidence}%，查看基准匹配详情">${confidence}%</summary><div class="model-match-popover" aria-label="基准匹配详情"><div class="match-detail-primary"><span class="match-detail-label">基准模型</span><strong>${escapeHtml(officialName)}</strong></div><div class="match-detail-line"><span>供应商</span><span>${escapeHtml(provider)}</span></div><div class="match-detail-line"><span>匹配规则</span><span>${escapeHtml(rule)}</span></div><div class="match-detail-line"><span>置信度</span><span>${confidence}%</span></div>${candidatesMarkup}</div></details>`;
 }
 
 function closeModelMatchDetails(except = null) {
@@ -783,7 +783,7 @@ function renderRows() {
       ? (row.pricingUnavailable ? pricingUnavailableLabel(row)
         : row.stationCategory === "public" ? "仅公益站比较"
           : row.imageCompare?.kind === "tier-mismatch" ? "规格不同"
-            : "无官方价")
+            : "无基准价")
       : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const isPublic = state.comparisonMode === "public";
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
@@ -916,16 +916,16 @@ function renderReferenceStatus() {
   }
   const count = ref.models?.length || 0;
   const fetched = ref.fetchedAt ? new Date(ref.fetchedAt) : null;
-  $("#reference-status").textContent = count ? `官方价 ${count}` : "官方价未加载";
+  $("#reference-status").textContent = count ? `基准价 ${count}` : "基准价未加载";
   $("#reference-note").textContent = fetched ? fetched.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
   $("#reference-dot").classList.toggle("is-live", count > 0);
   const warnings = ref.warnings?.length ? ref.warnings.join("；") : "";
-  const cacheNote = "官方目录每日缓存 · USD credit 1:1 · 人民币按设置汇率";
+  const cacheNote = "基准目录每日缓存 · USD credit 1:1 · 人民币按设置汇率";
   pill.title = fetched ? `${cacheNote}${warnings ? `；${warnings}` : ""}` : warnings || cacheNote;
   pill.hidden = false;
   $("#freshness-sep").hidden = false;
 }
-// 顶栏合并读数：中转站快照时间 · 官方价缓存时间，两边齐全就折叠成一行。
+// 顶栏合并读数：中转站快照时间 · 基准价缓存时间，两边齐全就折叠成一行。
 function renderFreshness() {
   const collectedAt = (state.data?.snapshots || [])
     .map(snapshot => snapshot?.collectedAt)
@@ -1539,7 +1539,7 @@ $("#cancel-refresh-preflight").addEventListener("click", async () => {
 $("#fetch-references").addEventListener("click", async event => {
   const button = event.currentTarget;
   button.disabled = true;
-  try { render(await callService("FETCH_REFERENCES")); toast("官方参考价已更新"); }
+  try { render(await callService("FETCH_REFERENCES")); toast("基准参考价已更新"); }
   catch (error) { toast(error.message); }
   finally { button.disabled = false; }
 });

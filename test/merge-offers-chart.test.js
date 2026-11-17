@@ -124,7 +124,7 @@ test("dashboard folds official matching into one confidence detail control", () 
   assert.match(script, /<details class="model-match-details">/);
   assert.match(script, /<summary class="confidence-tag"/);
   assert.match(script, /const officialNote = !isPublic \? modelMatchMarkup\(row, currency\) : ""/);
-  assert.match(script, /官方候选（\$\{candidates\.length\}）/);
+  assert.match(script, /基准候选（\$\{candidates\.length\}）/);
   assert.equal(script.includes('class="official-name"'), false);
   assert.equal(script.includes('class="candidate-tag"'), false);
   assert.match(css, /\.model-match-details:hover \.model-match-popover/);
@@ -194,10 +194,10 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   const css = readFileSync(new URL("../styles/dashboard.css", import.meta.url), "utf8");
   assert.equal(html.includes("price-group-heading"), false);
-  // 费用项、官方、中转三个表头合并成一组 colspan，所以按合并后的结构断言。
+  // 费用项、基准、中转三个表头合并成一组 colspan，所以按合并后的结构断言。
   assert.match(html, /colspan="3" class="paid-only-column price-key-heading is-section-start"/);
   assert.match(html, /class="price-head-key">费用项/);
-  assert.match(html, /class="price-head-side">官方<\/span>/);
+  assert.match(html, /class="price-head-side">基准<\/span>/);
   assert.match(html, /class="price-head-side">中转<\/span>/);
   assert.match(html, /data-sort-keys="monthlyCost blendedUnitPrice diffPercent">月成本 · 折算单价<\/th>/);
   assert.match(html, /class="unit-hint-popover".*中转币/);
@@ -302,5 +302,5 @@ test("switching comparison mode drops filters that belong to the other dataset",
   assert.deepEqual(defaults, ["anthropic", "openai"]);
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   assert.match(script, /resetFiltersForModeSwitch\(\);\s*\n\s*render\(data\);/);
-  assert.match(script, /state\.filters = modeSwitchFilters\(state\.filters, DEFAULT_PROVIDER_FILTER\)/);
+  assert.match(script, /state\.filters = modeSwitchFilters\(state\.filters, readProviderFilter\(\)\)/);
 });
