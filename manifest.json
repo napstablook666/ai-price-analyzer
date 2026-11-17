@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI 中转站价格对比",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "定时采集多家 AI 中转站、OpenRouter 官方参考价并进行同模型对比。",
   "icons": {
     "16": "icons/icon-16.png",
