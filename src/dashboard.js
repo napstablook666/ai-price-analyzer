@@ -768,6 +768,14 @@ function repositionMonthlyCostPanel() {
 function modelIconMarkup(row) {
   return providerIconMarkup([row.provider, row.canonicalModel, row.modelName, row.displayName], { size: 15 });
 }
+
+// 站点名直接开站点首页；按站点筛选走左侧「全部中转站」。
+function stationSiteLinkMarkup(station, row) {
+  const logo = siteIconMarkup(station.pluginId, row.stationName, { size: 16 });
+  const name = `<span class="station-name">${escapeHtml(row.stationName)}</span>`;
+  if (!station.baseUrl) return `<span class="station-site-link is-plain">${logo}${name}</span>`;
+  return `<a class="station-site-link" href="${escapeHtml(station.baseUrl)}" target="_blank" rel="noopener noreferrer" title="打开 ${escapeHtml(station.baseUrl)}" aria-label="打开站点：${escapeHtml(row.stationName)}">${logo}${name}${icon("arrow-up-right", { size: 13, className: "icon station-link-icon" })}</a>`;
+}
 function renderRows() {
   closeMonthlyCostPanel();
   const currency = state.data?.settings?.defaultCurrency || "CNY";
@@ -818,7 +826,7 @@ function renderRows() {
     const unitGroup = groupedByUnit ? unitGroupMarkup(row, previousRow, index === 0) : "";
     return `${unitGroup}<tr class="${rowClasses}">
       <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
-      <td data-label="中转站"><div class="station-cell"><button class="station-filter-link" type="button" title="筛选此站点" aria-label="筛选站点：${escapeHtml(row.stationName)}" data-focus-station="${escapeHtml(row.stationId)}">${siteIconMarkup(station.pluginId, row.stationName, { size: 16 })}<span>${escapeHtml(row.stationName)}</span></button><span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span></div></td>
+      <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span></div></td>
       <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking))}</td>
       <td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, monthlyRanking, deltaClass, deltaLabel)}</td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
@@ -1428,14 +1436,6 @@ backToTop.addEventListener("click", () => {
   const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   pageShell.scrollTo({ top: 0, behavior });
   tableWrap.scrollTo({ top: 0, behavior });
-});
-
-$("#comparison-body").addEventListener("click", async event => {
-  const button = event.target.closest("[data-focus-station]");
-  if (!button) return;
-  state.filters.stationId = button.dataset.focusStation;
-  renderStationFilter(state.rows);
-  renderRows();
 });
 
 $("#refresh-station-search").addEventListener("input", event => {

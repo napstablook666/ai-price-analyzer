@@ -163,8 +163,12 @@
 .confidence-tag { padding: 0 5px; border-radius: var(--radius-pill); color: var(--text-3); background: var(--surface-2); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .provider-tag, .group-tag, .status-tag, .delta-tag { display: inline-flex; align-items: center; gap: 3px; width: fit-content; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 12px; line-height: 1.35; }
 .station-cell { display: grid; justify-items: start; gap: 6px; min-width: 0; }
-.station-filter-link { display: inline-flex; align-items: center; gap: 6px; width: 100%; min-width: 0; padding: 0; color: var(--text); background: transparent; font-size: 13.5px; font-weight: 650; text-align: left; }
-.station-filter-link > span:last-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.station-site-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; padding: 0; color: var(--text); background: transparent; font-size: 13.5px; font-weight: 650; text-align: left; }
+.station-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.station-link-icon { flex: 0 0 auto; color: var(--text-3); opacity: 0; transition: opacity .15s ease, color .15s ease; }
+.station-site-link:hover .station-name, .station-site-link:focus-visible .station-name { text-decoration: underline; text-underline-offset: 2px; }
+.station-site-link:hover .station-link-icon, .station-site-link:focus-visible .station-link-icon { opacity: 1; color: var(--accent); }
+.station-site-link.is-plain { cursor: default; }
 .station-meta { color: var(--text-3); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
 .comparison-table td.price-cell { position: relative; padding-block: 6px 12px; vertical-align: top; }
 .price-grid { display: grid; grid-template-columns: var(--price-cols); gap: 1px 10px; align-items: baseline; width: 100%; font-size: 13px; line-height: 1.15; }
