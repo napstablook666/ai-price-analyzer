@@ -154,6 +154,17 @@ git clone https://github.com/napstablook666/ai-price-analyzer-plugins.git plugin
 
 详细说明见 [PRIVACY.md](./PRIVACY.md)，漏洞报告方式见 [SECURITY.md](./SECURITY.md)。
 
+
+## 免责声明
+
+扩展算的是估算值，仅供参考，以站点后台的实际扣费为准。
+
+- 价格来自你配置的站点当时展示的价目页或接口。站点改价、改分组倍率、改计费口径之后，旧快照不会自己变对。
+- 月成本、折算单价、混合单价都建立在「偏好与成本」里那组月用量上。你填的用量和真实账单不会一致，算出来的金额只是同一把尺子下的横向对比。
+- 带 `≈`、「估算」、「价格推导」、「币种待核验」标记的数字误差最大，别拿它们当报价依据。
+- 扩展不核对账单、不代下单，也不代表任何站点的官方价格。依据这些数字做充值或采购决定，风险由使用者承担。
+
+完整说明见 [docs/disclaimer.md](./docs/disclaimer.md)。
 ## 发布
 
 发布由 Git tag 触发。先用 `npm run version:patch`（或 `minor` / `major`）同步版本号，再推 `v0.5.2` 这样的 tag。GitHub Actions 会产出三个文件：

@@ -48,6 +48,10 @@
 
 单位问题占九成。检查 `priceCurrency` 是每 M token 还是每 K token，以及充值比例里的到账积分。
 
+## 价格准吗，能照着它充值吗
+
+当参考，别当报价。扩展抓的是站点当时展示的价目，再按你填的月用量折算成月成本；站点改价、改分组倍率、改充值档位之后都可能对不上。带 `≈`、「估算」、「币种待核验」的行误差最大。以站点后台的实际扣费为准，完整边界见[免责声明](./disclaimer)。
+
 ## 支持哪些浏览器
 
 Chromium 内核：Chrome、Edge、Brave 等。Firefox 和 Safari 不保证能用，MV3 实现差异太大。
@@ -76,3 +80,4 @@ Chromium 内核：Chrome、Edge、Brave 等。Firefox 和 Safari 不保证能用
 
 - [故障排查](./troubleshooting)
 - [隐私与安全](./security)
+- [免责声明](./disclaimer)

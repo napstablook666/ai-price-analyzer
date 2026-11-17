@@ -154,6 +154,17 @@ The builder generates `src/site-plugins/providers/<id>.js`, `src/site-plugins/ca
 
 See [PRIVACY.md](./PRIVACY.md) for details and [SECURITY.md](./SECURITY.md) for vulnerability reporting.
 
+## Disclaimer
+
+The extension produces estimates. Treat every price and conclusion as a reference only; the station's own invoice is authoritative.
+
+- Prices come from the pricing page or endpoint your station served at collection time. After the station changes prices, group multipliers, or billing rules, an old snapshot stays stale.
+- Monthly cost, blended unit price, and price difference all rest on the monthly usage you enter under "Preferences & cost". Your real invoice will not match, and the numbers only make sense as a comparison on one ruler.
+- Cells marked `≈`, "estimated", "derived price", or "currency unverified" carry the largest error. Do not treat them as a quote.
+- The extension does not reconcile invoices, place orders, or speak for any station. Decisions about topping up or purchasing based on these numbers are yours to carry.
+
+Full text: [docs/disclaimer.md](./docs/disclaimer.md).
+
 ## Release
 
 Git tags trigger releases. Sync the version with `npm run version:patch` (or `minor` / `major`), then push a tag such as `v0.5.2`. GitHub Actions publishes three files:
