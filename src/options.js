@@ -1269,7 +1269,9 @@ async function refreshStation(stationId) {
     const status = snapshot.status === "success" ? "success" : snapshot.status === "partial" ? "partial" : "error";
     const modelCount = snapshot.normalized?.data?.length || 0;
     updateStationQueryStatus({ stationId: station.id, stationName: station.name, status, modelCount, durationMs: Date.now() - startedAt, error: snapshot.error || (status === "partial" ? partialSnapshotMessage(snapshot) : "") });
-    toast(status === "success" ? `已查询 ${modelCount} 个模型` : status === "partial" ? `部分查询：${modelCount} 个模型，${partialSnapshotMessage(snapshot)}` : `查询失败：${snapshot.error || "请查看仪表盘"}`);
+    // 站点自己公布的充值比例会跟着这次采集一起变，改了就顺口说一声，省得用户猜价格怎么跳了。
+    const rechargeNote = Number(snapshot.recharge?.rate) > 0 ? `，充值比例 ${Number(snapshot.recharge.rate).toFixed(4)}` : "";
+    toast(status === "success" ? `已查询 ${modelCount} 个模型${rechargeNote}` : status === "partial" ? `部分查询：${modelCount} 个模型，${partialSnapshotMessage(snapshot)}${rechargeNote}` : `查询失败：${snapshot.error || "请查看仪表盘"}`);
   } catch (error) {
     updateStationQueryStatus({ stationId: station.id, stationName: station.name, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
     toast(error.message || String(error));

@@ -47,7 +47,8 @@ import { SITE_PLUGIN_CATALOG } from "../src/site-plugins/catalog.js";
 await loadSitePlugins(SITE_PLUGIN_CATALOG.map(plugin => plugin.id));
 const collectStationInput = (stationInput, options = {}) => {
   const collection = resolveStationCollection(stationInput);
-  return collectPreparedStation(collection.station, { ...options, collection });
+  // 这组用例的 fetch 桩只认价格接口：默认不探 /api/status，要测探测就显式传 probeRecharge。
+  return collectPreparedStation(collection.station, { probeRecharge: false, ...options, collection });
 };
 
 const pqhFixture = {

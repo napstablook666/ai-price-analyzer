@@ -39,7 +39,8 @@ export function effectiveRecharge(station, snapshot) {
   const manualRate = positiveNumber(station?.rechargeRate);
   const manual = {
     rate: manualRate === null ? 1 : manualRate,
-    verified: station?.rechargeRateVerified !== false,
+    // 手填值只有被显式核验过才拿来换算；未核验按 1:1，和采集值无关。
+    verified: (station?.rechargeRateVerified ?? snapshot?.rechargeRateVerified) === true,
     source: "manual"
   };
   if (station?.rechargeAuto === false) return manual;
@@ -54,10 +55,3 @@ export function effectiveRecharge(station, snapshot) {
   };
 }
 
-export function rechargeSourceLabel(recharge) {
-  if (recharge?.source === "auto") {
-    const at = Number(recharge.collectedAt);
-    return Number.isFinite(at) && at > 0 ? `自动采集（${new Date(at).toLocaleString("zh-CN", { hour12: false })}）` : "自动采集";
-  }
-  return recharge?.verified === false ? "手填（未核验）" : "手填";
-}
