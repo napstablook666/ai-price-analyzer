@@ -56,7 +56,6 @@ jobs:
           tar -c --exclude=./.git --exclude=./dist . | tar -x -C dist/source
           tar -c --exclude=.git -C plugins . | tar -x -C dist/source/plugins
           (
-          (
             cd dist/source
             # update.bat / update.ps1 只进包，不进 update.json 的文件表：扩展不去写自己。
             zip -qr "../../dist/ai-relay-price-extension-${version}.zip" \

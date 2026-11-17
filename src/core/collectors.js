@@ -3,6 +3,7 @@ import { PAGE_RUNTIME_CAPTURE_TYPE, PAGE_RUNTIME_FETCH_TYPE } from "./bridge-pro
 import { getResponseFormatDefinition } from "./response-formats.js";
 import { NORMALIZED_PRICE_FIELDS } from "./price-fields.js";
 import { buildStationRequest } from "./request-strategy.js";
+import { RECHARGE_STATUS_ENDPOINT, parseRechargeStatus } from "./recharge.js";
 
 function hasInvalidPricingValue(value, priceKeys, depth = 0) {
   if (!value || depth > 6 || typeof value !== "object") return false;
@@ -76,10 +77,10 @@ function buildSnapshot(station, normalized, url, status = 200) {
   };
 }
 
-export async function collectStation(station, { retries = COLLECT_RETRIES, retryDelayMs = COLLECT_RETRY_DELAY_MS, ...options } = {}) {
+export async function collectStation(station, { retries = COLLECT_RETRIES, retryDelayMs = COLLECT_RETRY_DELAY_MS, probeRecharge = true, ...options } = {}) {
   for (let attempt = 1; ; attempt += 1) {
     try {
-      return await collectStationOnce(station, options);
+      return await withRecharge(station, await collectStationOnce(station, options), { ...options, probeRecharge });
     } catch (error) {
       if (!isTransientNetworkError(error)) throw error;
       // 重试用完还是失败：浏览器原话（Failed to fetch）对用户没信息量，换成能看懂的。
@@ -189,6 +190,32 @@ async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetc
     }
   }
   return Object.keys(auxiliary).length ? { ...payload, __aux: auxiliary } : payload;
+}
+
+// 充值比例是站点级事实，站点自己公布在 /api/status 上。抓一次挂到快照顶部，
+// 主价格照常；拿不到就当这次没有自动倍率，比价回落到手填值。
+async function withRecharge(station, snapshot, { probeRecharge = true, fetchImpl = fetch, pageFetch } = {}) {
+  if (!snapshot || probeRecharge === false || station?.rechargeAuto === false) return snapshot;
+  const recharge = await probeRechargeRate(station, { fetchImpl, pageFetch });
+  return recharge ? { ...snapshot, recharge } : snapshot;
+}
+
+export async function probeRechargeRate(station, { fetchImpl = fetch, pageFetch } = {}) {
+  try {
+    const url = new URL(RECHARGE_STATUS_ENDPOINT, station.baseUrl).toString();
+    // 固定 GET、不带密钥：这一步只读公开的站点参数，不要把目标接口的鉴权和请求体带进来。
+    const request = { url, method: "GET", headers: { accept: "application/json" }, body: undefined, credentials: "omit", pageAuth: null };
+    const response = station.mode === "page" && pageFetch
+      ? await pageFetch(request)
+      : await fetchImpl(url, { method: "GET", headers: request.headers, credentials: "omit" });
+    if (!response || response.ok === false || (response.status && response.status >= 400)) return null;
+    const body = typeof response.json === "function" ? await readResponse(response) : response.body;
+    const parsed = parseRechargeStatus(body);
+    return parsed ? { ...parsed, source: "auto", collectedAt: Date.now() } : null;
+  } catch {
+    // 老站没有这个接口，或者返回的是 HTML 首页：没有就没有，不写失败。
+    return null;
+  }
 }
 
 export function createPageFetch(sendMessage) {

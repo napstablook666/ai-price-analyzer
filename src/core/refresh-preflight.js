@@ -92,6 +92,7 @@ function stationSignature(station) {
     station.priceCurrencyVerified,
     station.rechargeRate,
     station.rechargeRateVerified,
+    station.rechargeAuto,
     station.basePricePerMillion
   ];
 }

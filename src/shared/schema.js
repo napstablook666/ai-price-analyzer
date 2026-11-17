@@ -199,6 +199,8 @@ export const DEFAULT_STATION = {
   rechargeCredits: 1,
   rechargeRate: 1,
   rechargeRateVerified: true,
+  // 站点公开 /api/status 时优先用它的现价，关掉就只认上面手填的比例。
+  rechargeAuto: true,
   rechargeRateNote: "",
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
@@ -329,6 +331,7 @@ export function normalizeStation(input = {}) {
   station.priceCurrencyVerified = station.priceCurrency !== "UNKNOWN" && input.priceCurrencyVerified !== false;
   station.priceCurrencyNote = String(input.priceCurrencyNote || "").trim();
   station.rechargeRateVerified = input.rechargeRateVerified !== false;
+  station.rechargeAuto = input.rechargeAuto !== false;
   station.rechargeRateNote = String(input.rechargeRateNote || "").trim();
   const basePricePerMillion = Number(station.basePricePerMillion);
   station.basePricePerMillion = Number.isFinite(basePricePerMillion) && basePricePerMillion >= 0 ? basePricePerMillion : SYSTEM_BASE_PRICE_PER_1M;

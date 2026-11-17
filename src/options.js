@@ -747,7 +747,11 @@ function configRechargeRate() {
   const credits = Number($("#config-recharge-credits").value);
   const rate = derivedRechargeRate(rmb, credits);
   $("#config-recharge-rate").value = rate.toFixed(4);
-  $("#config-recharge-rate-display").textContent = `每 1 中转币成本 ¥${rate.toFixed(4)}`;
+  // 自动采集开着时，这里只是兜底值：站点的 /api/status 一给价就按它的算。
+  const auto = $("#config-recharge-auto")?.checked !== false;
+  $("#config-recharge-rate-display").textContent = auto
+    ? `兜底值：每 1 中转币成本 ¥${rate.toFixed(4)}（采集到 /api/status 时以站点现价为准）`
+    : `每 1 中转币成本 ¥${rate.toFixed(4)}（已锁定手填值，不采集站点比例）`;
 }
 function stationHostName(baseUrl) {
   try { return new URL(normalizeUrl(baseUrl)).hostname.replace(/^www\./i, ""); } catch { return ""; }
@@ -976,6 +980,7 @@ function readStations() {
       rechargeCredits,
       rechargeRate: derivedRechargeRate(rechargeRmb, rechargeCredits),
       rechargeRateVerified: station.rechargeRateVerified !== false,
+      rechargeAuto: station.rechargeAuto !== false,
       rechargeRateNote: station.rechargeRateNote || "",
       priceCurrency: "CREDITS",
       priceCurrencyVerified: station.priceCurrencyVerified !== false,
@@ -1094,6 +1099,7 @@ function collectConfigStation() {
     rechargeRmb: convertRechargeAmount($("#config-recharge-amount").value, rechargeCurrency, "CNY", currentExchangeRate()) ?? 0,
     rechargeCurrency,
     rechargeCredits: Number($("#config-recharge-credits").value) || 1,
+    rechargeAuto: $("#config-recharge-auto").checked,
     priceCurrencyVerified: $("#config-price-currency-verified").checked,
     priceCurrencyNote: $("#config-price-currency-note").value.trim(),
     basePricePerMillion: nonNegativeNumber($("#config-base-price").value, 2),
@@ -1120,6 +1126,7 @@ function fillStationConfigDialog(station) {
   $("#config-price-currency-note").value = station.priceCurrencyNote || "";
   $("#config-base-price").value = nonNegativeNumber(station.basePricePerMillion, 2);
   renderTierRows(station.rechargeTiers);
+  $("#config-recharge-auto").checked = station.rechargeAuto !== false;
   $("#config-tokens-per-request").value = Number(station.billingProfile?.tokensPerRequest) > 0 ? Number(station.billingProfile.tokensPerRequest) : 0;
   configRechargeRate();
   const origin = currentSiteOrigin(station.baseUrl);
@@ -1164,6 +1171,7 @@ async function saveStationConfig() {
       priceCurrencyNote: collected.priceCurrencyNote,
       basePricePerMillion: collected.basePricePerMillion,
       rechargeTiers: collected.rechargeTiers,
+      rechargeAuto: collected.rechargeAuto,
       rechargeTiersVerified: collected.rechargeTiers.length > 0,
       billingProfile: collected.billingProfile
     });
@@ -1974,6 +1982,7 @@ $("#config-autofill").addEventListener("click", () => void autofillConfigStation
 $("#config-test").addEventListener("click", () => void testConfigStation());
 $("#config-recharge-amount").addEventListener("input", configRechargeRate);
 $("#config-recharge-credits").addEventListener("input", configRechargeRate);
+$("#config-recharge-auto").addEventListener("change", configRechargeRate);
 $("#config-recharge-currency").addEventListener("change", () => {
   changeRechargeCurrency($("#config-recharge-amount"), $("#config-recharge-currency"));
   configRechargeRate();

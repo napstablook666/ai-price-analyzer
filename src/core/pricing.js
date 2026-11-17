@@ -4,6 +4,7 @@ import { STANDARD_PRICE_FIELDS } from "./price-fields.js";
 import { canonicalKey, stripDecoration, stripVendorPrefix } from "./canonical.js";
 import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaUnitLabel, mediaUnitRank, pickImageQuote, toPerImage } from "./image-billing.js";
 import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
+import { effectiveRecharge } from "./recharge.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -138,12 +139,13 @@ export function resolveRechargeTier(tiers = [], spend = 0) {
 
 // costPrices 里已经乘过的充值汇率。档位折扣要从面值算，所以先按它还原。
 // CNY 站在 currencyToRmb 里固定返回 1，不受 rechargeRate 影响。
-function rechargeFactorOf(station, currency) {
+function rechargeFactorOf(station, currency, snapshot) {
   const code = String(currency ?? "").trim().toUpperCase();
   if (!["USD", "CREDITS", "POINTS"].includes(code)) return 1;
-  if (!station?.rechargeRateVerified) return 1;
-  const rate = Number(station.rechargeRate);
-  return Number.isFinite(rate) && rate > 0 ? rate : 1;
+  // 倍率以站点自报的现价为准，手填值只在没有采集值时顶上。
+  const recharge = effectiveRecharge(station, snapshot);
+  if (!recharge.verified) return 1;
+  return recharge.rate > 0 ? recharge.rate : 1;
 }
 
 // 按次价格折成元/百万 token：分母是站点画像里的单次 token，不是全局平均。
@@ -404,8 +406,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         const groupRatio = Number.isFinite(Number(rawGroupRatio)) ? Number(rawGroupRatio) : 1;
         const hasUnpricedPriceGap = unpricedModelKeys.some(value => value.startsWith(`${group}:${item.model_name}:`));
         const priceCurrencyVerified = station.priceCurrencyVerified ?? snapshot.priceCurrencyVerified;
-        const rechargeRateVerified = station.rechargeRateVerified ?? snapshot.rechargeRateVerified ?? false;
-        const priceQuote = getProxyPriceQuote(item, groupRatio, stationCategory === "public" ? 1 : station.rechargeRate, station.basePricePerMillion, priceCurrencyVerified, stationCategory === "public" ? true : rechargeRateVerified);
+        const recharge = effectiveRecharge(station, snapshot);
+        const priceQuote = getProxyPriceQuote(item, groupRatio, stationCategory === "public" ? 1 : recharge.rate, station.basePricePerMillion, priceCurrencyVerified, stationCategory === "public" ? true : recharge.verified);
         const quotedPrices = priceQuote.quotedPrices;
         const baseCostPrices = priceQuote.costPrices;
         // 视频按秒的档位是并列选项，各占 100%，不参与分档加权。
@@ -564,7 +566,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     // 实付 = 月消耗面值 × 落档折扣。额度永久有效，所以按实际消耗折，不按档位面值折。
     // costPrices 对 USD/CREDITS 站已经乘过 rechargeRate，档位折扣必须作用在面值上，否则重复打折。
     const rowStation = stationMap.get(row.stationId);
-    const rechargeFactor = rechargeFactorOf(rowStation, row.sourceCurrency);
+    const rechargeFactor = rechargeFactorOf(rowStation, row.sourceCurrency, latestByStation.get(row.stationId));
     const faceMonthlyCost = rechargeFactor > 0 ? row.monthlyCost / rechargeFactor : row.monthlyCost;
     const rechargePlan = row.stationCategory === "public" || row.pricingUnavailable
       ? null
