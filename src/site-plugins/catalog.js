@@ -25,6 +25,7 @@ import { sitePlugin as jijiPlugin } from "./providers/jiji.js";
 import { sitePlugin as maolaoapiPlugin } from "./providers/maolaoapi.js";
 import { sitePlugin as stellaislePlugin } from "./providers/stellaisle.js";
 import { sitePlugin as relayrouterPlugin } from "./providers/relayrouter.js";
+import { sitePlugin as stellaisleCarpoolPlugin } from "./providers/stellaisle-carpool.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -66,8 +67,9 @@ export const SITE_PLUGIN_CATALOG = [
   entry("cheaprouter", "CheapRouter", "cheaprouter.cc", "direct", () => ({ sitePlugin: cheaprouterPlugin }), { paths: ["/models"], description: "公开模型价格 API" }),
   entry("jiji", "吉吉模型市场", "jiji.cc", "page", () => ({ sitePlugin: jijiPlugin }), { addable: false, description: "带 token 的模型市场，按站点地址添加" }),
   entry("maolaoapi", "maolaoapi.com", "maolaoapi.com", "direct", () => ({ sitePlugin: maolaoapiPlugin }), { paths: ["/pricing","/","/console/topup"], description: "公开定价 API，直连采集；充值 1.03 元/额度，200/500/1000 档另有折扣" }),
-  entry("stellaisle", "飓星API", "token.stellaisle.com", "direct", () => ({ sitePlugin: stellaislePlugin }), { paths: ["/","/pricing"], category: "public", description: "公开 /api/pricing 直连采集，90 个模型 × 17 个渠道分组" }),
-  entry("relayrouter", "RelayRouter", "relayrouter.app", "direct", () => ({ sitePlugin: relayrouterPlugin }), { hosts: ["www.relayrouter.app","relayrouter.app"], paths: ["/pricing","/console/topup","/"], description: "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）" })
+  entry("stellaisle", "飓星API", "token.stellaisle.com", "direct", () => ({ sitePlugin: stellaislePlugin }), { paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，90 个模型 × 17 个渠道分组" }),
+  entry("relayrouter", "RelayRouter", "relayrouter.app", "direct", () => ({ sitePlugin: relayrouterPlugin }), { hosts: ["www.relayrouter.app","relayrouter.app"], paths: ["/pricing","/console/topup","/"], description: "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）" }),
+  entry("stellaisle-carpool", "飓星API 拼车", "token.stellaisle.com", "page", () => ({ sitePlugin: stellaisleCarpoolPlugin }), { paths: ["/carpool-market"], description: "登录后读 /api/carpool-market 的座位清单，用座位价除以期间额度当折扣，折算站内模型价" })
 ];
 
 export function sitePluginById(id) {
