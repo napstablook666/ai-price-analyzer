@@ -6,7 +6,7 @@
 
 ```
 站点插件采集          src/site-plugins/providers/<id>.js
-  ↓  请求策略          core/provider-registry.js  requestPolicy / localStoragePageAuth / cookiePageAuth
+  ↓  请求策略          core/provider-registry.js  requestPolicy / localStoragePageAuth / cookiePageAuth / cookieRefreshAuth
   ↓  响应解析          core/adapters.js  normalizeEndpoint + responseFormat 分支
 快照（每站一份）      { stationId, models: [{ model_name, price… }], capturedAt }
   ↓

@@ -18,7 +18,7 @@
 
 ```json
 {
-  "permissions": ["alarms", "scripting", "tabs", "storage", "cookies"],
+  "permissions": ["alarms", "scripting", "tabs", "storage", "cookies", "declarativeNetRequest"],
   "host_permissions": ["<all_urls>"]
 }
 ```
@@ -29,7 +29,8 @@
 | `alarms` | 每日签到与更新检查的定时任务 |
 | `scripting` | `page` 模式往站点标签页注入读取脚本 |
 | `tabs` | 找到目标站点已打开的标签页 |
-| `cookies` | 签到写回站点会话 cookie、保存登录态快照 |
+| `cookies` | 签到写回站点会话 cookie、保存登录态快照；读 HttpOnly 登录态 cookie 换 token |
+| `declarativeNetRequest` | 给站点刷新接口的请求补 `Origin` 与 `Cookie`，在后台换出 access token，不用开临时标签页 |
 | `<all_urls>` | 中转站域名没法预先枚举，只能申请全站 |
 
 全站权限是形态决定的，不是想多要。实际请求受两重限制：

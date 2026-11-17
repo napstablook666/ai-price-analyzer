@@ -103,7 +103,7 @@ export const sitePlugin = {
 - `id` 必须和目录名、manifest 的 `id` 一致；`matches` 必须是函数，否则注册时报错。
 - `matches(context, station)` 拿到 `{ url, hostname, path, hashPath }`，返回布尔。
 - `prepare(stationInput, context)` 在添加站点时改写站点记录（baseUrl、adapter、auth），可以省略。
-- `request` 决定采集请求怎么发：`requestPolicy(urlOrFn, { credentials })`，`page` 模式通常用 `localStoragePageAuth` / `cookiePageAuth`。
+- `request` 决定采集请求怎么发：`requestPolicy(urlOrFn, { credentials })`。`page` 模式通常用 `localStoragePageAuth` / `cookiePageAuth`；登录态只在 HttpOnly cookie 里的站点用 `cookieRefreshAuth({ cookieName, refreshPath, accessTokenPath, expiresAtPath })`，由 service worker 借 DNR 换出 access token。
 - `preset` 是插件自带的默认站点模板，首页「添加」用的就是它。
 - `modelAliases` 不要手写，构建器会从 `models.json` 注入。
 

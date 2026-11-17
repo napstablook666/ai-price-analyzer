@@ -7,9 +7,9 @@
 | 项目 | 要求 |
 | --- | --- |
 | 浏览器 | Chrome / Edge 等 Chromium 内核浏览器，支持 MV3 |
-| 扩展版本 | `0.5.2`（见 `manifest.json`） |
+| 扩展版本 | `0.6.0`（见 `manifest.json`） |
 | Node.js | 仅开发与测试需要，Node 20 及以上 |
-| 权限 | `storage`、`scripting`、`tabs`、`alarms`、`cookies`，主机权限 `<all_urls>` |
+| 权限 | `storage`、`scripting`、`tabs`、`alarms`、`cookies`、`declarativeNetRequest`，主机权限 `<all_urls>` |
 
 `<all_urls>` 是故意的：站点域名由插件目录决定，加站不需要重新申请权限。扩展只在你添加过的站点上注入页面脚本，其余页面不读内容。
 
