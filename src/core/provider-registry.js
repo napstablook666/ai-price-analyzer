@@ -13,6 +13,7 @@ export const NODEAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const KILLAI_PRICING_ENDPOINT = "/api/pricing";
 export const TOKENFLUX_PRICING_ENDPOINT = "/api/pricing";
 export const CENTOS_PRICING_ENDPOINT = "/api/pricing";
+export const MAOLAO_PRICING_ENDPOINT = "/api/pricing";
 export const WINDHUB_PRICING_ENDPOINT = "/api/pricing";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
@@ -77,6 +78,18 @@ export function cookiePageAuth(sessionFailureStatuses = [401]) {
     sessionFailureMessage: PAGE_SESSION_FAILURE_MESSAGE
   };
 }
+// 站点把登录态只放在 HttpOnly cookie 里、且刷新接口校验 Origin 时用：
+// service worker 借 declarativeNetRequest 改写 Origin 与 Cookie 换 access token，全程不开页面。
+export function cookieRefreshAuth(options = {}) {
+  return {
+    cookieName: String(options.cookieName || ""),
+    refreshPath: String(options.refreshPath || ""),
+    accessTokenPath: options.accessTokenPath || "data.access_token",
+    expiresAtPath: options.expiresAtPath || "",
+    missingMessage: options.missingMessage || "未找到站点登录 cookie，请先在当前 Chrome 配置文件登录后重试",
+    failureMessage: options.failureMessage || PAGE_SESSION_FAILURE_MESSAGE
+  };
+}
 
 export function requestPolicy(endpoint, options = {}) {
   return {
@@ -88,6 +101,7 @@ export function requestPolicy(endpoint, options = {}) {
     priceKeys: options.priceKeys || RAW_PRICE_KEYS,
     query: options.query || null,
     pageAuth: options.pageAuth || null,
+    cookieAuth: options.cookieAuth || null,
     preflight: options.preflight || null,
     skipCapture: options.skipCapture === true
   };

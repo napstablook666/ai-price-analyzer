@@ -26,7 +26,13 @@ export function selectPageTab(tabs, origin, preferredTabId, preferredPath) {
   return null;
 }
 
-function waitForTab(tabs, tabId) {
+const ERROR_PAGE_PREFIX = "chrome-error://";
+
+function isErrorPage(tab) {
+  return String(tab?.url || "").startsWith(ERROR_PAGE_PREFIX);
+}
+
+function waitForTab(tabs, tabId, { reload = false } = {}) {
   return new Promise((resolve, reject) => {
     const cleanup = () => {
       clearTimeout(timer);
@@ -47,10 +53,25 @@ function waitForTab(tabs, tabId) {
     const timer = setTimeout(() => finish(new Error("采集页面加载超时")), 30000);
     tabs.onUpdated.addListener(onUpdated);
     tabs.onRemoved?.addListener(onRemoved);
+    if (reload) {
+      // 重载后 status 会短暂停在 complete，只能等 onUpdated 再判，不能看初始快照。
+      Promise.resolve(tabs.reload(tabId)).catch(error => finish(error));
+      return;
+    }
     tabs.get(tabId).then(tab => {
       if (tab.status === "complete") finish(null, tab);
     }, error => finish(error));
   });
+}
+
+// 导航失败时 Chrome 会停在自己的错误页上，此时 tab.status 已经是 complete，
+// 直接注入只会抛 `Frame with ID 0 is showing error page`；重载一次再判断，仍失败就报站点不可达。
+async function reloadErrorPage(tabs, tab) {
+  if (!isErrorPage(tab)) return tab;
+  if (typeof tabs.reload !== "function") throw new Error("采集页面加载失败：站点无法访问");
+  const reloaded = await waitForTab(tabs, tab.id, { reload: true });
+  if (isErrorPage(reloaded)) throw new Error("采集页面加载失败：站点无法访问");
+  return reloaded;
 }
 
 export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTemporaryWhenAmbiguous = false, keepOnLoadFailure = false, onTemporaryTabCreated } = {}) {
@@ -62,13 +83,13 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTe
     const sameOrigin = candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`));
     tab = sameOrigin.find(candidate => candidate.active) || sameOrigin[0] || null;
   }
-  if (tab) return { tab, temporary: false };
+  if (tab) return { tab: await reloadErrorPage(tabs, tab), temporary: false };
   if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`)).length > 1) return { tab: null, temporary: false };
   if (provider?.openTemporaryPage !== true) return { tab: null, temporary: false };
   const created = await tabs.create({ url: url.toString(), active: false });
   try {
     await onTemporaryTabCreated?.(created);
-    return { tab: await waitForTab(tabs, created.id), temporary: true };
+    return { tab: await reloadErrorPage(tabs, await waitForTab(tabs, created.id)), temporary: true };
   } catch (error) {
     if (keepOnLoadFailure) {
       error.tabId = created.id;
