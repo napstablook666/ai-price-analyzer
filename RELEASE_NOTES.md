@@ -1,40 +1,52 @@
-# AI Price Analyzer v0.11.2
+# AI Price Analyzer v0.12.0
 
-这版只修一件事：扩展自更新一直没真正生效。装了旧版本的人看到的是「当前版本太旧，需要手动下载一次」，一次都没成功自动升过。
+这版改的是「加一个站要写多少代码」。原来每个新站点都要写一个几百行的解析类，
+哪怕它和其他站返回的是同一种数据结构；现在站点差异写成一份声明，新站接进来不动源码。
 
 ## 主要变化
 
-- **自更新的最低版本下限不再等于本版版本号。** 发布清单 `update.json` 里有个 `minShell`，意思是「低于这个版本的人不能自更新，只能手动装」。构建脚本却把它默认取成 `--version`，于是每份清单都在说「至少要装我刚发的这一版才能自更新」，装任何比它老的人都判定不合格。从 v0.9.0 引入自更新起就这样，通道对旧版本全程关闭。
-- **下限改由 `package.json` 的 `updateMinShell` 决定。** 当前值是 `0.9.0`，也就是自更新协议首次发布的版本，之后协议没变过，这个值就不该动。协议真的出现不兼容改动时，在这个字段往上推，并在发布说明里写清为什么要手动下载一次。
-- **写错配置会当场报错，不再静默兜底。** 缺 `updateMinShell`、不是 semver、高于本版版本，三种情况都直接失败；等于本版版本时放行但在日志里警告「只有装这一版的人能自更新」。原来的兜底就是回落到版本号，正是把通道关死的那条路径。
-- `minShell` 一直在签名范围内，这次没有改动签名口径：改这个字段同样会让整份清单验签失败。
+- **同形状的站点改成声明式映射。** 采集层多了一种 `price-map` 格式：站点在插件的 `adapter.priceMap` 里声明「数据在哪个路径、模型名取哪个字段、分档规则长什么样」，解析由通用引擎按声明求值。`tokenflux` / `newcodex` / `allrouter` / `stellaisle` / `stellaisle-carpool` / `cheaprouter` / `true-sota` / `sidrune` / `relayrouter` 九个站共用一份引擎，彼此的差异只有 `source` 一个字段。
+- **接入星芽API（xingya.site）。** 匿名直连 `/api/pricing`，83 个模型、13 个分组倍率，`billing_expr` 的系数直接是美元/百万 token，`quota_type=1` 的按次计费单独成行。充值是 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送。
+- **AllRouter 改采 `/api/pricing`。** 分组名和倍率用站点自己公开的那份，不再从模型列表反推。
+- **NewCodex / AllRouter / RelayRouter 去掉壳类。** 这三个类此前各自只有一个 getter 和一句格式字符串比较，业务逻辑全在基类里，现在由声明替代，类不存在了。
+
+## 修复
+
+- **新增 `test/golden/` 快照，兜住映射改动的牵连。** 以前改一个 base，哪些站会跟着变、变成什么样，只能靠人推。现在 5 份报文 fixture 各走一遍映射，结果逐行比对，漂移直接打印增删行。覆盖 99 行报价。
+- **`station-audit` 没传插件声明。** `scripts/station-audit.mjs` 体检时只传 `responseFormat`，走的是格式推断链而不是插件里真实的 `priceMap`，对声明化站点等于在瞎猜。修完 `npm run audit:stations`：28 个站 27 正常、1 个 `WARN`（`relayrouter` 缺价 2 条，已知）、0 失败。
+- **`base.css` 里 `[hidden]` 和 `.sr-only` 各定义了两遍**，删掉后一份，保留的仍在原位，渲染结果不变。
+
+## 界面
+
+- 控件间距从混用的 3px / 5px 统一到 4px / 6px 一套刻度：分段控件、标签、筛选项、「常用」浮层一致了。
+- 图标按钮的 hover 不再一律变红，只有标记了 `danger-icon` 的才变红；移动端的主题切换按钮补到 44px 触控尺寸。
+
+## 破坏性变更
+
+没有。老设置里写的 `responseFormat: "tokenflux"` / `"newcodex"` / `"allrouter"` 等格式名继续能解析，走的是格式定义里带的兜底声明。
 
 ## 校验
 
-- `npm run verify:clean`：干净签出 `79583e7` 上全套通过。
-- `npm test`：483 项全过（新增 `test/update-min-shell.test.js` 9 项）。
-- 真跑一次构建：产出 `update.json` 的 `minShell` 为 `0.9.0`，`--version v0.8.0` 与 `--min-shell 0.12.0` 都按预期报错且不写文件。
-- 用同一把密钥验签：原清单通过，篡改 `minShell` 为 `0.1.0` 或 `0.11.2` 均失败。
-- 判定实测：装 `0.11.0` / `0.11.1` 的用户对修复后的清单 `canSelfUpdate` 为 `true`；对修复前的清单为 `false`。
-- `npm run plugins:check`：28 个插件产物与源同步。
-- `npm run version:check`：`package.json`、`manifest.json` 均为 `0.11.2`。
+- `npm run verify:clean`：干净签出 `1fd3d73` 上全套通过。
+- `npm test`：491 项全过（新增 `test/price-map-golden.test.js` 6 项）。
+- `npm run audit:stations`：27 OK / 1 WARN / 0 FAIL。
+- `npm run plugins:build`：29 个插件产物与源同步。
+- 声明差异度：8 个站相对 `tokenflux` 的差异键都只有 `source` 一个。测试里有上限保护，超过 4 个键会失败并提示「该写 strategy 而不是塞声明」。
 
 ## 隐私检查
 
-仓库里没有 cookie、token、账号名。这次改动只碰构建脚本与发布清单的取值，不涉及任何网络请求与凭据。
+仓库里没有 cookie、token、账号名。星芽API 走匿名接口，不需要登录态。
 
 ## Assets
 
-- `ai-relay-price-extension-v0.11.2.zip` — 可直接加载的扩展目录包。
-- `ai-price-analyzer-v0.11.2-source.zip` — 含 `plugins/` 源的完整源码包。
+- `ai-relay-price-extension-v0.12.0.zip` — 可直接加载的扩展目录包。
+- `ai-price-analyzer-v0.12.0-source.zip` — 含 `plugins/` 源的完整源码包。
 - `SHA256SUMS.txt` — 上面两个包的校验值。
 
 ## 升级说明
 
-装 `0.9.0` 及以上的版本，这次可以直接用自更新升上来，不用手动下载。
+装 `0.9.0` 及以上的版本可以直接用自更新升上来。`0.8.x` 及更早的还得手动装一次，自更新协议是 v0.9.0 才有的。
 
-装 `0.8.x` 及更早的还得手动装一次。自更新协议是 v0.9.0 才有的，更早的版本里根本没有这段代码。
-
-设置项没有变化，不需要重新登录。
+设置项没有变化，站点配置不用重建。
 
 价格由站点决定，采集规则会随站点改版失效，扩展侧算出的月成本与价差都是估算，以站点后台实际扣费为准。详见[免责声明](https://napstablook666.github.io/ai-price-analyzer/disclaimer)。
