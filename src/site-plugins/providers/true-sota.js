@@ -4,8 +4,11 @@ import { requestPolicy, TRUE_SOTA_MODEL_PRICING_ENDPOINT } from "../../core/prov
 
 const preset = {
   id: "true-sota",
+  preserveRechargeRateVerification: true,
   name: "TrueSOTA",
   baseUrl: "https://true-sota.com/model-pricing",
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点充值折算尚未核验，当前仅保留站点原始报价，不用于已验证人民币成本比价。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },

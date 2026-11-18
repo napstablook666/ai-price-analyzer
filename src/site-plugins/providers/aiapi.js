@@ -4,8 +4,11 @@ import { AIAPI_MODEL_CATALOG_ENDPOINT, AIAPI_MODEL_CATALOG_FORMAT, AIAPI_PRICE_K
 
 const preset = {
   id: "aiapi",
+  preserveRechargeRateVerification: true,
   name: "AIAPI",
   baseUrl: "https://cn.aiapi.bot/dashboard/model-prices",
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点充值折算尚未核验，当前仅保留站点原始报价，不用于已验证人民币成本比价。",
   enabled: true,
   mode: "page",
   auth: { type: "none" },

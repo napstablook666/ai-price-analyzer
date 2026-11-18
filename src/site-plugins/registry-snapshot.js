@@ -257,6 +257,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
+      "id": "newcodex",
+      "name": "NewCodex",
+      "version": "0.9.0",
+      "description": "公开 /api/pricing 直连采集，69 个模型 11 个分组；充值 1 元 = 1 美元额度，单笔 ¥100/200/500/1000 另赠 10%/20%/40%/50%",
+      "hosts": [
+        "newcodex.cn",
+        "www.newcodex.cn"
+      ],
+      "needsCode": true
+    },
+    {
       "id": "site-checkin",
       "name": "站点签到插件",
       "version": "1.1.0",

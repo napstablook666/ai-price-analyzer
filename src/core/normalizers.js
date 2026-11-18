@@ -8,6 +8,7 @@ import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "./price-maps/true-sota.js";
 import { sidrunePriceMap } from "./price-maps/sidrune.js";
 import { relayRouterPriceMap } from "./price-maps/relayrouter.js";
+import { newcodexPriceMap } from "./price-maps/newcodex.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
@@ -564,6 +565,19 @@ export class TokenFluxPricingStrategy extends ParsingStrategy {
           }
         : {})
     };
+  }
+}
+
+// 同一份 tokenflux 形状，倍率类的 model_ratio 按 1 = $2 折算，理由见 price-maps/newcodex.js。
+export class NewCodexPricingStrategy extends TokenFluxPricingStrategy {
+  get priceMap() { return newcodexPriceMap; }
+
+  canParse(raw, options = {}) {
+    return options.responseFormat === "newcodex" && raw?.success === true && Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
+  }
+
+  parse(raw) {
+    return { ...super.parse(raw), sourceFormat: "newcodex" };
   }
 }
 
@@ -1717,6 +1731,7 @@ registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
 registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("windhub", () => new WindHubPricingStrategy());
+registerResponseFormatHandler("newcodex", () => new NewCodexPricingStrategy());
 registerResponseFormatHandler("stellaisle", () => new StellaislePricingStrategy());
 registerResponseFormatHandler("stellaisle-carpool", () => new StellaisleCarpoolPricingStrategy());
 registerResponseFormatHandler("relayrouter", () => new RelayRouterPricingStrategy());

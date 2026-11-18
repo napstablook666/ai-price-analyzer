@@ -24,5 +24,6 @@ export const SITE_PLUGIN_ORDER = [
   "maolaoapi",
   "stellaisle",
   "relayrouter",
-  "stellaisle-carpool"
+  "stellaisle-carpool",
+  "newcodex"
 ];

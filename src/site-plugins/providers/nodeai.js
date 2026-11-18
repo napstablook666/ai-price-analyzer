@@ -4,8 +4,11 @@ import { NODEAI_MODEL_PLAZA_ENDPOINT, requestPolicy } from "../../core/provider-
 
 const preset = {
   id: "nodeai",
+  preserveRechargeRateVerification: true,
   name: "NodeAI",
   baseUrl: "https://nodeai.cc/model-plaza",
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点充值折算尚未核验，当前仅保留站点原始报价，不用于已验证人民币成本比价。",
   rechargeRmb: 1,
   rechargeCurrency: "CNY",
   rechargeCredits: 1,

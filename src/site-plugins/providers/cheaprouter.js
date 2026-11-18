@@ -4,8 +4,11 @@ import { CHEAP_ROUTER_PRICING_ENDPOINT, requestPolicy } from "../../core/provide
 
 const preset = {
   id: "cheaprouter",
+  preserveRechargeRateVerification: true,
   name: "cheaprouter.cc",
   baseUrl: "https://cheaprouter.cc/models",
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点充值折算尚未核验，当前仅保留站点原始报价，不用于已验证人民币成本比价。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },

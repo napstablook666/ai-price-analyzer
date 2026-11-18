@@ -6,6 +6,8 @@ const preset = {
   id: "cun",
   name: "CUN.AI",
   baseUrl: "https://www.cun.ai/pricing",
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点充值折算尚未核验，当前仅保留站点原始报价，不用于已验证人民币成本比价。",
   enabled: true,
   mode: "page",
   auth: { type: "none" },
@@ -14,6 +16,7 @@ const preset = {
 
 const pluginSource = {
   id: "cun",
+  preserveRechargeRateVerification: true,
   host: "cun.ai",
   matches: ({ hostname, path }) => hostname === "cun.ai" && ["/", "/pricing"].includes(path),
   prepareMatches: ({ hostname }) => hostname === "cun.ai",

@@ -2090,7 +2090,7 @@ test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addProviderStationPresets(current, PROVIDER_REGISTRY, { exchangeRate: 8.2 });
   const added = stations.slice(current.length);
-  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi", "stellaisle", "stellaisle-carpool", "relayrouter", "jiji", "soleapi"]));
+  assert.deepEqual(new Set(added.map(station => station.id)), new Set(["true-sota", "sidrune", "cun", "dddai", "liuguang", "aiapi", "fastaitoken", "nexavlinks", "cheaprouter", "nodeai", "hepingan", "all-in-one", "fuck-everyone", "killai", "sevenai", "tokenflux", "centos", "windhub", "maolaoapi", "stellaisle", "stellaisle-carpool", "relayrouter", "jiji", "soleapi", "newcodex"]));
   assert.equal(added.find(station => station.id === "sidrune").rechargeRmb, 8.2);
   assert.equal(normalizeStation(added.find(station => station.id === "sidrune")).rechargeRate, 8.2);
   const nodeAi = added.find(station => station.id === "nodeai");
@@ -5364,6 +5364,7 @@ test("installing a registry plugin adds its addable stations to the workspace ri
   globalThis.chrome = {
     runtime: {
       lastError: undefined,
+      sendMessage() {},
       onMessage: { addListener() {} },
       onInstalled: { addListener() {} },
       onStartup: { addListener() {} },
@@ -5458,6 +5459,7 @@ test("bulk uninstall removes registry records, local plugins, and their stations
   globalThis.chrome = {
     runtime: {
       lastError: undefined,
+      sendMessage() {},
       onMessage: { addListener() {} },
       onInstalled: { addListener() {} },
       onStartup: { addListener() {} },
@@ -5541,7 +5543,8 @@ test("saves settings automatically instead of behind a global save button", () =
   assert.match(options, /document\.addEventListener\("visibilitychange"/);
   assert.match(options, /station\.enabled = event\.target\.checked;\n\s*scheduleStationsSave\(\);/);
   assert.match(options, /state\.stations = state\.stations\.filter\(station => station\.id !== stationId\);\n\s*renderStations\(\);\n\s*scheduleStationsSave\(\);/);
-  assert.match(options, /void flushStationsSave\(\);\n\s*toast\("站点已添加/);
+  // 加站后必须走 scheduleStationsSave：直接 flush 时 stationsDirty 还是 false，等于什么都没写。
+  assert.match(options, /scheduleStationsSave\(\);\n\s*toast\("站点已添加/);
   assert.equal(css.includes(".autosave-status"), false, "the autosave pill styles are gone");
 
   // 抽屉不再每存一次就重拉仪表盘，改在关闭抽屉时刷新。

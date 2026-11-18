@@ -19,6 +19,7 @@ const preset = {
 
 const pluginSource = {
   id: "tokenflux",
+  preserveRechargeRateVerification: true,
   host: "tokenflux.cloud",
   matches: ({ hostname, path }) => hostname === "tokenflux.cloud" && ["/", "/pricing"].includes(path),
   prepareMatches: ({ hostname }) => hostname === "tokenflux.cloud",

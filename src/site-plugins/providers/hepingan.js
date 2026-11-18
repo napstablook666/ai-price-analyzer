@@ -6,6 +6,8 @@ const preset = {
   id: "hepingan",
   name: "hepingan.top",
   baseUrl: "https://api.hepingan.top/available-channels",
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点充值折算尚未核验，当前仅保留站点原始报价，不用于已验证人民币成本比价。",
   enabled: true,
   mode: "page",
   auth: { type: "none" },
@@ -31,6 +33,7 @@ const pageAuth = localStoragePageAuth("auth_token", "Authorization", "未找到 
 const pluginSource = {
   id: "hepingan",
   host: "api.hepingan.top",
+  preserveRechargeRateVerification: true,
   matches: ({ hostname, path }) => hostname === "api.hepingan.top" && path === "/available-channels",
   prepareMatches: ({ hostname }) => hostname === "api.hepingan.top",
   prepare: (stationInput, { url }) => ({

@@ -15,6 +15,7 @@ export const SITE_LOGOS = {
   "killai": "icons/sites/killai.png",
   "liuguang": "icons/sites/liuguang.svg",
   "maolaoapi": "icons/sites/maolaoapi.svg",
+  "newcodex": "icons/sites/newcodex.svg",
   "nexavlinks": "icons/sites/nexavlinks.png",
   "nodeai": "icons/sites/nodeai.png",
   "public-pricing": "icons/sites/public-pricing.png",
