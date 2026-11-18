@@ -330,7 +330,8 @@ export function normalizeStation(input = {}) {
   station.priceCurrency = ["CNY", "USD", "CREDITS", "UNKNOWN"].includes(input.priceCurrency) ? input.priceCurrency : "CREDITS";
   station.priceCurrencyVerified = station.priceCurrency !== "UNKNOWN" && input.priceCurrencyVerified !== false;
   station.priceCurrencyNote = String(input.priceCurrencyNote || "").trim();
-  station.rechargeRateVerified = input.rechargeRateVerified !== false;
+  // 手填比例只有显式标了「已核实」才拿来乘价格，没标就先按 1:1 估算。
+  station.rechargeRateVerified = input.rechargeRateVerified === true;
   station.rechargeAuto = input.rechargeAuto !== false;
   station.rechargeRateNote = String(input.rechargeRateNote || "").trim();
   const basePricePerMillion = Number(station.basePricePerMillion);
