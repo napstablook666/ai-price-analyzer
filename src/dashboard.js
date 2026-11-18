@@ -53,13 +53,15 @@ function saveProviderFavorite(values) {
 // 同模型的价差，但看总榜时太吵。勾选状态记进 localStorage，下次打开沿用。
 const CHEAPEST_GROUP_STORE = "model-atlas:cheapest-group-only";
 function readCheapestGroupOnly() {
-  try { return localStorage.getItem(CHEAPEST_GROUP_STORE) === "1"; } catch { return false; }
+  try {
+    const stored = localStorage.getItem(CHEAPEST_GROUP_STORE);
+    // 默认折叠：首屏该给答案，同一个模型十几个分组的价格留在「分组」筛选器里展开。
+    return stored === null ? true : stored === "1";
+  } catch { return true; }
 }
 function saveCheapestGroupOnly(value) {
-  try {
-    if (value) localStorage.setItem(CHEAPEST_GROUP_STORE, "1");
-    else localStorage.removeItem(CHEAPEST_GROUP_STORE);
-  } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
+  // 显式写 "0"，别用 removeItem 表示关闭：读的时候 null 就是默认开，会把它读回来。
+  try { localStorage.setItem(CHEAPEST_GROUP_STORE, value ? "1" : "0"); } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
 }
 const PAGE_SIZE = 20;
 const state = {
@@ -338,7 +340,9 @@ function filterFacetOptions(key) {
   const options = [...container.querySelectorAll(".facet-option")];
   let matches = 0;
   for (const option of options) {
-    option.hidden = !option.textContent.toLowerCase().includes(query);
+    // 只匹配名字，不匹配右侧那行统计：搜「2」不该把「2 个模型」全捞出来。
+    const label = option.querySelector("span")?.textContent || option.textContent;
+    option.hidden = !label.toLowerCase().includes(query);
     if (!option.hidden) matches++;
   }
   const noMatches = container.querySelector("[data-no-matches]");
@@ -350,13 +354,38 @@ function facetSelection(key) {
   const checked = options.filter(option => option.checked).map(option => option.value);
   return checked.length === options.length ? null : checked;
 }
+// 分组名后面挂两个数：这个分组覆盖几个模型、按当前用量一个月多少钱。
+// 分组在站点上是绑 key 的，勾选时能看出「这个组够不够用、贵不贵」比只看名字有用。
+function groupFacetStats(rows) {
+  const stats = new Map();
+  for (const row of rows) {
+    const name = row.groupName;
+    if (!name) continue;
+    const entry = stats.get(name) || { models: new Set(), cost: 0 };
+    entry.models.add(row.canonicalModel || row.modelName);
+    const cost = paidMonthlyCost(row);
+    if (Number.isFinite(cost)) entry.cost += cost;
+    stats.set(name, entry);
+  }
+  return stats;
+}
+
 function renderFacetFilters(rows) {
+  const currency = state.data?.settings?.defaultCurrency || "CNY";
+  const groupStats = groupFacetStats(rows);
   for (const key of state.comparisonMode === "public" ? ["group"] : ["provider", "group"]) {
     const container = $(`#${key}-filters`);
     const values = [...new Set(rows.map(row => row[key === "provider" ? "provider" : "groupName"]).filter(Boolean))].sort();
     const selected = state.filters[key] === null ? new Set(values) : new Set(state.filters[key]);
     container.innerHTML = values.length
-      ? `${values.map(value => `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}>${key === "provider" && providerLogoFor(value) ? providerIconMarkup(value, { size: 14 }) : ""}<span>${escapeHtml(value)}</span></label>`).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`
+      ? `${values.map(value => {
+          const stats = key === "group" ? groupStats.get(value) : null;
+          // 统计只用来挑组，不进搜索文本：名字里带数字时别让筛选框误中。
+          const note = stats && stats.models.size
+            ? `<small aria-hidden="true">${stats.models.size} 个模型 · ${formatPrice(stats.cost, currency)}</small>`
+            : "";
+          return `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}>${key === "provider" && providerLogoFor(value) ? providerIconMarkup(value, { size: 14 }) : ""}<span>${escapeHtml(value)}</span>${note}</label>`;
+        }).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`
       : `<span class="facet-empty">暂无可选项</span>`;
     filterFacetOptions(key);
   }
