@@ -81,7 +81,20 @@ const pluginSource = {
     endpointCandidates: "provider",
     credentials: "omit",
     pageHeaders: ["Authorization"],
-    pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 Jiji 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401])
+    // 站点把 auth_token 存在 localStorage，24 小时过期。过期后前端拿 refresh_token 换一对新的
+    // （refresh_token 每次轮换），这里照同一套续期，登录过一次之后就不用再回来手动登。
+    pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 Jiji 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401], {
+      endpoint: "/api/v1/auth/refresh",
+      credentials: "same-origin",
+      requestTokenKey: "refresh_token",
+      responsePath: "data",
+      accessTokenKey: "access_token",
+      refreshTokenStorageKey: "refresh_token",
+      refreshTokenKey: "refresh_token",
+      expiresInKey: "expires_in",
+      expiresAtStorageKey: "token_expires_at",
+      statuses: [401]
+    })
   })
 };
 

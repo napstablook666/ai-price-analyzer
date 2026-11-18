@@ -74,6 +74,10 @@ const pluginSource = {
     return prepared;
   },
   mode: "page",
+  // 拼车中心和主站同域（token.stellaisle.com），浏览器里往往已经开着主站的页面。
+  // 复用那个 tab 就能读 localStorage 里的 uid，省一次开页；没有可用的才临时开一个。
+  reuseAmbiguousOriginTab: true,
+  openTemporaryPage: true,
   responseFormat: "stellaisle-carpool",
   authType: "cookie",
   rationale: "拼车市场要登录态，座位清单和站内定价一起读，按座位折扣折算模型价",
