@@ -76,9 +76,6 @@ const $ = selector => document.querySelector(selector);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();
-// 采集结束后进度面板再留 5 秒给用户看清结果，然后自动收起，不长期占着首屏。
-const PROGRESS_HIDE_DELAY_MS = 5000;
-let progressHideTimer = null;
 const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
 
@@ -1547,7 +1544,6 @@ $("#show-unmatched").addEventListener("change", event => { state.filters.showUnm
 function renderRefreshProgress(progress) {
   state.refreshInProgress = progress.refreshInProgress ?? !["complete", "error"].includes(progress.phase);
   const panel = $("#refresh-progress-panel");
-  clearTimeout(progressHideTimer);
   panel.hidden = false;
   const total = Math.max(0, Number(progress.total) || 0);
   const completed = Math.max(0, Number(progress.completed) || 0);
@@ -1584,10 +1580,6 @@ function renderRefreshProgress(progress) {
     message.textContent = formatRefreshSummary(summary);
     // 进度里的完成信号先于消息响应到达，这里主动同步一次，避免响应丢失时表格停在旧数据。
     load();
-    progressHideTimer = setTimeout(() => {
-      progressHideTimer = null;
-      panel.hidden = true;
-    }, PROGRESS_HIDE_DELAY_MS);
   } else if (progress.phase === "error") {
     message.textContent = progress.message;
   }
@@ -1789,6 +1781,10 @@ $("#cancel-refresh-preflight").addEventListener("click", async () => {
     state.refreshPreflight = null;
     renderRefreshPreflight();
   } catch (error) { toast(error.message); }
+});
+
+$("#close-refresh-progress").addEventListener("click", () => {
+  $("#refresh-progress-panel").hidden = true;
 });
 
 $("#fetch-references").addEventListener("click", async event => {
