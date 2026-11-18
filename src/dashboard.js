@@ -1953,6 +1953,8 @@ window.addEventListener("message", event => {
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
   if (message?.type === "CHECKIN_UPDATED") load({ preservePage: true });
+  // 插件安装/卸载、导入设置都会在后台改站点，比价表得跟着重拉。
+  if (message?.type === "STATIONS_CHANGED") load({ preservePage: true });
 });
 onRefreshProgress(renderRefreshProgress);
 load();

@@ -1238,7 +1238,9 @@ async function testConfigStation() {
 async function persistStations() {
   const stations = readStations();
   if (stations.some(station => !station.baseUrl)) throw new Error("请填写所有站点地址");
-  state.stations = await callService("SAVE_STATIONS", { stations });
+  const removedIds = [...removedStationIds];
+  state.stations = await callService("SAVE_STATIONS", { stations, removedIds, origin: CLIENT_ID });
+  removedStationIds.clear();
   return state.stations;
 }
 
@@ -1721,7 +1723,8 @@ function commitStationPreview() {
   const card = document.querySelector(`[data-station-id="${station.id}"]`);
   card?.scrollIntoView({ behavior: "smooth", block: "center" });
   $("#add-station-dialog").close();
-  void flushStationsSave();
+  // 走 scheduleStationsSave 而不是 flush：flush 第一道闸是 stationsDirty，这里还没标脏，直接调等于空转。
+  scheduleStationsSave();
   toast("站点已添加，自动保存");
 }
 
@@ -1949,6 +1952,8 @@ $("#plugin-installed-list").addEventListener("click", async event => {
   const stationId = card.dataset.stationId;
   if (event.target.closest("[data-remove-station]")) {
     state.stationSourceTabIds.delete(stationId);
+    // 删除只认显式名单：页面内存里没有不等于库里没有，落库得说清删谁。
+    removedStationIds.add(stationId);
     state.stations = state.stations.filter(station => station.id !== stationId);
     renderStations();
     scheduleStationsSave();
@@ -2024,6 +2029,11 @@ let settingsDirty = false;
 let stationsDirty = false;
 let settingsSaveChain = Promise.resolve();
 let stationsSaveChain = Promise.resolve();
+// 本页的标识：落库时带上，后台广播回来时靠它认出自己的回声，不必二次重绘。
+const CLIENT_ID = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+// 本页删掉的站点 id。库里的删除只认这份名单，内存里没有不算数。
+const removedStationIds = new Set();
+let stationsResyncAfterSave = false;
 
 function notifySettingsSaved() {
   if (EMBEDDED) window.parent.postMessage({ type: "MODEL_ATLAS_SETTINGS_SAVED" }, location.origin);
@@ -2084,6 +2094,11 @@ function flushStationsSave() {
       // 服务端会归一 id 与开关，只在结果真的变了时重绘，避免打字时列表跳动。
       if (stationSignature() !== before) renderStations();
       notifySettingsSaved();
+      // 编辑期间别人改过库，等这一轮落完再对齐，别在输入框上直接盖。
+      if (stationsResyncAfterSave) {
+        stationsResyncAfterSave = false;
+        await syncStationsFromService();
+      }
     } catch (error) {
       stationsDirty = true;
       toast(`站点保存失败：${error.message || error}`);
@@ -2095,6 +2110,26 @@ function flushStationsSave() {
 function flushAutoSave() {
   return Promise.all([flushSettingsSave(), flushStationsSave()]);
 }
+
+// 插件安装/卸载、导入设置、别的标签页都会在后台改站点，本页内存得快照作废重拉。
+async function syncStationsFromService() {
+  try {
+    state.stations = await callService("GET_STATIONS");
+    renderStations();
+  } catch (error) {
+    toast(`站点已变动，重新读取失败：${error.message || error}`);
+  }
+}
+
+chrome.runtime.onMessage.addListener(message => {
+  if (message?.type !== "STATIONS_CHANGED") return;
+  if (message.origin && message.origin === CLIENT_ID) return;
+  if (stationsDirty) {
+    stationsResyncAfterSave = true;
+    return;
+  }
+  void syncStationsFromService();
+});
 
 for (const selector of ["#settings-form", "#llm-form"]) {
   const form = $(selector);
@@ -2111,6 +2146,8 @@ for (const selector of ["#settings-form", "#llm-form"]) {
     void flushSettingsSave();
   });
 }
+// 启用开关在面板标题栏里，不在 #llm-form 内，靠表单委托收不到，单独挂一次。
+$("#llm-enabled")?.addEventListener("change", scheduleSettingsSave);
 
 window.addEventListener("pagehide", () => void flushAutoSave());
 document.addEventListener("visibilitychange", () => {

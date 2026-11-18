@@ -20,6 +20,7 @@ import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
 import { normalizeSettings, normalizeStation } from "./shared/schema.js";
 import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { buildSettingsExport, parseSettingsExport } from "./core/settings-transfer.js";
+import { mergeStationSave } from "./core/station-save.js";
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
 import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_RETRIES, ASSIST_RETRY_DELAY_MS, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPool, buildAssistPrompt, cacheKey, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, poolSummaryLabel, selectPendingEntries, spreadAssistResults, summarizeCache, summarizePool } from "./core/llm-matching.js";
@@ -259,6 +260,12 @@ async function refreshReferences(force = false) {
   const result = await fetchReferences({ cache });
   await setValue("references", result);
   return result;
+}
+
+// 站点被后台改过之后，开着页面得重拉一次；不广播的话页面内存还是旧快照。
+// origin 是发起方自己的标记，发起方靠它认出自己的回声，不必重绘。
+function notifyStationsChanged(origin = "") {
+  chrome.runtime.sendMessage({ type: "STATIONS_CHANGED", origin: String(origin || "") }, () => void chrome.runtime.lastError);
 }
 
 function notifyRefreshProgress(progress) {
@@ -1137,6 +1144,7 @@ async function addSitePlugins(ids) {
     const added = addedStations.map(station => activeSitePluginForStation(station)?.id).filter(Boolean);
     if (addedStations.length) await putStations([...current, ...addedStations]);
     pruneSitePlugins([...current, ...addedStations], [...installedPluginIds(settings)]);
+    if (addedStations.length) notifyStationsChanged();
     return {
       stations: [...current, ...addedStations],
       added,
@@ -1146,18 +1154,17 @@ async function addSitePlugins(ids) {
   });
 }
 
-async function saveStations(input) {
+// 传进来的站点只做新增与覆盖，删除只认显式名单：页面快照过期时，缺席不能当成删除。
+async function saveStations(input, removedIds = [], origin = "") {
   const invalidation = invalidateRefreshPreflight();
   await ensureWorkspacePlugins();
   await syncSitePlugins(input);
   const current = await getStations();
   const currentById = new Map(current.map(station => [station.id, station]));
-  const wanted = new Set(input.map(station => station.id));
-  for (const station of current) {
-    if (!wanted.has(station.id)) await removeStationCredential(station.id);
-  }
-  const stations = [];
-  for (const raw of input) {
+  const removed = new Set((Array.isArray(removedIds) ? removedIds : []).map(id => String(id ?? "").trim()).filter(Boolean));
+  for (const id of removed) await removeStationCredential(id);
+  const upserts = [];
+  for (const raw of input || []) {
     const station = normalizeStation(prepareStationInput(raw));
     const submitted = station.auth || {};
     const previous = currentById.get(station.id);
@@ -1169,13 +1176,15 @@ async function saveStations(input) {
       username: submitted.username || stored.username,
       password: submitted.password || stored.password
     });
-    stations.push({ ...station, auth: { type: submitted.type, token: "", username: "", password: "" } });
+    upserts.push({ ...station, auth: { type: submitted.type, token: "", username: "", password: "" } });
   }
+  const stations = mergeStationSave(current, upserts, [...removed]);
   await putStations(stations);
   const pluginSettings = await getSettings();
   setActivePluginIds(installedPluginIds(pluginSettings));
   pruneSitePlugins(stations, [...installedPluginIds(pluginSettings)]);
   await invalidation;
+  notifyStationsChanged(origin);
   return stations;
 }
 
@@ -1204,6 +1213,7 @@ async function importSettingsFromFile(payload) {
     pluginRegistry: current.pluginRegistry
   }));
   await putStations(incoming.stations);
+  notifyStationsChanged();
   await invalidateRefreshPreflight();
   return { settings: await settingsForUi(), stations: incoming.stations.length };
 }
@@ -1879,7 +1889,10 @@ export async function uninstallPlugins(ids) {
     for (const station of stations) {
       if (!kept.includes(station)) await removeStationCredential(station.id);
     }
-    if (kept.length !== stations.length) await putStations(kept);
+    if (kept.length !== stations.length) {
+      await putStations(kept);
+      notifyStationsChanged();
+    }
     await persistSettings({ ...settings, pluginRegistry: { ...registry, installed }, localPlugins });
     workspacePluginsSynced = false;
     await ensureWorkspacePlugins({ force: true });
@@ -1955,7 +1968,8 @@ async function handle(message, sender) {
     case "APPLY_MODEL_ASSIST_OVERRIDES": return applyModelAssistOverrides(message.keys);
     case "SET_MODEL_ASSIST_OVERRIDE": return setModelAssistOverride(message);
     case "GET_MODEL_ASSIST_CATALOG": return modelAssistCatalog(message);
-    case "SAVE_STATIONS": return saveStations(message.stations);
+    case "SAVE_STATIONS": return saveStations(message.stations, message.removedIds, message.origin);
+    case "GET_STATIONS": return getPreparedStations();
     case "ADD_SITE_PLUGINS": return addSitePlugins(message.ids);
     case "GET_PLUGIN_WORKSPACE": return pluginWorkspaceState();
     case "REFRESH_PLUGIN_REGISTRY": return refreshPluginRegistry(message);
