@@ -10,6 +10,9 @@ import { RELAYROUTER_PRICING_ENDPOINT, requestPolicy } from "../../core/provider
 //   所以 1 美元额度 = 1 元。页面另外显示的 6.68752 是 usd_exchange_rate，
 //   只用于把人民币金额换算成美元显示，不参与扣费。
 //   注：口径来自站点自身配置，没有真实付款；实测不同就改 rechargeRmb。
+// 站点差异只有这一句：报文形状归到 relayrouter 基座（tokenflux 形状换一套字段名）。
+const PRICE_MAP = { base: "relayrouter" };
+
 const preset = {
   id: "relayrouter",
   name: "RelayRouter",
@@ -41,7 +44,7 @@ const preset = {
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
-  adapter: { kind: "relayrouter", endpoint: RELAYROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "relayrouter" }
+  adapter: { kind: "declarative", endpoint: RELAYROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
 
 const pluginSource = {
@@ -56,10 +59,10 @@ const pluginSource = {
     baseUrl: `${url.origin}/pricing`,
     mode: "direct",
     auth: { type: "none" },
-    adapter: { ...(stationInput.adapter || {}), kind: "relayrouter", endpoint: RELAYROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "relayrouter" }
+    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: RELAYROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
   }),
   mode: "direct",
-  responseFormat: "relayrouter",
+  responseFormat: "price-map",
   authType: "none",
   rationale: "RelayRouter 通过公开定价 API 直连采集，充值档位已核验",
   request: requestPolicy(() => RELAYROUTER_PRICING_ENDPOINT, { credentials: "omit" })

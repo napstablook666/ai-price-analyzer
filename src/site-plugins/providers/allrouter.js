@@ -26,6 +26,9 @@ import { ALLROUTER_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-r
 //   充值：/api/status 里 price = 1（1 元 = 1 美元额度）、quota_per_unit = 500000、
 //   custom_currency_symbol = "credits"、custom_currency_exchange_rate = 10，
 //   也就是界面上的 10 credits = $1；赠送档位在 /api/user/topup/info，需要登录，没核实就不写。
+// 站点差异只有这一句：报文形状归到 allrouter 基座（newcodex 映射 + 图片端点规则）。
+const PRICE_MAP = { base: "allrouter" };
+
 const preset = {
   id: "allrouter",
   name: "AllRouter",
@@ -41,7 +44,7 @@ const preset = {
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
-  adapter: { kind: "tokenflux", endpoint: ALLROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "allrouter" }
+  adapter: { kind: "declarative", endpoint: ALLROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
 
 const pluginSource = {
@@ -56,10 +59,10 @@ const pluginSource = {
     baseUrl: `${url.origin}/console/topup`,
     mode: "direct",
     auth: { type: "none" },
-    adapter: { ...(stationInput.adapter || {}), kind: "tokenflux", endpoint: ALLROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "allrouter" }
+    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: ALLROUTER_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
   }),
   mode: "direct",
-  responseFormat: "allrouter",
+  responseFormat: "price-map",
   authType: "none",
   rationale: "AllRouter 的 /api/pricing 匿名可读，在售模型、分组倍率、充值口径都不需要登录",
   request: requestPolicy(() => ALLROUTER_PRICING_ENDPOINT, { credentials: "omit" })

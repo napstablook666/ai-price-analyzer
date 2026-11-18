@@ -10,7 +10,9 @@ import { trueSotaPriceMap } from "../src/core/price-maps/true-sota.js";
 import { sidrunePriceMap } from "../src/core/price-maps/sidrune.js";
 import { relayRouterPriceMap } from "../src/core/price-maps/relayrouter.js";
 import { allrouterPriceMap } from "../src/core/price-maps/allrouter.js";
-import { parseBillingTiers } from "../src/core/normalizers.js";
+import { normalizeProxyData, parseBillingTiers } from "../src/core/normalizers.js";
+import { RESPONSE_FORMAT_DEFINITIONS } from "../src/core/response-formats.js";
+import { resolvePriceMap } from "../src/core/price-maps/index.js";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/tokenflux-pricing.json", import.meta.url), "utf8"));
 
@@ -439,4 +441,30 @@ test("AllRouter 倍率类按 1 = $2 折算，再乘分组倍率", () => {
 test("AllRouter 出图模型靠 supported_endpoint_types 进生图榜", () => {
   assert.equal(allRouterRow("gpt-image-2.5", "default").media_type, "image");
   assert.equal(allRouterRow("claude-opus-5-5", "claude-max").media_type, undefined);
+});
+
+// 这三家原本各有一个 12 行的 strategy 类，canParse 只比字符串、parse 只调 super.parse。
+// 现在统一走 price-map 处理器 + 格式定义里的兜底声明，这组测试守住那条路别再长出新的壳类。
+test("走 price-map 的格式定义必须自带可解析的 priceMap 声明", () => {
+  for (const [format, definition] of Object.entries(RESPONSE_FORMAT_DEFINITIONS)) {
+    if (definition.strategy !== "price-map" || format === "price-map") continue;
+    assert.ok(definition.priceMap, `${format} 用了 price-map 处理器，但没有声明 priceMap`);
+    assert.equal(resolvePriceMap(definition.priceMap).error, undefined, `${format} 的 priceMap 解不出来`);
+  }
+});
+
+test("老枚举值和新写法产出逐行相同", () => {
+  const cases = [
+    ["allrouter", "allrouter-pricing.json"],
+    ["relayrouter", "relayrouter-pricing.json"]
+  ];
+  for (const [format, file] of cases) {
+    const payload = JSON.parse(readFileSync(new URL(`./fixtures/${file}`, import.meta.url), "utf8"));
+    const legacy = normalizeProxyData(payload, { responseFormat: format });
+    const declared = normalizeProxyData(payload, { responseFormat: "price-map", priceMap: { base: format } });
+    assert.ok(legacy.data.length > 0, `${format} 用老写法解析不出数据`);
+    assert.equal(declared.sourceFormat, format);
+    assert.deepEqual(declared.data, legacy.data);
+    assert.deepEqual(declared.group_ratio, legacy.group_ratio);
+  }
 });

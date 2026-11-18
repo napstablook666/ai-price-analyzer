@@ -9,12 +9,14 @@ const definitions = {
   "all-in-one-models": { label: "all-in-one.icu 租户模型", explicit: true, strategy: "all-in-one-models" },
   "fuck-everyone-model-plaza": { label: "fuck-everyone 模型广场", explicit: true, strategy: "model-plaza", profile: "fuck-everyone" },
   "tokenflux": { label: "TokenFlux 定价", explicit: true, strategy: "tokenflux" },
-  "newcodex": { label: "NewCodex 定价", explicit: true, strategy: "newcodex" },
-  "allrouter": { label: "AllRouter 定价", explicit: true, strategy: "allrouter" },
+  // 这三家报文都是 tokenflux 换一套字段映射，用 price-map 处理器 + 兜底声明就能覆盖；
+  // 保留各自的枚举值是为了老配置里的 responseFormat 还能认，新站直接写 "price-map"。
+  "newcodex": { label: "NewCodex 定价", explicit: true, strategy: "price-map", priceMap: { base: "newcodex" } },
+  "allrouter": { label: "AllRouter 定价", explicit: true, strategy: "price-map", priceMap: { base: "allrouter" } },
   "windhub": { label: "WindHub 公开定价", explicit: true, strategy: "windhub" },
   "stellaisle": { label: "Star API 公开定价", explicit: true, strategy: "stellaisle" },
   "stellaisle-carpool": { label: "Star API 拼车市场", explicit: true, strategy: "stellaisle-carpool" },
-  "relayrouter": { label: "RelayRouter 定价", explicit: true, strategy: "relayrouter" },
+  "relayrouter": { label: "RelayRouter 定价", explicit: true, strategy: "price-map", priceMap: { base: "relayrouter" } },
   // 声明式映射：报文形状由 adapter.priceMap 描述，站点差异写在插件里，不占新的枚举值。
   "price-map": { label: "声明式价格映射", explicit: true, strategy: "price-map" },
 };

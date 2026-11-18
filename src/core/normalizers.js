@@ -7,9 +7,6 @@ import { stellaisleCarpoolPriceMap } from "./price-maps/stellaisle-carpool.js";
 import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "./price-maps/true-sota.js";
 import { sidrunePriceMap } from "./price-maps/sidrune.js";
-import { relayRouterPriceMap } from "./price-maps/relayrouter.js";
-import { newcodexPriceMap } from "./price-maps/newcodex.js";
-import { allrouterPriceMap } from "./price-maps/allrouter.js";
 import { resolvePriceMap } from "./price-maps/index.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
@@ -601,15 +598,27 @@ export class TokenFluxPricingStrategy extends ParsingStrategy {
 // 只有一个 priceMap getter 和一句 responseFormat 字符串比较，业务逻辑全在基类。
 // 站点差异本来就只有「用哪份映射」这一件事，那就让它变成数据，别再变成类。
 export class PriceMapPricingStrategy extends ParsingStrategy {
+  // defaultPriceMap 是格式定义里带的兜底声明：老配置写的 responseFormat: "newcodex"
+  // 仍然能解析，走的就是 definition.priceMap。新站直接把声明写在 adapter 上。
+  constructor(defaultPriceMap = null) {
+    super();
+    this.defaultPriceMap = defaultPriceMap;
+  }
+
+  declarationFor(options = {}) {
+    return options.priceMap || this.defaultPriceMap;
+  }
+
   canParse(raw, options = {}) {
-    if (options.responseFormat !== "price-map") return false;
-    const { map } = resolvePriceMap(options.priceMap);
+    const declaration = this.declarationFor(options);
+    if (!declaration) return false;
+    const { map } = resolvePriceMap(declaration);
     if (!map) return false;
     return Array.isArray(readPath(raw, map.rootPath || "/data"));
   }
 
   parse(raw, options = {}) {
-    const resolved = resolvePriceMap(options.priceMap);
+    const resolved = resolvePriceMap(this.declarationFor(options));
     if (resolved.error) return { data: [], group_ratio: {}, sourceFormat: "price-map", error: resolved.error };
     const map = resolved.map;
     const { rows, unresolved } = applyPriceMap(map, raw, { parseTiers: parseBillingTiers });
@@ -635,33 +644,8 @@ export class PriceMapPricingStrategy extends ParsingStrategy {
   }
 }
 
-// 同一份 tokenflux 形状，倍率类的 model_ratio 按 1 = $2 折算，理由见 price-maps/newcodex.js。
-export class NewCodexPricingStrategy extends TokenFluxPricingStrategy {
-  get priceMap() { return newcodexPriceMap; }
-
-  canParse(raw, options = {}) {
-    return options.responseFormat === "newcodex" && raw?.success === true && Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
-  }
-
-  parse(raw) {
-    return { ...super.parse(raw), sourceFormat: "newcodex" };
-  }
-}
-
-// AllRouter 的 /api/pricing 是标准的 tokenflux 形状：data 是行数组，分组倍率、可用分组、
-// 每条模型在卖哪些分组、端点类型都在。这里只改编号和价格映射，解析整份复用。
-export class AllRouterPricingStrategy extends TokenFluxPricingStrategy {
-  get priceMap() { return allrouterPriceMap; }
-
-  canParse(raw, options = {}) {
-    return options.responseFormat === "allrouter" && raw?.success === true &&
-      Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
-  }
-
-  parse(raw) {
-    return { ...super.parse(raw), sourceFormat: "allrouter" };
-  }
-}
+// NewCodex / AllRouter / RelayRouter 三家的类已删：报文形状都是 tokenflux 换一套字段映射，
+// 差异只剩「用哪份映射」，改成 adapter.priceMap 声明即可（见 price-maps/ 与 response-formats.js 的兜底声明）。
 
 export class WindHubPricingStrategy extends TokenFluxPricingStrategy {
   canParse(raw, options = {}) {
@@ -820,19 +804,7 @@ export class StellaisleCarpoolPricingStrategy extends ParsingStrategy {
     };
   }
 }
-// RelayRouter 的报文和 TokenFlux 同构，只是字段名换了一套（见 price-maps/relayrouter.js）。
-export class RelayRouterPricingStrategy extends TokenFluxPricingStrategy {
-  get priceMap() { return relayRouterPriceMap; }
-
-  canParse(raw, options = {}) {
-    return options.responseFormat === "relayrouter" && raw?.success === true &&
-      Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
-  }
-
-  parse(raw) {
-    return { ...super.parse(raw), sourceFormat: "relayrouter" };
-  }
-}
+// RelayRouter 同上，改由 adapter.priceMap 声明（price-maps/relayrouter.js）。
 function unwrapTrpcPayload(raw) {
   const item = Array.isArray(raw) && raw.length ? raw[0] : raw;
   return item?.result?.data?.json || item?.result?.data || raw;
@@ -1813,12 +1785,9 @@ registerResponseFormatHandler("aiapi", () => new AiApiModelCatalogStrategy());
 registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("windhub", () => new WindHubPricingStrategy());
-registerResponseFormatHandler("newcodex", () => new NewCodexPricingStrategy());
-registerResponseFormatHandler("allrouter", () => new AllRouterPricingStrategy());
 registerResponseFormatHandler("stellaisle", () => new StellaislePricingStrategy());
 registerResponseFormatHandler("stellaisle-carpool", () => new StellaisleCarpoolPricingStrategy());
-registerResponseFormatHandler("relayrouter", () => new RelayRouterPricingStrategy());
-registerResponseFormatHandler("price-map", () => new PriceMapPricingStrategy());
+registerResponseFormatHandler("price-map", definition => new PriceMapPricingStrategy(definition.priceMap || null));
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
 registerResponseFormatHandler("all-in-one-models", () => new AllInOneModelsStrategy());

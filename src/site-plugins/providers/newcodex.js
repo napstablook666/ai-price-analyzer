@@ -18,6 +18,9 @@ import { NEWCODEX_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-re
 //   另外这个站的倍率类 model_ratio 按 1 = $2/百万 token 算（与它自己的 billing_expr 系数对得上），
 //   所以用 newcodex 这份映射（tokenflux 形状 + 倍率乘 2），不用 tokenflux 原版，否则倍率类报价会低一半
 //   /api/models、/api/user/topup/info 都要登录，价格接口不用，所以是 direct 直连
+// 站点差异只有这一句：报文形状归到 newcodex 基座（tokenflux 形状 + 倍率乘 2）。
+const PRICE_MAP = { base: "newcodex" };
+
 const preset = {
   id: "newcodex",
   name: "NewCodex",
@@ -47,7 +50,7 @@ const preset = {
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
-  adapter: { kind: "tokenflux", endpoint: NEWCODEX_PRICING_ENDPOINT, method: "GET", responseFormat: "newcodex" }
+  adapter: { kind: "declarative", endpoint: NEWCODEX_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
 
 const pluginSource = {
@@ -61,10 +64,10 @@ const pluginSource = {
     baseUrl: `${url.origin}/pricing`,
     mode: "direct",
     auth: { type: "none" },
-    adapter: { ...(stationInput.adapter || {}), kind: "tokenflux", endpoint: NEWCODEX_PRICING_ENDPOINT, method: "GET", responseFormat: "newcodex" }
+    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: NEWCODEX_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
   }),
   mode: "direct",
-  responseFormat: "newcodex",
+  responseFormat: "price-map",
   authType: "none",
   rationale: "NewCodex 的 /api/pricing 匿名可读，价格与充值档位都不需要登录",
   request: requestPolicy(() => NEWCODEX_PRICING_ENDPOINT, { credentials: "omit" })
