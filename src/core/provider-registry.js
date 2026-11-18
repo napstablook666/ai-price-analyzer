@@ -17,7 +17,7 @@ export const MAOLAO_PRICING_ENDPOINT = "/api/pricing";
 export const WINDHUB_PRICING_ENDPOINT = "/api/pricing";
 export const STELLAISLE_PRICING_ENDPOINT = "/api/pricing";
 export const NEWCODEX_PRICING_ENDPOINT = "/api/pricing";
-export const ALLROUTER_PRICING_ENDPOINT = "/api/ratio_config";
+export const ALLROUTER_PRICING_ENDPOINT = "/api/pricing";
 export const STELLAISLE_CARPOOL_ENDPOINT = "/api/carpool-market?availability=available&page=1&page_size=100&subscription_exact=false";
 export const RELAYROUTER_PRICING_ENDPOINT = "/api/pricing";
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";

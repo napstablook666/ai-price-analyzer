@@ -271,7 +271,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "allrouter",
       "name": "AllRouter",
       "version": "0.11.2",
-      "description": "公开 /api/ratio_config 直连采集，49 个在售模型；倍率 1 = $2/百万 token，DeepSeek 与部分长上下文模型走分段表达式；充值 1 元 = 1 美元额度",
+      "description": "公开 /api/pricing 直连采集，52 个在售模型、102 条模型分组；分组倍率公开（default 0.75、deepseek 0.4、gpt 0.053 等），倍率 1 = $2/百万 token，37 个模型走分段或分时表达式；充值 1 元 = 1 美元额度",
       "hosts": [
         "allrouter.cc",
         "www.allrouter.cc"

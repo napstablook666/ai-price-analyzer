@@ -9,6 +9,7 @@ import { cheapRouterPriceMap } from "../src/core/price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "../src/core/price-maps/true-sota.js";
 import { sidrunePriceMap } from "../src/core/price-maps/sidrune.js";
 import { relayRouterPriceMap } from "../src/core/price-maps/relayrouter.js";
+import { allrouterPriceMap } from "../src/core/price-maps/allrouter.js";
 import { parseBillingTiers } from "../src/core/normalizers.js";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/tokenflux-pricing.json", import.meta.url), "utf8"));
@@ -385,4 +386,57 @@ test("RelayRouter 按次计价模型只出按次价，并带上媒体类型", ()
   const video = relayRow("wan3.0-video", "Alibaba-video-1");
   assert.equal(video.request_price, 0.0065);
   assert.equal(video.media_type, "video");
+});
+
+// ---- AllRouter：/api/pricing 就是 tokenflux 形状，分组倍率公开 ----
+
+// 真实 payload 裁出来的 5 条：倍率类、分时表达式、长度分档表达式、出图表达式各一。
+const allRouterFixture = JSON.parse(readFileSync(new URL("./fixtures/allrouter-pricing.json", import.meta.url), "utf8"));
+
+function allRouterRows() {
+  return applyPriceMap(allrouterPriceMap, allRouterFixture, { parseTiers: parseBillingTiers });
+}
+
+function allRouterRow(model, group, tier) {
+  const found = allRouterRows().rows.find(row => row.model_name === model && row.proxy_group_name === group &&
+    (tier === undefined || row.tier_name === tier));
+  assert.ok(found, `没找到 ${model} / ${group} / ${tier ?? "-"} 这一行`);
+  return found;
+}
+
+test("AllRouter 用站点公开的分组名和倍率，不编基准价", () => {
+  const { rows, unresolved } = allRouterRows();
+  assert.deepEqual(unresolved, []);
+  // 分组名必须来自站点的 group_ratio，编出来的占位分组名一个都不能有。
+  const siteGroups = new Set(Object.keys(allRouterFixture.group_ratio));
+  for (const row of rows) assert.ok(siteGroups.has(row.proxy_group_name), `分组名 ${row.proxy_group_name} 不在站点的分组表里`);
+  assert.ok(!rows.some(row => row.proxy_group_name === "基准价"));
+  assert.equal(allRouterRow("deepseek-v4.1-flash", "deepseek").group_ratio, 0.4);
+  assert.equal(allRouterRow("glm-5.3-flash", "glm").group_ratio, 0.3);
+});
+
+test("AllRouter 表达式价乘分组倍率：default 0.75、deepseek 0.4", () => {
+  // 表达式 off_peak 是 p*0.15 + c*0.6，乘分组倍率才是站点实际扣的钱。
+  const offPeak = allRouterRow("deepseek-v4.1-flash", "default", "off_peak");
+  assert.equal(offPeak.input_price, 0.1125);
+  assert.equal(offPeak.output_price, 0.45);
+  assert.equal(allRouterRow("deepseek-v4.1-flash", "deepseek", "off_peak").input_price, 0.06);
+  assert.equal(allRouterRow("deepseek-v4.1-flash", "default", "peak").input_price, 0.225);
+  // 长度分档同样按分组倍率走：gpt 分组是自营号池，倍率 0.053。
+  assert.equal(allRouterRow("gpt-6-luna-openai-compact", "gpt", "0_272k").input_price, 0.0053);
+  assert.equal(allRouterRow("gpt-6-luna-openai-compact", "default", "272k_plus").output_price, 0.5625);
+});
+
+test("AllRouter 倍率类按 1 = $2 折算，再乘分组倍率", () => {
+  // claude-opus-5-5：ratio 2 → $4/M，claude-official-api 0.65 → 2.6。
+  const row = allRouterRow("claude-opus-5-5", "claude-official-api");
+  assert.equal(row.input_price, 2.6);
+  assert.equal(row.output_price, 13);
+  assert.equal(row.completion_ratio, 5);
+  assert.equal(row.price_currency, "USD");
+});
+
+test("AllRouter 出图模型靠 supported_endpoint_types 进生图榜", () => {
+  assert.equal(allRouterRow("gpt-image-2.5", "default").media_type, "image");
+  assert.equal(allRouterRow("claude-opus-5-5", "claude-max").media_type, undefined);
 });

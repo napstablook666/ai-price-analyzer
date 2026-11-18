@@ -73,7 +73,7 @@ export const SITE_PLUGIN_CATALOG = [
   entry("relayrouter", "RelayRouter", "relayrouter.app", "direct", () => ({ sitePlugin: relayrouterPlugin }), { hosts: ["www.relayrouter.app","relayrouter.app"], paths: ["/pricing","/console/topup","/"], description: "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）" }),
   entry("stellaisle-carpool", "飓星API 拼车", "token.stellaisle.com", "page", () => ({ sitePlugin: stellaisleCarpoolPlugin }), { paths: ["/carpool-market"], description: "登录后读 /api/carpool-market 的座位清单，用座位价除以期间额度当折扣，折算站内模型价" }),
   entry("newcodex", "NewCodex", "newcodex.cn", "direct", () => ({ sitePlugin: newcodexPlugin }), { hosts: ["newcodex.cn","www.newcodex.cn"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，69 个模型 11 个分组；充值 1 元 = 1 美元额度，单笔 ¥100/200/500/1000 另赠 10%/20%/40%/50%" }),
-  entry("allrouter", "AllRouter", "allrouter.cc", "direct", () => ({ sitePlugin: allrouterPlugin }), { hosts: ["allrouter.cc","www.allrouter.cc"], paths: ["/","/console","/console/topup"], description: "公开 /api/ratio_config 直连采集，49 个在售模型；倍率 1 = $2/百万 token，DeepSeek 与部分长上下文模型走分段表达式；充值 1 元 = 1 美元额度" })
+  entry("allrouter", "AllRouter", "allrouter.cc", "direct", () => ({ sitePlugin: allrouterPlugin }), { hosts: ["allrouter.cc","www.allrouter.cc"], paths: ["/","/console","/console/topup"], description: "公开 /api/pricing 直连采集，52 个在售模型、102 条模型分组；分组倍率公开（default 0.75、deepseek 0.4、gpt 0.053 等），倍率 1 = $2/百万 token，37 个模型走分段或分时表达式；充值 1 元 = 1 美元额度" })
 ];
 
 export function sitePluginById(id) {

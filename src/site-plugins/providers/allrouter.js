@@ -3,24 +3,29 @@
 import { ALLROUTER_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 // 站点画像（2026-11-18 实测）：
-//   /api/ratio_config 匿名 200、约 43 KB，data 是 New API 的列式报文：model_ratio / completion_ratio /
-//   cache_ratio / create_cache_ratio / model_price / billing_expr / billing_mode 七张「模型名 → 值」的表，
-//   没有行数组，拼接在 normalizers.js 的 AllRouterPricingStrategy 里做。
-//   ratio 表里 486 个模型名，绝大多数是 New API 出厂默认表，站点根本不卖；
-//   真实在售清单只有 /api/user/models 有，且需要登录，所以插件按白名单采 49 个
-//   default 分组的在售模型（清单在 price-maps/allrouter.js，站点上新模型时去改那里）。
+//   /api/pricing 匿名 200，报文是标准 tokenflux 形状：data 行数组 52 个模型，外加
+//   group_ratio / usable_group / group_desc / auto_groups / supported_endpoint / vendors /
+//   pricing_version。每条模型的 enable_groups 就是它真正在卖的分组，52 个模型共 102 条
+//   「模型 × 分组」，全部落在 group_ratio 与 usable_group 的键上。
+//   分组倍率是公开的：default 0.75（官方 API）、deepseek 0.4、gemini 0.45、glm 0.3、
+//   gpt-azure-api 0.6、claude-official-api 0.65、gpt 0.053（自营 codex 号池）、
+//   grok 0.045、claude-max 0.25、kimi 号池 0.06。站点计费口径 =「官方价 × 分组倍率」，
+//   见 docs.allrouter.cc/billing：充值是 $1 = 10 credits，扣费按模型官方价乘分组倍率。
 //   倍率口径：model_ratio 1 = $2/百万 token，与 billing_expr 里的美元系数对得上
-//   （claude-opus-5-5 ratio 2 ↔ expr p*4；claude-sonnet-5-5 ratio 1 ↔ expr p*2；
-//   claude-haiku-4-5 ratio 0.5 ↔ 官方 $1/M），所以倍率类要乘 2。
-//   27 个模型把真实价写在 billing_expr 里，带长度分段（len <= 272000 之类）或分时条件
+//   （claude-opus-5-5 ratio 2 ↔ expr p*4；claude-haiku-4-5 ratio 0.5 ↔ 官方 $1/M），
+//   所以倍率类要乘 2。
+//   37 个模型把真实价写在 billing_expr 里，带长度分段（len <= 272000 之类）或分时条件
 //   （DeepSeek 三个：工作日 9-12 点与 14-18 点走 peak，其余走 off_peak 半价），
-//   这些以表达式为准，ratio 只是占位。
-//   三个 gpt-image-2.5 的表达式是 p*5 + img*8 + c*30：img 系数按图片 token 计，解析器不认，
-//   只报文本 token 价，按张的钱没有公开口径。
+//   这些以表达式为准，ratio 只是占位。全站没有 model_price > 0、也没有 quota_type = 1 的条目。
+//   三个 gpt-image-2.5 的表达式是 p*5 + cr*1.25 + img*8 + c*30：img 系数按图片 token 计，
+//   解析器不认，只报文本 token 价，按张的钱没有公开口径。
+//   换掉 /api/ratio_config 的原因：那条路是 New API 的列式报文，486 个模型名里绝大多数是
+//   出厂默认表、站点根本不卖，也没有任何分组信息，只能按白名单挑 49 个再加一个编出来的
+//   「基准价」分组，界面上就出现了官网没有的分组名。/api/pricing 三样东西一起给了：
+//   在售清单、分组、倍率。
 //   充值：/api/status 里 price = 1（1 元 = 1 美元额度）、quota_per_unit = 500000、
 //   custom_currency_symbol = "credits"、custom_currency_exchange_rate = 10，
 //   也就是界面上的 10 credits = $1；赠送档位在 /api/user/topup/info，需要登录，没核实就不写。
-//   分组倍率同样要登录（/api/user/groups 401），插件出的是基准价。
 const preset = {
   id: "allrouter",
   name: "AllRouter",
@@ -32,7 +37,7 @@ const preset = {
   rechargePlansVerified: false,
   priceCurrency: "USD",
   priceCurrencyVerified: true,
-  priceCurrencyNote: "报价是美元/百万 token，和站内 billing_expr 的美元系数一致；界面把额度折算成 credits 显示（10 credits = $1），不影响这里的价格。分组倍率要登录才看得到，插件报的是基准价。",
+  priceCurrencyNote: "报价是美元/百万 token，和站内 billing_expr 的美元系数一致；界面把额度折算成 credits 显示（10 credits = $1），不影响这里的价格。分组倍率取自公开的 /api/pricing：default 0.75、deepseek 0.4、gpt 0.053 等，按站点的「官方价 × 分组倍率」口径折算。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
@@ -56,7 +61,7 @@ const pluginSource = {
   mode: "direct",
   responseFormat: "allrouter",
   authType: "none",
-  rationale: "AllRouter 的 /api/ratio_config 匿名可读，公开定价和充值口径都不需要登录",
+  rationale: "AllRouter 的 /api/pricing 匿名可读，在售模型、分组倍率、充值口径都不需要登录",
   request: requestPolicy(() => ALLROUTER_PRICING_ENDPOINT, { credentials: "omit" })
 };
 
