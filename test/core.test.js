@@ -639,17 +639,24 @@ test("飓星分组广场：按分组展开报价，不可用分组与未定价�
         }
       },
       groupPrices: [
+        // 逐条拉取存的是整包响应，分组详情在 data 里。用裸详情测会漏掉这层解包。
         {
-          group_id: 37,
-          model_prices: [
-            { model_name: "gpt-6-luna", pricing_mode: "tiered", billing_expr: 'len <= 272000 ? tier("standard", p * 0.1 + c * 0.5) : tier("long_context", p * 0.2 + c * 0.75)' },
-            { model_name: "codex-auto-review", pricing_mode: "token", input_per_m: 0.066, output_per_m: 0.396 },
-            { model_name: "gpt-reserve", pricing_mode: "unconfigured" }
-          ]
+          success: true,
+          data: {
+            group_id: 37,
+            model_prices: [
+              { model_name: "gpt-6-luna", pricing_mode: "tiered", billing_expr: 'len <= 272000 ? tier("standard", p * 0.1 + c * 0.5) : tier("long_context", p * 0.2 + c * 0.75)' },
+              { model_name: "codex-auto-review", pricing_mode: "token", input_per_m: 0.066, output_per_m: 0.396 },
+              { model_name: "gpt-reserve", pricing_mode: "unconfigured" }
+            ]
+          }
         },
         {
-          group_id: 11,
-          model_prices: [{ model_name: "gemini-3.8-flash", pricing_mode: "tiered", billing_expr: 'tier("standard", p * 0.75 + c * 3.75)' }]
+          success: true,
+          data: {
+            group_id: 11,
+            model_prices: [{ model_name: "gemini-3.8-flash", pricing_mode: "tiered", billing_expr: 'tier("standard", p * 0.75 + c * 3.75)' }]
+          }
         }
       ]
     }

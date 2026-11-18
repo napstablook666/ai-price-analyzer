@@ -707,9 +707,11 @@ function stellaislePlazaAvailable(raw) {
 }
 
 function stellaislePlazaData(raw) {
-  if (!stellaislePlazaAvailable(raw)) return null;
   const byId = new Map();
-  for (const detail of stellaislePlazaPrices(raw)) {
+  for (const entry of stellaislePlazaPrices(raw)) {
+    // 逐条拉取存的是整包响应（{success,data:{group_id,…}}），分组详情在 data 里。
+    // 早先拿裸详情测，这条解包漏了，线上一直退回基准价。
+    const detail = entry && typeof entry === "object" && entry.data && typeof entry.data === "object" ? entry.data : entry;
     if (!detail || typeof detail !== "object") continue;
     const id = String(detail.group_id ?? "").trim();
     if (id) byId.set(id, detail);
