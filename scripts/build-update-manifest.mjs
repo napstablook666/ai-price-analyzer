@@ -4,6 +4,7 @@
 // 用法：
 //   node scripts/build-update-manifest.mjs --source dist/source --zip dist/xxx.zip \
 //     --version v0.9.0 --url https://github.com/<owner>/<repo>/releases/download/v0.9.0/xxx.zip
+// minShell 默认取 package.json 的 updateMinShell，--min-shell 可临时覆盖。
 // 私钥从环境变量 SIGNING_KEY（PEM 全文）读，或 --key-file 指定路径。
 
 import { createHash, sign, createPrivateKey } from "node:crypto";
@@ -12,6 +13,7 @@ import { existsSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { manifestSigningPayload, parseUpdateManifest } from "../src/core/self-update.js";
+import { resolveMinShell } from "./lib/update-version.mjs";
 
 const rootDir = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
@@ -66,9 +68,17 @@ const zipPath = resolve(rootDir, args.zip || "");
 const version = String(args.version || "").replace(/^v/, "");
 const zipUrl = String(args["zip-url"] || args.url || "");
 const outPath = resolve(rootDir, args.out || "dist/update.json");
-const minShell = String(args["min-shell"] || version).replace(/^v/, "");
-
 if (!version) fail("缺少 --version");
+
+// minShell 取 package.json 的 updateMinShell（协议最低兼容版本），不是本版版本号。
+// 理由与取值规则见 scripts/lib/update-version.mjs。
+const packageJson = JSON.parse(await readFile(resolve(rootDir, "package.json"), "utf8"));
+const { minShell, warnings } = resolveMinShell({
+  cliValue: args["min-shell"],
+  packageJson,
+  version
+});
+for (const warning of warnings) console.warn(`警告：${warning}`);
 if (!zipUrl) fail("缺少 --url");
 if (!existsSync(sourceDir)) fail(`找不到打包目录：${sourceDir}`);
 if (!existsSync(zipPath)) fail(`找不到更新包：${zipPath}`);
@@ -115,4 +125,5 @@ await writeFile(outPath, JSON.stringify(manifest, null, 2) + "\n", "utf8");
 
 console.log(`update.json 已生成：${toPosix(relative(rootDir, outPath))}`);
 console.log(`版本 ${version}，文件 ${Object.keys(sortedFiles).length} 个，包 ${zipInfo.size} 字节`);
+console.log(`minShell ${minShell}`);
 console.log(`zip sha256 ${zipInfo.hash}`);
