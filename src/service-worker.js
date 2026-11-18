@@ -185,13 +185,22 @@ async function collectWithCookieAuth(station, collection, cookieAuth) {
   }
 }
 
+// 拿不到页面标签页的原因不止「没登录」：同一站点多开了几个页面同样会走到这里，
+// 再报「请先登录」只会把人引到错误的方向，得说清是哪一种。
+function pageTabFailureMessage(station, reason) {
+  const name = station.name || station.id || "目标站点";
+  if (reason === "ambiguous") return `${name} 开着多个标签页，但都不在采集页面上，请只保留一个后重试`;
+  return "请先在当前 Chrome 配置文件登录目标站点一次后重试";
+}
+
 export async function withPageFetch(station, preferredTabId, task, { existingTab } = {}) {
   const origin = new URL(station.baseUrl).origin;
   return withKeyedLock(origin, async () => {
-    const { tab, temporary } = existingTab?.id
+    const opened = existingTab?.id
       ? { tab: existingTab, temporary: false }
       : await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
-    if (!tab?.id) throw new Error("请先在当前 Chrome 配置文件登录目标站点一次后重试");
+    const { tab, temporary } = opened;
+    if (!tab?.id) throw new Error(pageTabFailureMessage(station, opened.reason));
     try {
       await ensurePageBridge(chrome.scripting, tab.id, { tabs: chrome.tabs });
       const bridgeFetch = createPageFetch((message, callback) => chrome.tabs.sendMessage(tab.id, message, callback));
@@ -392,7 +401,6 @@ async function preflightPageStation(station, requestRevision) {
   let opened;
   try {
     opened = await findOrOpenPageTab(chrome.tabs, station, undefined, {
-      allowTemporaryWhenAmbiguous: true,
       keepOnLoadFailure: true,
       onTemporaryTabCreated: async created => {
         if (requestRevision === refreshPreflightRevision) {

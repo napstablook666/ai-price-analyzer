@@ -4679,18 +4679,39 @@ test("reuses an existing Hepingan login page", async () => {
   assert.equal(result.temporary, false);
 });
 
-test("does not choose an arbitrary Hepingan tab when login pages are ambiguous", async () => {
+test("opens a clean hepingan page instead of guessing among ambiguous login tabs", async () => {
+  const opened = [];
   const tabs = {
     query: async () => [
       { id: 56, url: "https://api.hepingan.top/account-a" },
       { id: 57, url: "https://api.hepingan.top/account-b" }
     ],
-    create: async () => assert.fail("should keep the ambiguous login context unresolved"),
+    create: async options => {
+      opened.push(options);
+      return { id: 58, url: options.url, status: "complete" };
+    },
+    get: async tabId => ({ id: tabId, url: "https://api.hepingan.top/available-channels", status: "complete" }),
     onUpdated: { addListener() {}, removeListener() {} },
     onRemoved: { addListener() {}, removeListener() {} }
   };
   const result = await findOrOpenPageTab(tabs, { baseUrl: "https://api.hepingan.top/available-channels", mode: "page" });
-  assert.deepEqual(result, { tab: null, temporary: false });
+  assert.equal(result.temporary, true);
+  assert.equal(result.tab.id, 58);
+  assert.deepEqual(opened, [{ url: "https://api.hepingan.top/available-channels", active: false }]);
+});
+
+test("reports too many same-site tabs when the provider cannot open a temporary page", async () => {
+  const tabs = {
+    query: async () => [
+      { id: 61, url: "https://api.killai.cc/console" },
+      { id: 62, url: "https://api.killai.cc/docs" }
+    ],
+    create: async () => assert.fail("killai has no openTemporaryPage"),
+    onUpdated: { addListener() {}, removeListener() {} },
+    onRemoved: { addListener() {}, removeListener() {} }
+  };
+  const result = await findOrOpenPageTab(tabs, { id: "killai", name: "KillAI", baseUrl: "https://api.killai.cc/pricing", mode: "page" });
+  assert.deepEqual(result, { tab: null, temporary: false, reason: "ambiguous" });
 });
 
 test("reuses an existing matching FastAIToken tab", async () => {

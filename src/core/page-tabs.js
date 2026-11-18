@@ -85,7 +85,7 @@ async function reloadErrorPage(tabs, tab) {
   return reloaded;
 }
 
-export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTemporaryWhenAmbiguous = false, keepOnLoadFailure = false, onTemporaryTabCreated } = {}) {
+export async function findOrOpenPageTab(tabs, station, preferredTabId, { keepOnLoadFailure = false, onTemporaryTabCreated } = {}) {
   const url = new URL(station.adapter?.pageUrl || station.baseUrl);
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.toString());
@@ -95,8 +95,13 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTe
     tab = sameOrigin.find(candidate => candidate.active) || sameOrigin[0] || null;
   }
   if (tab) return { tab: await reloadErrorPage(tabs, tab), temporary: false };
-  if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && sameSiteUrl(candidate.url, url.origin)).length > 1) return { tab: null, temporary: false };
-  if (provider?.openTemporaryPage !== true) return { tab: null, temporary: false };
+  // 同源开着好几个页面、但路径都不在采集页上时不猜用户那个，可也不能直接放弃：
+  // 采集层只有一句「请先登录」，用户明明登录着也会被挡在这里。支持临时开页的插件
+  // 就开一个干净的采集页；不支持的说清是「页面太杂」还是「根本打不开站点」。
+  if (provider?.openTemporaryPage !== true) {
+    const sameSite = candidates.filter(candidate => candidate.id !== undefined && sameSiteUrl(candidate.url, url.origin));
+    return { tab: null, temporary: false, reason: sameSite.length ? "ambiguous" : "absent" };
+  }
   const created = await tabs.create({ url: url.toString(), active: false });
   try {
     await onTemporaryTabCreated?.(created);
