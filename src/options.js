@@ -9,9 +9,13 @@ import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 import { paginateRows } from "./dashboard-index.js";
 import { canSelfUpdate, fetchUpdateManifest } from "./core/self-update.js";
 import { applyUpdate, isExtensionDirectory, restoreBackup } from "./core/self-update-apply.js";
+import { OPTIONS_HTML_IDS } from "./dom-contract.js";
+import { assertDomContract, makeQuery } from "./core/dom-guard.js";
 
 const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
-const $ = selector => document.querySelector(selector);
+// 页面一打开就核契约：缺的节点一次列全，不再等到切到某个视图才在别处炸。
+assertDomContract("options.html", OPTIONS_HTML_IDS);
+const $ = makeQuery("options.html", OPTIONS_HTML_IDS);
 const EMBEDDED = new URLSearchParams(location.search).get("embed") === "1";
 if (EMBEDDED) document.body.classList.add("is-embedded");
 

@@ -9,6 +9,8 @@ import { COMPARISON_MEDIA_MODES, MEDIA_MODE_LABELS, mediaModeOf, normalizeMediaT
 import { providerIconMarkup, providerLogoFor } from "./shared/provider-icons.js";
 import { siteIconMarkup } from "./shared/site-icon.js";
 import { IMAGE_UNIT_LABELS, IMAGE_UNIT_SUFFIXES, mediaUnitLabel, mediaUnitRank } from "./core/image-billing.js";
+import { DASHBOARD_HTML_IDS } from "./dom-contract.js";
+import { assertDomContract, makeQuery } from "./core/dom-guard.js";
 
 // 供应商不写死名单：默认全选（null）。用户改过就记进 localStorage 的 JSON，下次打开沿用。
 const PROVIDER_FILTER_STORE = "model-atlas:provider-filter";
@@ -72,7 +74,9 @@ const state = {
   refreshStationQuery: "",
   refreshStationOptionsKey: ""
 };
-const $ = selector => document.querySelector(selector);
+// 页面一打开就核契约：缺的节点一次列全，不再等到某个按钮被点开才炸。
+assertDomContract("dashboard.html", DASHBOARD_HTML_IDS);
+const $ = makeQuery("dashboard.html", DASHBOARD_HTML_IDS);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
 const refreshRows = new Map();

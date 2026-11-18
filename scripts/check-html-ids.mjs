@@ -12,13 +12,18 @@
 // `document.getElementById("x")` 后紧跟 `el.id = "x"` 的是 get-or-create，不算缺失。
 // 动态拼接的选择器（$(`#${key}-filters`)）静态求不了，按前后缀排除并打印覆盖率。
 //
-// 用法：node scripts/check-html-ids.mjs [--json]
-import { readFileSync, existsSync, readdirSync } from "node:fs";
+// 顺带生成 src/dom-contract.js：每页被字面量引用过的 id 清单，页面启动时据此点名。
+// 生成物与源码不一致时报错，避免「静态查得出、运行时看不见」两头脱节。
+//
+// 用法：node scripts/check-html-ids.mjs [--json] [--write]
+import { readFileSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const PAGES = ["dashboard.html", "options.html"];
+// 每页「被字面量引用过的 id」会攒在这里，最后写成 src/dom-contract.js 给运行时用。
+const contracts = {};
 
 const ID_ATTR = /\sid\s*=\s*["']([^"']+)["']/g;
 const SCRIPT_SRC = /<script[^>]*\ssrc\s*=\s*["']([^"']+)["']/g;
@@ -115,6 +120,8 @@ for (const page of PAGES) {
   const missing = [...referenced]
     .filter((id) => !defined.has(id) && !selfDefined.has(id) && !isDynamic(id))
     .sort();
+  // 清单只收「脚本真的按字面量引用过」的 id：代码自己创建的不算，动态拼接的算不出全集。
+  contracts[page] = [...referenced].filter((id) => !selfDefined.has(id)).sort();
   // 死节点＝在整页脚本、样式表、以及 HTML 自身的 aria/href 引用里都不再出现。
   // HTML 里出现两次以上（一次是定义，一次是被 aria-controls 之类引用）就算活着。
   const css = cssCorpus();
@@ -176,6 +183,44 @@ if (existsSync(optionsPath)) {
       page: "options.html",
       level: badViews ? "error" : "info",
       msg: `视图注册表 ${views.length} 项，缺 DOM ${badViews} 项`,
+    });
+  }
+}
+
+// 把清单写成运行时可用的模块：同一个事实，静态侧查一遍，运行时再核一遍。
+const CONTRACT_PATH = resolve(root, "src/dom-contract.js");
+const contractName = (page) =>
+  `${page.replace(/\.html$/, "").replace(/[^A-Za-z0-9]+/g, "_").toUpperCase()}_HTML_IDS`;
+
+function renderContract() {
+  const lines = [
+    "// 由 scripts/check-html-ids.mjs 生成，不要手改。改完 HTML 或选择器之后跑 `npm run ids:build`。",
+    "// 内容是整页脚本里以字面量引用过的 id。页面启动时逐个核对，缺几个就一次列全，",
+    "// 而不是等到某个按钮被点开，才在几十行之外炸成一句 setAttribute of null。",
+    "",
+  ];
+  for (const page of PAGES) {
+    const ids = contracts[page];
+    if (!ids) continue;
+    lines.push(`export const ${contractName(page)} = [`);
+    for (const id of ids) lines.push(`  ${JSON.stringify(id)},`);
+    lines.push("];", "");
+  }
+  return lines.join("\n");
+}
+
+const expectedContract = renderContract();
+const currentContract = existsSync(CONTRACT_PATH) ? readFileSync(CONTRACT_PATH, "utf8") : "";
+if (currentContract !== expectedContract) {
+  if (process.argv.includes("--write")) {
+    writeFileSync(CONTRACT_PATH, expectedContract);
+    report.push({ page: "src/dom-contract.js", level: "info", msg: "契约清单已重新生成" });
+  } else {
+    failed++;
+    report.push({
+      page: "src/dom-contract.js",
+      level: "error",
+      msg: "DOM 契约清单与当前源码不一致，跑 `npm run ids:build` 重新生成",
     });
   }
 }

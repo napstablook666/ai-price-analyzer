@@ -35,6 +35,14 @@ jobs:
       - name: Check generated plugin files
         run: node scripts/plugin-build.mjs --check
 
+      # 这两条以前只写在 npm run verify 里，CI 从来没跑过。
+      # 校验写好了没人跑，等于没写——复盘里最贵的一条教训，先在这里补上。
+      - name: Check DOM id contract
+        run: npm run ids:check
+
+      - name: Check version consistency
+        run: npm run version:check
+
       - name: Check extension syntax and manifest
         shell: bash
         run: |
@@ -45,6 +53,8 @@ jobs:
           node --check src/content-bridge.js
           node --check src/page-bridge.js
           node -e "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8'))"
+          node --check src/core/dom-guard.js
+          node --check src/dom-contract.js
           test -f dashboard.html
           test -f options.html
           test -s icons/icon.svg
