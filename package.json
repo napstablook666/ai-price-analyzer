@@ -1,6 +1,6 @@
 {
   "name": "ai-price-analyzer",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "type": "module",
   "description": "AI 中转站模型价格比价浏览器扩展",
   "private": true,
