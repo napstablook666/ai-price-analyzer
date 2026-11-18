@@ -13,7 +13,7 @@
 // 动态拼接的选择器（$(`#${key}-filters`)）静态求不了，按前后缀排除并打印覆盖率。
 //
 // 用法：node scripts/check-html-ids.mjs [--json]
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -61,6 +61,18 @@ function dynamicShapes(text) {
   return { prefixes, suffixes, wildcard, count };
 }
 
+let cssCache = null;
+function cssCorpus() {
+  if (cssCache !== null) return cssCache;
+  const dir = resolve(root, "styles");
+  cssCache = existsSync(dir)
+    ? readdirSync(dir)
+        .filter((f) => f.endsWith(".css"))
+        .map((f) => readFileSync(resolve(dir, f), "utf8"))
+        .join("\n")
+    : "";
+  return cssCache;
+}
 // 从 HTML 的 script src 出发，顺着相对 import 收集整页脚本
 function collectScripts(htmlPath, html) {
   const seen = new Set();
@@ -96,22 +108,29 @@ for (const page of PAGES) {
   const referenced = refsIn(code);
   const selfDefined = new Set([...code.matchAll(SELF_DEFINED)].map((m) => m[1]));
   const { prefixes, suffixes, wildcard, count: dynCount } = dynamicShapes(code);
-  const isDynamic = (id) =>
-    wildcard ||
-    [...prefixes].some((p) => id.startsWith(p)) ||
-    [...suffixes].some((s) => id.endsWith(s));
+  const shapeMatch = (id) =>
+    [...prefixes].some((p) => id.startsWith(p)) || [...suffixes].some((s) => id.endsWith(s));
+  const isDynamic = (id) => wildcard || shapeMatch(id);
 
   const missing = [...referenced]
     .filter((id) => !defined.has(id) && !selfDefined.has(id) && !isDynamic(id))
     .sort();
-  const unused = [...defined].filter((id) => !code.includes(id)).sort();
+  // 死节点＝在整页脚本、样式表、以及 HTML 自身的 aria/href 引用里都不再出现。
+  // HTML 里出现两次以上（一次是定义，一次是被 aria-controls 之类引用）就算活着。
+  const css = cssCorpus();
+  const occurrences = (id) => html.split(id).length - 1;
+  const unused = [...defined]
+    // 动态拼接能生成这个 id（$(`#${key}-filters`) 之于 group-filters）也不算死。
+    // 全通配（$(`#${id}`)）不参与这个判断，否则整页 id 全被判活。
+    .filter((id) => !code.includes(id) && !css.includes(id) && occurrences(id) < 2 && !shapeMatch(id))
+    .sort();
 
   for (const id of missing) {
     failed++;
     report.push({ page, level: "error", msg: `JS 引用了不存在的 id: #${id}` });
   }
   for (const id of unused) {
-    report.push({ page, level: "info", msg: `HTML 里的 id 全页无人引用: #${id}` });
+    report.push({ page, level: "info", msg: `HTML 里的 id 无人按 id 引用（可能只用 class 或纯样式钩子）: #${id}` });
   }
 
   const staticOk = [...referenced].filter((id) => !isDynamic(id) && !selfDefined.has(id)).length;
@@ -124,6 +143,41 @@ for (const page of PAGES) {
       ` / 可静态验证 ${staticOk} 处，动态拼接 ${dynCount} 处，自建节点 ${selfDefined.size} 个` +
       (wildcard ? " —— 存在全通配选择器，本页静态检查失效，只能真机验" : ""),
   });
+}
+
+// 设置页的视图注册表曾经残留过一个已删的 "providers"，
+// activateSettingsView() 对 null 调 setAttribute，整个 options.js 初始化就此中断。
+// 注册表与 DOM 必须一一对应，这条只能靠这里和真机各拦一次。
+const optionsPath = resolve(root, "src/options.js");
+if (existsSync(optionsPath)) {
+  const optionsCode = readFileSync(optionsPath, "utf8");
+  const viewsDecl = optionsCode.match(/SETTINGS_VIEWS\s*=\s*\[([^\]]*)\]/);
+  if (viewsDecl) {
+    const optionsHtml = readFileSync(resolve(root, "options.html"), "utf8");
+    const views = [...viewsDecl[1].matchAll(/["']([A-Za-z0-9_-]+)["']/g)].map((m) => m[1]);
+    let badViews = 0;
+    for (const view of views) {
+      const missingView = !optionsHtml.includes(`id="settings-view-${view}"`);
+      const missingTab = !optionsHtml.includes(`data-settings-target="${view}"`);
+      if (!missingView && !missingTab) continue;
+      badViews++;
+      failed++;
+      report.push({
+        page: "options.html",
+        level: "error",
+        msg:
+          `SETTINGS_VIEWS 里的 "${view}" 缺 DOM` +
+          `${missingView ? `（无 #settings-view-${view}）` : ""}` +
+          `${missingTab ? `（无 data-settings-target="${view}"）` : ""}` +
+          " —— 切到这个视图时整页初始化会中断",
+      });
+    }
+    report.push({
+      page: "options.html",
+      level: badViews ? "error" : "info",
+      msg: `视图注册表 ${views.length} 项，缺 DOM ${badViews} 项`,
+    });
+  }
 }
 
 if (process.argv.includes("--json")) {
