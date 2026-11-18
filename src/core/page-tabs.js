@@ -6,9 +6,23 @@ import {
   LEGACY_PAGE_WINDOW_RESPONSE_TYPE,
   PAGE_BRIDGE_VERSION
 } from "./bridge-protocol.js";
-import { providerForStation } from "./provider-registry.js";
+import { normalizeHostname, providerForStation } from "./provider-registry.js";
+// 站点常把裸域 301 到 www（jiji.cc → www.jiji.cc）。两边要算同一个站点，
+// 否则浏览器里明明开着那个页面也认不出来，每次都白开一个新标签页。
+function sameSiteUrl(value, origin) {
+  if (typeof value !== "string" || !value) return false;
+  if (value.startsWith(`${origin}/`)) return true;
+  try {
+    const left = new URL(value);
+    const right = new URL(origin);
+    return left.protocol === right.protocol && left.port === right.port && normalizeHostname(left.hostname) === normalizeHostname(right.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function selectPageTab(tabs, origin, preferredTabId, preferredPath) {
-  const matchingTabs = tabs.filter(tab => tab.id !== undefined && tab.url?.startsWith(`${origin}/`));
+  const matchingTabs = tabs.filter(tab => tab.id !== undefined && sameSiteUrl(tab.url, origin));
   const preferred = matchingTabs.find(tab => tab.id === preferredTabId);
   if (preferred) return preferred;
   if (matchingTabs.length === 1) return matchingTabs[0];
@@ -80,11 +94,11 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTe
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.toString());
   const provider = providerForStation(station, { forPrepare: true });
   if (!tab && provider?.reuseAmbiguousOriginTab === true) {
-    const sameOrigin = candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`));
+    const sameOrigin = candidates.filter(candidate => candidate.id !== undefined && sameSiteUrl(candidate.url, url.origin));
     tab = sameOrigin.find(candidate => candidate.active) || sameOrigin[0] || null;
   }
   if (tab) return { tab: await reloadErrorPage(tabs, tab), temporary: false };
-  if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && candidate.url?.startsWith(`${url.origin}/`)).length > 1) return { tab: null, temporary: false };
+  if (!allowTemporaryWhenAmbiguous && candidates.filter(candidate => candidate.id !== undefined && sameSiteUrl(candidate.url, url.origin)).length > 1) return { tab: null, temporary: false };
   if (provider?.openTemporaryPage !== true) return { tab: null, temporary: false };
   const created = await tabs.create({ url: url.toString(), active: false });
   try {

@@ -4072,6 +4072,52 @@ test("isolates the Hepingan v3 bridge from stale v2 listeners and uses page auth
   assert.equal(posted.at(-1).type, PAGE_WINDOW_RESPONSE_TYPE);
 });
 
+test("站点 301 到 www 时，裸域地址的请求落到页面 origin，Authorization 不被跨域重定向吃掉", async () => {
+  const listeners = new Map();
+  const posted = [];
+  const calls = [];
+  const pageOrigin = "https://www.jiji.cc";
+  const modelApi = "https://jiji.cc/extension/api/model-market";
+  const pageAuth = { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 Jiji 登录凭据，请先在当前 Chrome 配置文件登录后重试" };
+  const pageWindow = {
+    location: { hostname: "www.jiji.cc", href: `${pageOrigin}/custom/13235f4cd3f1e94e`, origin: pageOrigin },
+    history: { pushState() {}, replaceState() {} },
+    document: { body: {}, querySelector: () => null, querySelectorAll: () => [] },
+    localStorage: { getItem: () => "jiji-token", length: 1, key: () => "auth_token" },
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    removeEventListener() {},
+    postMessage(message) { posted.push(message); },
+    fetch: async (url, init) => {
+      calls.push({ url, init });
+      return { ok: true, status: 200, headers: { get: () => "application/json" }, json: async () => ({ data: [] }), clone: () => ({ json: async () => ({ data: [] }) }) };
+    }
+  };
+  function MockXHR() {}
+  MockXHR.prototype.open = function() {};
+  MockXHR.prototype.send = function() {};
+  runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), { window: pageWindow, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR, URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise });
+  await listeners.get("message")({
+    source: pageWindow,
+    origin: pageOrigin,
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "jiji-www", request: { url: modelApi, method: "GET", headers: { Accept: "application/json" }, pageAuth } }
+  });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, `${pageOrigin}/extension/api/model-market`);
+  assert.equal(calls[0].init.headers.Authorization, "Bearer jiji-token");
+  assert.equal(posted.at(-1).type, PAGE_WINDOW_RESPONSE_TYPE);
+  assert.equal(posted.at(-1).response.ok, true);
+
+  posted.length = 0;
+  calls.length = 0;
+  await listeners.get("message")({
+    source: pageWindow,
+    origin: pageOrigin,
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "jiji-other-host", request: { url: "https://evil.example/extension/api/model-market", method: "GET" } }
+  });
+  assert.equal(calls.length, 0);
+  assert.match(posted.at(-1).error, /页面请求必须同源/);
+});
+
 test("refreshes page auth once and stops after a failed refresh", async () => {
   const listeners = new Map();
   const posted = [];
@@ -4682,6 +4728,11 @@ test("page discovery requires the initiating tab when origins are ambiguous", ()
   assert.equal(selectPageTab(tabs, "https://relay.example", 11), null);
   assert.equal(selectPageTab(tabs, "https://relay.example"), null);
   assert.equal(selectPageTab([tabs[0]], "https://relay.example"), tabs[0]);
+  // 站点 301 到 www（jiji.cc → www.jiji.cc）时，浏览器里开着的 www 页面要能认出来。
+  const wwwTabs = [{ id: 31, url: "https://www.jiji.cc/custom/13235f4cd3f1e94e" }];
+  assert.equal(selectPageTab(wwwTabs, "https://jiji.cc", undefined, "https://jiji.cc/custom/13235f4cd3f1e94e")?.id, 31);
+  assert.equal(selectPageTab(wwwTabs, "https://jiji.cc", 31)?.id, 31);
+  assert.equal(selectPageTab(wwwTabs, "https://other.example", undefined), null);
   const hashTabs = [
     { id: 21, url: "https://all-in-one.icu/#/login" },
     { id: 22, url: "https://all-in-one.icu/#/tenant/models" }

@@ -13,6 +13,31 @@ const LEGACY_PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request", "new-api-user"]);
 const ALLOWED_CREDENTIALS = new Set(["omit", "same-origin", "include"]);
+// 不少站点把裸域 301 到 www（jiji.cc → www.jiji.cc）。插件里写的裸域地址原样发出去，
+// 浏览器先吃一次跨域重定向，而 fetch 在跨域重定向时会把 Authorization 丢掉，接口那边就成了未登录。
+// 所以 www 与非 www 视为同一个站点，但请求必须落到页面当前 origin，一个字节都不外送。
+function isSameSiteOrigin(origin, reference) {
+  if (origin === reference) return true;
+  let left;
+  let right;
+  try {
+    left = new URL(origin);
+    right = new URL(reference);
+  } catch {
+    return false;
+  }
+  if (left.protocol !== right.protocol || left.port !== right.port) return false;
+  return left.hostname.toLowerCase().replace(/^www\./, "") === right.hostname.toLowerCase().replace(/^www\./, "");
+}
+
+function alignToPageOrigin(url) {
+  if (url.origin === window.location.origin) return url;
+  const page = new URL(window.location.href);
+  url.protocol = page.protocol;
+  url.hostname = page.hostname;
+  url.port = page.port;
+  return url;
+}
 let capturedPricing = null;
 const MAX_CAPTURE_BYTES = 512 * 1024;
 const CAPTURE_TTL_MS = 30_000;
@@ -341,6 +366,32 @@ function readStoredPageToken(pageAuth) {
   return "";
 }
 
+// 采不到要说清采不到在哪：是页面停在别处，还是本机存储里压根没这个键。
+// 只报键名与页面路径，令牌本身一个字都不带出来。
+function listStorageKeys(storage, limit) {
+  const keys = [];
+  try {
+    for (let index = 0; index < storage.length && keys.length < limit; index += 1) {
+      const key = String(storage.key(index) || "");
+      if (key) keys.push(key);
+    }
+  } catch {
+    return [];
+  }
+  return keys;
+}
+
+function describePageAuthState(pageAuth) {
+  const storageKey = String(pageAuth?.storageKey || "");
+  const tokens = listStorageKeys(window.localStorage, 60);
+  const refreshTokenKey = String(pageAuth?.refresh?.refreshTokenStorageKey || "");
+  const parts = [`页面 ${window.location.pathname || "/"}`];
+  parts.push(tokens.includes(storageKey) ? `${storageKey} 有键但值为空` : `localStorage 里没有 ${storageKey}`);
+  if (refreshTokenKey) parts.push(tokens.includes(refreshTokenKey) ? `有 ${refreshTokenKey} 但续期没成功` : `也没有 ${refreshTokenKey}`);
+  parts.push(`现有键：${tokens.length ? tokens.slice(0, 12).join("、") : "无"}`);
+  return `（${parts.join("；")}）`;
+}
+
 function readStoredPath(storageKey, path) {
   if (!storageKey || !path) return "";
   let payload;
@@ -387,14 +438,15 @@ async function applyPageAuth(headers, pageAuth) {
   if (!token && pageAuth.refresh) {
     if (await refreshPageAuth(pageAuth)) token = readStoredPageToken(pageAuth);
   }
-  if (!token) throw new Error(pageAuth.missingMessage || "未找到页面登录凭据，请先在当前 Chrome 配置文件登录后重试");
+  if (!token) throw new Error(`${pageAuth.missingMessage || "未找到页面登录凭据，请先在当前 Chrome 配置文件登录后重试"}${describePageAuthState(pageAuth)}`);
   headers[header] = pageAuth.scheme ? `${pageAuth.scheme} ${token}` : token;
 }
 
 async function validateRequest(request) {
   if (!request || typeof request.url !== "string") throw new Error("页面请求缺少地址");
   const url = new URL(request.url, window.location.href);
-  if (url.origin !== window.location.origin) throw new Error("页面请求必须同源");
+  if (!isSameSiteOrigin(url.origin, window.location.origin)) throw new Error("页面请求必须同源");
+  alignToPageOrigin(url);
   const method = String(request.method || "GET").toUpperCase();
   if (!ALLOWED_METHODS.has(method)) throw new Error("页面请求方式不受支持");
   const credentials = request.credentials == null ? "omit" : String(request.credentials);
@@ -414,7 +466,8 @@ async function refreshPageAuth(pageAuth) {
   if (!refresh || typeof refresh !== "object") return false;
   let refreshUrl;
   try { refreshUrl = new URL(String(refresh.endpoint || ""), window.location.href); } catch { return false; }
-  if (refreshUrl.origin !== window.location.origin) return false;
+  if (!isSameSiteOrigin(refreshUrl.origin, window.location.origin)) return false;
+  alignToPageOrigin(refreshUrl);
   const cookieOnly = refresh.cookieOnly === true;
   const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
   const refreshTokenPath = String(refresh.refreshTokenPath || "");
