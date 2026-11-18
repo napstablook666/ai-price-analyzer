@@ -27,6 +27,7 @@ import { sitePlugin as stellaislePlugin } from "./providers/stellaisle.js";
 import { sitePlugin as relayrouterPlugin } from "./providers/relayrouter.js";
 import { sitePlugin as stellaisleCarpoolPlugin } from "./providers/stellaisle-carpool.js";
 import { sitePlugin as newcodexPlugin } from "./providers/newcodex.js";
+import { sitePlugin as allrouterPlugin } from "./providers/allrouter.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -71,7 +72,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("stellaisle", "飓星API", "token.stellaisle.com", "direct", () => ({ sitePlugin: stellaislePlugin }), { paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，90 个模型，站点不公开模型与渠道分组的对应关系，只采基准价" }),
   entry("relayrouter", "RelayRouter", "relayrouter.app", "direct", () => ({ sitePlugin: relayrouterPlugin }), { hosts: ["www.relayrouter.app","relayrouter.app"], paths: ["/pricing","/console/topup","/"], description: "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）" }),
   entry("stellaisle-carpool", "飓星API 拼车", "token.stellaisle.com", "page", () => ({ sitePlugin: stellaisleCarpoolPlugin }), { paths: ["/carpool-market"], description: "登录后读 /api/carpool-market 的座位清单，用座位价除以期间额度当折扣，折算站内模型价" }),
-  entry("newcodex", "NewCodex", "newcodex.cn", "direct", () => ({ sitePlugin: newcodexPlugin }), { hosts: ["newcodex.cn","www.newcodex.cn"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，69 个模型 11 个分组；充值 1 元 = 1 美元额度，单笔 ¥100/200/500/1000 另赠 10%/20%/40%/50%" })
+  entry("newcodex", "NewCodex", "newcodex.cn", "direct", () => ({ sitePlugin: newcodexPlugin }), { hosts: ["newcodex.cn","www.newcodex.cn"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，69 个模型 11 个分组；充值 1 元 = 1 美元额度，单笔 ¥100/200/500/1000 另赠 10%/20%/40%/50%" }),
+  entry("allrouter", "AllRouter", "allrouter.cc", "direct", () => ({ sitePlugin: allrouterPlugin }), { hosts: ["allrouter.cc","www.allrouter.cc"], paths: ["/","/console","/console/topup"], description: "公开 /api/ratio_config 直连采集，49 个在售模型；倍率 1 = $2/百万 token，DeepSeek 与部分长上下文模型走分段表达式；充值 1 元 = 1 美元额度" })
 ];
 
 export function sitePluginById(id) {

@@ -10,6 +10,7 @@ const definitions = {
   "fuck-everyone-model-plaza": { label: "fuck-everyone 模型广场", explicit: true, strategy: "model-plaza", profile: "fuck-everyone" },
   "tokenflux": { label: "TokenFlux 定价", explicit: true, strategy: "tokenflux" },
   "newcodex": { label: "NewCodex 定价", explicit: true, strategy: "newcodex" },
+  "allrouter": { label: "AllRouter 定价", explicit: true, strategy: "allrouter" },
   "windhub": { label: "WindHub 公开定价", explicit: true, strategy: "windhub" },
   "stellaisle": { label: "Star API 公开定价", explicit: true, strategy: "stellaisle" },
   "stellaisle-carpool": { label: "Star API 拼车市场", explicit: true, strategy: "stellaisle-carpool" },

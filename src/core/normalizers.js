@@ -9,6 +9,7 @@ import { trueSotaPriceMap } from "./price-maps/true-sota.js";
 import { sidrunePriceMap } from "./price-maps/sidrune.js";
 import { relayRouterPriceMap } from "./price-maps/relayrouter.js";
 import { newcodexPriceMap } from "./price-maps/newcodex.js";
+import { ALLROUTER_IMAGE_MODELS, ALLROUTER_MODELS, allrouterPriceMap } from "./price-maps/allrouter.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
@@ -578,6 +579,47 @@ export class NewCodexPricingStrategy extends TokenFluxPricingStrategy {
 
   parse(raw) {
     return { ...super.parse(raw), sourceFormat: "newcodex" };
+  }
+}
+
+// AllRouter 的 /api/ratio_config 是 New API 的列式报文：data 里没有行数组，
+// 而是 model_ratio / completion_ratio / cache_ratio / create_cache_ratio / model_price /
+// billing_expr / billing_mode 七张「模型名 → 值」的表。这里按模型名拼成行，再交给价格映射。
+// 拼之前先过在售白名单：ratio 表里那 486 条大多是 New API 出厂默认表，站点根本不卖。
+export const ALLROUTER_COLUMNS = [
+  "model_ratio", "completion_ratio", "cache_ratio", "create_cache_ratio", "model_price", "billing_expr", "billing_mode"
+];
+const ALLROUTER_MODEL_SET = new Set(ALLROUTER_MODELS);
+
+export function pivotAllRouterColumns(data) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return [];
+  const columns = ALLROUTER_COLUMNS.filter(key => data[key] && typeof data[key] === "object");
+  if (!columns.length) return [];
+  const names = new Set();
+  for (const key of columns) for (const name of Object.keys(data[key])) names.add(name);
+  return [...names].filter(name => ALLROUTER_MODEL_SET.has(name)).map(name => {
+    const row = { model_name: name };
+    for (const key of columns) if (own(data[key], name)) row[key] = data[key][name];
+    // 站点不报端点类型，出图模型靠这张表补，见 price-maps/allrouter.js。
+    if (ALLROUTER_IMAGE_MODELS.has(name)) row.supported_endpoint_types = ["image-generation"];
+    return row;
+  });
+}
+
+// 拼出来的行和 tokenflux 同构，规则整份复用；倍率类乘 2 的理由见 price-maps/allrouter.js。
+export class AllRouterPricingStrategy extends TokenFluxPricingStrategy {
+  get priceMap() { return allrouterPriceMap; }
+
+  canParse(raw, options = {}) {
+    return options.responseFormat === "allrouter" && raw?.success === true &&
+      raw?.data && typeof raw.data === "object" && !Array.isArray(raw.data) &&
+      Boolean(raw.data.model_ratio) && typeof raw.data.model_ratio === "object";
+  }
+
+  parse(raw) {
+    // 站点没有公开的分组倍率表，group_ratio 给空对象，让它走价格映射里的 unlisted 基准价。
+    const normalized = super.parse({ ...raw, data: pivotAllRouterColumns(raw.data), group_ratio: {} });
+    return { ...normalized, sourceFormat: "allrouter" };
   }
 }
 
@@ -1732,6 +1774,7 @@ registerResponseFormatHandler("pqh", () => new PqhPricingStrategy());
 registerResponseFormatHandler("tokenflux", () => new TokenFluxPricingStrategy());
 registerResponseFormatHandler("windhub", () => new WindHubPricingStrategy());
 registerResponseFormatHandler("newcodex", () => new NewCodexPricingStrategy());
+registerResponseFormatHandler("allrouter", () => new AllRouterPricingStrategy());
 registerResponseFormatHandler("stellaisle", () => new StellaislePricingStrategy());
 registerResponseFormatHandler("stellaisle-carpool", () => new StellaisleCarpoolPricingStrategy());
 registerResponseFormatHandler("relayrouter", () => new RelayRouterPricingStrategy());

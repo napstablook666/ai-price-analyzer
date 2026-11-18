@@ -25,5 +25,6 @@ export const SITE_PLUGIN_ORDER = [
   "stellaisle",
   "relayrouter",
   "stellaisle-carpool",
-  "newcodex"
+  "newcodex",
+  "allrouter"
 ];

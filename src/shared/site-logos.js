@@ -4,6 +4,7 @@
 export const SITE_LOGOS = {
   "aiapi": "icons/sites/aiapi.svg",
   "all-in-one": "icons/sites/all-in-one.svg",
+  "allrouter": "icons/sites/allrouter.svg",
   "centos": "icons/sites/centos.png",
   "cheaprouter": "icons/sites/cheaprouter.svg",
   "cun": "icons/sites/cun.png",
