@@ -178,7 +178,46 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
 
 // 站点可能把价格和分组拆在两个接口里：飓星API 的拼车中心就是一个例子，
 // 座位清单在 /api/carpool-market，模型单价还在 /api/pricing。
+// 分组广场更绕一层：先拿分组表，每个分组的报价在 /api/group-plaza/groups/{id}。
 // 辅助报文挂在 __aux 上交给响应格式处理器；拿不到就跳过，不拖垮主采集。
+function pickPath(source, path) {
+  const keys = String(path || "").split(".").map(key => key.trim()).filter(Boolean);
+  let current = source;
+  for (const key of keys) {
+    if (current === null || current === undefined || typeof current !== "object") return undefined;
+    current = current[key];
+  }
+  return current;
+}
+
+async function fetchAuxBody(station, endpoint, strategy, spec, { fetchImpl, pageFetch }) {
+  const url = new URL(endpoint, station.baseUrl).toString();
+  const request = buildStationRequest(station, url, { ...strategy, ...spec });
+  const response = station.mode === "page" && pageFetch
+    ? await pageFetch(request.pageRequest)
+    : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: request.credentials });
+  if (!response || response.ok === false || (response.status && response.status >= 400)) return null;
+  const body = typeof response.json === "function" ? await readResponse(response) : response.body;
+  return body && typeof body === "object" && !Array.isArray(body) ? body : null;
+}
+
+// 逐条拉取时一次放几个出去：分组广场三十来个分组，串行会拖到一分钟以外。
+const AUX_DETAIL_CONCURRENCY = 6;
+
+async function mapWithConcurrency(entries, limit, worker) {
+  const results = new Array(entries.length);
+  let cursor = 0;
+  const runners = Array.from({ length: Math.min(limit, entries.length) }, async () => {
+    while (cursor < entries.length) {
+      const index = cursor;
+      cursor += 1;
+      results[index] = await worker(entries[index], index);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
 async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetch }) {
   const specs = Array.isArray(strategy?.aux) ? strategy.aux : [];
   if (!specs.length || !payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
@@ -188,14 +227,28 @@ async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetc
     const endpoint = String(spec?.endpoint || "").trim();
     if (!key || !endpoint) continue;
     try {
-      const url = new URL(endpoint, station.baseUrl).toString();
-      const request = buildStationRequest(station, url, { ...strategy, ...spec });
-      const response = station.mode === "page" && pageFetch
-        ? await pageFetch(request.pageRequest)
-        : await fetchImpl(url, { method: request.method, headers: request.headers, body: request.body, credentials: request.credentials });
-      if (!response || response.ok === false || (response.status && response.status >= 400)) continue;
-      const body = typeof response.json === "function" ? await readResponse(response) : response.body;
-      if (body && typeof body === "object" && !Array.isArray(body)) auxiliary[key] = body;
+      // forEach 指向主报文里的一张清单：清单里一个 id 一次请求，结果按原顺序收成数组。
+      if (!spec.forEach) {
+        const body = await fetchAuxBody(station, endpoint, strategy, spec, { fetchImpl, pageFetch });
+        if (body) auxiliary[key] = body;
+        continue;
+      }
+      // 清单可以来自主报文，也可以来自前一个辅助报文（分组表就是先拉列表再逐组取价）。
+      const list = pickPath(auxiliary, spec.forEach) ?? pickPath(payload, spec.forEach);
+      if (!Array.isArray(list)) continue;
+      const idField = String(spec.idField || "id");
+      const where = spec.where && typeof spec.where === "object" ? spec.where : null;
+      const targets = list
+        .filter(row => row && typeof row === "object")
+        .filter(row => !where || Object.entries(where).every(([field, expected]) => String(row[field] ?? "") === String(expected)))
+        .map(row => String(row[idField] ?? "").trim())
+        .filter(Boolean);
+      if (!targets.length) continue;
+      const bodies = await mapWithConcurrency(targets, AUX_DETAIL_CONCURRENCY, id =>
+        fetchAuxBody(station, endpoint.replace("{id}", encodeURIComponent(id)), strategy, spec, { fetchImpl, pageFetch })
+      );
+      const collected = bodies.filter(Boolean);
+      if (collected.length) auxiliary[key] = collected;
     } catch {
       // 辅助接口失败就当作没有：主价格还在。
     }

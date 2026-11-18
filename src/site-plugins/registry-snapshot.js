@@ -229,7 +229,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "stellaisle",
       "name": "飓星API",
       "version": "0.12.0",
-      "description": "公开 /api/pricing 直连采集，90 个模型，站点不公开模型与渠道分组的对应关系，只采基准价",
+      "description": "公开接口直连采集：/api/pricing 给 94 个模型的基准价，/api/group-plaza 给分组与倍率，按分组展开报价",
       "hosts": [
         "token.stellaisle.com"
       ],

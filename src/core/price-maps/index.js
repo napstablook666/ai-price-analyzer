@@ -10,7 +10,7 @@
 // 新增一个同形状站点不再需要动扩展代码。
 
 import { tokenfluxPriceMap } from "./tokenflux.js";
-import { stellaislePriceMap } from "./stellaisle.js";
+import { stellaislePriceMap, stellaislePlazaPriceMap } from "./stellaisle.js";
 import { stellaisleCarpoolPriceMap } from "./stellaisle-carpool.js";
 import { cheapRouterPriceMap } from "./cheaprouter.js";
 import { trueSotaPriceMap } from "./true-sota.js";
@@ -25,6 +25,7 @@ export const PRICE_MAP_BASES = Object.freeze({
   newcodex: newcodexPriceMap,
   allrouter: allrouterPriceMap,
   stellaisle: stellaislePriceMap,
+  "stellaisle-plaza": stellaislePlazaPriceMap,
   "stellaisle-carpool": stellaisleCarpoolPriceMap,
   cheaprouter: cheapRouterPriceMap,
   "true-sota": trueSotaPriceMap,

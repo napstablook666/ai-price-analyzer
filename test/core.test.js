@@ -624,6 +624,49 @@ test("prepares a shared-host station with the plugin it was created from", () =>
   assert.equal(providerForStation({ baseUrl: "https://token.stellaisle.com/carpool-market" }).id, "stellaisle-carpool");
 });
 
+test("飓星分组广场：按分组展开报价，不可用分组与未定价模型跳过", () => {
+  const payload = {
+    success: true,
+    group_ratio: {},
+    data: [{ model_name: "base-only", quota_type: 0, model_ratio: 1, completion_ratio: 2, enable_groups: [] }],
+    __aux: {
+      groups: {
+        data: {
+          items: [
+            { group_id: 37, vendor_name: "SWS", name: "认证特惠供应商s001", ratio: 0.088, status: "ok" },
+            { group_id: 11, vendor_name: "平台认证", name: "认证供应商SG", ratio: 0.473, status: "unstable" }
+          ]
+        }
+      },
+      groupPrices: [
+        {
+          group_id: 37,
+          model_prices: [
+            { model_name: "gpt-6-luna", pricing_mode: "tiered", billing_expr: 'len <= 272000 ? tier("standard", p * 0.1 + c * 0.5) : tier("long_context", p * 0.2 + c * 0.75)' },
+            { model_name: "codex-auto-review", pricing_mode: "token", input_per_m: 0.066, output_per_m: 0.396 },
+            { model_name: "gpt-reserve", pricing_mode: "unconfigured" }
+          ]
+        },
+        {
+          group_id: 11,
+          model_prices: [{ model_name: "gemini-3.8-flash", pricing_mode: "tiered", billing_expr: 'tier("standard", p * 0.75 + c * 3.75)' }]
+        }
+      ]
+    }
+  };
+  const normalized = normalizePricingPayload(payload, "stellaisle", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(normalized.error, undefined);
+  // 基准价那一条被分组报价顶掉：站内基准价倍率 1，没人买得到，混进榜里只会把价格抬高一截。
+  assert.deepEqual([...new Set(normalized.data.map(row => row.model_name))].sort(), ["codex-auto-review", "gpt-6-luna"]);
+  const luna = normalized.data.filter(row => row.model_name === "gpt-6-luna");
+  assert.deepEqual(luna.map(row => [row.tier_name, row.input_price]), [["standard", 0.0088], ["long_context", 0.0176]]);
+  assert.equal(luna[0].proxy_group_name, "SWS · 认证特惠供应商s001");
+  assert.equal(luna[0].group_ratio, 0.088);
+  const codex = normalized.data.find(row => row.model_name === "codex-auto-review");
+  assert.equal(codex.input_price, 0.066);
+  assert.equal(codex.group_ratio, 1);
+});
+
 test("collects AIAPI prices through its logged-in model page", async () => {
   const station = {
     id: "station-aiapi",

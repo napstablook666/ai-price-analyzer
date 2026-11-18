@@ -1,6 +1,11 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
-import { requestPolicy, STELLAISLE_PRICING_ENDPOINT } from "../../core/provider-registry.js";
+import {
+  requestPolicy,
+  STELLAISLE_PLAZA_ENDPOINT,
+  STELLAISLE_PLAZA_GROUP_ENDPOINT,
+  STELLAISLE_PRICING_ENDPOINT
+} from "../../core/provider-registry.js";
 
 const preset = {
   id: "stellaisle",
@@ -28,7 +33,7 @@ const pluginSource = {
   id: "stellaisle",
   host: "token.stellaisle.com",
   preserveRechargeRateVerification: true,
-  matches: ({ hostname, path }) => hostname === "token.stellaisle.com" && ["/", "/pricing"].includes(path),
+  matches: ({ hostname, path }) => hostname === "token.stellaisle.com" && ["/", "/pricing", "/group-plaza"].includes(path),
   prepareMatches: ({ hostname }) => hostname === "token.stellaisle.com",
   prepare: (stationInput, { url }) => ({
     ...stationInput,
@@ -42,9 +47,24 @@ const pluginSource = {
   mode: "direct",
   responseFormat: "stellaisle",
   authType: "none",
-  rationale: "飓星API 的 /api/pricing 匿名可读，价格不需要登录",
+  rationale: "飓星API 的 /api/pricing 与分组广场都匿名可读，价格和分组倍率都不需要登录",
   preset,
-  request: requestPolicy(() => STELLAISLE_PRICING_ENDPOINT, { credentials: "omit" })
+  // 分组广场才是真正能买的分组：列表给 ratio / 状态 / 供应商，逐组详情给该组
+  // 每个模型的真实价。列表本身不带价，所以它是辅助请求，主请求仍是 /api/pricing。
+  // 只拉 status=ok 的组：不可用的分组价格不可信，拉回来也会被展开逻辑丢掉。
+  request: requestPolicy(() => STELLAISLE_PRICING_ENDPOINT, {
+    credentials: "omit",
+    aux: [
+      { key: "groups", endpoint: STELLAISLE_PLAZA_ENDPOINT },
+      {
+        key: "groupPrices",
+        endpoint: STELLAISLE_PLAZA_GROUP_ENDPOINT,
+        forEach: "groups.data.items",
+        idField: "group_id",
+        where: { status: "ok" }
+      }
+    ]
+  })
 };
 
 const MODEL_ALIASES = [

@@ -5,6 +5,7 @@
 export const DASHBOARD_HTML_IDS = [
   "back-to-top",
   "cancel-refresh-preflight",
+  "cheapest-group-only",
   "checkin-list",
   "checkin-menu",
   "checkin-refresh",

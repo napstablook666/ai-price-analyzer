@@ -49,6 +49,18 @@ function saveProviderFavorite(values) {
   } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
   syncFacetFavoriteTrigger();
 }
+// 「同站只留最便宜分组」：飓星API 一个站就有 21 个可用分组、178 行报价，全展开能看出
+// 同模型的价差，但看总榜时太吵。勾选状态记进 localStorage，下次打开沿用。
+const CHEAPEST_GROUP_STORE = "model-atlas:cheapest-group-only";
+function readCheapestGroupOnly() {
+  try { return localStorage.getItem(CHEAPEST_GROUP_STORE) === "1"; } catch { return false; }
+}
+function saveCheapestGroupOnly(value) {
+  try {
+    if (value) localStorage.setItem(CHEAPEST_GROUP_STORE, "1");
+    else localStorage.removeItem(CHEAPEST_GROUP_STORE);
+  } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
+}
 const PAGE_SIZE = 20;
 const state = {
   data: null,
@@ -66,7 +78,7 @@ const state = {
   refreshInProgress: false,
   refreshPreflight: null,
   preflightLoading: false,
-  filters: { search: "", stationId: "", provider: readProviderFilter(), group: null, models: [], showUnmatched: true, sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
+  filters: { search: "", stationId: "", provider: readProviderFilter(), group: null, models: [], showUnmatched: true, cheapestGroupOnly: readCheapestGroupOnly(), sortBy: "blendedUnitPrice", sortSecondary: "diffPercent", sortDirection: "asc" },
   stationIndexes: new Map(),
   refreshStationIds: new Set(),
   // Shift 连选的起点。普通点一下就把起点挪到这行，Shift 点则从起点连到这一行。
@@ -170,6 +182,21 @@ function rowMatches(row, query) {
   if (Array.isArray(state.filters.group) && !state.filters.group.includes(row.groupName)) return false;
   if (state.comparisonMode !== "public" && !state.filters.showUnmatched && !row.officialName) return false;
   return true;
+}
+
+// 同一个站、同一个模型的同一档报价只留最便宜的分组。分组筛选已经勾了具体分组时不折叠：
+// 那是用户明确要看这几家，再替他把贵的删掉就是骗人。
+function collapseToCheapestGroup(rows) {
+  if (!state.filters.cheapestGroupOnly || Array.isArray(state.filters.group)) return rows;
+  const cheapest = new Map();
+  for (const row of rows) {
+    const key = [row.stationId, row.modelName, row.canonicalModel, row.mediaType, row.sizeTier || "", row.requestUnit || ""].join("\u0000");
+    const cost = paidMonthlyCost(row);
+    const best = cheapest.get(key);
+    if (!best || (Number.isFinite(cost) && (!Number.isFinite(best.cost) || cost < best.cost))) cheapest.set(key, { row, cost });
+  }
+  const keep = new Set([...cheapest.values()].map(entry => entry.row));
+  return rows.filter(row => keep.has(row));
 }
 
 function pricingUnavailableLabel(row) {
@@ -957,10 +984,10 @@ function renderRows() {
   closeMonthlyCostPanel();
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
-  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
+  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.cheapestGroupOnly, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
   if (pageFilterKey !== null && pageFilterKey !== filterKey) state.page = 0;
   pageFilterKey = filterKey;
-  const filtered = sortRows(state.rows.filter(row => rowMatches(row, query)));
+  const filtered = sortRows(collapseToCheapestGroup(state.rows.filter(row => rowMatches(row, query))));
   const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
   state.page = page.page;
   const visible = page.rows;
@@ -1253,6 +1280,7 @@ if (!preservePage) { state.page = 0; pageFilterKey = null; }
   renderMediaMode();
   state.filters.showUnmatched = Boolean(data.settings?.showUnmatched);
   $("#show-unmatched").checked = state.filters.showUnmatched;
+  $("#cheapest-group-only").checked = state.filters.cheapestGroupOnly;
   renderSummary(state.rows);
   renderStationFilter(state.rows);
   renderRefreshStationOptions();
@@ -1537,10 +1565,19 @@ $("#reset-filters").addEventListener("click", () => {
   $("#sort-secondary").value = "diffPercent";
   $("#sort-direction").value = "asc";
   $("#show-unmatched").checked = true;
+  // 重置只回到「全展开」：折叠是看总榜时的临时视角，不该被当成筛选条件粘住。
+  state.filters.cheapestGroupOnly = false;
+  saveCheapestGroupOnly(false);
+  $("#cheapest-group-only").checked = false;
   renderFacetFilters(state.rows);
   renderRows();
 });
 $("#show-unmatched").addEventListener("change", event => { state.filters.showUnmatched = event.target.checked; renderRows(); });
+$("#cheapest-group-only").addEventListener("change", event => {
+  state.filters.cheapestGroupOnly = event.target.checked;
+  saveCheapestGroupOnly(state.filters.cheapestGroupOnly);
+  renderRows();
+});
 
 
 

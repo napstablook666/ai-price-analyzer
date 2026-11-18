@@ -461,7 +461,6 @@ function groupSelection(map, raw, item) {
     }
     return selected;
   }
-  const ratioTable = readPath(raw, spec.ratioPath || "/group_ratio");
   const listed = readPath(item, spec.listPath || "enable_groups");
   let groups = (Array.isArray(listed) ? listed : [listed]).map(value => String(value ?? "").trim()).filter(Boolean);
   // 有的站每条的 enable_groups 是空数组，定价页也只报基准价、不说是哪个分组在卖。
@@ -474,6 +473,13 @@ function groupSelection(map, raw, item) {
     const ratio = typeof unlisted === "object" && Number.isFinite(unlisted.ratio) ? unlisted.ratio : 1;
     return group ? [{ group, ratio }] : [];
   }
+  // item 自己带倍率时不用查表：分组广场的 token / 按次价已经在站内乘过分组倍率，
+  // 映射声明里把它们标成 1，只有表达式那档才按分组 ratio 现乘。
+  if (spec.ratioField) {
+    const fieldRatio = Number(readPath(item, spec.ratioField));
+    if (Number.isFinite(fieldRatio) && fieldRatio >= 0) return groups.map(group => ({ group, ratio: fieldRatio }));
+  }
+  const ratioTable = readPath(raw, spec.ratioPath || "/group_ratio");
   if (!ratioTable || typeof ratioTable !== "object") return groups.map(group => ({ group, ratio: 1 }));
   const usable = readPath(raw, spec.usablePath || "/usable_group");
   const usableKeys = usable && typeof usable === "object" && !Array.isArray(usable) ? Object.keys(usable) : null;

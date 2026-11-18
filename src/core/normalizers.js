@@ -2,7 +2,7 @@ import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { applyPriceMap, readPath } from "./price-map.js";
 import { tokenfluxPriceMap } from "./price-maps/tokenflux.js";
-import { stellaislePriceMap } from "./price-maps/stellaisle.js";
+import { stellaislePlazaPriceMap, stellaislePriceMap } from "./price-maps/stellaisle.js";
 import { stellaisleCarpoolPriceMap } from "./price-maps/stellaisle-carpool.js";
 import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "./price-maps/true-sota.js";
@@ -12,7 +12,8 @@ import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
 // 28：长度档边界识别与「中间档写在最后」的区间填充都变了，老快照要重算。
-export const NORMALIZATION_VERSION = 28;
+// 29：飓星API 改按分组广场展开报价，一条模型变多条分组价，老快照的价格口径对不上。
+export const NORMALIZATION_VERSION = 29;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -681,16 +682,97 @@ export class WindHubPricingStrategy extends TokenFluxPricingStrategy {
   }
 }
 
-// Star API 的报文和 WindHub 同构，分组根本不公开模型 ↔ 分组的对应，只出基准价（见 price-maps/stellaisle.js）。
+// Star API 的报文和 WindHub 同构，但公开定价接口不报「模型 ↔ 分组」的对应关系
+// （94 条模型的 enable_groups 全是空数组），只出基准价（见 price-maps/stellaisle.js）。
+//
+// 真正的分组在分组广场：/api/group-plaza 给分组表，逐组详情给该组每个模型的真实价。
+// 两批报文由 requestPolicy 的 aux 取回，挂在 __aux.groups 与 __aux.groupPrices 上。
+// 拿到就展开成分组报价，拿不到就退回基准价，不让分组接口挂掉拖垮整轮采集。
+const PLAZA_GROUP_STATUS = "ok";
+
+// 分组表的报文是 {data:{items:[…],total,…}}，明细是逐组响应体的数组。
+function stellaislePlazaGroups(raw) {
+  const aux = raw && typeof raw === "object" ? raw.__aux : null;
+  const items = readPath(aux, "groups.data.items");
+  return Array.isArray(items) ? items : [];
+}
+
+function stellaislePlazaPrices(raw) {
+  const aux = raw && typeof raw === "object" ? raw.__aux : null;
+  return Array.isArray(aux?.groupPrices) ? aux.groupPrices : [];
+}
+
+function stellaislePlazaAvailable(raw) {
+  return stellaislePlazaGroups(raw).length > 0 && stellaislePlazaPrices(raw).length > 0;
+}
+
+function stellaislePlazaData(raw) {
+  if (!stellaislePlazaAvailable(raw)) return null;
+  const byId = new Map();
+  for (const detail of stellaislePlazaPrices(raw)) {
+    if (!detail || typeof detail !== "object") continue;
+    const id = String(detail.group_id ?? "").trim();
+    if (id) byId.set(id, detail);
+  }
+  const data = [];
+  for (const group of stellaislePlazaGroups(raw)) {
+    if (!group || typeof group !== "object") continue;
+    // 站点把不可用的分组也列在表里（unstable / bad / unknown），价格不可信，跳过。
+    if (String(group.status ?? "").trim() !== PLAZA_GROUP_STATUS) continue;
+    const id = String(group.group_id ?? "").trim();
+    const detail = byId.get(id);
+    if (!detail) continue;
+    const ratio = finitePrice(group.ratio);
+    if (ratio === null) continue;
+    const groupName = String(group.name ?? "").trim() || `分组 ${id}`;
+    const vendor = String(group.vendor_name ?? "").trim();
+    const label = vendor ? `${vendor} · ${groupName}` : groupName;
+    const prices = Array.isArray(detail.model_prices) ? detail.model_prices : [];
+    for (const price of prices) {
+      if (!price || typeof price !== "object") continue;
+      const model = String(price.model_name ?? "").trim();
+      if (!model) continue;
+      const mode = String(price.pricing_mode ?? "").trim();
+      // unconfigured 是站上还没定价的占位模型。
+      if (!mode || mode === "unconfigured") continue;
+      // token 与按次的价已经在站内乘过分组倍率，标成 1 免得映射再乘一次；
+      // 只有 tiered 的 billing_expr 是未折算的，按分组 ratio 现乘。
+      const billed = mode !== "tiered";
+      data.push({ ...price, model_name: model, __group_name: label, __group_ratio: billed ? 1 : ratio });
+    }
+  }
+  return data.length ? data : null;
+}
+
 export class StellaislePricingStrategy extends WindHubPricingStrategy {
   get priceMap() { return stellaislePriceMap; }
 
   canParse(raw, options = {}) {
-    return options.responseFormat === "stellaisle" && raw?.success === true &&
+    if (options.responseFormat !== "stellaisle") return false;
+    if (stellaislePlazaAvailable(raw)) return true;
+    return raw?.success === true &&
       Array.isArray(raw?.data) && raw?.group_ratio && typeof raw.group_ratio === "object";
   }
 
   parse(raw) {
+    const plaza = stellaislePlazaData(raw);
+    if (plaza) {
+      const { rows, unresolved } = applyPriceMap(stellaislePlazaPriceMap, { data: plaza }, { parseTiers: parseBillingTiers });
+      const groupRatio = {};
+      for (const row of rows) groupRatio[row.proxy_group_name] = row.group_ratio;
+      return {
+        data: rows,
+        group_ratio: groupRatio,
+        sourceFormat: "stellaisle",
+        ...(unresolved.length
+          ? {
+              incomplete: true,
+              unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+              unpricedModels: unresolved.map(entry => entry.model)
+            }
+          : {})
+      };
+    }
     const normalized = super.parse(raw);
     return {
       ...normalized,

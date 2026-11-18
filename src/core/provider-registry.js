@@ -21,6 +21,10 @@ export const WINDHUB_PRICING_ENDPOINT = DEFAULT_PRICING_ENDPOINT;
 export const STELLAISLE_PRICING_ENDPOINT = DEFAULT_PRICING_ENDPOINT;
 export const NEWCODEX_PRICING_ENDPOINT = DEFAULT_PRICING_ENDPOINT;
 export const ALLROUTER_PRICING_ENDPOINT = DEFAULT_PRICING_ENDPOINT;
+// 分组广场：列表给分组表（ratio、状态、模型清单），逐组详情才是每个模型的真实价。
+// 列表本身不带价格，所以它是辅助请求；主请求仍是 /api/pricing。
+export const STELLAISLE_PLAZA_ENDPOINT = "/api/group-plaza?page_size=100";
+export const STELLAISLE_PLAZA_GROUP_ENDPOINT = "/api/group-plaza/groups/{id}";
 export const STELLAISLE_CARPOOL_ENDPOINT = "/api/carpool-market?availability=available&page=1&page_size=100&subscription_exact=false";
 export const RELAYROUTER_PRICING_ENDPOINT = DEFAULT_PRICING_ENDPOINT;
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";

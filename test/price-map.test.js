@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 import { applyPriceMap, evalExpression, readPath, shapeFingerprint, shapeSkeleton } from "../src/core/price-map.js";
 import { tokenfluxPriceMap } from "../src/core/price-maps/tokenflux.js";
-import { stellaislePriceMap } from "../src/core/price-maps/stellaisle.js";
+import { stellaislePlazaPriceMap, stellaislePriceMap } from "../src/core/price-maps/stellaisle.js";
 import { cheapRouterPriceMap } from "../src/core/price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "../src/core/price-maps/true-sota.js";
 import { sidrunePriceMap } from "../src/core/price-maps/sidrune.js";
@@ -167,6 +167,54 @@ test("enable_groups 全空时只出站内基准价，不拿 group_ratio 的键�
   const fallback = rowsOf(payload);
   assert.equal(fallback.rows.length, 0);
   assert.equal(fallback.unresolved.length, 1);
+});
+
+// 分组广场：一条数据对应一个分组，分组名与倍率由 normalizer 展开时标在 __group_* 上。
+// 口径分两半（见 price-maps/stellaisle.js）：tiered 的表达式要乘分组倍率，
+// token 与按次价站内已经乘过，倍率恒为 1。乘错一边整张榜都偏。
+test("分组广场：表达式按分组倍率折算，token 与按次价原样出", () => {
+  const payload = {
+    data: [
+      {
+        model_name: "gpt-6-luna",
+        pricing_mode: "tiered",
+        billing_expr: 'len <= 272000 ? tier("standard", p * 0.1 + c * 0.5 + cr * 0.01) : tier("long_context", p * 0.2 + c * 0.75 + cr * 0.02)',
+        __group_name: "SWS · 认证特惠供应商s001",
+        __group_ratio: 0.088
+      },
+      {
+        model_name: "codex-auto-review",
+        pricing_mode: "token",
+        input_per_m: 0.066,
+        output_per_m: 0.396,
+        cached_input_per_m: 0.0066,
+        __group_name: "SWS · 认证特惠供应商s001",
+        __group_ratio: 1
+      },
+      {
+        model_name: "gpt-image-2.5",
+        pricing_mode: "per_call",
+        price_per_call: 0.02145,
+        __group_name: "平台认证 · 认证供应商d01",
+        __group_ratio: 1
+      }
+    ]
+  };
+  const rows = applyPriceMap(stellaislePlazaPriceMap, payload, { parseTiers: parseBillingTiers }).rows;
+  assert.deepEqual(
+    rows.filter(row => row.model_name === "gpt-6-luna").map(row => [row.tier_name, row.input_price, row.output_price]),
+    [["standard", 0.0088, 0.044], ["long_context", 0.0176, 0.066]]
+  );
+  const codex = rows.find(row => row.model_name === "codex-auto-review");
+  // input_per_m 0.066 已经是 0.75 × 0.088 的结果，再乘一次就等于白送。
+  assert.equal(codex.group_ratio, 1);
+  assert.equal(codex.input_price, 0.066);
+  assert.equal(codex.proxy_group_name, "SWS · 认证特惠供应商s001");
+  const image = rows.find(row => row.model_name === "gpt-image-2.5");
+  assert.equal(image.group_ratio, 1);
+  assert.equal(image.image_price, 0.02145);
+  assert.equal(image.request_price, null);
+  assert.equal(image.media_type, "image");
 });
 
 // ---- CheapRouter：和 TokenFlux 形状完全不同的第二份站点 ----
