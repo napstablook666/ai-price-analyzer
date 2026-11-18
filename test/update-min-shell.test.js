@@ -6,8 +6,10 @@ import { resolveMinShell } from "../scripts/lib/update-version.mjs";
 
 const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
 
+// 用例里的版本号一律用 1.2.3 这类假值：断言真实版本一律从 package.json 读，
+// 免得升版本时跟着改测试，也免得在仓库里搜版本号时捞出一堆干扰项。
 test("minShell 取 package.json 的 updateMinShell，不取本版版本号", () => {
-  const { minShell } = resolveMinShell({ packageJson: { updateMinShell: "0.9.0" }, version: "0.11.2" });
+  const { minShell } = resolveMinShell({ packageJson: { updateMinShell: "0.9.0" }, version: "1.2.3" });
   assert.equal(minShell, "0.9.0");
 });
 
@@ -15,7 +17,7 @@ test("--min-shell 覆盖 package.json，并说明覆盖了什么", () => {
   const { minShell, warnings } = resolveMinShell({
     cliValue: "0.9.0",
     packageJson: { updateMinShell: "0.10.0" },
-    version: "0.11.2"
+    version: "1.2.3"
   });
   assert.equal(minShell, "0.9.0");
   assert.equal(warnings.length, 1);
@@ -23,38 +25,35 @@ test("--min-shell 覆盖 package.json，并说明覆盖了什么", () => {
 });
 
 test("两边都没给时报错，不回落到本版版本号", () => {
-  assert.throws(
-    () => resolveMinShell({ packageJson: {}, version: "0.11.2" }),
-    /缺少 updateMinShell/
-  );
+  assert.throws(() => resolveMinShell({ packageJson: {}, version: "1.2.3" }), /缺少 updateMinShell/);
 });
 
 test("minShell 不是语义化版本时报错", () => {
   assert.throws(
-    () => resolveMinShell({ packageJson: { updateMinShell: "0.9" }, version: "0.11.2" }),
+    () => resolveMinShell({ packageJson: { updateMinShell: "0.9" }, version: "1.2.3" }),
     /不是语义化版本/
   );
 });
 
 test("minShell 高于本版版本时报错：那一版自己都不满足下限", () => {
   assert.throws(
-    () => resolveMinShell({ packageJson: { updateMinShell: "0.12.0" }, version: "0.11.2" }),
+    () => resolveMinShell({ packageJson: { updateMinShell: "1.2.4" }, version: "1.2.3" }),
     /高于本版版本/
   );
 });
 
 test("minShell 等于本版版本时放行但警告：自更新只对本版生效", () => {
   const { minShell, warnings } = resolveMinShell({
-    packageJson: { updateMinShell: "0.11.2" },
-    version: "0.11.2"
+    packageJson: { updateMinShell: "1.2.3" },
+    version: "1.2.3"
   });
-  assert.equal(minShell, "0.11.2");
+  assert.equal(minShell, "1.2.3");
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /只有装这一版的人能自更新/);
 });
 
 test("带 v 前缀的写法归一成裸版本号", () => {
-  const { minShell } = resolveMinShell({ packageJson: { updateMinShell: "v0.9.0" }, version: "v0.11.2" });
+  const { minShell } = resolveMinShell({ packageJson: { updateMinShell: "v0.9.0" }, version: "v1.2.3" });
   assert.equal(minShell, "0.9.0");
 });
 
