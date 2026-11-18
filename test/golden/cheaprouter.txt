@@ -1,0 +1,12 @@
+# base: cheaprouter
+# fixture: cheaprouter-pricing.json
+# rows: 6 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-haiku-4-5-20251001|Claude促销分组|-|0.5|2.5|0.05|0.625|-|-|-|USD|1|5
+codex-auto-review|Codex促销分组-不降智|>272K|0.06|0.27|0.006|0.075|-|-|-|USD|1|4.5
+codex-auto-review|Codex促销分组-不降智|≤272K|0.03|0.18|0.003|0.0375|-|-|-|USD|1|6
+gpt-image-2.5-flare|GPT官Key分组|-|-|-|-|-|-|0.0536|image|USD|1|1
+gpt-image-2|Codex促销分组-不降智|-|-|-|-|-|-|0.0536|image|USD|1|1
+kimi-k3.1-pro|国模按量付费分组|-|4|20|0.5|0.5|-|-|-|USD|1|5

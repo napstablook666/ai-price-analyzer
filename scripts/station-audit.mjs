@@ -61,12 +61,14 @@ for (const entry of SITE_PLUGIN_CATALOG) {
 
   let endpoint;
   let responseFormat;
+  let priceMap = null;
   try {
     const { sitePlugin } = entry.load();
     // 有的插件把 preset 写成函数（要拿汇率之类的外部参数），这里按无参调一次。
     const preset = typeof sitePlugin?.preset === "function" ? sitePlugin.preset({}) : sitePlugin?.preset;
     endpoint = preset?.adapter?.endpoint;
     responseFormat = preset?.adapter?.responseFormat || "auto";
+    priceMap = preset?.adapter?.priceMap || null;
   } catch (error) {
     results.push({ id: entry.id, state: "FAIL", reason: `插件加载失败: ${error.message}` });
     continue;
@@ -86,7 +88,7 @@ for (const entry of SITE_PLUGIN_CATALOG) {
 
   let normalized;
   try {
-    normalized = normalizePricingPayload(fetched.raw, responseFormat);
+    normalized = normalizePricingPayload(fetched.raw, responseFormat, { priceMap });
   } catch (error) {
     results.push({ id: entry.id, state: "FAIL", reason: `解析失败: ${error.message}` });
     continue;

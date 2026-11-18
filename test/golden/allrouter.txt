@@ -1,0 +1,20 @@
+# base: allrouter
+# fixture: allrouter-pricing.json
+# rows: 14 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-opus-5-5|claude-max|standard|1|5|0.05|1.25|-|-|-|USD|0.25|5
+claude-opus-5-5|claude-official-api|standard|2.6|13|0.13|3.25|-|-|-|USD|0.65|5
+deepseek-v4.1-flash|deepseek|off_peak|0.06|0.24|0.0012|0|-|-|-|USD|0.4|4
+deepseek-v4.1-flash|deepseek|peak|0.12|0.48|0.0024|0|-|-|-|USD|0.4|4
+deepseek-v4.1-flash|default|off_peak|0.1125|0.45|0.00225|0|-|-|-|USD|0.75|4
+deepseek-v4.1-flash|default|peak|0.225|0.9|0.0045|0|-|-|-|USD|0.75|4
+glm-5.3-flash|glm|标准|0.045|0.15|0.009|-|-|-|-|USD|0.3|3.3333333333333335
+gpt-6-luna-openai-compact|default|0_272k|0.075|0.375|0.0075|0.09375|-|-|-|USD|0.75|5
+gpt-6-luna-openai-compact|default|272k_plus|0.15|0.5625|0.015|0.1875|-|-|-|USD|0.75|3.75
+gpt-6-luna-openai-compact|gpt|0_272k|0.0053|0.0265|0.00053|0.006625|-|-|-|USD|0.053|5
+gpt-6-luna-openai-compact|gpt|272k_plus|0.0106|0.03975|0.00106|0.01325|-|-|-|USD|0.053|3.75
+gpt-image-2.5|default|standard|3.75|22.5|0.9375|-|-|-|image|USD|0.75|6
+gpt-image-2.5|gpt-azure-api|standard|3|18|0.75|-|-|-|image|USD|0.6|6
+gpt-image-2.5|gpt|standard|0.265|1.59|0.06625|-|-|-|image|USD|0.053|6

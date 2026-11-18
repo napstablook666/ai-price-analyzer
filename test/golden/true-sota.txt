@@ -1,0 +1,18 @@
+# base: true-sota
+# fixture: true-sota-pricing.json
+# rows: 12 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-fable-5|Claude|-|22|110|2.2|-|-|-|-|USD|2.2|5
+claude-haiku-4-5|Claude|-|2.2|11|0.22|-|-|-|-|USD|2.2|5
+claude-haiku-4-5|Claude（kiro）|-|1|5|0.1|-|-|-|-|USD|1|5
+claude-haiku-4-5|全模型|-|2|10|0.2|-|-|-|-|USD|2|5
+gpt-image-1|官方GPT|-|-|-|-|-|-|0.134|image|USD|1|1
+gpt-image-1|官方GPT|-|-|-|-|-|-|0.201|image|USD|1|1
+gpt-image-1|官方GPT|-|-|-|-|-|-|0.268|image|USD|1|1
+gpt-image-2|GPT|-|-|-|-|-|-|0.15|image|USD|1|1
+gpt-image-2|官方GPT|-|-|-|-|-|-|0.134|image|USD|1|1
+gpt-image-2|官方GPT|-|-|-|-|-|-|0.201|image|USD|1|1
+gpt-image-2|官方GPT|-|-|-|-|-|-|0.268|image|USD|1|1
+gpt-image-2|生图|-|-|-|-|-|-|0.15|image|USD|1|1
