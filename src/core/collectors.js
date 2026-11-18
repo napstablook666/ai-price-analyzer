@@ -72,7 +72,8 @@ function buildSnapshot(station, normalized, url, status = 200) {
       ...(normalized.unknownChannelStates ? { unknownChannelStates: normalized.unknownChannelStates } : {}),
       ...(normalized.failedModels ? { failedModels: normalized.failedModels } : {}),
       ...(normalized.failedModelCount ? { failedModelCount: normalized.failedModelCount } : {}),
-      ...(normalized.failedModelReasons ? { failedModelReasons: normalized.failedModelReasons } : {})
+      ...(normalized.failedModelReasons ? { failedModelReasons: normalized.failedModelReasons } : {}),
+      ...(normalized.degradedReasons ? { degradedReasons: normalized.degradedReasons } : {})
     }
   };
 }
@@ -153,12 +154,21 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
       const payload = typeof response.json === "function" ? await readResponse(response) : response.body;
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
       // 主价格之外还要取的报文（拼车市场就是这种：座位在 /api/carpool-market，
-      // 单价在 /api/pricing），拿不到不算采集失败。
-      const enriched = typeof payload === "string" ? payload
+      // 单价在 /api/pricing），拿不到不算采集失败，但要记下来。
+      const aux = typeof payload === "string"
+        ? { payload, issues: [] }
         : await attachAuxiliary(station, payload, requestStrategy, { fetchImpl, pageFetch });
+      const enriched = aux.payload;
       const normalized = typeof enriched === "string"
         ? { sourceFormat: "text", data: [], group_ratio: {}, error: "响应不是 JSON" }
         : normalizePricingPayload(enriched, station.adapter?.responseFormat || "auto", options);
+      if (aux.issues.length) {
+        normalized.incomplete = true;
+        normalized.degradedReasons = [
+          ...(Array.isArray(normalized.degradedReasons) ? normalized.degradedReasons : []),
+          ...aux.issues.map(issue => `${issue.key} ${AUX_ISSUE_LABELS[issue.reason] || issue.reason}${issue.detail ? `（${issue.detail}）` : ""}`)
+        ];
+      }
       if (station.mode === "page" && pageFetch) {
         const priceFields = NORMALIZED_PRICE_FIELDS;
         if (!normalized.data.length) throw new Error("页面响应未生成可用价格数据");
@@ -218,10 +228,27 @@ async function mapWithConcurrency(entries, limit, worker) {
   return results;
 }
 
+// 辅助接口失败的原因，写成界面能直接显示的一句话。
+const AUX_ISSUE_LABELS = {
+  "aux-request-failed": "请求失败",
+  "aux-list-missing": "清单没取到",
+  "aux-list-empty": "清单为空",
+  "aux-detail-partial": "逐条拉取有缺失"
+};
+
+function auxIssue(key, reason, detail) {
+  return { key, reason, ...(detail ? { detail: String(detail).slice(0, 160) } : {}) };
+}
+
+// 辅助接口失败不该拖垮主采集，但也不能不留痕：分组价没取到时表里退回基准价，
+// 看起来和「这个站本来就没分组」一模一样。把失败记成 issues 一路带到快照上，
+// 界面才能标「部分解析」，而不是装作正常。
 async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetch }) {
   const specs = Array.isArray(strategy?.aux) ? strategy.aux : [];
-  if (!specs.length || !payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const untouched = { payload, issues: [] };
+  if (!specs.length || !payload || typeof payload !== "object" || Array.isArray(payload)) return untouched;
   const auxiliary = {};
+  const issues = [];
   for (const spec of specs) {
     const key = String(spec?.key || "").trim();
     const endpoint = String(spec?.endpoint || "").trim();
@@ -231,11 +258,18 @@ async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetc
       if (!spec.forEach) {
         const body = await fetchAuxBody(station, endpoint, strategy, spec, { fetchImpl, pageFetch });
         if (body) auxiliary[key] = body;
+        else issues.push(auxIssue(key, "aux-request-failed", endpoint));
         continue;
       }
       // 清单可以来自主报文，也可以来自前一个辅助报文（分组表就是先拉列表再逐组取价）。
+      // 清单本身来自另一个辅助报文时，那一份失败已经记过账，别把派生失败再报一遍。
+      const upstream = String(spec.forEach).split(".")[0];
+      if (issues.some(issue => issue.key === upstream)) continue;
       const list = pickPath(auxiliary, spec.forEach) ?? pickPath(payload, spec.forEach);
-      if (!Array.isArray(list)) continue;
+      if (!Array.isArray(list)) {
+        issues.push(auxIssue(key, "aux-list-missing", spec.forEach));
+        continue;
+      }
       const idField = String(spec.idField || "id");
       const where = spec.where && typeof spec.where === "object" ? spec.where : null;
       const targets = list
@@ -243,17 +277,25 @@ async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetc
         .filter(row => !where || Object.entries(where).every(([field, expected]) => String(row[field] ?? "") === String(expected)))
         .map(row => String(row[idField] ?? "").trim())
         .filter(Boolean);
-      if (!targets.length) continue;
+      if (!targets.length) {
+        issues.push(auxIssue(key, "aux-list-empty", `${spec.forEach} 过滤后没有条目`));
+        continue;
+      }
       const bodies = await mapWithConcurrency(targets, AUX_DETAIL_CONCURRENCY, id =>
         fetchAuxBody(station, endpoint.replace("{id}", encodeURIComponent(id)), strategy, spec, { fetchImpl, pageFetch })
       );
       const collected = bodies.filter(Boolean);
+      const missing = targets.length - collected.length;
+      if (missing > 0) issues.push(auxIssue(key, "aux-detail-partial", `${missing}/${targets.length} 条没拉到`));
       if (collected.length) auxiliary[key] = collected;
-    } catch {
-      // 辅助接口失败就当作没有：主价格还在。
+    } catch (error) {
+      issues.push(auxIssue(key, "aux-request-failed", error?.message || error));
     }
   }
-  return Object.keys(auxiliary).length ? { ...payload, __aux: auxiliary } : payload;
+  return {
+    payload: Object.keys(auxiliary).length ? { ...payload, __aux: auxiliary } : payload,
+    issues
+  };
 }
 
 // 充值比例是站点级事实，站点自己公布在 /api/status 上。抓一次挂到快照顶部，

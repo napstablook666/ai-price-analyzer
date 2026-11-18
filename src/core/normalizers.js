@@ -743,7 +743,7 @@ function stellaislePlazaData(raw) {
       data.push({ ...price, model_name: model, __group_name: label, __group_ratio: billed ? 1 : ratio });
     }
   }
-  return data.length ? data : null;
+  return data;
 }
 
 export class StellaislePricingStrategy extends WindHubPricingStrategy {
@@ -758,31 +758,61 @@ export class StellaislePricingStrategy extends WindHubPricingStrategy {
 
   parse(raw) {
     const plaza = stellaislePlazaData(raw);
-    if (plaza) {
+    if (plaza.length) {
       const { rows, unresolved } = applyPriceMap(stellaislePlazaPriceMap, { data: plaza }, { parseTiers: parseBillingTiers });
-      const groupRatio = {};
-      for (const row of rows) groupRatio[row.proxy_group_name] = row.group_ratio;
-      return {
-        data: rows,
-        group_ratio: groupRatio,
-        sourceFormat: "stellaisle",
-        ...(unresolved.length
-          ? {
-              incomplete: true,
-              unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
-              unpricedModels: unresolved.map(entry => entry.model)
-            }
-          : {})
-      };
+      if (rows.length) {
+        const groupRatio = {};
+        for (const row of rows) groupRatio[row.proxy_group_name] = row.group_ratio;
+        return {
+          data: rows,
+          group_ratio: groupRatio,
+          sourceFormat: "stellaisle",
+          ...(unresolved.length
+            ? {
+                incomplete: true,
+                unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+                unpricedModels: unresolved.map(entry => entry.model)
+              }
+            : {})
+        };
+      }
+      // 分组价拿到了却一条也展开不出来：直接返回空表会让这个站在比价里消失，
+      // 比出错还难查。退回基准价，同时把原因挂上。
+      return this.baselineFallback(raw, "分组价取到了，但一条也没能展开成报价");
     }
+    return this.baselineFallback(raw, stellaislePlazaDegradeReason(raw));
+  }
+
+  // 退回站内基准价：价格还在，但口径已经换了。站点有分组、我们没读到，
+  // 和站点本来就没分组，在表里长得一模一样，可这两种情况的「贵」不是一回事。
+  baselineFallback(raw, reason) {
     const normalized = super.parse(raw);
     return {
       ...normalized,
       sourceFormat: "stellaisle",
       // 父类那句报错写着 WindHub，换到这家就自相矛盾了。
-      ...(normalized.data.length ? {} : { error: "Star API 公开定价数据为空或格式无效" })
+      ...(normalized.data.length ? {} : { error: "Star API 公开定价数据为空或格式无效" }),
+      ...(reason
+        ? {
+            incomplete: true,
+            degradedReasons: [
+              ...(Array.isArray(normalized.degradedReasons) ? normalized.degradedReasons : []),
+              reason
+            ]
+          }
+        : {})
     };
   }
+}
+
+// 退回基准价时到底丢了什么。说清楚是「没拿到」还是「拿到了对不上」，
+// 这两种情况排查方向完全不同。
+function stellaislePlazaDegradeReason(raw) {
+  const groups = stellaislePlazaGroups(raw).filter(group => String(group?.status ?? "").trim() === PLAZA_GROUP_STATUS);
+  const prices = stellaislePlazaPrices(raw);
+  if (!groups.length) return "";
+  if (!prices.length) return `分组广场有 ${groups.length} 个可用分组，分组价一条也没拿到`;
+  return `分组价取到 ${prices.length} 份，但对不上分组表里的任何一组`;
 }
 
 // 拼车中心（/api/carpool-market）单独一套报文：一份座位清单，模型字段只有名字。

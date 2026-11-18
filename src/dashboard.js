@@ -210,7 +210,9 @@ function partialStatusLabel(row) {
   const modes = [...new Set(row.unsupportedBillingModes || [])].filter(Boolean);
   const invalid = [...new Set(row.invalidPricingValues || [])].filter(Boolean);
   const unpriced = [...new Set(row.unpricedModels || [])].filter(Boolean);
+  const degraded = [...new Set(row.degradedReasons || [])].filter(Boolean);
   const details = [
+    ...degraded.map(reason => escapeHtml(reason)),
     modes.length ? `未解析 ${modes.map(mode => escapeHtml(mode)).join("、")}` : "",
     invalid.length ? `价格字段异常 ${invalid.map(value => escapeHtml(value)).join("、")}` : "",
     unpriced.length ? `未定价模型 ${unpriced.map(value => escapeHtml(value)).join("、")}` : ""

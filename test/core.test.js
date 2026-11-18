@@ -674,6 +674,124 @@ test("飓星分组广场：按分组展开报价，不可用分组与未定价�
   assert.equal(codex.group_ratio, 1);
 });
 
+test("飓星分组广场：分组价对不上分组表时退回基准价并标降级", () => {
+  const payload = {
+    success: true,
+    group_ratio: {},
+    data: [{ model_name: "base-only", quota_type: 0, model_ratio: 1, completion_ratio: 2, enable_groups: [] }],
+    __aux: {
+      groups: {
+        data: {
+          items: [{ group_id: 37, vendor_name: "SWS", name: "认证特惠供应商s001", ratio: 0.088, status: "ok" }]
+        }
+      },
+      // 分组详情里的 group_id 和分组表里的任何一个都对不上：价格还在，口径已经不是分组的了。
+      groupPrices: [
+        { success: true, data: { group_id: 999, model_prices: [{ model_name: "ghost", pricing_mode: "token", input_per_m: 1, output_per_m: 2 }] } }
+      ]
+    }
+  };
+  const normalized = normalizePricingPayload(payload, "stellaisle", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(normalized.incomplete, true);
+  assert.equal(normalized.degradedReasons.length, 1);
+  assert.match(normalized.degradedReasons[0], /对不上分组表/);
+  // 丢分组不等于丢价格：基准价还在，站不会从比价里消失。
+  assert.equal(normalized.data.length, 1);
+  assert.equal(normalized.data[0].model_name, "base-only");
+});
+
+test("飓星分组广场：分组价一条没拿到时标降级，不装作这个站没分组", () => {
+  const payload = {
+    success: true,
+    group_ratio: {},
+    data: [{ model_name: "base-only", quota_type: 0, model_ratio: 1, completion_ratio: 2, enable_groups: [] }],
+    __aux: {
+      groups: {
+        data: {
+          items: [
+            { group_id: 37, vendor_name: "SWS", name: "认证特惠供应商s001", ratio: 0.088, status: "ok" },
+            { group_id: 31, vendor_name: "sailapi", name: "pro不降智高缓", ratio: 0.11, status: "ok" }
+          ]
+        }
+      }
+    }
+  };
+  const normalized = normalizePricingPayload(payload, "stellaisle", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(normalized.incomplete, true);
+  assert.equal(normalized.degradedReasons.length, 1);
+  assert.match(normalized.degradedReasons[0], /2 个可用分组，分组价一条也没拿到/);
+  assert.equal(normalized.data.length, 1);
+});
+
+test("飓星分组广场：没有分组报文时不瞎标降级", () => {
+  // 站点本来就没分组（或者压根不是分组站）时，不该给每一行挂一条警告。
+  const payload = {
+    success: true,
+    group_ratio: {},
+    data: [{ model_name: "base-only", quota_type: 0, model_ratio: 1, completion_ratio: 2, enable_groups: [] }]
+  };
+  const normalized = normalizePricingPayload(payload, "stellaisle", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(normalized.incomplete, undefined);
+  assert.equal(normalized.degradedReasons, undefined);
+  assert.equal(normalized.data.length, 1);
+});
+
+test("辅助接口失败会标降级，而不是装作主价格就够", async () => {
+  const pricing = {
+    success: true,
+    group_ratio: {},
+    data: [{ model_name: "base-only", quota_type: 0, model_ratio: 1, completion_ratio: 2, enable_groups: [] }]
+  };
+  const snapshot = await collectStationInput({
+    id: "station-stellaisle-aux-down",
+    name: "飓星API",
+    baseUrl: "https://token.stellaisle.com/pricing",
+    adapter: { kind: "stellaisle", endpoint: "/api/pricing", method: "GET", responseFormat: "stellaisle" }
+  }, {
+    fetchImpl: async url => {
+      if (url.includes("/api/pricing")) return response(pricing);
+      // 分组表挂掉：主价格还在，但分组维度这次没了。
+      throw new Error("group-plaza down");
+    }
+  });
+  // 有价格但缺维度，是「部分解析」而不是「成功」。
+  assert.equal(snapshot.status, "partial");
+  assert.match(snapshot.rawMeta.degradedReasons.join(" "), /groups 请求失败/);
+  assert.equal(snapshot.normalized.data.length, 1);
+});
+
+test("辅助接口正常时不挂降级标记", async () => {
+  const pricing = {
+    success: true,
+    group_ratio: {},
+    data: [{ model_name: "base-only", quota_type: 0, model_ratio: 1, completion_ratio: 2, enable_groups: [] }]
+  };
+  const groups = {
+    success: true,
+    data: { items: [{ group_id: 37, vendor_name: "SWS", name: "认证特惠供应商s001", ratio: 0.088, status: "ok" }] }
+  };
+  const detail = {
+    success: true,
+    data: { group_id: 37, model_prices: [{ model_name: "gpt-6-luna", pricing_mode: "token", input_per_m: 0.0088, output_per_m: 0.044 }] }
+  };
+  const snapshot = await collectStationInput({
+    id: "station-stellaisle-aux-ok",
+    name: "飓星API",
+    baseUrl: "https://token.stellaisle.com/pricing",
+    adapter: { kind: "stellaisle", endpoint: "/api/pricing", method: "GET", responseFormat: "stellaisle" }
+  }, {
+    fetchImpl: async url => {
+      if (url.includes("/api/pricing")) return response(pricing);
+      if (url.includes("/api/group-plaza/groups/")) return response(detail);
+      if (url.includes("/api/group-plaza")) return response(groups);
+      return response({ success: false });
+    }
+  });
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.rawMeta.degradedReasons, undefined);
+  assert.equal(snapshot.normalized.data[0].model_name, "gpt-6-luna");
+});
+
 test("collects AIAPI prices through its logged-in model page", async () => {
   const station = {
     id: "station-aiapi",
