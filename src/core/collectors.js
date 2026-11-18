@@ -94,6 +94,17 @@ export async function collectStation(station, { retries = COLLECT_RETRIES, retry
   }
 }
 
+// 归一阶段的公共参数。原来同一行 options 在三个分支里复制了三遍，
+// 加一个键就要改三处；priceMap 也从站点 adapter 一起带下去。
+function normalizationOptionsFor(station) {
+  return {
+    basePricePerMillion: station.basePricePerMillion,
+    priceCurrency: station.priceCurrency,
+    priceCurrencyVerified: station.priceCurrencyVerified,
+    modelListCurrency: station.priceCurrency,
+    priceMap: station.adapter?.priceMap || null
+  };
+}
 async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, collection } = {}) {
   if (!collection) throw new Error("collectStation requires a prepared collection");
   const { endpoints, priceKeys, request: requestStrategy } = collection;
@@ -106,7 +117,7 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
       throw new Error(`${station.name} 手动价格 JSON 无效`);
     }
     if (hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
-    const normalized = normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency });
+    const normalized = normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", normalizationOptionsFor(station));
     return buildSnapshot(station, normalized, "manual://station-config", 200);
   }
   let firstEmptySnapshot = null;
@@ -119,7 +130,7 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
       const payload = typeof response?.json === "function" ? await readResponse(response) : response?.body;
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("页面响应未通过价格数据校验");
       const normalized = payload && typeof payload !== "string"
-        ? normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency })
+        ? normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", normalizationOptionsFor(station))
         : { sourceFormat: "page-capture", data: [] };
       const priceFields = NORMALIZED_PRICE_FIELDS;
       if (normalized.data.some(row => priceFields.some(field => row[field] !== null && row[field] !== undefined && (!Number.isFinite(Number(row[field])) || Number(row[field]) < 0)))) throw new Error("页面响应未通过价格数据校验");
@@ -138,7 +149,7 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
       if (!response || response.ok === false || (response.status && response.status >= 400)) {
         throw new Error(requestError(station, requestStrategy, response));
       }
-      const options = { basePricePerMillion: station.basePricePerMillion, priceCurrency: station.priceCurrency, priceCurrencyVerified: station.priceCurrencyVerified, modelListCurrency: station.priceCurrency };
+      const options = normalizationOptionsFor(station);
       const payload = typeof response.json === "function" ? await readResponse(response) : response.body;
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
       // 主价格之外还要取的报文（拼车市场就是这种：座位在 /api/carpool-market，

@@ -1,6 +1,6 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { mediaSpecsOf, mediaTypeForPricing } from "./media.js";
-import { applyPriceMap } from "./price-map.js";
+import { applyPriceMap, readPath } from "./price-map.js";
 import { tokenfluxPriceMap } from "./price-maps/tokenflux.js";
 import { stellaislePriceMap } from "./price-maps/stellaisle.js";
 import { stellaisleCarpoolPriceMap } from "./price-maps/stellaisle-carpool.js";
@@ -10,10 +10,12 @@ import { sidrunePriceMap } from "./price-maps/sidrune.js";
 import { relayRouterPriceMap } from "./price-maps/relayrouter.js";
 import { newcodexPriceMap } from "./price-maps/newcodex.js";
 import { allrouterPriceMap } from "./price-maps/allrouter.js";
+import { resolvePriceMap } from "./price-maps/index.js";
 import { PRICE_FIELD_DEFINITIONS, rawPriceValue } from "./price-fields.js";
 import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseFormatHandler, registerResponseFormatHandler } from "./response-formats.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
-export const NORMALIZATION_VERSION = 27;
+// 28：长度档边界识别与「中间档写在最后」的区间填充都变了，老快照要重算。
+export const NORMALIZATION_VERSION = 28;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -204,7 +206,7 @@ export class ParsingStrategy {
 
 const TIER_CALL_PATTERN = /tier\s*\(/gi;
 // len <= N / p <= N 这类长度条件决定档位区间，hour(...) 之类的时间条件不算。
-const TIER_BOUNDARY_PATTERN = /(?:^|[^a-z0-9_])(?:len|length|tokens?|input_tokens?|p)\s*(<=|<|>=|>)\s*(\d+(?:\.\d+)?)\s*$/i;
+const TIER_BOUNDARY_PATTERN = /(?:^|[^a-z0-9_])(?:len|length|tokens?|input_tokens?|p)\s*(<=|<|>=|>)\s*(\d+(?:\.\d+)?)[\s)]*$/i;
 const TIER_TIME_RULE_PATTERN = /\*\s*\(\s*(.*?)\?\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*\)/i;
 
 function balancedSpan(source, start) {
@@ -423,17 +425,41 @@ export function parseBillingTiers(expression) {
     }
   }
   // 只有出现长度条件时才补区间下界，否则普通单档模型不该凭空多出 min_tokens。
+  // 只有出现长度条件时才补区间下界，否则普通单档模型不该凭空多出 min_tokens。
   if (tiers.some(tier => tier.minTokens !== null || tier.maxTokens !== null)) {
-    tiers.forEach((tier, index) => {
-      if (tier.minTokens !== null) return;
-      if (index === 0) {
-        tier.minTokens = 0;
-        return;
-      }
-      const previous = tiers[index - 1];
-      // 上一档上界是闭区间（<=）时，本档从它 +1 开始；开区间（<）时本档就从该值开始。
-      tier.minTokens = previous.maxTokens === null ? null : previous.maxInclusive === false ? previous.maxTokens : previous.maxTokens + 1;
+    // 表达式的书写顺序不等于区间顺序。站点会把「中间档」写在最后：
+    //   len <= 250000 ? 0.06 : (len >= 500000 ? 0.2 : 0.1)
+    // 第三档没有自己的边界，它就是剩下的那段。所以先按已知下界排骨架，再把无边界档填进空隙。
+    const upperAfter = tier => (tier.maxTokens === null ? Infinity : tier.maxInclusive === false ? tier.maxTokens : tier.maxTokens + 1);
+    const skeleton = tiers
+      .filter(tier => tier.minTokens !== null || tier.maxTokens !== null)
+      .sort((a, b) => (a.minTokens ?? 0) - (b.minTokens ?? 0));
+
+    let cursor = 0;
+    for (const tier of skeleton) {
+      if (tier.minTokens === null) tier.minTokens = cursor;
+      cursor = upperAfter(tier);
+    }
+
+    const gaps = [];
+    let gapStart = 0;
+    for (const tier of skeleton) {
+      if (tier.minTokens > gapStart) gaps.push({ start: gapStart, end: tier.minTokens - 1 });
+      const next = upperAfter(tier);
+      if (next === Infinity) { gapStart = Infinity; break; }
+      gapStart = next;
+    }
+    if (gapStart !== Infinity) gaps.push({ start: gapStart, end: null });
+
+    const floating = tiers.filter(tier => tier.minTokens === null && tier.maxTokens === null);
+    floating.forEach((tier, index) => {
+      const gap = gaps[index];
+      if (!gap) return;
+      tier.minTokens = gap.start;
+      tier.maxTokens = gap.end;
     });
+    // 填完之后按区间重排，避免中间档在表里排到最后。
+    if (floating.length) tiers.sort((a, b) => (a.minTokens ?? 0) - (b.minTokens ?? 0));
   }
   return tiers;
 }
@@ -558,6 +584,46 @@ export class TokenFluxPricingStrategy extends ParsingStrategy {
       data: rows,
       group_ratio: groupRatio,
       sourceFormat: "tokenflux",
+      ...(unresolved.length
+        ? {
+            incomplete: true,
+            unsupportedBillingModes: [...new Set(unresolved.map(entry => entry.reason))].sort(),
+            unpricedModels: unresolved.map(entry => entry.model)
+          }
+        : {})
+    };
+  }
+}
+
+// 声明式价格映射：站点把差异写在 adapter.priceMap 里，这里只负责按声明求值。
+//
+// 存在的理由：NewCodex / AllRouter / WindHub / Star API / RelayRouter 五个类各自
+// 只有一个 priceMap getter 和一句 responseFormat 字符串比较，业务逻辑全在基类。
+// 站点差异本来就只有「用哪份映射」这一件事，那就让它变成数据，别再变成类。
+export class PriceMapPricingStrategy extends ParsingStrategy {
+  canParse(raw, options = {}) {
+    if (options.responseFormat !== "price-map") return false;
+    const { map } = resolvePriceMap(options.priceMap);
+    if (!map) return false;
+    return Array.isArray(readPath(raw, map.rootPath || "/data"));
+  }
+
+  parse(raw, options = {}) {
+    const resolved = resolvePriceMap(options.priceMap);
+    if (resolved.error) return { data: [], group_ratio: {}, sourceFormat: "price-map", error: resolved.error };
+    const map = resolved.map;
+    const { rows, unresolved } = applyPriceMap(map, raw, { parseTiers: parseBillingTiers });
+    // 分组倍率的字段名也可能被站点改掉，按映射声明的 ratioPath 取，取不到就当没有分组。
+    const ratioSource = readPath(raw, map.groups?.ratioPath || "/group_ratio");
+    const groupRatio = ratioSource && typeof ratioSource === "object" && !Array.isArray(ratioSource)
+      ? Object.fromEntries(Object.entries(ratioSource)
+          .map(([group, value]) => [group, finitePrice(value)])
+          .filter(([, value]) => value !== null))
+      : {};
+    return {
+      data: rows,
+      group_ratio: groupRatio,
+      sourceFormat: map.source || "price-map",
       ...(unresolved.length
         ? {
             incomplete: true,
@@ -1752,6 +1818,7 @@ registerResponseFormatHandler("allrouter", () => new AllRouterPricingStrategy())
 registerResponseFormatHandler("stellaisle", () => new StellaislePricingStrategy());
 registerResponseFormatHandler("stellaisle-carpool", () => new StellaisleCarpoolPricingStrategy());
 registerResponseFormatHandler("relayrouter", () => new RelayRouterPricingStrategy());
+registerResponseFormatHandler("price-map", () => new PriceMapPricingStrategy());
 registerResponseFormatHandler("sora", () => new SoraPricingStrategy());
 registerResponseFormatHandler("model-plaza", definition => new ModelPlazaStrategy(definition.profile));
 registerResponseFormatHandler("all-in-one-models", () => new AllInOneModelsStrategy());

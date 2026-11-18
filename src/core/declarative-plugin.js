@@ -68,6 +68,17 @@ function stringMap(value, field, { maxKeys = 16 } = {}) {
   return result;
 }
 
+
+// 价格映射声明：仓库下发的 JSON 要过一遍白名单形状，不许夹带函数或大对象。
+// 字符串形式是「用哪个内置 base」，对象形式是「base + 覆盖」，都被 price-map/index.js 解析。
+function normalizePriceMap(raw, id) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === "string") return text(raw, "priceMap", { max: 64 });
+  if (typeof raw !== "object" || Array.isArray(raw)) fail(`插件 ${id} 的 priceMap 必须是 base 名或对象`);
+  const serialized = JSON.stringify(raw);
+  if (serialized.length > 8000) fail(`插件 ${id} 的 priceMap 过大（上限 8000 字节）`);
+  return JSON.parse(serialized);
+}
 function normalizePreset(raw) {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) fail("插件字段 preset 必须是对象");
@@ -191,6 +202,7 @@ export function normalizePluginSpec(raw) {
 
   const checkin = normalizeCheckin(raw.checkin);
   if (kind === "checkin" && !checkin) fail(`插件 ${id} 是签到插件，必须声明 checkin 端点`);
+  const priceMap = normalizePriceMap(raw.priceMap, id);
   const request = kind === "checkin" ? null : raw.request && typeof raw.request === "object" ? raw.request : { endpoint: raw.endpoint };
   if (kind !== "checkin" && !request.endpoint) fail(`插件 ${id} 缺少采集端点 request.endpoint`);
   const endpointCandidates = request?.endpointCandidates === undefined ? "provider" : request.endpointCandidates;
@@ -199,6 +211,7 @@ export function normalizePluginSpec(raw) {
   if (!CREDENTIALS.has(credentials)) fail(`插件 ${id} 的 request.credentials 不合法：${credentials}`);
   const responseFormat = raw.responseFormat === undefined ? "auto" : raw.responseFormat;
   if (!isSupportedResponseFormat(responseFormat)) fail(`插件 ${id} 的 responseFormat 不受支持：${responseFormat}，可用值 ${Object.keys(RESPONSE_FORMAT_DEFINITIONS).join("/")}`);
+  if (responseFormat === "price-map" && !priceMap) fail(`插件 ${id} 用了 price-map 格式，必须同时声明 priceMap`);
 
   return {
     schemaVersion: PLUGIN_REGISTRY_SCHEMA_VERSION,
@@ -215,6 +228,7 @@ export function normalizePluginSpec(raw) {
     preservePriceCurrency: raw.preservePriceCurrency !== false,
     preserveRechargeRateVerification: Boolean(raw.preserveRechargeRateVerification),
     responseFormat,
+    priceMap,
     request: kind === "checkin" ? null : {
       endpoint: endpoint(request.endpoint, "request.endpoint"),
       endpointCandidates,
@@ -423,7 +437,8 @@ export function providerFromSpec(spec) {
     kind: PLUGIN_DECLARATIVE_KIND,
     endpoint: request.endpoint,
     method: request.method || "GET",
-    responseFormat: spec.responseFormat || "auto"
+    responseFormat: spec.responseFormat || "auto",
+    ...(spec.priceMap ? { priceMap: spec.priceMap } : {})
   };
   return {
     kind: PLUGIN_DECLARATIVE_KIND,
@@ -434,6 +449,7 @@ export function providerFromSpec(spec) {
     mode: spec.mode || "direct",
     authType: "none",
     responseFormat: spec.responseFormat || "auto",
+    priceMap: spec.priceMap || null,
     name: spec.name,
     description: spec.description || "",
     category: spec.category || "paid",

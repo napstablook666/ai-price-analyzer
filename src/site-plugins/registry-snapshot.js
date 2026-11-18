@@ -279,6 +279,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
+      "id": "xingya",
+      "name": "星芽API",
+      "version": "0.11.2",
+      "description": "公开 /api/pricing 直连采集，83 个模型 13 个分组；充值 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送",
+      "hosts": [
+        "xingya.site",
+        "xingya.space"
+      ],
+      "needsCode": true
+    },
+    {
       "id": "site-checkin",
       "name": "站点签到插件",
       "version": "1.1.0",

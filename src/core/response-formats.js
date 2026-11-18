@@ -15,6 +15,8 @@ const definitions = {
   "stellaisle": { label: "Star API 公开定价", explicit: true, strategy: "stellaisle" },
   "stellaisle-carpool": { label: "Star API 拼车市场", explicit: true, strategy: "stellaisle-carpool" },
   "relayrouter": { label: "RelayRouter 定价", explicit: true, strategy: "relayrouter" },
+  // 声明式映射：报文形状由 adapter.priceMap 描述，站点差异写在插件里，不占新的枚举值。
+  "price-map": { label: "声明式价格映射", explicit: true, strategy: "price-map" },
 };
 
 export const RESPONSE_FORMAT_DEFINITIONS = Object.freeze(definitions);

@@ -190,3 +190,27 @@ test("does not discount twice when the station already folds in a recharge rate"
   assert.equal(offer.rechargePlan.amount, 1000);
   assert.ok(Math.abs(offer.monthlyCostPaid - 4.512) < 0.001, String(offer.monthlyCostPaid));
 });
+
+// 星芽API 的表达式外面套了两层括号：((p <= 250000)) ? ... : ...
+// 边界正则以前要求数字后直接结束，碰到 "))" 就整条不匹配，长度档静默退化成无边界。
+test("双括号包着的长度条件也要认出边界", () => {
+  const tiers = parseBillingTiers('((p <= 250000)) ? (tier("request", fixed(0.06))) : (tier("request", fixed(0.1)))');
+  assert.equal(tiers.length, 2);
+  assert.equal(tiers[0].maxTokens, 250000);
+  assert.equal(tiers[1].minTokens, 250001);
+});
+
+// 同一个站的 opus 系列把中间档写在最后：
+//   len <= 250000 ? 0.06 : (len >= 500000 ? 0.2 : 0.1)
+// 第三档没有自己的边界，旧逻辑按书写顺序取「上一档的上界」，而上一档是开口的，
+// 于是三档全无边界并列。正确结果是中间那段 250001–499999。
+test("中间档写在最后时按区间填进空隙", () => {
+  const tiers = parseBillingTiers(
+    '((p <= 250000)) ? (tier("request", fixed(0.06))) : (((len >= 500000)) ? (tier("request", fixed(0.2))) : (tier("request", fixed(0.1))))'
+  );
+  assert.deepEqual(tiers.map(tier => [tier.request, tier.minTokens, tier.maxTokens ?? null]), [
+    [0.06, 0, 250000],
+    [0.1, 250001, 499999],
+    [0.2, 500000, null]
+  ]);
+});
