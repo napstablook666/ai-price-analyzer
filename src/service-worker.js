@@ -193,20 +193,15 @@ export async function withPageFetch(station, preferredTabId, task, { existingTab
       : await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
     if (!tab?.id) throw new Error("请先在当前 Chrome 配置文件登录目标站点一次后重试");
     try {
-      let pendingCapture = await ensurePageBridge(chrome.scripting, tab.id);
+      await ensurePageBridge(chrome.scripting, tab.id, { tabs: chrome.tabs });
       const bridgeFetch = createPageFetch((message, callback) => chrome.tabs.sendMessage(tab.id, message, callback));
       let bridgeRetryUsed = false;
       const recoverBridge = async () => {
         if (bridgeRetryUsed) return;
         bridgeRetryUsed = true;
-        await ensurePageBridge(chrome.scripting, tab.id, { forceContent: true });
+        await ensurePageBridge(chrome.scripting, tab.id, { forceContent: true, tabs: chrome.tabs });
       };
       const pageFetch = request => {
-        if (request?.capture && pendingCapture) {
-          const capture = pendingCapture;
-          pendingCapture = null;
-          return Promise.resolve(capture);
-        }
         return bridgeFetch(request).catch(async error => {
           if (!/Receiving end does not exist|message channel closed before a response was received/i.test(error.message || "")) throw error;
           await recoverBridge();

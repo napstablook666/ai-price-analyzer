@@ -843,7 +843,7 @@ test("captures the AIAPI model catalog from page requests", async () => {
     await listeners.get("message")({
       source: pageWindow,
       origin,
-      data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST_V3", id }
+      data: { type: PAGE_WINDOW_CAPTURE_REQUEST_TYPE, id }
     });
     return posted.at(-1);
   };
@@ -4028,9 +4028,9 @@ test("isolates the Hepingan v3 bridge from stale v2 listeners and uses page auth
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST_V3", id: "hepingan-capture" }
+    data: { type: PAGE_WINDOW_CAPTURE_REQUEST_TYPE, id: "hepingan-capture" }
   });
-  assert.equal(posted.at(-1).type, "AI_RELAY_PAGE_BRIDGE_RESPONSE_V3");
+  assert.equal(posted.at(-1).type, PAGE_WINDOW_RESPONSE_TYPE);
   assert.equal(posted.at(-1).response.ok, false);
   await listeners.get("message")({
     source: pageWindow,
@@ -4042,7 +4042,7 @@ test("isolates the Hepingan v3 bridge from stale v2 listeners and uses page auth
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "hepingan-v3", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET", credentials: "include", headers: { Accept: "application/json" }, pageAuth } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "hepingan-v3", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET", credentials: "include", headers: { Accept: "application/json" }, pageAuth } }
   });
   assert.equal(request.init.headers.Authorization, `Bearer ${token}`);
   assert.equal(request.init.credentials, "include");
@@ -4053,7 +4053,7 @@ test("isolates the Hepingan v3 bridge from stale v2 listeners and uses page auth
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "hepingan-other", request: { url: `${origin}/api/v1/user/profile`, method: "GET" } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "hepingan-other", request: { url: `${origin}/api/v1/user/profile`, method: "GET" } }
   });
   assert.equal(request.init.headers.Authorization, undefined);
   assert.equal(request.init.credentials, "omit");
@@ -4064,7 +4064,7 @@ test("isolates the Hepingan v3 bridge from stale v2 listeners and uses page auth
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST_V3", id: "hepingan-no-token", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET", pageAuth } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "hepingan-no-token", request: { url: `${origin}${HEPINGAN_CHANNELS_ENDPOINT}`, method: "GET", pageAuth } }
   });
   assert.equal(request, null);
   assert.equal(storageReads, 1);
@@ -4254,10 +4254,7 @@ test("keeps bridge protocol constants synchronized across injected scripts", () 
     ["PAGE_BRIDGE_VERSION", PAGE_BRIDGE_VERSION],
     ["PAGE_WINDOW_REQUEST_TYPE", PAGE_WINDOW_REQUEST_TYPE],
     ["PAGE_WINDOW_CAPTURE_REQUEST_TYPE", PAGE_WINDOW_CAPTURE_REQUEST_TYPE],
-    ["PAGE_WINDOW_RESPONSE_TYPE", PAGE_WINDOW_RESPONSE_TYPE],
-    ["LEGACY_PAGE_WINDOW_REQUEST_TYPE", LEGACY_PAGE_WINDOW_REQUEST_TYPE],
-    ["LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE", LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE],
-    ["LEGACY_PAGE_WINDOW_RESPONSE_TYPE", LEGACY_PAGE_WINDOW_RESPONSE_TYPE]
+    ["PAGE_WINDOW_RESPONSE_TYPE", PAGE_WINDOW_RESPONSE_TYPE]
   ]) assertLiteral(pageBridge, name, value);
 
   for (const [name, value] of [
@@ -4272,14 +4269,13 @@ test("keeps bridge protocol constants synchronized across injected scripts", () 
     ["PAGE_RUNTIME_CAPTURE_TYPE", PAGE_RUNTIME_CAPTURE_TYPE]
   ]) assertLiteral(contentBridge, name, value);
   const assertVersioned = (value, version) => assert.match(value, new RegExp(`V${version}$`), `${value} is out of sync with version ${version}`);
-  for (const value of [PAGE_WINDOW_REQUEST_TYPE, PAGE_WINDOW_CAPTURE_REQUEST_TYPE, PAGE_WINDOW_RESPONSE_TYPE]) assertVersioned(value, 3);
+  for (const value of [PAGE_WINDOW_REQUEST_TYPE, PAGE_WINDOW_CAPTURE_REQUEST_TYPE, PAGE_WINDOW_RESPONSE_TYPE]) assertVersioned(value, PAGE_BRIDGE_VERSION);
   for (const value of [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE, PAGE_RUNTIME_FETCH_TYPE, PAGE_RUNTIME_CAPTURE_TYPE]) assertVersioned(value, CONTENT_BRIDGE_VERSION);
 
   assert.ok(contentBridge.includes("message?.type === PAGE_RUNTIME_FETCH_TYPE"));
   assert.ok(contentBridge.includes("message?.type === PAGE_RUNTIME_CAPTURE_TYPE"));
   assert.ok(pageBridge.includes("type: PAGE_WINDOW_RESPONSE_TYPE"));
-  assert.ok(pageTabs.includes("function probePageBridge(requiredVersion, responseType, captureRequestType)"));
-  assert.ok(pageTabs.includes("func: probePageBridge, args: [PAGE_BRIDGE_VERSION, LEGACY_PAGE_WINDOW_RESPONSE_TYPE, LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE]"));
+  assert.ok(pageTabs.includes("function probePageBridge()"), "probePageBridge 不再按版本号判断是否最新");
   assert.ok(pageTabs.includes("func: probeContentBridge, args: [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE]"));
   assert.ok(pageTabs.includes("contentProbe.result.version < CONTENT_BRIDGE_VERSION"));
 });
@@ -4392,7 +4388,7 @@ test("uses the CUN.AI local uid only for its pricing API", async () => {
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "cun-1", request: { url: `${origin}/api/pricing`, method: "GET", credentials: "include", headers: { Accept: "application/json" }, pageAuth: { source: "localStorage", storageKey: "uid", header: "New-Api-User", missingMessage: "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "cun-1", request: { url: `${origin}/api/pricing`, method: "GET", credentials: "include", headers: { Accept: "application/json" }, pageAuth: { source: "localStorage", storageKey: "uid", header: "New-Api-User", missingMessage: "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
   });
   assert.equal(request.init.headers["New-Api-User"], "cun-user-id");
   assert.equal(request.init.headers.Authorization, undefined);
@@ -4429,7 +4425,7 @@ test("uses FastAIToken page auth only for its channel API without returning the 
   runInNewContext(readFileSync(new URL("../src/page-bridge.js", import.meta.url), "utf8"), { window: pageWindow, history: pageWindow.history, fetch: pageWindow.fetch, XMLHttpRequest: MockXHR, URL, Date, Math, JSON, Object, String, Number, Array, Set, RegExp, Error, Promise });
   await listeners.get("message")({
     source: pageWindow, origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-1", request: { url: `${origin}/api/v1/channels/available`, method: "GET", credentials: "include", headers: { Accept: "application/json", "X-User-UI-Request": "1" }, pageAuth: { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "fastai-1", request: { url: `${origin}/api/v1/channels/available`, method: "GET", credentials: "include", headers: { Accept: "application/json", "X-User-UI-Request": "1" }, pageAuth: { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
   });
   assert.equal(request.init.headers.Authorization, `Bearer ${token}`);
   assert.equal(request.init.headers["X-User-UI-Request"], "1");
@@ -4438,7 +4434,7 @@ test("uses FastAIToken page auth only for its channel API without returning the 
   request = null;
   await listeners.get("message")({
     source: pageWindow, origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-2", request: { url: `${origin}/api/v1/user/profile`, method: "GET", headers: { Accept: "application/json" } } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "fastai-2", request: { url: `${origin}/api/v1/user/profile`, method: "GET", headers: { Accept: "application/json" } } }
   });
   assert.equal(request.init.headers.Authorization, undefined);
   assert.equal(request.init.headers["X-User-UI-Request"], undefined);
@@ -4447,7 +4443,7 @@ test("uses FastAIToken page auth only for its channel API without returning the 
   pageWindow.localStorage.getItem = () => "";
   await listeners.get("message")({
     source: pageWindow, origin,
-    data: { type: "AI_RELAY_PAGE_BRIDGE_REQUEST", id: "fastai-3", request: { url: `${origin}/api/v1/channels/available`, method: "GET", headers: { Accept: "application/json" }, pageAuth: { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
+    data: { type: PAGE_WINDOW_REQUEST_TYPE, id: "fastai-3", request: { url: `${origin}/api/v1/channels/available`, method: "GET", headers: { Accept: "application/json" }, pageAuth: { source: "localStorage", storageKey: "auth_token", header: "Authorization", scheme: "Bearer", missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试" } } }
   });
   assert.equal(request, null);
   assert.match(posted.at(-1).error, /未找到 FastAIToken 登录凭据/);
@@ -4487,7 +4483,7 @@ test("captures CheapRouter model prices from the logged-in DOM", async () => {
   await listeners.get("message")({
     source: pageWindow,
     origin,
-    data: { type: "AI_RELAY_PAGE_CAPTURE_REQUEST", id: "cheaprouter-1" }
+    data: { type: PAGE_WINDOW_CAPTURE_REQUEST_TYPE, id: "cheaprouter-1" }
   });
   const result = posted.at(-1).response;
   assert.equal(result.ok, true);
@@ -4785,8 +4781,7 @@ test("installs bridge scripts when an existing page has no bridge", async () => 
   const injections = [];
   const results = [{ result: { current: false } }, { result: false }];
   const scripting = { executeScript: async script => { injections.push(script); return [script.func?.name?.startsWith("probe") ? results.shift() : {}]; } };
-  assert.equal(await ensurePageBridge(scripting, 42), null);
-  assert.deepEqual(injections[0].args, [PAGE_BRIDGE_VERSION, LEGACY_PAGE_WINDOW_RESPONSE_TYPE, LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE]);
+  assert.equal(await ensurePageBridge(scripting, 42), undefined);
   assert.deepEqual(injections[2].args, [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE]);
   assert.deepEqual(injections.map(({ target, world, files }) => ({ target, world, files })), [
     { target: { tabId: 42 }, world: "MAIN", files: undefined },
@@ -4797,16 +4792,27 @@ test("installs bridge scripts when an existing page has no bridge", async () => 
   ]);
 });
 
-test("upgrades a legacy page bridge without adding another request proxy", async () => {
-  const capture = { ok: true, status: 200, body: { data: [{ model_name: "gpt-4o" }] } };
+test("rebuilds the page context when a bridge without teardown is still running", async () => {
   const injections = [];
-  const results = [{ result: { legacy: true, capture } }, { result: true }];
+  const reloads = [];
+  const updated = { addListener(listener) { updated.fire = listener; }, removeListener() {} };
+  const tabs = {
+    reload: async tabId => { reloads.push(tabId); queueMicrotask(() => updated.fire(tabId, { status: "complete" })); },
+    get: async () => ({ status: "complete", url: "https://jiji.cc/" }),
+    onUpdated: updated
+  };
+  const results = [{ result: { stale: true } }, { result: { version: CONTENT_BRIDGE_VERSION } }];
   const scripting = { executeScript: async script => { injections.push(script); return [script.func?.name?.startsWith("probe") ? results.shift() : {}]; } };
-  assert.equal(await ensurePageBridge(scripting, 42), capture);
-  assert.deepEqual(injections.filter(script => script.files).map(({ target, world, files }) => ({ target, world, files })), [
-    { target: { tabId: 42 }, world: "MAIN", files: ["src/page-bridge.js"] }
+  await ensurePageBridge(scripting, 42, { tabs });
+  assert.deepEqual(reloads, [42]);
+  assert.deepEqual(injections.filter(script => script.files).map(({ world, files }) => ({ world, files })), [
+    { world: "MAIN", files: ["src/page-bridge.js"] }
   ]);
-  assert.equal(injections[1].world, "MAIN");
+});
+
+test("refuses to run against a bridge it cannot replace when no tab handle is available", async () => {
+  const scripting = { executeScript: async script => [script.func ? { result: { stale: true } } : {}] };
+  await assert.rejects(() => ensurePageBridge(scripting, 42), /刷新该页面/);
 });
 
 test("reinstalls stale v2 page and content bridges", async () => {
@@ -4820,12 +4826,14 @@ test("reinstalls stale v2 page and content bridges", async () => {
   ]);
 });
 
-test("does not reinject an already installed bridge", async () => {
+test("reinstalls the page bridge on every pass so stale injected logic cannot survive", async () => {
   const injections = [];
-  const results = [{ result: { current: true, version: 3 } }, { result: { version: CONTENT_BRIDGE_VERSION } }];
+  const results = [{ result: { upgradeable: true } }, { result: { version: CONTENT_BRIDGE_VERSION } }];
   const scripting = { executeScript: async script => { injections.push(script); return [script.func?.name?.startsWith("probe") ? results.shift() : {}]; } };
-  assert.equal(await ensurePageBridge(scripting, 42), null);
-  assert.equal(injections.some(script => script.files), false);
+  await ensurePageBridge(scripting, 42);
+  assert.deepEqual(injections.filter(script => script.files).map(({ world, files }) => ({ world, files })), [
+    { world: "MAIN", files: ["src/page-bridge.js"] }
+  ]);
 });
 
 test("reinstalls the content bridge when a page receiver disappears", async () => {
@@ -4833,6 +4841,7 @@ test("reinstalls the content bridge when a page receiver disappears", async () =
   const scripting = { executeScript: async script => { injections.push(script); return [{ result: script.func?.name?.startsWith("probe") ? { current: true } : true }]; } };
   await ensurePageBridge(scripting, 42, { forceContent: true });
   assert.deepEqual(injections.filter(script => script.files).map(({ target, world, files }) => ({ target, world, files })), [
+    { target: { tabId: 42 }, world: "MAIN", files: ["src/page-bridge.js"] },
     { target: { tabId: 42 }, world: undefined, files: ["src/content-bridge.js"] }
   ]);
 });

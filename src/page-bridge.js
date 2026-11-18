@@ -1,15 +1,23 @@
 (() => {
-  const PAGE_BRIDGE_VERSION = 5;
-  const legacyBridge = window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ === true;
-  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= PAGE_BRIDGE_VERSION) return;
+  const PAGE_BRIDGE_VERSION = 6;
+  // MAIN world 的脚本活到页面关闭为止，扩展重载它也不会退场。旧实现靠一个手写版本号决定
+  // 「要不要重新注入」：改完行为忘记把数字加 1，页面里就一直跑着几个月前的逻辑，扩展还以为
+  // 它是最新的，报出来的错也是旧的。现在每次注入都先把上一轮装的 listener 与 fetch/XHR 补丁
+  // 拆干净再重装，重复注入等于原地升级，正确性不再依赖人工记版本号。
+  const previousTeardown = window.__AI_PRICING_PAGE_BRIDGE_TEARDOWN__;
+  if (typeof previousTeardown === "function") {
+    try { previousTeardown(); } catch {}
+  }
+  const nativeFetch = typeof window.fetch === "function" ? window.fetch : null;
+  const nativeXhrOpen = XMLHttpRequest.prototype.open;
+  const nativeXhrSend = XMLHttpRequest.prototype.send;
+  const nativePushState = history.pushState;
+  const nativeReplaceState = history.replaceState;
   window.__AI_PRICING_PAGE_BRIDGE__ = true;
   window.__AI_PRICING_PAGE_BRIDGE_VERSION__ = PAGE_BRIDGE_VERSION;
-const PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V3";
-const PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V3";
-const LEGACY_PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST";
-const LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST";
-const PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V3";
-const LEGACY_PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE";
+const PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V6";
+const PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V6";
+const PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V6";
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request", "new-api-user"]);
 const ALLOWED_CREDENTIALS = new Set(["omit", "same-origin", "include"]);
@@ -525,20 +533,21 @@ function clearCapturedPricing() {
 }
 
 function rememberNavigation() {
-  for (const method of ["pushState", "replaceState"]) {
-    const original = history[method];
-    history[method] = function(...args) {
-      const result = original.apply(this, args);
-      clearCapturedPricing();
-      return result;
-    };
-  }
+  history.pushState = function(...args) {
+    const result = nativePushState.apply(this, args);
+    clearCapturedPricing();
+    return result;
+  };
+  history.replaceState = function(...args) {
+    const result = nativeReplaceState.apply(this, args);
+    clearCapturedPricing();
+    return result;
+  };
   window.addEventListener("popstate", clearCapturedPricing);
 }
 
 function rememberFetches() {
-  const nativeFetch = window.fetch;
-  if (typeof nativeFetch === "function") window.fetch = async function(...args) {
+  if (nativeFetch) window.fetch = async function(...args) {
     const response = await nativeFetch.apply(this, args);
     if (isPricingUrl(args[0])) {
       const contentLength = Number(response.headers?.get?.("content-length"));
@@ -546,29 +555,25 @@ function rememberFetches() {
     }
     return response;
   };
-  const nativeOpen = XMLHttpRequest.prototype.open;
-  const nativeSend = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function(method, url) { this.__aiRelayUrl = url; return nativeOpen.apply(this, arguments); };
+  XMLHttpRequest.prototype.open = function(method, url) { this.__aiRelayUrl = url; return nativeXhrOpen.apply(this, arguments); };
   XMLHttpRequest.prototype.send = function(...args) {
     if (isPricingUrl(this.__aiRelayUrl)) this.addEventListener("load", () => { try { if (this.responseText.length <= MAX_CAPTURE_BYTES) rememberPricing(JSON.parse(this.responseText), "xhr"); } catch {} }, { once: true });
-    return nativeSend.apply(this, args);
+    return nativeXhrSend.apply(this, args);
   };
 }
 
-if (!legacyBridge) {
-  rememberNavigation();
-  rememberFetches();
-}
-window.addEventListener("message", async event => {
+rememberNavigation();
+rememberFetches();
+async function onMessage(event) {
   if (event.source !== window || event.origin !== window.location.origin) return;
   const { type, id, request } = event.data || {};
   if (typeof id !== "string" || !id) return;
-  if (type === PAGE_WINDOW_CAPTURE_REQUEST_TYPE || (!legacyBridge && type === LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE)) {
+  if (type === PAGE_WINDOW_CAPTURE_REQUEST_TYPE) {
     const payload = await capturePricing();
     window.postMessage({ type: PAGE_WINDOW_RESPONSE_TYPE, id, ok: Boolean(payload), response: { ok: Boolean(payload), status: payload ? 200 : 404, body: payload || { data: [], group_ratio: {} } } }, window.location.origin);
     return;
   }
-  if (type !== PAGE_WINDOW_REQUEST_TYPE && (!legacyBridge && type !== LEGACY_PAGE_WINDOW_REQUEST_TYPE)) return;
+  if (type !== PAGE_WINDOW_REQUEST_TYPE) return;
   try {
     let response = await executeRequest(request);
     if (!response.ok && shouldRefreshPageAuth(request?.pageAuth, response) && await refreshPageAuth(request.pageAuth)) response = await executeRequest(request);
@@ -580,5 +585,23 @@ window.addEventListener("message", async event => {
   } catch (error) {
     window.postMessage({ type: PAGE_WINDOW_RESPONSE_TYPE, id, ok: false, error: error.message }, window.location.origin);
   }
-});
+}
+
+window.addEventListener("message", onMessage);
+
+// 下一次注入会先调这个，把这一轮装上去的一切（listener、fetch/XHR 补丁、history 包装）
+// 还原干净，脚本就可以反复注入而不叠加。
+window.__AI_PRICING_PAGE_BRIDGE_TEARDOWN__ = () => {
+  window.removeEventListener("message", onMessage);
+  window.removeEventListener("popstate", clearCapturedPricing);
+  if (nativeFetch && window.fetch !== nativeFetch) window.fetch = nativeFetch;
+  XMLHttpRequest.prototype.open = nativeXhrOpen;
+  XMLHttpRequest.prototype.send = nativeXhrSend;
+  history.pushState = nativePushState;
+  history.replaceState = nativeReplaceState;
+  capturedPricing = null;
+  delete window.__AI_PRICING_PAGE_BRIDGE__;
+  delete window.__AI_PRICING_PAGE_BRIDGE_VERSION__;
+  delete window.__AI_PRICING_PAGE_BRIDGE_TEARDOWN__;
+};
 })();

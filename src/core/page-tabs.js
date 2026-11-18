@@ -1,10 +1,7 @@
 import {
   CONTENT_BRIDGE_VERSION,
   CONTENT_PROBE_REQUEST_TYPE,
-  CONTENT_PROBE_RESPONSE_TYPE,
-  LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE,
-  LEGACY_PAGE_WINDOW_RESPONSE_TYPE,
-  PAGE_BRIDGE_VERSION
+  CONTENT_PROBE_RESPONSE_TYPE
 } from "./bridge-protocol.js";
 import { normalizeHostname, providerForStation } from "./provider-registry.js";
 // 站点常把裸域 301 到 www（jiji.cc → www.jiji.cc）。两边要算同一个站点，
@@ -116,28 +113,16 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { allowTe
 }
 
 // The old MAIN-world proxy survives extension reloads and cannot be unregistered.
-function probePageBridge(requiredVersion, responseType, captureRequestType) {
-  if (window.__AI_PRICING_PAGE_BRIDGE__ && window.__AI_PRICING_PAGE_BRIDGE_VERSION__ >= requiredVersion) return { current: true };
+// 页面里的旧桥不会因为扩展重载而退场。这里只判断它还活着没有；要不要重新注入由
+// ensurePageBridge 统一决定（每次都注入），不再靠版本号比较来推断「是不是最新的」。
+function probePageBridge() {
+  // MAIN world 的注入物没有卸载通道：旧版脚本既不会拆掉自己的 listener，也没法把它包过的
+  // window.fetch 还原回去。这种页面只能先把上下文整个重建一次。
+  if (window.__AI_PRICING_PAGE_BRIDGE__ === true) return typeof window.__AI_PRICING_PAGE_BRIDGE_TEARDOWN__ === "function" ? { upgradeable: true } : { stale: true };
   const fetchSource = String(window.fetch || "");
   const xhrSendSource = String(window.XMLHttpRequest?.prototype?.send || "");
-  if (fetchSource.includes("isPricingUrl") || xhrSendSource.includes("isPricingUrl")) return { legacy: true };
-  return new Promise(resolve => {
-    const id = `ai-pricing-probe-${Date.now()}-${Math.random()}`;
-    let timer;
-    const finish = result => {
-      clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-      resolve(result);
-    };
-    const onMessage = event => {
-      const message = event.data || {};
-      if (event.source !== window || event.origin !== window.location.origin || message.type !== responseType || message.id !== id) return;
-      finish({ legacy: true, capture: message.response });
-    };
-    window.addEventListener("message", onMessage);
-    timer = setTimeout(() => finish({ current: false }), 100);
-    window.postMessage({ type: captureRequestType, id }, window.location.origin);
-  });
+  if (fetchSource.includes("isPricingUrl") || xhrSendSource.includes("isPricingUrl")) return { stale: true };
+  return { current: false };
 }
 
 function probeContentBridge(requestType, responseType) {
@@ -170,25 +155,23 @@ export function resetContentBridge() {
 }
 
 
-function markLegacyPageBridge() {
-  window.__AI_PRICING_PAGE_BRIDGE_LEGACY__ = true;
-}
 
-export async function ensurePageBridge(scripting, tabId, { forceContent = false } = {}) {
+export async function ensurePageBridge(scripting, tabId, { forceContent = false, tabs = null } = {}) {
   const target = { tabId };
-  const [pageProbe] = await scripting.executeScript({ target, world: "MAIN", func: probePageBridge, args: [PAGE_BRIDGE_VERSION, LEGACY_PAGE_WINDOW_RESPONSE_TYPE, LEGACY_PAGE_WINDOW_CAPTURE_REQUEST_TYPE] });
-  let initialCapture = null;
-  if (pageProbe?.result?.legacy) {
-    if (pageProbe.result.capture?.ok) initialCapture = pageProbe.result.capture;
-    await scripting.executeScript({ target, world: "MAIN", func: markLegacyPageBridge });
-    await scripting.executeScript({ target, files: ["src/page-bridge.js"], world: "MAIN" });
-  } else if (!pageProbe?.result?.current) {
-    await scripting.executeScript({ target, files: ["src/page-bridge.js"], world: "MAIN" });
+  // 每次都注入。脚本顶部会先把自己上一轮装的 listener、fetch/XHR 补丁、history 包装全拆回去
+  // 再重装，所以重复注入就是原地升级。以前只在版本号偏小时才注入，改完行为忘了把数字加一，
+  // 页面里就一直在跑旧逻辑，扩展还以为它是最新的，报出来的也是旧错误。
+  const [pageProbe] = await scripting.executeScript({ target, world: "MAIN", func: probePageBridge });
+  if (pageProbe?.result?.stale) {
+    // 页面里挂着一份没带 teardown 的旧桥，它拆不掉也盖不住：旧 listener 会重复响应、
+    // 旧 fetch 包装会继续拒绝新逻辑认可的请求。只有重建页面上下文能清掉那批闭包。
+    if (!tabs) throw new Error("页面里存在无法升级的旧版页面桥，请刷新该页面后重试");
+    await waitForTab(tabs, tabId, { reload: true });
   }
+  await scripting.executeScript({ target, files: ["src/page-bridge.js"], world: "MAIN" });
   const [contentProbe] = await scripting.executeScript({ target, world: "ISOLATED", func: probeContentBridge, args: [CONTENT_PROBE_REQUEST_TYPE, CONTENT_PROBE_RESPONSE_TYPE] });
   if (forceContent || !contentProbe?.result || contentProbe.result.version < CONTENT_BRIDGE_VERSION) {
     await scripting.executeScript({ target, world: "ISOLATED", func: resetContentBridge });
     await scripting.executeScript({ target, files: ["src/content-bridge.js"] });
   }
-  return initialCapture;
 }
