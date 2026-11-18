@@ -832,22 +832,26 @@ function updateStationQueryStatus(progress) {
       : `查询到 ${Number(progress.modelCount) || 0} 个模型${duration}`;
 }
 
+// DOM id 一律是 usage-<key>。前缀收进这个函数，调用处才写得出字面前缀：
+// ids:check 靠前缀识别动态拼接，写成 `#${id}` 会把整页 id 检查降级成不可验证。
+const usageInput = (key) => $(`#usage-${key}`);
+
 const USAGE_INPUTS = [
-  { field: "input", id: "usage-input", million: true },
-  { field: "cacheRead", id: "usage-cache-read", million: true },
-  { field: "cacheWrite", id: "usage-cache-write", million: true },
-  { field: "cacheWrite1h", id: "usage-cache-write-1h", million: true },
-  { field: "output", id: "usage-output", million: true },
-  { field: "requests", id: "usage-requests", million: false },
-  { field: "imageInputTokens", id: "usage-image-input-tokens", million: true },
-  { field: "imageOutputTokens", id: "usage-image-output-tokens", million: true },
-  { field: "peakShare", id: "usage-peak-share", million: false, percent: true },
-  { field: "images", id: "usage-images", million: false }
+  { field: "input", key: "input", million: true },
+  { field: "cacheRead", key: "cache-read", million: true },
+  { field: "cacheWrite", key: "cache-write", million: true },
+  { field: "cacheWrite1h", key: "cache-write-1h", million: true },
+  { field: "output", key: "output", million: true },
+  { field: "requests", key: "requests", million: false },
+  { field: "imageInputTokens", key: "image-input-tokens", million: true },
+  { field: "imageOutputTokens", key: "image-output-tokens", million: true },
+  { field: "peakShare", key: "peak-share", million: false, percent: true },
+  { field: "images", key: "images", million: false }
 ];
 
 function readUsageInputs() {
-  return Object.fromEntries(USAGE_INPUTS.map(({ field, id, million, percent }) => [
-    field, Math.max(0, Number($(`#${id}`).value) || 0) * (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1)
+  return Object.fromEntries(USAGE_INPUTS.map(({ field, key, million, percent }) => [
+    field, Math.max(0, Number(usageInput(key).value) || 0) * (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1)
   ]));
 }
 
@@ -867,7 +871,7 @@ function usageInputValue(usage, { field, million, percent }) {
 function writeUsageInputs(usage) {
   for (const item of USAGE_INPUTS) {
     if (!Object.prototype.hasOwnProperty.call(usage, item.field)) continue;
-    $(`#${item.id}`).value = usageInputValue(usage, item);
+    usageInput(item.key).value = usageInputValue(usage, item);
   }
 }
 
@@ -1997,7 +2001,7 @@ $("#config-recharge-currency").addEventListener("change", () => {
 
 
 $("#usage-preset").addEventListener("change", event => applyUsagePreset(event.target.value));
-for (const { id } of USAGE_INPUTS) $(`#${id}`).addEventListener("input", syncUsagePreset);
+for (const { key } of USAGE_INPUTS) usageInput(key).addEventListener("input", syncUsagePreset);
 $("#magpie-sync-interval").addEventListener("change", event => void saveMagpieInterval(Number(event.target.value)));
 $("#sync-magpie-usage").addEventListener("click", () => void syncMagpieUsage());
 fillMagpieIntervalOptions();
