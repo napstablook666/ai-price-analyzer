@@ -41,7 +41,10 @@ function responseSignalsLogin(body) {
 
 export function requiresPageSessionPreflight(station, provider) {
   if (!station?.enabled || station.mode !== "page") return false;
-  const request = provider?.request || {};
+  // 插件没注册上时不能放过：page 模式一定得靠页面，跳过预检只会把
+  // 「插件状态不对」伪装成「无需登录」，等采集时才炸。
+  if (!provider) return Boolean(station.pluginId);
+  const request = provider.request || {};
   return Boolean(request.pageAuth || request.credentials === "include");
 }
 
@@ -56,6 +59,17 @@ export function classifyPageSessionError(error) {
   return loginSignal(error?.message || String(error)) ? "needsLogin" : "uncertain";
 }
 
+const PREFLIGHT_REASON_LIMIT = 120;
+
+// 预检失败必须把现场带出来：只给通用文案的话，面板上每个站点都是同一句话，等于没检查。
+export function pageSessionStatusReason(status, detail = "") {
+  const base = status === "ready" ? "页面会话检查通过"
+    : status === "needsLogin" ? "未找到有效登录会话，请在打开的页面手动登录"
+      : "无法确认登录状态，请检查页面后再手动确认";
+  const extra = String(detail || "").replace(/\s+/g, " ").trim();
+  if (!extra) return base;
+  return `${base}（${extra.length > PREFLIGHT_REASON_LIMIT ? `${extra.slice(0, PREFLIGHT_REASON_LIMIT)}…` : extra}）`;
+}
 function stableSerialize(value) {
   if (value === null || value === undefined) return String(value);
   if (Array.isArray(value)) return `[${value.map(stableSerialize).join(",")}]`;

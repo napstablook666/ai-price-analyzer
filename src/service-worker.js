@@ -1,7 +1,7 @@
 import { collectStation, createPageFetch } from "./core/collectors.js";
 import { modelAliasesForStations, prepareStationInput, providerForStation } from "./core/provider-registry.js";
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
-import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
+import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
 import { inferStationAdapter } from "./core/adapters.js";
 import { addProviderStationPresets } from "./core/station-presets.js";
 import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins, syncSpecSitePlugins, unloadSpecSitePlugin } from "./site-plugins/loader.js";
@@ -392,11 +392,6 @@ function safePreflightTabUrl(value) {
   return sanitizePreflightUrl(value);
 }
 
-function pageSessionStatusReason(status) {
-  if (status === "ready") return "页面会话检查通过";
-  if (status === "needsLogin") return "未找到有效登录会话，请在打开的页面手动登录";
-  return "无法确认登录状态，请检查页面后再手动确认";
-}
 
 async function preflightPageStation(station, requestRevision) {
   let opened;
@@ -430,7 +425,7 @@ async function preflightPageStation(station, requestRevision) {
       stationId: station.id,
       stationName: station.name,
       status: "uncertain",
-      reason: pageSessionStatusReason("uncertain"),
+      reason: pageSessionStatusReason("uncertain", error?.message),
       tabId: stale ? null : (Number.isInteger(error.tabId) ? error.tabId : null),
       tabUrl: stale ? "" : safePreflightTabUrl(station.baseUrl)
     };
@@ -469,6 +464,7 @@ async function preflightPageStation(station, requestRevision) {
   }
 
   let status = "uncertain";
+  let probeError = "";
   try {
     const collection = resolveStationCollection(station);
     const probe = collection.request.preflight || null;
@@ -485,6 +481,7 @@ async function preflightPageStation(station, requestRevision) {
     status = classifyPageSessionResponse(response);
   } catch (error) {
     status = classifyPageSessionError(error);
+    probeError = error?.message || "";
   }
 
   if (requestRevision !== refreshPreflightRevision) {
@@ -531,7 +528,7 @@ async function preflightPageStation(station, requestRevision) {
     stationId: station.id,
     stationName: station.name,
     status,
-    reason: pageSessionStatusReason(status),
+    reason: pageSessionStatusReason(status, probeError),
     tabId: closedTemporary ? null : tab.id,
     tabUrl: closedTemporary ? "" : safePreflightTabUrl(tab.url || station.baseUrl)
   };
@@ -540,6 +537,9 @@ async function preflightPageStation(station, requestRevision) {
 async function createRefreshPreflight() {
   await restoreRefreshPreflightState();
   if (refreshAllTask || refreshReferencesTask) throw new Error("当前正在刷新，请稍后再执行登录预检");
+  // 预检要和采集用同一套插件状态。service worker 睡醒后注册表是空的，
+  // providerForStation 拿不到插件，站点就会被判成「无需登录」一路放过。
+  await ensureWorkspacePlugins();
   const carriedTemporaryTabIds = [...refreshPreflightCreatedTabIds];
   const invalidation = invalidateRefreshPreflight();
   const requestRevision = refreshPreflightRevision;
@@ -556,6 +556,7 @@ async function createRefreshPreflight() {
   const requestSignature = refreshStationSignature(stations, requestMode);
   const results = [];
   for (const station of stations) {
+    await loadSitePluginForStation(station);
     const provider = providerForStation(station);
     if (!requiresPageSessionPreflight(station, provider)) {
       results.push({ stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "无需页面登录预检" });

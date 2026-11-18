@@ -4,7 +4,7 @@ import nodeTest from "node:test";
 import { PAGE_RUNTIME_FETCH_TYPE } from "../src/core/bridge-protocol.js";
 import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { flattenComparisonRows, getProxyPriceQuote } from "../src/core/pricing.js";
-import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, classifyPageSessionResponse, refreshStationSignature, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
+import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, classifyPageSessionResponse, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
 
 import { loadedSitePluginIds, resetSitePluginLoader } from "../src/site-plugins/loader.js";
 const test = (name, optionsOrFn, maybeFn) => {
@@ -842,4 +842,26 @@ test("restores preflight confirmation and temporary tab ownership after a servic
     assert.equal(second.results.find(result => result.stationId === "hepingan").status, "ready");
     assert.ok(worker.removed.includes(killAiTab));
   });
+});
+
+test("页面站点插件没加载上时也要预检，不能判成无需登录", () => {
+  const station = { id: "hepingan", enabled: true, mode: "page", pluginId: "hepingan" };
+  assert.equal(requiresPageSessionPreflight(station, null), true);
+  // 手动加的页面站点没有插件，本来就没有登录态可查，不用预检。
+  assert.equal(requiresPageSessionPreflight({ ...station, pluginId: "" }, null), false);
+  assert.equal(requiresPageSessionPreflight({ ...station, mode: "direct" }, null), false);
+  assert.equal(requiresPageSessionPreflight({ ...station, enabled: false }, null), false);
+  assert.equal(requiresPageSessionPreflight(station, { request: { pageAuth: {} } }), true);
+  assert.equal(requiresPageSessionPreflight(station, { request: { credentials: "include" } }), true);
+  assert.equal(requiresPageSessionPreflight(station, { request: {} }), false);
+});
+
+test("预检失败把现场写进 reason，不再只有一句通用文案", () => {
+  const detail = "未找到 hepingan.top 登录凭据，请先在当前 Chrome 配置文件登录后重试";
+  assert.equal(pageSessionStatusReason("needsLogin"), "未找到有效登录会话，请在打开的页面手动登录");
+  assert.match(pageSessionStatusReason("needsLogin", detail), /未找到 hepingan\.top 登录凭据/);
+  assert.match(pageSessionStatusReason("uncertain", "页面请求超时"), /页面请求超时/);
+  assert.equal(pageSessionStatusReason("ready", "   "), "页面会话检查通过");
+  // 长错误只留前 120 字，面板不该被一整段堆栈撑爆。
+  assert.ok(pageSessionStatusReason("uncertain", "x".repeat(400)).length < 200);
 });
