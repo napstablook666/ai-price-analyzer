@@ -4,11 +4,10 @@
 .page-shell { display: flex; flex-direction: column; gap: 16px; width: min(1760px, 100%); flex: 1; height: auto; min-height: 0; margin: 0 auto; padding: 16px 24px 20px; overflow: hidden; }
 .media-mode-bar { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--shadow-raise); }
 .media-mode-copy { display: grid; gap: 2px; min-width: 0; }
-.media-mode-copy .eyebrow { color: var(--text-3); font-size: 11px; }
 .media-mode-copy strong { color: var(--text); font-size: 15px; }
 .media-mode-copy p { margin: 0; color: var(--text-3); font-size: 11px; }
-.media-mode-switch { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
-.media-mode-button { min-height: 34px; min-width: 72px; padding: 0 14px; border-radius: 6px; color: var(--text-2); background: transparent; font-size: 13px; font-weight: 600; }
+.media-mode-switch { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.media-mode-button { min-height: 34px; min-width: 72px; padding: 0 12px; border-radius: 4px; color: var(--text-2); background: transparent; font-size: 13px; font-weight: 600; }
 .media-mode-button:hover { color: var(--text); background: var(--surface); }
 .media-mode-button.is-active { color: var(--accent); background: var(--surface); box-shadow: var(--shadow-segment); }
 .media-mode-video .billing-mode-tag { color: var(--accent); }
@@ -16,8 +15,8 @@
 .summary-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
 .summary-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
 .summary-strip:empty { display: none; }
-.comparison-mode { display: flex; flex: 0 0 auto; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
-.comparison-mode-button { min-height: 32px; padding: 0 14px; border-radius: 6px; color: var(--text-2); background: transparent; font-size: 13px; font-weight: 600; }
+.comparison-mode { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.comparison-mode-button { min-height: 32px; padding: 0 12px; border-radius: 4px; color: var(--text-2); background: transparent; font-size: 13px; font-weight: 600; }
 .comparison-mode-button.is-active { color: var(--accent); background: var(--surface); box-shadow: var(--shadow-segment); }
 .panel { min-width: 0; }
 .panel-heading { min-height: 48px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
@@ -73,11 +72,11 @@
 .facet-menu-body { display: grid; gap: 0; width: 100%; max-height: 320px; margin-top: 8px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-pop); overflow-y: auto; }
 .facet-search { min-height: 32px; height: 32px; margin-bottom: 8px; font-size: 13px; }
 .facet-options { display: grid; gap: 2px; }
-.facet-option { display: flex; align-items: center; gap: 8px; min-height: 24px; padding: 3px 5px; border-radius: 6px; color: var(--text-2); font-size: 13px; cursor: pointer; }
+.facet-option { display: flex; align-items: center; gap: 8px; min-height: 24px; padding: 2px 6px; border-radius: 6px; color: var(--text-2); font-size: 13px; cursor: pointer; }
 .facet-option:hover { background: var(--surface-2); }
 .facet-option input { flex: 0 0 16px; width: 16px; height: 16px; min-height: 16px; padding: 0; margin: 0; accent-color: var(--accent); }
 .station-filter-menu .facet-options { max-height: min(420px, 45vh); overflow-y: auto; }
-.facet-menu-actions { display: flex; gap: 6px; margin-bottom: 5px; }
+.facet-menu-actions { display: flex; gap: 6px; margin-bottom: 4px; }
 .facet-menu-actions button { min-height: 28px; padding: 0 8px; border-radius: 6px; color: var(--text-2); background: var(--surface-2); font-size: 11px; }
 .facet-empty { padding: 8px 4px; color: var(--text-3); font-size: 11px; }
 /* 「常用」浮层：固定定位挂在 body 层，菜单自身会滚动，绝对定位会被裁掉 */
@@ -121,7 +120,7 @@
 .dashboard-sidebar { grid-area: sidebar; display: flex; flex-direction: column; align-content: start; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .dashboard-workspace:has(.dashboard-sidebar > [data-collapsed="true"]:not(#checkin-panel)) { grid-template-columns: minmax(0, 1fr) 44px; }
 .dashboard-sidebar:has(> [data-collapsed="true"]:not(#checkin-panel)) { width: 44px; min-width: 44px; }
-.dashboard-sidebar > [data-collapsed="true"] > .panel-heading { justify-content: center; min-height: 48px; padding: 12px 5px; border-bottom: 0; }
+.dashboard-sidebar > [data-collapsed="true"] > .panel-heading { justify-content: center; min-height: 48px; padding: 12px 4px; border-bottom: 0; }
 .dashboard-sidebar > [data-collapsed="true"] > .panel-heading > div { display: none; }
 .dashboard-sidebar > [data-collapsed="true"] .collapse-toggle { margin: 0; }
 .comparison-panel { grid-area: comparison; display: flex; flex: 1 1 auto; flex-direction: column; min-height: 180px; overflow: hidden; }
@@ -175,8 +174,8 @@
 .facet-option .site-logo, .facet-option .model-logo { width: 16px; height: 16px; border-radius: 4px; }
 .facet-option .model-logo svg { width: 12px; height: 12px; }
 .model-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; color: var(--text-3); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
-.confidence-tag { padding: 0 5px; border-radius: var(--radius-pill); color: var(--text-3); background: var(--surface-2); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.provider-tag, .group-tag, .status-tag, .delta-tag { display: inline-flex; align-items: center; gap: 3px; width: fit-content; padding: 2px 5px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 12px; line-height: 1.35; }
+.confidence-tag { padding: 0 6px; border-radius: var(--radius-pill); color: var(--text-3); background: var(--surface-2); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.provider-tag, .group-tag, .status-tag, .delta-tag { display: inline-flex; align-items: center; gap: 4px; width: fit-content; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--text-2); background: var(--surface); font-size: 12px; line-height: 1.35; }
 .station-cell { display: grid; justify-items: start; gap: 6px; min-width: 0; }
 .station-site-link { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; padding: 0; color: var(--text); background: transparent; font-size: 13px; font-weight: 600; text-align: left; }
 .station-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
@@ -194,7 +193,7 @@
 .price-grid-row.price-line-primary .price-key { color: var(--text); font-weight: 600; }
 .price-grid-row.price-line-primary .price-value { color: var(--price-tone, var(--text)); font-size: 13px; font-weight: 600; }
 /* 输入/输出之外的费用项：一排小标签「官方 → 中转」，悬停看完整文字，缓存项前面加一个灰色标签 */
-.price-grid-detail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 5px; margin-top: 2px; grid-column: 1 / -1; overflow: hidden; }
+.price-grid-detail { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; margin-top: 2px; grid-column: 1 / -1; overflow: hidden; }
 .price-mini { display: inline-flex; align-items: baseline; gap: 2px; padding: 0 2px; border-radius: 4px; background: var(--surface-2); font-size: 11px; line-height: 1.25; white-space: nowrap; }
 .price-mini-label { margin-right: 2px; color: var(--text-3); font-size: 11px; line-height: 1.25; white-space: nowrap; }
 .price-mini-key { color: var(--text-2); }
@@ -241,7 +240,7 @@
 .blended-cost { color: var(--accent); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .blended-cost small { margin-left: 2px; color: var(--accent); font-size: 11px; font-weight: 600; }
 .recommendation-cell { display: flex; align-items: flex-start; flex-direction: column; gap: 4px; min-width: 0; }
-.status-cluster { display: flex; flex-wrap: wrap; gap: 3px; }
+.status-cluster { display: flex; flex-wrap: wrap; gap: 4px; }
 .status-tag .icon { width: 10px; height: 10px; }
 .status-tag.warning { color: var(--warn); border-color: var(--warn-line); background: var(--warn-soft); }
 .status-tag.muted { color: var(--text-3); }
@@ -293,14 +292,14 @@
 .checkin-item { flex-wrap: wrap; }
 .checkin-empty { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-2); font-size: 11px; }
 .checkin-empty-text { line-height: 1.5; }
-.back-to-top { position: fixed; right: 18px; bottom: 18px; z-index: 20; display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-2); background: var(--surface); box-shadow: var(--shadow-pop); }
+.back-to-top { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-2); background: var(--surface); box-shadow: var(--shadow-pop); }
 
 /* 顶栏模式开关：付费站和公益站随手切换 */
 .dashboard-topbar .comparison-mode-button { min-height: 30px; padding: 0 10px; }
 
 /* 设置抽屉：顶栏齿轮就地打开站点与设置，盖在仪表盘上而不是另开页面 */
 .settings-layer { position: fixed; inset: 0; z-index: 70; display: grid; justify-items: end; }
-.settings-scrim { position: absolute; inset: 0; background: rgb(15 15 14 / .3); }
+.settings-scrim { position: absolute; inset: 0; background: var(--overlay); }
 .settings-sheet { position: relative; display: flex; flex-direction: column; width: min(1120px, 100%); height: 100%; border-left: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-pop); }
 .settings-sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
 .settings-sheet-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
@@ -351,12 +350,13 @@
   .top-menu-checkin { width: min(88vw, 320px); max-height: none; }
 }
 @media (max-width: 640px) {
-  .dashboard-topbar { min-height: 60px; padding: 9px 12px; }
+  .dashboard-topbar { min-height: 60px; padding: 8px 12px; }
   .dashboard-topbar .brand-overline { display: none; }
   .dashboard-topbar .brand-mark { width: 30px; height: 30px; }
   .dashboard-topbar .refresh-actions { gap: 4px; }
   .dashboard-topbar .refresh-station-body, .dashboard-topbar .checkin-body { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; max-height: calc(100dvh - 76px); overflow-y: auto; }
   .dashboard-topbar .button { min-height: 44px; }
+  .dashboard-topbar .theme-toggle { width: 44px; height: 44px; }
   .page-shell { height: auto; }
   .comparison-mode-button { min-height: 44px; }
   .media-mode-bar { align-items: stretch; flex-direction: column; gap: 8px; }
@@ -389,22 +389,22 @@
 }
 
 .cell-chart { display: block; width: 100%; max-width: 180px; height: 5px; min-width: 36px; position: relative; }
-.chart-track { display: block; position: relative; height: 100%; overflow: hidden; background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; }
+.chart-track { display: block; position: relative; height: 100%; overflow: hidden; background: var(--surface-2); border: 1px solid var(--line); border-radius: 2px; }
 .chart-bar { position: absolute; inset: 0 auto 0 0; min-width: 2px; border-radius: inherit; background: var(--text-3); transition: width .2s ease; }
 .cell-chart.is-monthly-cost { max-width: none; min-width: 0; height: 6px; }
 .cell-chart.is-monthly-cost .chart-bar { background: var(--accent); }
 /* 列头小图标：悬停或点击解释价格单位（中转币），表格只留数值 */
-.unit-hint { display: inline-block; position: relative; margin-left: 5px; vertical-align: -0.1em; font-weight: 400; }
+.unit-hint { display: inline-block; position: relative; margin-left: 6px; vertical-align: -0.1em; font-weight: 400; }
 .unit-hint-trigger { display: inline-grid; place-items: center; width: 15px; height: 15px; color: var(--text-3); border-radius: 50%; cursor: pointer; list-style: none; }
 .unit-hint-trigger::-webkit-details-marker { display: none; }
 .unit-hint-trigger::marker { content: ""; }
-.unit-hint-trigger .icon { width: 14px; height: 14px; stroke-width: 1.9; }
+.unit-hint-trigger .icon { width: 14px; height: 14px; }
 .unit-hint-trigger:hover, .unit-hint-trigger:focus-visible, .unit-hint[open] > .unit-hint-trigger { color: var(--accent); }
 .unit-hint-popover { position: absolute; z-index: 40; display: none; left: -12px; top: calc(100% + 8px); width: min(300px, 72vw); padding: 10px 12px; gap: 6px; color: var(--text-2); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: var(--shadow-pop); font-size: 12px; font-weight: 400; line-height: 1.6; letter-spacing: 0; white-space: normal; }
 .unit-hint-popover strong { color: var(--text); font-size: 12px; }
 .unit-hint-popover p { margin: 0; }
-/* 图标与浮层之间有 7px 间隙，用透明桥接避免鼠标下移时浮层闪没 */
-.unit-hint-popover::before { content: ""; position: absolute; top: -7px; right: 0; left: 0; height: 7px; }
+/* 图标与浮层之间有 8px 间隙，用透明桥接避免鼠标下移时浮层闪没 */
+.unit-hint-popover::before { content: ""; position: absolute; top: -8px; right: 0; left: 0; height: 8px; }
 .unit-hint:hover > .unit-hint-popover, .unit-hint:focus-within > .unit-hint-popover, .unit-hint[open] > .unit-hint-popover { display: grid; }
 /* 月成本排名浮层挂在 body 层，鼠标移进浮层滚动列表不会把它关掉 */
 .floating-layer { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
@@ -433,7 +433,7 @@
 .monthly-cost-ranking-cost { font: 600 12px var(--font-mono); white-space: nowrap; }
 .monthly-cost-ranking-group { display: flex; align-items: center; gap: 6px; margin-left: 40px; overflow: hidden; color: var(--text-3); font-size: 10px; white-space: nowrap; }
 .monthly-cost-ranking-group-name { overflow: hidden; text-overflow: ellipsis; }
-.monthly-cost-ranking-current { flex: none; padding: 0 6px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font-size: 10px; font-weight: 600; line-height: 15px; letter-spacing: .04em; }
+.monthly-cost-ranking-current { flex: none; padding: 0 6px; border-radius: var(--radius-pill); background: var(--accent); color: var(--on-accent); font-size: 10px; font-weight: 600; line-height: 16px; }
 .monthly-cost-ranking-list .cell-chart { max-width: none; flex: none; }
 .monthly-cost-ranking-empty { padding: 8px 0; color: var(--text-3); font-size: 12px; }
 /* 模型匹配详情：表格里只保留置信度，其余信息悬停或点击展开 */
@@ -450,7 +450,7 @@
 .match-detail-primary strong { color: var(--text); font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
 .match-detail-line { display: flex; justify-content: space-between; gap: 12px; }
 .match-detail-line > span:last-child { color: var(--text); text-align: right; }
-.match-candidates { display: grid; gap: 4px; padding-top: 5px; border-top: 1px solid var(--line); }
+.match-candidates { display: grid; gap: 4px; padding-top: 4px; border-top: 1px solid var(--line); }
 .match-candidates .candidate-list { display: grid; gap: 4px; }
 .candidate-item { display: grid; grid-template-columns: minmax(0, 1fr) 80px 56px; gap: 8px; color: var(--text-3); }
 .candidate-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
