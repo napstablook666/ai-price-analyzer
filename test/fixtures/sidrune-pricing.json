@@ -1,0 +1,1341 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "billing_notice": "所有按 Token 计价的模型均按官方价格和消耗 token 计算基础价格，按次计价模型以展示为准。\n\n本站充值倍率为 [充值倍率] 倍率，即1人民币=[充值倍率]美元额度，分组倍率即为该分组模型的实际汇率（人民币/美元）\n\n> 购买订阅套餐可获得额度折扣，套餐内额度越大折扣率越高，具体以套餐为准，下方所示分组汇率均为余额汇率，乘以套餐的额度折扣即为套餐的实际汇率\n> 相同号池的余额计费分组和订阅计费分组倍率相同，区别为名称中的标识不同——余额计费分组的名称中带有“余额”字样、订阅计费分组的名称中带有“订阅”字样\n",
+    "recharge_multiplier": 1,
+    "groups": [
+      {
+        "id": 5,
+        "name": "Claude-Max-cc",
+        "description": "Max号池，限Claude Code（非CC请求自动落入外接组），Fable5单价上浮20%。带防封注入，介意请切换低注入组。\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n",
+        "rate_multiplier": 1,
+        "effective_rate_multiplier": 1,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 0.9,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-4-6",
+            "claude-sonnet-5",
+            "claude-haiku-4-5",
+            "claude-opus-4-5",
+            "claude-sonnet-4-5",
+            "claude-opus-5",
+            "claude-fable-5",
+            "claude-fable-5-1",
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+            "claude-fable-5-2"
+          ]
+        }
+      },
+      {
+        "id": 39,
+        "name": "Claude-AWSQ",
+        "description": "AWSQ混合号池，智商不稳定，适合酒馆用户，或解决简单问题\n智商⭐⭐\n速度/稳定性⭐⭐⭐⭐⭐",
+        "rate_multiplier": 0.4,
+        "effective_rate_multiplier": 0.4,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-4-6",
+            "claude-fable-5",
+            "claude-sonnet-5",
+            "claude-opus-4-5",
+            "claude-haiku-4-5",
+            "claude-sonnet-4-5",
+            "claude-opus-5",
+            "claude-fable-5-1",
+            "claude-opus-5-5",
+            "claude-sonnet-5-5"
+          ]
+        }
+      },
+      {
+        "id": 46,
+        "name": "GPT-Pro",
+        "description": "Pro 5X + Plus号池炸弹车，缓存比之前低一点，可生图。\n智商    ⭐⭐⭐⭐\n速度/稳定性⭐⭐⭐\n",
+        "rate_multiplier": 0.2,
+        "effective_rate_multiplier": 0.2,
+        "image_rate_independent": true,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 0.15,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gpt-5.5",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "codex-auto-review",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.3-codex-spark",
+            "gpt-6-astra",
+            "gpt-6-sol",
+            "gpt-6.1-sol",
+            "gpt-image-2",
+            "gpt-image-2.5-flare",
+            "gpt-image-2.5-sunburst",
+            "gpt-image-2.6-sunburst",
+            "gpt-image-2.6-flare",
+            "gpt-6.1-terra",
+            "gpt-6.2-sol",
+            "gpt-6.2-astra"
+          ]
+        }
+      },
+      {
+        "id": 94,
+        "name": "Claude-Kiro",
+        "description": "智商低但模型一致性好，输出稳定。\n智商⭐\n稳定性⭐⭐⭐⭐⭐",
+        "rate_multiplier": 0.25,
+        "effective_rate_multiplier": 0.25,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 0.1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-4-6",
+            "claude-sonnet-5",
+            "claude-sonnet-4-5",
+            "claude-haiku-4-5",
+            "claude-opus-5",
+            "claude-opus-5-5",
+            "claude-opus-4-5",
+            "claude-sonnet-5-5"
+          ]
+        }
+      },
+      {
+        "id": 100,
+        "name": "Claude-Max-外接",
+        "description": "Max号池，不限客户端，Fable5单价上浮20%。\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n",
+        "rate_multiplier": 1.2,
+        "effective_rate_multiplier": 1.2,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1.1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-4-6",
+            "claude-sonnet-5",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-haiku-4-5",
+            "claude-opus-5",
+            "claude-fable-5",
+            "claude-fable-5-1",
+            "claude-opus-5-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+            "claude-fable-5-2"
+          ]
+        }
+      },
+      {
+        "id": 116,
+        "name": "Claude-AWSB逆",
+        "description": "AWS Bedrock逆向号池，智商比肩Max，极致性价比选择，且用且珍惜，AWSB官方特性无web search\n智商      ⭐⭐⭐⭐⭐\n稳定性  ⭐⭐⭐\n速度      ⭐⭐⭐\n",
+        "rate_multiplier": 0.8,
+        "effective_rate_multiplier": 0.8,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-fable-5",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5",
+            "claude-opus-5",
+            "claude-opus-5-5",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-fable-5-1",
+            "claude-sonnet-5-5"
+          ]
+        }
+      },
+      {
+        "id": 128,
+        "name": "GPT-限时福利",
+        "description": "💣核弹车，超优惠Pro渠道资源，稳定性不保证、能用多久不保证，渠道拉闸就彻底用不了了！！！",
+        "rate_multiplier": 0.1,
+        "effective_rate_multiplier": 0.1,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "codex-auto-review",
+            "gpt-6.1-sol",
+            "gpt-6-astra",
+            "gpt-6.2-sol",
+            "gpt-6.2-astra"
+          ]
+        }
+      },
+      {
+        "id": 130,
+        "name": "Claude-Vertex逆",
+        "description": "Google Vertex逆向渠道，智商接近满血、无甲，极度适合酒馆，编程用户可作为Max代餐\n智商⭐⭐⭐⭐\n速度/稳定性⭐⭐⭐",
+        "rate_multiplier": 0.6,
+        "effective_rate_multiplier": 0.6,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5",
+            "claude-opus-5",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-opus-5-5"
+          ]
+        }
+      },
+      {
+        "id": 133,
+        "name": "Grok",
+        "description": "Grok Heavy号池，xAI原生协议(兼容OpenAI接口)，不支持生图\n稳定性⭐⭐⭐",
+        "rate_multiplier": 0.2,
+        "effective_rate_multiplier": 0.2,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.2,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "grok-4.5",
+            "grok-composer-2.5-fast",
+            "grok-build",
+            "grok-4.6",
+            "grok-4.7"
+          ]
+        }
+      },
+      {
+        "id": 175,
+        "name": "生图-nanobanana-余额",
+        "description": "稳定性：\nnano-banana-2: ⭐⭐⭐⭐⭐",
+        "rate_multiplier": 1,
+        "effective_rate_multiplier": 1,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "nano-banana-2"
+          ]
+        }
+      },
+      {
+        "id": 180,
+        "name": "GPT-Pro优选",
+        "description": "Pro 5X + Plus号池，缓存比之前低一点，可生图。\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐",
+        "rate_multiplier": 0.4,
+        "effective_rate_multiplier": 0.3,
+        "image_rate_independent": true,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": true,
+        "promo_rate_multiplier": 0.3,
+        "promo_active": true,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gpt-5.6-sol",
+            "gpt-5.6",
+            "gpt-5.6-terra",
+            "gpt-5.5",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.3-codex-spark",
+            "codex-auto-review",
+            "gpt-6-astra",
+            "gpt-6-sol",
+            "gpt-6.1-sol",
+            "gpt-image-2",
+            "gpt-image-2.5-flare",
+            "gpt-image-2.5-sunburst",
+            "gpt-6.1-terra",
+            "gpt-image-2.6-sunburst",
+            "gpt-image-2.6-flare",
+            "gpt-6.2-astra",
+            "gpt-6.2-sol"
+          ]
+        }
+      },
+      {
+        "id": 184,
+        "name": "Gemini-Antigravity逆",
+        "description": "Antigravity逆向池，无缓存，只适合工作流、酒馆、小说等场景，无生图\n稳定性⭐⭐⭐⭐",
+        "rate_multiplier": 0.5,
+        "effective_rate_multiplier": 0.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gemini-3.8-flash",
+            "nano-banana-2",
+            "gemini-4-argon"
+          ]
+        }
+      },
+      {
+        "id": 188,
+        "name": "Claude-AWSB-Sale",
+        "description": "AWSB官key，不限客户端，AWSB官方特性无web search，量不多，不接包池、蒸馏\n智商      ⭐⭐⭐⭐⭐\n稳定性  ⭐⭐⭐\n速度      ⭐⭐⭐⭐⭐\n缓存      ⭐⭐⭐⭐",
+        "rate_multiplier": 2.5,
+        "effective_rate_multiplier": 2.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-8",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-haiku-4-5",
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-4-7",
+            "claude-opus-5",
+            "claude-opus-5-5",
+            "claude-sonnet-4",
+            "claude-opus-4",
+            "claude-opus-4-1",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5"
+          ]
+        }
+      },
+      {
+        "id": 203,
+        "name": "Embedding",
+        "description": "开源Embedding模型部署，按需选择合适模型，仅对输入计费，可至模型广场查看具体自定义模型名称、选择合适模型，\n稳定性：⭐⭐⭐⭐⭐⭐",
+        "rate_multiplier": 1,
+        "effective_rate_multiplier": 1,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "embed-multilingual-v3.0",
+            "embed-cf/plamo-embedding-1b",
+            "embed-Qwen/Qwen3-Embedding-4B",
+            "embed-voyage-4-lite",
+            "embed-english-light-v3.0",
+            "embed-voyage-4",
+            "embed-english-v3.0",
+            "embed-voyage-code-3",
+            "embed-cf/qwen-embedding-0.6b",
+            "embed-Qwen/Qwen3-Embedding-8B",
+            "embed-voyage-4-large",
+            "embed-cf/bge-base-en-v1.5",
+            "embed-BAAI/bge-m3",
+            "embed-cf/bge-m3",
+            "embed-voyage-3-lite",
+            "embed-cf/embeddinggemma-300m",
+            "embed-text-embedding-ada-002",
+            "embed-cf/bge-small-en-v1.5",
+            "embed-text-embedding-3-large",
+            "embed-multilingual-light-v3.0",
+            "embed-zembed-1",
+            "embed-Qwen/Qwen3-Embedding-0.6B",
+            "embed-voyage-code-2",
+            "embed-cf/bge-large-en-v1.5",
+            "embed-text-embedding-3-small"
+          ]
+        }
+      },
+      {
+        "id": 206,
+        "name": "Rerank",
+        "description": "开源Rerank模型部署，按需选择合适模型，仅对输入计费，可至模型广场查看具体自定义模型名称、选择合适模型，\n稳定性：⭐⭐⭐⭐⭐⭐",
+        "rate_multiplier": 1,
+        "effective_rate_multiplier": 1,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "rerank-zerank-1",
+            "rerank-zerank-2",
+            "rerank-Qwen/Qwen3-Reranker-0.6B",
+            "rerank-zerank-1-small",
+            "rerank-Qwen/Qwen3-Reranker-4B",
+            "rerank-v3.5",
+            "rerank-v4.0-pro",
+            "rerank-english-v3.0",
+            "rerank-Qwen/Qwen3-Reranker-8B",
+            "rerank-v4.0-fast",
+            "rerank-multilingual-v3.0",
+            "rerank-BAAI/bge-reranker-v2-m3"
+          ]
+        }
+      },
+      {
+        "id": 208,
+        "name": "GPT-Azure",
+        "description": "Azure 官key 组，GPT历史全模型供应，自行拉取。\n智商    ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐",
+        "rate_multiplier": 2.5,
+        "effective_rate_multiplier": 2.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-6-astra",
+            "gpt-5.5",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.3-codex-spark",
+            "codex-auto-review",
+            "gpt-5.2",
+            "gpt-image-2",
+            "gpt-image-2.5-flare",
+            "gpt-image-2.5-sunburst",
+            "gpt-6.1-sol",
+            "gpt-6-sol",
+            "gpt-5.4-nano",
+            "gpt-image-2.6-flare",
+            "gpt-image-2.6-sunburst",
+            "gpt-6.1-terra",
+            "gpt-6-luna",
+            "gpt-6.2-astra",
+            "gpt-6.2-sol"
+          ]
+        }
+      },
+      {
+        "id": 212,
+        "name": "GPT-Pro-高智稳定",
+        "description": "稳定不降智，仅提供Astra/Sol/Terra。\n智商    ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐",
+        "rate_multiplier": 0.7,
+        "effective_rate_multiplier": 0.7,
+        "image_rate_independent": true,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-6-astra",
+            "gpt-6-sol",
+            "gpt-6.1-sol",
+            "gpt-image-2",
+            "gpt-image-2.5-flare",
+            "gpt-image-2.5-sunburst",
+            "gpt-image-2.6-sunburst",
+            "gpt-image-2.6-flare",
+            "gpt-6.1-terra",
+            "gpt-6.2-sol",
+            "gpt-6.2-astra"
+          ]
+        }
+      },
+      {
+        "id": 219,
+        "name": "Claude-Anthropic官",
+        "description": "Anthropic官key号池，不限客户端\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐⭐",
+        "rate_multiplier": 4.5,
+        "effective_rate_multiplier": 4.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-opus-5-5",
+            "claude-haiku-4-5",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+            "claude-opus-4-1",
+            "claude-sonnet-4",
+            "claude-mythos-preview"
+          ]
+        }
+      },
+      {
+        "id": 221,
+        "name": "Claude-Anthropic官逆",
+        "description": "A社官key逆向资源，不限客户端\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐",
+        "rate_multiplier": 2.2,
+        "effective_rate_multiplier": 2.2,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-4-5-20251101",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-sonnet-4-5-20250929",
+            "claude-haiku-4-5-20251001",
+            "claude-opus-5-5",
+            "claude-haiku-4-5",
+            "claude-opus-4-5",
+            "claude-sonnet-4-5"
+          ]
+        }
+      },
+      {
+        "id": 222,
+        "name": "Claude-Max低注入",
+        "description": "Max号池，不限客户端。低防封注入。\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n",
+        "rate_multiplier": 1.4,
+        "effective_rate_multiplier": 1.4,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5-5",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-opus-4-5",
+            "claude-haiku-4-5",
+            "claude-sonnet-4-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5",
+            "claude-fable-5-2"
+          ]
+        }
+      },
+      {
+        "id": 225,
+        "name": "Claude-AWSB-Standard",
+        "description": "AWSB官key池，官方特性无web search，可蒸馏（蒸馏单独开池），缓存可能不稳定\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐⭐\n缓存    ⭐⭐⭐⭐",
+        "rate_multiplier": 3.6,
+        "effective_rate_multiplier": 3.6,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5-5",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5",
+            "claude-opus-4-5",
+            "claude-sonnet-4-5",
+            "claude-sonnet-5-5",
+            "claude-haiku-5-5"
+          ]
+        }
+      },
+      {
+        "id": 227,
+        "name": "Qwen",
+        "description": "算力中心部署\n智商    ⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐\n稳定性⭐⭐⭐",
+        "rate_multiplier": 0.5,
+        "effective_rate_multiplier": 0.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "qwen-3.8-max"
+          ]
+        }
+      },
+      {
+        "id": 234,
+        "name": "Deepseek",
+        "description": "优选官方、云厂、算力中心资源，聚合+智能路由\n智商    ⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐",
+        "rate_multiplier": 0.5,
+        "effective_rate_multiplier": 0.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro",
+            "deepseek-v4-1-flash"
+          ]
+        }
+      },
+      {
+        "id": 237,
+        "name": "Kimi",
+        "description": "算力中心部署版\n智商    ⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐\n稳定性⭐⭐⭐",
+        "rate_multiplier": 0.6,
+        "effective_rate_multiplier": 0.6,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "kimi-k3",
+            "kimi-k2.6",
+            "kimi-k3.1-pro",
+            "kimi-k3.1-pro-highspeed",
+            "kimi-k2.7-code"
+          ]
+        }
+      },
+      {
+        "id": 239,
+        "name": "GLM",
+        "description": "算力中心部署版\n智商    ⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐\n稳定性⭐⭐⭐",
+        "rate_multiplier": 0.6,
+        "effective_rate_multiplier": 0.6,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "glm-5.2",
+            "glm-5.3",
+            "glm-5.3-flash",
+            "glm-5.3-flashx"
+          ]
+        }
+      },
+      {
+        "id": 241,
+        "name": "Claude-Max0注入",
+        "description": "Max号池，不限客户端，无防封注入，所有场景全解锁。\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n",
+        "rate_multiplier": 2.3,
+        "effective_rate_multiplier": 2.3,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5-5",
+            "claude-opus-5",
+            "claude-sonnet-5-5",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-sonnet-4-5",
+            "claude-haiku-5-5",
+            "claude-opus-4-5",
+            "claude-haiku-4-5",
+            "claude-fable-5-2"
+          ]
+        }
+      },
+      {
+        "id": 242,
+        "name": "GPT-OpenAI官",
+        "description": "OpenAI官key号池，含全模型（老模型配额少）",
+        "rate_multiplier": 3,
+        "effective_rate_multiplier": 3,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gpt-5.6-sol",
+            "gpt-6",
+            "gpt-5.6",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "gpt-6.1-sol",
+            "gpt-6-sol",
+            "gpt-6-luna",
+            "gpt-6-astra",
+            "gpt-5.5",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.3-codex-spark",
+            "codex-auto-review",
+            "gpt-5.2",
+            "gpt-image-1",
+            "gpt-image-1.5",
+            "gpt-image-2",
+            "gpt-image-2.5-flare",
+            "gpt-image-2.5-sunburst",
+            "gpt-image-2.6-flare",
+            "gpt-image-2.6-sunburst"
+          ]
+        }
+      },
+      {
+        "id": 243,
+        "name": "Gemini-Vertex",
+        "description": "Vertex Gemini号池\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐⭐",
+        "rate_multiplier": 2.5,
+        "effective_rate_multiplier": 2.5,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 0.0002,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "gemini-3.5-flash",
+            "gemini-3.8-flash",
+            "gemini-3.1-pro",
+            "gemini-3.6-flash",
+            "gemini-3.7-flash",
+            "gemini-4-argon",
+            "gemini-4-carbon",
+            "gemini-4-hydrogen",
+            "gemini-nano-banana-2.1"
+          ]
+        }
+      },
+      {
+        "id": 244,
+        "name": "Claude-AWSB-Premium",
+        "description": "AWSB官key，不限客户端，AWSB官方特性无web search，非常稳定可蒸馏\n智商    ⭐⭐⭐⭐⭐\n稳定性⭐⭐⭐⭐⭐\n速度    ⭐⭐⭐⭐⭐\n缓存    ⭐⭐⭐⭐⭐",
+        "rate_multiplier": 4.7,
+        "effective_rate_multiplier": 4.7,
+        "image_rate_independent": false,
+        "image_rate_multiplier": 1,
+        "promo_rate_enabled": false,
+        "promo_rate_multiplier": 1,
+        "promo_active": false,
+        "model_allowlist": {
+          "enabled": true,
+          "models": [
+            "claude-fable-5-1",
+            "claude-fable-5",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5-5",
+            "claude-opus-5",
+            "claude-sonnet-5-5",
+            "claude-sonnet-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-5-5",
+            "claude-opus-4-1",
+            "claude-sonnet-4",
+            "claude-opus-4",
+            "claude-sonnet-4-5",
+            "claude-opus-4-5",
+            "claude-haiku-4-5"
+          ]
+        }
+      }
+    ],
+    "pricing": [
+      {
+        "channel_id": 5,
+        "channel_name": "GPT 逆向",
+        "group_ids": [
+          46,
+          180,
+          212
+        ],
+        "name": "gpt-image-2",
+        "billing_mode": "image",
+        "input_price": null,
+        "output_price": null,
+        "cache_write_price": null,
+        "cache_write_1h_price": null,
+        "cache_read_price": null,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": 0.35,
+        "intervals": [
+          {
+            "tier_label": "1K",
+            "min_tokens": 0,
+            "max_tokens": null,
+            "per_request_price": 0.15
+          },
+          {
+            "tier_label": "2K",
+            "min_tokens": 0,
+            "max_tokens": null,
+            "per_request_price": 0.25
+          },
+          {
+            "tier_label": "4K",
+            "min_tokens": 0,
+            "max_tokens": null,
+            "per_request_price": 0.35
+          }
+        ]
+      },
+      {
+        "channel_id": 5,
+        "channel_name": "GPT 逆向",
+        "group_ids": [
+          46,
+          180,
+          212
+        ],
+        "name": "gpt-image-2.5-flare",
+        "billing_mode": "image",
+        "input_price": null,
+        "output_price": null,
+        "cache_write_price": null,
+        "cache_write_1h_price": null,
+        "cache_read_price": null,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": 0.3,
+        "intervals": []
+      },
+      {
+        "channel_id": 5,
+        "channel_name": "GPT 逆向",
+        "group_ids": [
+          46,
+          180,
+          212
+        ],
+        "name": "gpt-image-2.5-sunburst",
+        "billing_mode": "image",
+        "input_price": null,
+        "output_price": null,
+        "cache_write_price": null,
+        "cache_write_1h_price": null,
+        "cache_read_price": null,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": 0.3,
+        "intervals": []
+      },
+      {
+        "channel_id": 5,
+        "channel_name": "GPT 逆向",
+        "group_ids": [
+          46,
+          180,
+          212
+        ],
+        "name": "gpt-image-2.6-flare",
+        "billing_mode": "image",
+        "input_price": null,
+        "output_price": null,
+        "cache_write_price": null,
+        "cache_write_1h_price": null,
+        "cache_read_price": null,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": 0.3,
+        "intervals": []
+      },
+      {
+        "channel_id": 5,
+        "channel_name": "GPT 逆向",
+        "group_ids": [
+          46,
+          180,
+          212
+        ],
+        "name": "gpt-image-2.6-sunburst",
+        "billing_mode": "image",
+        "input_price": null,
+        "output_price": null,
+        "cache_write_price": null,
+        "cache_write_1h_price": null,
+        "cache_read_price": null,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": 0.3,
+        "intervals": []
+      },
+      {
+        "channel_id": 15,
+        "channel_name": "Gemini",
+        "group_ids": [
+          175,
+          184
+        ],
+        "name": "nano-banana-2",
+        "billing_mode": "image",
+        "input_price": null,
+        "output_price": null,
+        "cache_write_price": null,
+        "cache_write_1h_price": null,
+        "cache_read_price": null,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": 0.25,
+        "intervals": [
+          {
+            "tier_label": "1K",
+            "min_tokens": 0,
+            "max_tokens": null,
+            "per_request_price": 0.15
+          },
+          {
+            "tier_label": "2K",
+            "min_tokens": 0,
+            "max_tokens": null,
+            "per_request_price": 0.2
+          },
+          {
+            "tier_label": "4K",
+            "min_tokens": 0,
+            "max_tokens": null,
+            "per_request_price": 0.25
+          }
+        ]
+      },
+      {
+        "channel_id": 0,
+        "channel_name": "",
+        "group_ids": [
+          39,
+          100,
+          116,
+          188,
+          221,
+          222,
+          241,
+          244
+        ],
+        "name": "claude-fable-5",
+        "billing_mode": "token",
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_write_price": 0.0000125,
+        "cache_write_1h_price": 0.00002,
+        "cache_read_price": 0.000001,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 7,
+        "channel_name": "CCMAX",
+        "group_ids": [
+          5
+        ],
+        "name": "claude-fable-5",
+        "billing_mode": "token",
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_write_price": 0.0000125,
+        "cache_write_1h_price": 0.00002,
+        "cache_read_price": 0.000001,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "reasoning_effort_multipliers": {
+          "max": 1.5
+        },
+        "image_input_price": 0,
+        "image_output_price": 0,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 14,
+        "channel_name": "Claude-A官",
+        "group_ids": [
+          219
+        ],
+        "name": "claude-fable-5",
+        "billing_mode": "token",
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_write_price": 0.0000125,
+        "cache_write_1h_price": 0.00002,
+        "cache_read_price": 0.000001,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 0,
+        "channel_name": "",
+        "group_ids": [
+          39,
+          100,
+          116,
+          188,
+          221,
+          222,
+          241,
+          244
+        ],
+        "name": "claude-fable-5-1",
+        "billing_mode": "token",
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_write_price": 0.0000125,
+        "cache_write_1h_price": 0.00002,
+        "cache_read_price": 2.5e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 7,
+        "channel_name": "CCMAX",
+        "group_ids": [
+          5
+        ],
+        "name": "claude-fable-5-1",
+        "billing_mode": "token",
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_write_price": 0.0000125,
+        "cache_write_1h_price": 0.00002,
+        "cache_read_price": 2.5e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "reasoning_effort_multipliers": {
+          "max": 3.5
+        },
+        "image_input_price": 0,
+        "image_output_price": 0,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 14,
+        "channel_name": "Claude-A官",
+        "group_ids": [
+          219
+        ],
+        "name": "claude-fable-5-1",
+        "billing_mode": "token",
+        "input_price": 0.00001,
+        "output_price": 0.00005,
+        "cache_write_price": 0.0000125,
+        "cache_write_1h_price": 0.00002,
+        "cache_read_price": 2.5e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 0,
+        "channel_name": "",
+        "group_ids": [
+          100,
+          222,
+          241
+        ],
+        "name": "claude-fable-5-2",
+        "billing_mode": "token",
+        "input_price": 0.000008,
+        "output_price": 0.00004,
+        "cache_write_price": 0.00001,
+        "cache_write_1h_price": 0.000016,
+        "cache_read_price": 2e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 7,
+        "channel_name": "CCMAX",
+        "group_ids": [
+          5
+        ],
+        "name": "claude-fable-5-2",
+        "billing_mode": "token",
+        "input_price": 0.000008,
+        "output_price": 0.00004,
+        "cache_write_price": 0.00001,
+        "cache_write_1h_price": 0.000016,
+        "cache_read_price": 2e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 0,
+        "channel_name": "",
+        "group_ids": [
+          39,
+          94,
+          100,
+          116,
+          130,
+          188,
+          221,
+          222,
+          241,
+          244
+        ],
+        "name": "claude-haiku-4-5",
+        "billing_mode": "token",
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_write_price": 0.00000125,
+        "cache_write_1h_price": 0.000002,
+        "cache_read_price": 1e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 13,
+        "channel_name": "AWSB",
+        "group_ids": [
+          225
+        ],
+        "name": "claude-haiku-4-5",
+        "billing_mode": "token",
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_write_price": 0.00000125,
+        "cache_write_1h_price": 0.000002,
+        "cache_read_price": 1e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 7,
+        "channel_name": "CCMAX",
+        "group_ids": [
+          5
+        ],
+        "name": "claude-haiku-4-5",
+        "billing_mode": "token",
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_write_price": 0.00000125,
+        "cache_write_1h_price": 0.000002,
+        "cache_read_price": 1e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 14,
+        "channel_name": "Claude-A官",
+        "group_ids": [
+          219
+        ],
+        "name": "claude-haiku-4-5",
+        "billing_mode": "token",
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_write_price": 0.00000125,
+        "cache_write_1h_price": 0.000002,
+        "cache_read_price": 1e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 0,
+        "channel_name": "",
+        "group_ids": [
+          221
+        ],
+        "name": "claude-haiku-4-5-20251001",
+        "billing_mode": "token",
+        "input_price": 0.000001,
+        "output_price": 0.000005,
+        "cache_write_price": 0.00000125,
+        "cache_write_1h_price": 0.000002,
+        "cache_read_price": 1e-7,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      },
+      {
+        "channel_id": 0,
+        "channel_name": "",
+        "group_ids": [
+          100,
+          188,
+          222,
+          241,
+          244
+        ],
+        "name": "claude-haiku-5-5",
+        "billing_mode": "token",
+        "input_price": 1e-7,
+        "output_price": 5e-7,
+        "cache_write_price": 1.25e-7,
+        "cache_write_1h_price": 2e-7,
+        "cache_read_price": 1e-8,
+        "fast_multiplier": null,
+        "flex_multiplier": null,
+        "image_input_price": null,
+        "image_output_price": null,
+        "per_request_price": null,
+        "intervals": []
+      }
+    ]
+  }
+}

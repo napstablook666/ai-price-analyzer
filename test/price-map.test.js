@@ -571,8 +571,10 @@ test("倍率族站点的报价币种：美元族写 USD，人民币站自己覆�
   // 站点只声明差异：按人民币标价的站点把 currency 覆盖掉，其余照抄基座。
   const { map: overridden } = resolvePriceMap({ base: "tokenflux", currency: "CNY" });
   assert.equal(overridden.currency, "CNY");
-  // stellaisle 主站跟着基座走美元（站点 FAQ：1 元 = 1 美元额度，两者数值一致）；
-  // 分组广场那份映射自己写着 CNY，同一站点两个口径，等广场页标价核完再收拢。
+  // stellaisle 主站与分组广场都跟着基座走美元：站点 FAQ 写明「1 元 = 1 美元额度」，
+  // 广场 group 17 的 claude-opus-5-5 输入 1.76 = 4 × 0.44 也印证了单位是美元/百万 token。
   assert.equal(stellaislePriceMap.currency, "USD");
-  assert.equal(stellaislePlazaPriceMap.currency, "CNY");
+  assert.equal(stellaislePlazaPriceMap.currency, "USD");
+  // sidrune 的 input_price 是每 token 的美元价，映射里乘 1e6 换成每百万，币种也是美元。
+  assert.equal(sidrunePriceMap.currency, "USD");
 });

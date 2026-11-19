@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 import { applyPriceMap } from "../src/core/price-map.js";
 import { parseBillingTiers } from "../src/core/normalizers.js";
 import { PRICE_MAP_BASES } from "../src/core/price-maps/index.js";
+import { stellaislePlazaRows } from "../src/core/price-maps/stellaisle.js";
 
 const FIXTURES = new URL("../test/fixtures/", import.meta.url);
 const GOLDEN_DIR = new URL("../test/golden/", import.meta.url);
@@ -29,7 +30,12 @@ export const GOLDEN_CASES = Object.freeze([
   { base: "allrouter", fixture: "allrouter-pricing.json" },
   { base: "relayrouter", fixture: "relayrouter-pricing.json" },
   { base: "cheaprouter", fixture: "cheaprouter-pricing.json" },
-  { base: "true-sota", fixture: "true-sota-pricing.json" }
+  { base: "true-sota", fixture: "true-sota-pricing.json" },
+  // 广场的报文不拿来直接求值：先解包成「一行一个模型」，和采集时走同一个函数。
+  // 这层解包以前住在策略类里，快照摸不到，漏解一层只能等线上退回基准价才发现。
+  { base: "stellaisle-plaza", fixture: "stellaisle-plaza.json", expand: stellaislePlazaRows, note: "分组广场 3 个分组 + 1 个不可用分组，覆盖 tiered / token / per_call / unconfigured" },
+  { base: "stellaisle", fixture: "stellaisle-pricing.json", note: "站内基准价 26 行样本（按次 8 + 表达式 + token），站点当日共 154 行；model_pricing_source 只留样本内的键" },
+  { base: "sidrune", fixture: "sidrune-pricing.json", note: "20 行：6 个按张（带 1K/2K/4K 档）+ 14 个按 token" }
 ]);
 
 // 只看决定价格结论的字段。enable_groups、evidence、model_ratio 这些是中间产物，
@@ -56,10 +62,15 @@ const cell = value => {
   return String(value);
 };
 
-export function renderGolden(base, fixtureName, label = base) {
+// expand 是「报文 → 映射认得的形状」那一步，和采集时用同一个函数；
+// 有了它，解包写错这类问题会在快照里现形，而不是等线上退回基准价。
+export function renderGolden(caseItem) {
+  const { base, fixture, expand } = caseItem;
+  const label = caseName(caseItem);
   const map = PRICE_MAP_BASES[base];
   if (!map) throw new Error(`未知的 price-map base：${base}`);
-  const payload = JSON.parse(readFileSync(new URL(fixtureName, FIXTURES), "utf8"));
+  const raw = JSON.parse(readFileSync(new URL(fixture, FIXTURES), "utf8"));
+  const payload = expand ? { data: expand(raw) } : raw;
   const { rows, unresolved } = applyPriceMap(map, payload, { parseTiers: parseBillingTiers });
 
   const lines = rows.map(row => FIELDS.map(field => cell(row[field])).join("|")).sort();
@@ -71,7 +82,7 @@ export function renderGolden(base, fixtureName, label = base) {
   return [
     `# base: ${base}`,
     ...(label === base ? [] : [`# case: ${label}`]),
-    `# fixture: ${fixtureName}`,
+    `# fixture: ${fixture}`,
     `# rows: ${lines.length} · unresolved: ${misses.length}`,
     `# 更新：node scripts/price-map-golden.mjs --update`,
     `# 字段：${FIELDS.join("|")}`,
@@ -90,7 +101,7 @@ export function caseName(item) {
 }
 
 export function allGoldens() {
-  return GOLDEN_CASES.map(item => ({ ...item, text: renderGolden(item.base, item.fixture, caseName(item)) }));
+  return GOLDEN_CASES.map(item => ({ ...item, text: renderGolden(item) }));
 }
 
 async function main() {

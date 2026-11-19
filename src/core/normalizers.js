@@ -1,8 +1,8 @@
 import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 import { mediaSpecsOf, mediaTypeForPricing } from "./media.js";
-import { applyPriceMap, readPath } from "./price-map.js";
+import { applyPriceMap, finitePrice, readPath } from "./price-map.js";
 import { tokenfluxPriceMap } from "./price-maps/tokenflux.js";
-import { stellaislePlazaPriceMap, stellaislePriceMap } from "./price-maps/stellaisle.js";
+import { stellaislePlazaAvailable, stellaislePlazaGroups, stellaislePlazaPriceMap, stellaislePlazaPrices, stellaislePlazaRows, stellaislePriceMap } from "./price-maps/stellaisle.js";
 import { stellaisleCarpoolPriceMap } from "./price-maps/stellaisle-carpool.js";
 import { cheapRouterPriceMap } from "./price-maps/cheaprouter.js";
 import { trueSotaPriceMap } from "./price-maps/true-sota.js";
@@ -19,11 +19,6 @@ const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, 
 const number = (value, fallback = 1) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
-};
-const finitePrice = value => {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 const linuxDoFinitePrice = value => {
   if (value === null || value === undefined || typeof value === "boolean" || (typeof value === "string" && value.trim() === "")) return null;
@@ -688,64 +683,6 @@ export class WindHubPricingStrategy extends TokenFluxPricingStrategy {
 // 真正的分组在分组广场：/api/group-plaza 给分组表，逐组详情给该组每个模型的真实价。
 // 两批报文由 requestPolicy 的 aux 取回，挂在 __aux.groups 与 __aux.groupPrices 上。
 // 拿到就展开成分组报价，拿不到就退回基准价，不让分组接口挂掉拖垮整轮采集。
-const PLAZA_GROUP_STATUS = "ok";
-
-// 分组表的报文是 {data:{items:[…],total,…}}，明细是逐组响应体的数组。
-function stellaislePlazaGroups(raw) {
-  const aux = raw && typeof raw === "object" ? raw.__aux : null;
-  const items = readPath(aux, "groups.data.items");
-  return Array.isArray(items) ? items : [];
-}
-
-function stellaislePlazaPrices(raw) {
-  const aux = raw && typeof raw === "object" ? raw.__aux : null;
-  return Array.isArray(aux?.groupPrices) ? aux.groupPrices : [];
-}
-
-function stellaislePlazaAvailable(raw) {
-  return stellaislePlazaGroups(raw).length > 0 && stellaislePlazaPrices(raw).length > 0;
-}
-
-function stellaislePlazaData(raw) {
-  const byId = new Map();
-  for (const entry of stellaislePlazaPrices(raw)) {
-    // 逐条拉取存的是整包响应（{success,data:{group_id,…}}），分组详情在 data 里。
-    // 早先拿裸详情测，这条解包漏了，线上一直退回基准价。
-    const detail = entry && typeof entry === "object" && entry.data && typeof entry.data === "object" ? entry.data : entry;
-    if (!detail || typeof detail !== "object") continue;
-    const id = String(detail.group_id ?? "").trim();
-    if (id) byId.set(id, detail);
-  }
-  const data = [];
-  for (const group of stellaislePlazaGroups(raw)) {
-    if (!group || typeof group !== "object") continue;
-    // 站点把不可用的分组也列在表里（unstable / bad / unknown），价格不可信，跳过。
-    if (String(group.status ?? "").trim() !== PLAZA_GROUP_STATUS) continue;
-    const id = String(group.group_id ?? "").trim();
-    const detail = byId.get(id);
-    if (!detail) continue;
-    const ratio = finitePrice(group.ratio);
-    if (ratio === null) continue;
-    const groupName = String(group.name ?? "").trim() || `分组 ${id}`;
-    const vendor = String(group.vendor_name ?? "").trim();
-    const label = vendor ? `${vendor} · ${groupName}` : groupName;
-    const prices = Array.isArray(detail.model_prices) ? detail.model_prices : [];
-    for (const price of prices) {
-      if (!price || typeof price !== "object") continue;
-      const model = String(price.model_name ?? "").trim();
-      if (!model) continue;
-      const mode = String(price.pricing_mode ?? "").trim();
-      // unconfigured 是站上还没定价的占位模型。
-      if (!mode || mode === "unconfigured") continue;
-      // token 与按次的价已经在站内乘过分组倍率，标成 1 免得映射再乘一次；
-      // 只有 tiered 的 billing_expr 是未折算的，按分组 ratio 现乘。
-      const billed = mode !== "tiered";
-      data.push({ ...price, model_name: model, __group_name: label, __group_ratio: billed ? 1 : ratio });
-    }
-  }
-  return data;
-}
-
 export class StellaislePricingStrategy extends WindHubPricingStrategy {
   get priceMap() { return stellaislePriceMap; }
 
@@ -757,7 +694,7 @@ export class StellaislePricingStrategy extends WindHubPricingStrategy {
   }
 
   parse(raw) {
-    const plaza = stellaislePlazaData(raw);
+    const plaza = stellaislePlazaRows(raw);
     if (plaza.length) {
       const { rows, unresolved } = applyPriceMap(stellaislePlazaPriceMap, { data: plaza }, { parseTiers: parseBillingTiers });
       if (rows.length) {
@@ -808,7 +745,7 @@ export class StellaislePricingStrategy extends WindHubPricingStrategy {
 // 退回基准价时到底丢了什么。说清楚是「没拿到」还是「拿到了对不上」，
 // 这两种情况排查方向完全不同。
 function stellaislePlazaDegradeReason(raw) {
-  const groups = stellaislePlazaGroups(raw).filter(group => String(group?.status ?? "").trim() === PLAZA_GROUP_STATUS);
+  const groups = stellaislePlazaGroups(raw).filter(group => String(group?.status ?? "").trim() === "ok");
   const prices = stellaislePlazaPrices(raw);
   if (!groups.length) return "";
   if (!prices.length) return `分组广场有 ${groups.length} 个可用分组，分组价一条也没拿到`;

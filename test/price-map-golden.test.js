@@ -14,7 +14,9 @@ import { PRICE_MAP_BASES, priceMapDiffKeys } from "../src/core/price-maps/index.
 import { GOLDEN_CASES, renderGolden, goldenPath, caseName } from "../scripts/price-map-golden.mjs";
 
 // 还没补 fixture 的 base。补了就从这里删掉，别让它长期赖着。
-const NO_FIXTURE_YET = new Set(["stellaisle", "stellaisle-carpool", "stellaisle-plaza", "sidrune"]);
+// 拼车市场（stellaisle-carpool）拿不到匿名 fixture：`/api/carpool-market` 未登录直接 401，
+// 它只能靠用户站内登录态在页面上采（插件里 mode: "page"、authType: "cookie"）。
+const NO_FIXTURE_YET = new Set(["stellaisle-carpool"]);
 
 // 和 tokenflux 比，差异键最多这么几个。全是 1 的时候调这个数才是对的。
 const MAX_DIFF_KEYS = 4;
@@ -27,7 +29,7 @@ test("每份 golden 与当前映射一致", () => {
     // 快照比的是内容，换行风格不算改动（Windows 签出是 CRLF，生成的是 LF）。
     const expected = readFileSync(goldenPath(label(item)), "utf8").replace(/\r\n/g, "\n");
     assert.equal(
-      renderGolden(item.base, item.fixture, label(item)),
+      renderGolden(item),
       expected,
       `${label(item)} 的产出变了。确认是新行为就 node scripts/price-map-golden.mjs --update`
     );
@@ -36,7 +38,7 @@ test("每份 golden 与当前映射一致", () => {
 
 test("fixture 跑完不该留下解析不出价的模型", () => {
   for (const item of GOLDEN_CASES) {
-    const text = renderGolden(item.base, item.fixture, label(item));
+    const text = renderGolden(item);
     const summary = text.split("\n").find(line => line.startsWith("# rows:")) || "";
     const count = Number((summary.match(/unresolved: (\d+)/) || [])[1]);
     assert.equal(count, 0, `${item.base} 有模型没解析出价，看 golden 尾部的清单`);
@@ -45,7 +47,7 @@ test("fixture 跑完不该留下解析不出价的模型", () => {
 
 test("价格字段里不许出现 NaN", () => {
   for (const item of GOLDEN_CASES) {
-    const body = renderGolden(item.base, item.fixture, label(item))
+    const body = renderGolden(item)
       .split("\n")
       .filter(line => line && !line.startsWith("#"));
     for (const line of body) {

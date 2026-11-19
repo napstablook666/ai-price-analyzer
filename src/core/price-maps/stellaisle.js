@@ -1,3 +1,8 @@
+import { finitePrice, readPath } from "../price-map.js";
+
+// 广场的分组状态只有 ok 的可信：unstable / bad / unknown 的价站点自己都不保证。
+const PLAZA_GROUP_STATUS = "ok";
+
 // 飓星API（token.stellaisle.com）的价格映射。站点把价格拆成两层，映射也拆两份。
 //
 // 1. stellaislePriceMap —— /api/pricing 的站内基准价。
@@ -36,7 +41,10 @@ export const stellaislePlazaPriceMap = {
   rootPath: "/data",
   nameField: "model_name",
   labelField: "model_name",
-  currency: "CNY",
+  // 广场的价也是美元额度：group 17 的 claude-opus-5-5 输入 1.76 = 4 × 0.44（分组倍率），
+  // 与主站 /api/pricing 同一套单位。页面标 ¥ 是因为站点 FAQ 写明「1 元 = 1 美元额度」，
+  // 换算系数本来就是 1，改回 USD 只是把口径说对，数字不动。
+  currency: "USD",
   groups: {
     // 展开时每条数据都带着分组名与倍率，不用再查站点级表。
     listPath: "__group_name",
@@ -66,3 +74,62 @@ export const stellaislePlazaPriceMap = {
     }
   ]
 };
+
+// ---------- 分组广场的报文读取 ----------
+// 这段住在映射旁边而不是采集器里：golden 快照要直接跑它，才能把「整包响应解包」
+// 这类形状问题钉在测试里（早先漏解一层，线上一直退回基准价）。
+// 分组表的报文是 {data:{items:[…],total,…}}，明细是逐组响应体的数组。
+export function stellaislePlazaGroups(raw) {
+  const aux = raw && typeof raw === "object" ? raw.__aux : null;
+  const items = readPath(aux, "groups.data.items");
+  return Array.isArray(items) ? items : [];
+}
+
+export function stellaislePlazaPrices(raw) {
+  const aux = raw && typeof raw === "object" ? raw.__aux : null;
+  return Array.isArray(aux?.groupPrices) ? aux.groupPrices : [];
+}
+
+export function stellaislePlazaAvailable(raw) {
+  return stellaislePlazaGroups(raw).length > 0 && stellaislePlazaPrices(raw).length > 0;
+}
+
+export function stellaislePlazaRows(raw) {
+  const byId = new Map();
+  for (const entry of stellaislePlazaPrices(raw)) {
+    // 逐条拉取存的是整包响应（{success,data:{group_id,…}}），分组详情在 data 里。
+    // 早先拿裸详情测，这条解包漏了，线上一直退回基准价。
+    const detail = entry && typeof entry === "object" && entry.data && typeof entry.data === "object" ? entry.data : entry;
+    if (!detail || typeof detail !== "object") continue;
+    const id = String(detail.group_id ?? "").trim();
+    if (id) byId.set(id, detail);
+  }
+  const data = [];
+  for (const group of stellaislePlazaGroups(raw)) {
+    if (!group || typeof group !== "object") continue;
+    // 站点把不可用的分组也列在表里（unstable / bad / unknown），价格不可信，跳过。
+    if (String(group.status ?? "").trim() !== PLAZA_GROUP_STATUS) continue;
+    const id = String(group.group_id ?? "").trim();
+    const detail = byId.get(id);
+    if (!detail) continue;
+    const ratio = finitePrice(group.ratio);
+    if (ratio === null) continue;
+    const groupName = String(group.name ?? "").trim() || `分组 ${id}`;
+    const vendor = String(group.vendor_name ?? "").trim();
+    const label = vendor ? `${vendor} · ${groupName}` : groupName;
+    const prices = Array.isArray(detail.model_prices) ? detail.model_prices : [];
+    for (const price of prices) {
+      if (!price || typeof price !== "object") continue;
+      const model = String(price.model_name ?? "").trim();
+      if (!model) continue;
+      const mode = String(price.pricing_mode ?? "").trim();
+      // unconfigured 是站上还没定价的占位模型。
+      if (!mode || mode === "unconfigured") continue;
+      // token 与按次的价已经在站内乘过分组倍率，标成 1 免得映射再乘一次；
+      // 只有 tiered 的 billing_expr 是未折算的，按分组 ratio 现乘。
+      const billed = mode !== "tiered";
+      data.push({ ...price, model_name: model, __group_name: label, __group_ratio: billed ? 1 : ratio });
+    }
+  }
+  return data;
+}

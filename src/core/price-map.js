@@ -6,6 +6,13 @@ import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
 
 const OWN = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 
+// 价格字段的取值闸：不是有限非负数就当「没给」，调用方一律按未知处理。
+export const finitePrice = value => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+};
+
 // ---------- 取值 ----------
 
 // 支持 `a.b[0].c` 和 JSON Pointer 的 `/a/b/0/c` 两种写法。
