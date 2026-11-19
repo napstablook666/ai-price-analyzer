@@ -11,3 +11,4 @@
 *.jpg binary
 *.jpeg binary
 *.webp binary
+*.txt text eol=lf

@@ -23,7 +23,8 @@ const BASE_OF_FIXTURE = new Map(GOLDEN_CASES.map(item => [item.base, item.fixtur
 
 test("每份 golden 与当前映射一致", () => {
   for (const item of GOLDEN_CASES) {
-    const expected = readFileSync(goldenPath(item.base), "utf8");
+    // 快照比的是内容，换行风格不算改动（Windows 签出是 CRLF，生成的是 LF）。
+    const expected = readFileSync(goldenPath(item.base), "utf8").replace(/\r\n/g, "\n");
     assert.equal(
       renderGolden(item.base, item.fixture),
       expected,

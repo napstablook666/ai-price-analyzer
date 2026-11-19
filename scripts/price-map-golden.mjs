@@ -94,7 +94,9 @@ async function main() {
     const target = goldenPath(item.base);
     let current = null;
     try {
-      current = readFileSync(target, "utf8");
+      // 比的是字节内容，不是磁盘上的换行风格。Windows 下 core.autocrlf=true 时
+      // 签出来的快照是 CRLF，而这里写出去的是 LF，不归一化就会永远「有漂移」。
+      current = readFileSync(target, "utf8").replace(/\r\n/g, "\n");
     } catch {
       current = null;
     }
