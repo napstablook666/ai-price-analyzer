@@ -4,10 +4,11 @@ import { DEFAULT_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-reg
 
 // 2026-11-19：/api/pricing 匿名返回 63 个模型、18 个分组，价格都在 billing_expr。
 // 系数 × group_ratio 对齐页面 ¥：claude-fable-5 / Claude MAX 为 13 / 65 / 1.3。
-// /api/status 的 price=1、usd_exchange_rate=1；充值视角与标准视角同价。
-// 这些只能佐证 1:1 基准，登录后的档位、渠道费率和实付金额尚未核实。
+// 登录后 topup/info 的 discount={}；抽查 8 个金额的 amount 报价均为 1:1，订阅列表为空。
+// 支付宝、微信确认页均为充 ¥10 / 付 ¥10；尚未进入第三方收银台，不记录渠道实付。
 const PRICE_MAP = { base: "tokenflux", source: "91token", currency: "CREDITS" };
-const RECHARGE_NOTE = "公开 status 的 price=1、usd_exchange_rate=1，定价页充值视角与标准视角同价，暂按 1 元对应 1 美元额度记录。充值方案、赠送档位及渠道实付需要登录核实，当前比例未验证，不参与已验证推荐。";
+const LEGACY_RECHARGE_NOTE = "公开 status 的 price=1、usd_exchange_rate=1，定价页充值视角与标准视角同价，暂按 1 元对应 1 美元额度记录。充值方案、赠送档位及渠道实付需要登录核实，当前比例未验证，不参与已验证推荐。";
+const RECHARGE_NOTE = "2026-11-19 登录核验：1 元换 1 额度。10/20/50/100/200/500 元为快捷金额，无阶梯折扣或充值赠送；自定义范围 10–3000 元，另测 1000/3000 元报价仍为 1:1。当前订阅方案为空。支付宝、微信确认页充 10 元均待付 10 元，第三方收银台实付尚未核实。";
 
 const preset = {
   id: "91token",
@@ -16,12 +17,17 @@ const preset = {
   rechargeRmb: 1,
   rechargeCredits: 1,
   rechargeAuto: false,
-  rechargeRateVerified: false,
+  rechargeRateVerified: true,
   rechargeRateNote: RECHARGE_NOTE,
-  rechargePlansVerified: false,
+  rechargePlans: [10, 20, 50, 100, 200, 500].map(amount => ({
+    kind: "topup", amount, credits: amount, currency: "CNY", availability: "self_service", verified: true,
+    note: "快捷金额，非折扣；登录报价接口返回等额人民币，支持自定义 10–3000 元。"
+  })),
+  rechargePlansVerified: true,
+  rechargePaymentsVerified: false,
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
-  priceCurrencyNote: "billing_expr 系数按每百万 token 的额度记，乘公开分组倍率后与页面 ¥ 数字一致。报价按美元额度保留，实际人民币成本仍取决于未验证的充值比例。长度档和峰谷档分别保留；fast/priority 加价保留为条件，数值为普通服务档基价。11 个视频模型含秒数、分辨率或其他用量表达式，暂不折算。",
+  priceCurrencyNote: "billing_expr 系数按每百万 token 的额度记，乘公开分组倍率后与页面 ¥ 数字一致；已核实 1 元换 1 额度。长度档和峰谷档分别保留；fast/priority 加价保留为条件，数值为普通服务档基价。11 个视频模型含秒数、分辨率或其他用量表达式，暂不折算。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
@@ -33,22 +39,36 @@ const pluginSource = {
   host: "91token.com",
   preserveRechargeRateVerification: true,
   preset,
-  matches: ({ hostname, path }) => hostname === "91token.com" && ["/", "/pricing", "/console", "/console/topup"].includes(path),
+  matches: ({ hostname, path }) => hostname === "91token.com" && ["/", "/pricing", "/wallet", "/console", "/console/topup"].includes(path),
   prepareMatches: ({ hostname }) => hostname === "91token.com",
-  prepare: (stationInput, { url }) => ({
-    ...stationInput,
-    baseUrl: `${url.origin}/pricing`,
-    rechargeAuto: false,
-    rechargeRateVerified: stationInput.rechargeRateVerified === true,
-    rechargeRateNote: stationInput.rechargeRateNote || RECHARGE_NOTE,
-    mode: "direct",
-    auth: { type: "none" },
-    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
-  }),
+  prepare: (stationInput, { url }) => {
+    const defaultRate = (stationInput.rechargeRmb == null || Number(stationInput.rechargeRmb) === 1) &&
+      (stationInput.rechargeCredits == null || Number(stationInput.rechargeCredits) === 1) &&
+      (stationInput.rechargeRate == null || Number(stationInput.rechargeRate) === 1) &&
+      stationInput.rechargeCurrency !== "USD";
+    const legacyPreset = defaultRate && stationInput.rechargeRateNote === LEGACY_RECHARGE_NOTE &&
+      !stationInput.rechargeTiers?.length && !stationInput.rechargePlans?.length && !stationInput.rechargePayments?.length;
+    return {
+      ...stationInput,
+      baseUrl: `${url.origin}/pricing`,
+      rechargeAuto: false,
+      rechargeRateVerified: stationInput.rechargeRateVerified === true || legacyPreset ||
+        (defaultRate && stationInput.rechargeRateVerified == null),
+      rechargeRateNote: legacyPreset ? RECHARGE_NOTE : stationInput.rechargeRateNote || RECHARGE_NOTE,
+      ...(legacyPreset || stationInput.rechargePlans == null ? {
+        rechargePlans: preset.rechargePlans,
+        rechargePlansVerified: true
+      } : {}),
+      priceCurrencyNote: legacyPreset ? preset.priceCurrencyNote : stationInput.priceCurrencyNote || preset.priceCurrencyNote,
+      mode: "direct",
+      auth: { type: "none" },
+      adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
+    };
+  },
   mode: "direct",
   responseFormat: "price-map",
   authType: "none",
-  rationale: "91Token 公开定价接口匿名采集；充值方案及实付需要登录另行核实",
+  rationale: "91Token 公开定价接口匿名采集；登录已核实充值报价 1:1，第三方收银台实付尚未核实",
   request: requestPolicy(() => DEFAULT_PRICING_ENDPOINT, { credentials: "omit" })
 };
 

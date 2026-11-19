@@ -86,7 +86,7 @@ test("adds multiple selected presets once and derives added state from stations"
   });
 });
 
-test("91Token 匿名采集到比价保留分组、条件与11个视频缺口，充值不自动变已验证", async () => {
+test("91Token 匿名采集保留计费条件与11个视频缺口，充值报价已验证但渠道实付未验证", async () => {
   await withCleanRegistry(async () => {
     const providers = await loadSitePlugins(["91token"]);
     const [preset] = addProviderStationPresets([], providers, { exchangeRate: 7.2 });
@@ -95,10 +95,16 @@ test("91Token 匿名采集到比价保留分组、条件与11个视频缺口，�
     assert.equal(sitePluginForStation(station).id, "91token");
     assert.equal(station.mode, "direct");
     assert.equal(station.auth.type, "none");
-    assert.equal(station.rechargeRateVerified, false);
+    assert.equal(station.rechargeRateVerified, true);
     assert.equal(station.rechargeAuto, false);
     assert.equal(station.priceCurrency, "CREDITS");
     assert.deepEqual(station.rechargeTiers, []);
+    assert.equal(station.rechargeRate, 1);
+    assert.equal(station.rechargePlansVerified, true);
+    assert.deepEqual(station.rechargePlans.map(plan => [plan.amount, plan.credits, plan.discount]), [10, 20, 50, 100, 200, 500].map(amount => [amount, amount, undefined]));
+    assert.ok(station.rechargePlans.every(plan => plan.kind === "topup" && plan.verified && plan.availability === "self_service"));
+    assert.deepEqual(station.rechargePayments, []);
+    assert.equal(station.rechargePaymentsVerified, false);
     const fixture = JSON.parse(readFileSync(new URL("./fixtures/91token-pricing.json", import.meta.url), "utf8"));
     const requests = [];
     const snapshot = await collectStation(station, {
@@ -108,12 +114,12 @@ test("91Token 匿名采集到比价保留分组、条件与11个视频缺口，�
         return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
       }
     });
-    assert.equal(requests.length, 1, "未核实的 status 不能把充值比例自动提升为已验证");
+    assert.equal(requests.length, 1, "匿名报价采集不应额外请求需登录的充值接口");
     assert.equal(new URL(requests[0].url).pathname, "/api/pricing");
     assert.equal(requests[0].init.credentials, "omit");
     assert.equal(requests[0].init.headers.Authorization, undefined);
     assert.equal(snapshot.recharge, undefined);
-    assert.equal(snapshot.rechargeRateVerified, false);
+    assert.equal(snapshot.rechargeRateVerified, true);
     assert.equal(snapshot.status, "partial");
     assert.equal(snapshot.normalized.data.length, 123);
     assert.equal(new Set(snapshot.normalized.data.map(row => row.model_name)).size, 52);
@@ -142,6 +148,57 @@ test("91Token 匿名采集到比价保留分组、条件与11个视频缺口，�
     assert.equal(offer.quotedPrices.output, 65);
     assert.ok(offers.some(row => row.modelName === "gpt-image-2" && row.billingMode === "image"));
     assert.ok(offers.every(row => !snapshot.normalized.unpricedModels.includes(row.modelName)));
+  });
+});
+
+test("91Token 补验只迁移首版默认充值配置，保留自定义比例、方案和渠道证据", async () => {
+  await withCleanRegistry(async () => {
+    await loadSitePlugin("91token");
+    const legacyNote = "公开 status 的 price=1、usd_exchange_rate=1，定价页充值视角与标准视角同价，暂按 1 元对应 1 美元额度记录。充值方案、赠送档位及渠道实付需要登录核实，当前比例未验证，不参与已验证推荐。";
+    const legacy = {
+      pluginId: "91token", baseUrl: "https://91token.com/pricing",
+      rechargeRmb: 1, rechargeCredits: 1, rechargeRate: 1, rechargeCurrency: "CNY",
+      rechargeRateVerified: false, rechargeRateNote: legacyNote,
+      rechargeTiers: [], rechargePlans: [], rechargePayments: [],
+      rechargePlansVerified: false, rechargePaymentsVerified: false,
+      priceCurrencyNote: "首版：充值比例未验证"
+    };
+    const migrated = resolveStationCollection(legacy).station;
+    assert.equal(migrated.rechargeRateVerified, true);
+    assert.equal(migrated.rechargePlans.length, 6);
+    assert.equal(migrated.rechargePlansVerified, true);
+    assert.equal(migrated.rechargePaymentsVerified, false);
+    assert.match(migrated.rechargeRateNote, /登录核验/);
+    assert.match(migrated.priceCurrencyNote, /已核实 1 元换 1 额度/);
+    const fresh = resolveStationCollection({ baseUrl: "https://91token.com/wallet" }).station;
+    assert.equal(fresh.baseUrl, "https://91token.com/pricing");
+    assert.equal(fresh.rechargeRateVerified, true);
+    assert.equal(fresh.rechargeRate, 1);
+    assert.equal(fresh.rechargePlans.length, 6);
+    const customInputs = [
+      { ...legacy, rechargeRmb: 80, rechargeCredits: 100, rechargeRate: 0.8 },
+      { ...legacy, rechargeRateNote: "用户手工选择未验证", rechargePlans: [] },
+      { ...legacy, rechargeRateNote: "用户实测", rechargeRateVerified: true,
+        rechargePlans: [{ kind: "manual", amount: 80, credits: 100, currency: "CNY", availability: "manual", verified: true, recurring: false, accumulates: false }],
+        rechargePlansVerified: false },
+      { ...legacy, rechargeTiers: [{ amount: 100, discount: 0.9 }],
+        rechargePayments: [{ channel: "alipay", faceAmount: 100, payAmount: 80, currency: "CNY", paidRmb: 80 }],
+        rechargePaymentsVerified: true }
+    ];
+    for (const input of customInputs) {
+      const actual = resolveStationCollection(input).station;
+      assert.equal(actual.rechargeRateVerified, input.rechargeRateVerified);
+      assert.equal(actual.rechargeRateNote, input.rechargeRateNote);
+      assert.equal(actual.priceCurrencyNote, input.priceCurrencyNote);
+      assert.deepEqual(actual.rechargePlans, input.rechargePlans);
+      assert.deepEqual(actual.rechargeTiers, input.rechargeTiers);
+      assert.deepEqual(actual.rechargePayments, input.rechargePayments);
+      assert.equal(actual.rechargePlansVerified, input.rechargePlansVerified);
+      assert.equal(actual.rechargePaymentsVerified, input.rechargePaymentsVerified);
+    }
+    const rateOnly = resolveStationCollection({ baseUrl: legacy.baseUrl, rechargeRate: 0.8 }).station;
+    assert.equal(rateOnly.rechargeRate, 0.8, "补缺省金额不能覆盖旧版仅保存的 rechargeRate");
+    assert.equal(rateOnly.rechargeRateVerified, false);
   });
 });
 

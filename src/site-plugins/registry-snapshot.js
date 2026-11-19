@@ -304,7 +304,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "91token",
       "name": "91Token",
       "version": "0.15.0",
-      "description": "公开定价接口匿名采集文本与图片报价，保留分组和长度档；复杂视频暂不折算，充值方案及实付需要登录核实",
+      "description": "匿名采集文本与图片报价，保留分组和长度档；充值报价已核实 1:1，无自助阶梯折扣，第三方收银台实付未验证；复杂视频暂不折算",
       "hosts": [
         "91token.com",
         "www.91token.com"
