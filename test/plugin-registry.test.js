@@ -91,11 +91,6 @@ test("内置插件带来源与版本，未拉取仓库时也能列出", () => {
   }
   assert.ok(PLUGIN_REGISTRY_SNAPSHOT.plugins.length >= 20);
   for (const entry of PLUGIN_REGISTRY_SNAPSHOT.plugins) {
-    if (entry.kind === "checkin") {
-      assert.equal(entry.needsCode, false);
-      assert.ok(entry.checkin && entry.checkin.statusPath);
-      continue;
-    }
     assert.equal(entry.needsCode, true);
     assert.ok(entry.hosts.length);
     assert.match(entry.version, /^\d+\.\d+\.\d+$/);

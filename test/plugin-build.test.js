@@ -19,8 +19,7 @@ test("插件产物与 plugins/ 源保持同步", () => {
 
 test("catalog 与插件目录一一对应，且顺序来自 manifest.order", () => {
   const { plugins } = build();
-  // 签到插件只有 JSON 规格，不进采集 catalog
-  const ids = plugins.filter(plugin => plugin.kind !== "checkin").map(plugin => plugin.id).sort();
+  const ids = plugins.map(plugin => plugin.id).sort();
   assert.deepEqual(SITE_PLUGIN_CATALOG.map(entry => entry.id).sort(), ids);
   assert.deepEqual([...SITE_PLUGIN_ORDER].sort(), ids);
   for (const entry of SITE_PLUGIN_CATALOG) {
