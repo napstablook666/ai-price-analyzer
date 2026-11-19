@@ -2,6 +2,8 @@
 // 目标是把 normalizers.js 里一个站点一个 if 分支的写法换掉，
 // 一个站点一个 map 文档，字段改名改 map 不改代码。
 
+import { SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.js";
+
 const OWN = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 
 // ---------- 取值 ----------
@@ -470,7 +472,7 @@ function baseRowOf(rule, item, map, group) {
 // 于是「一个常数、一处声明」，表达式里不再出现 `model_ratio * 2`。
 function withSiteRatioBase(map) {
   const base = Number(map?.ratioBase);
-  if (!Number.isFinite(base) || base <= 0 || base === 1) return map;
+  if (!Number.isFinite(base) || base <= 0) return map;
   return { ...map, rules: (map.rules || []).map(rule => rule?.kind === "token" ? { ...rule, ratioBase: base } : rule) };
 }
 
@@ -583,9 +585,10 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
     // kind === "token"
     // 上下文长度分档：档位对象里通常直接带各档的绝对价，表达式对着档位对象求值。
     // 倍率换算是站点属性，先算出来：ratioBase 决定 model_ratio 一个单位值多少美元。
-    const ratioBase = Number(rule.ratioBase) > 0 ? Number(rule.ratioBase) : 1;
-    // 上下文长度分档：档位对象里通常直接带各档的绝对价，表达式对着档位对象求值。
-    const cells = tokenCells(rule, ratioBase === 1 ? item : scaledRatioItem(item, ratioBase));
+    // ratioBase 是「model_ratio 一个单位值多少美元」，缺省取系统基准（New API 家族
+    // ratio 1 = $2/百万）；偏离这个基准的站点在自己的映射里声明。
+    const ratioBase = Number(rule.ratioBase) > 0 ? Number(rule.ratioBase) : SYSTEM_BASE_PRICE_PER_1M;
+    const cells = tokenCells(rule, scaledRatioItem(item, ratioBase));
     if (!cells.length) {
       unresolved.push({ model: name, reason: "输入价算不出来", source: rule.input });
       continue;

@@ -158,6 +158,20 @@ test("声明里的 ratioBase 能覆盖族基准", () => {
   assert.equal(rows[0].input_price, 1.5);
 });
 
+test("映射不写 ratioBase 时按系统基准折算，不再静默按 1 算", () => {
+  const payload = {
+    success: true,
+    group_ratio: { default: 1 },
+    data: [{ model_name: "claude-sonnet-4-5", quota_type: 0, model_ratio: 1.5, completion_ratio: 5, enable_groups: ["default"] }]
+  };
+  const map = resolvePriceMap({ base: "tokenflux" }).map;
+  assert.equal(map.ratioBase, undefined, "族映射不该再各写一份常数");
+  const rows = applyPriceMap(map, payload, { parseTiers: parseBillingTiers }).rows;
+  // 1.5 × 系统基准 2 = $3/M，与官方 sonnet 价对得上；按 1 算就是半价。
+  assert.equal(rows[0].input_price, 3);
+  assert.equal(rows[0].model_ratio, 1.5);
+});
+
 test("分组在 enable_groups 里但 group_ratio 没有倍率时不出行", () => {
   const payload = {
     success: true,

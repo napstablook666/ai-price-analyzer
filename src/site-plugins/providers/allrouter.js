@@ -26,7 +26,7 @@ import { ALLROUTER_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-r
 //   充值：/api/status 里 price = 1（1 元 = 1 美元额度）、quota_per_unit = 500000、
 //   custom_currency_symbol = "credits"、custom_currency_exchange_rate = 10，
 //   也就是界面上的 10 credits = $1；赠送档位在 /api/user/topup/info，需要登录，没核实就不写。
-// 站点差异只有这一句：报文形状归到 allrouter 基座（newcodex 映射 + 图片端点规则）。
+// 站点差异只有这一句：报文形状归到 allrouter 基座（tokenflux 映射 + 图片端点规则）。
 const PRICE_MAP = { base: "allrouter" };
 
 const preset = {

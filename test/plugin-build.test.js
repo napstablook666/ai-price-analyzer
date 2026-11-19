@@ -10,6 +10,7 @@ const { build, checkOutputs, rewriteImports } = await import(pathToFileURL(path.
 const { SITE_PLUGIN_CATALOG } = await import(pathToFileURL(path.join(here, "..", "src", "site-plugins", "catalog.js")).href);
 const { SITE_PLUGIN_ORDER } = await import(pathToFileURL(path.join(here, "..", "src", "shared", "plugin-order.js")).href);
 const { SITE_LOGOS, siteLogoFor } = await import(pathToFileURL(path.join(here, "..", "src", "shared", "site-logos.js")).href);
+const { resolvePriceMap } = await import(pathToFileURL(path.join(here, "..", "src", "core", "price-maps", "index.js")).href);
 
 test("插件产物与 plugins/ 源保持同步", () => {
   const drift = checkOutputs(build().files);
@@ -82,4 +83,20 @@ test("每个插件都带站点图标，site-logos 映射与插件目录一致", 
   }
   assert.deepEqual(Object.keys(SITE_LOGOS).sort(), plugins.map(plugin => plugin.id).sort());
   assert.equal(siteLogoFor("no-such-plugin"), "");
+});
+
+// priceMap 里写错 base 名，采集时才炸，而且只炸一个站点，很容易当成站点改版。
+// 这里在构建期就解析一遍：声明指向的 base 必须存在，解析出来的映射必须有规则。
+test("每个插件声明的 priceMap 都能解析", async () => {
+  for (const entry of SITE_PLUGIN_CATALOG) {
+    const { sitePlugin } = entry.load();
+    const prepared = typeof sitePlugin.prepare === "function"
+      ? sitePlugin.prepare({ adapter: {} }, { url: new URL(`https://${sitePlugin.host}/pricing`) })
+      : null;
+    const spec = prepared?.adapter?.priceMap || sitePlugin.preset?.adapter?.priceMap;
+    if (!spec) continue;
+    const resolved = resolvePriceMap(spec);
+    assert.equal(resolved.error, undefined, `${entry.id} 的 priceMap 解不出来：${resolved.error}`);
+    assert.ok(Array.isArray(resolved.map.rules) && resolved.map.rules.length > 0, `${entry.id} 的映射没有规则`);
+  }
 });

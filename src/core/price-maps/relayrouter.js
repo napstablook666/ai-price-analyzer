@@ -21,8 +21,6 @@ const RELAY_ROUTER_MEDIA_TYPES = [
 export const relayRouterPriceMap = {
   schemaVersion: "price-map/1",
   source: "relayrouter",
-  // 倍率的基准是 2 美元/M token，声明在这里，表达式里只写 model_ratio。
-  ratioBase: 2,
   rootPath: "/data",
   nameField: "model_name",
   labelField: "model_name",

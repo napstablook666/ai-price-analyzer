@@ -8,8 +8,6 @@
 export const cheapRouterPriceMap = {
   schemaVersion: "price-map/1",
   source: "cheaprouter",
-  // 站点的 model_ratio 按 1 = $2/M 记，写回倍率字段时按这个折算。
-  ratioBase: 2,
   rootPath: "/data/items",
   nameField: "model",
   labelField: "display_name",

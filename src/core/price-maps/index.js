@@ -5,7 +5,7 @@
 // 最后在 response-formats.js 里各占一个枚举值。三处加起来四十多行，业务差异只有两三个字段。
 // 那些类的 parse() 全是一行 super.parse()，canParse() 只比 responseFormat 字符串。
 //
-// 现在站点只声明差异：{ base: "tokenflux", source: "xingya", currency: "USD", ratioBase: 2 }。
+// 现在站点只声明差异：{ base: "tokenflux", source: "xingya", currency: "USD", ratioBase: 1 }。
 // ratioBase 是「一行报文里 model_ratio 一个单位值多少美元」，引擎会把它乘进求值上下文，
 // 所以老站点（1 = $2 的那批）不必再复制一份映射、也不必在表达式里写 `* 2`。
 // 引擎按 base 取内置映射，把声明里的键覆盖上去，交回 applyPriceMap 求值。

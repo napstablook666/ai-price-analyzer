@@ -16,10 +16,10 @@ import { NEWCODEX_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-re
 //   5 个 gpt-image-* 是 tier("image", fixed(0.04)) * image_count → $0.04/张，
 //   必须走带表达式支持的归一（内建的 new-api-pricing 会丢掉 fixed() 档位，回落到占位倍率算成 $75/M）
 //   另外这个站的倍率类 model_ratio 按 1 = $2/百万 token 算（与它自己的 billing_expr 系数对得上），
-//   所以用 newcodex 这份映射（tokenflux 形状 + 倍率乘 2），不用 tokenflux 原版，否则倍率类报价会低一半
+//   所以直接用 tokenflux 那份映射：它的 ratioBase（1 = $2/百万）正是本站的口径。
 //   /api/models、/api/user/topup/info 都要登录，价格接口不用，所以是 direct 直连
-// 站点差异只有这一句：报文形状归到 newcodex 基座（tokenflux 形状 + 倍率乘 2）。
-const PRICE_MAP = { base: "newcodex" };
+// 站点差异只有这一句：报文形状归到 tokenflux 基座（它的 ratio 基准就是 1 = $2/百万）。
+const PRICE_MAP = { base: "tokenflux" };
 
 const preset = {
   id: "newcodex",
