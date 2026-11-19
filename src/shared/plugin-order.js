@@ -28,5 +28,6 @@ export const SITE_PLUGIN_ORDER = [
   "newcodex",
   "allrouter",
   "xingya",
-  "openlux"
+  "openlux",
+  "91token"
 ];

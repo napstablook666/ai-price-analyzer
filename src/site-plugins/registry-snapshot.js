@@ -299,6 +299,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "openlux.ai"
       ],
       "needsCode": true
+    },
+    {
+      "id": "91token",
+      "name": "91Token",
+      "version": "0.15.0",
+      "description": "公开定价接口匿名采集文本与图片报价，保留分组和长度档；复杂视频暂不折算，充值方案及实付需要登录核实",
+      "hosts": [
+        "91token.com",
+        "www.91token.com"
+      ],
+      "needsCode": true
     }
   ]
 };

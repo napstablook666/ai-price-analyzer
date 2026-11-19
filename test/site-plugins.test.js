@@ -6,6 +6,9 @@ import { PROVIDER_REGISTRY, providerById } from "../src/core/provider-registry.j
 import { addProviderStationPresets } from "../src/core/station-presets.js";
 import { SITE_PLUGIN_CATALOG, sitePluginCatalogForStations, sitePluginForStation } from "../src/site-plugins/catalog.js";
 import { loadSitePlugin, loadSitePlugins, loadedSitePluginIds, pruneSitePlugins, resetSitePluginLoader, syncSitePlugins } from "../src/site-plugins/loader.js";
+import { collectStation } from "../src/core/collectors.js";
+import { resolveStationCollection } from "../src/core/request-strategy.js";
+import { buildComparisonRows } from "../src/core/pricing.js";
 
 async function withCleanRegistry(callback) {
   resetSitePluginLoader();
@@ -80,6 +83,65 @@ test("adds multiple selected presets once and derives added state from stations"
     const added = sitePluginCatalogForStations(stations).filter(plugin => plugin.added).map(plugin => plugin.id);
     assert.deepEqual(added.sort(), ["centos", "windhub"]);
     assert.equal(providerById("centos").id, "centos");
+  });
+});
+
+test("91Token 匿名采集到比价保留分组、条件与11个视频缺口，充值不自动变已验证", async () => {
+  await withCleanRegistry(async () => {
+    const providers = await loadSitePlugins(["91token"]);
+    const [preset] = addProviderStationPresets([], providers, { exchangeRate: 7.2 });
+    const collection = resolveStationCollection({ ...preset, baseUrl: "https://www.91token.com/console/topup" });
+    const station = collection.station;
+    assert.equal(sitePluginForStation(station).id, "91token");
+    assert.equal(station.mode, "direct");
+    assert.equal(station.auth.type, "none");
+    assert.equal(station.rechargeRateVerified, false);
+    assert.equal(station.rechargeAuto, false);
+    assert.equal(station.priceCurrency, "CREDITS");
+    assert.deepEqual(station.rechargeTiers, []);
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/91token-pricing.json", import.meta.url), "utf8"));
+    const requests = [];
+    const snapshot = await collectStation(station, {
+      collection,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
+      }
+    });
+    assert.equal(requests.length, 1, "未核实的 status 不能把充值比例自动提升为已验证");
+    assert.equal(new URL(requests[0].url).pathname, "/api/pricing");
+    assert.equal(requests[0].init.credentials, "omit");
+    assert.equal(requests[0].init.headers.Authorization, undefined);
+    assert.equal(snapshot.recharge, undefined);
+    assert.equal(snapshot.rechargeRateVerified, false);
+    assert.equal(snapshot.status, "partial");
+    assert.equal(snapshot.normalized.data.length, 123);
+    assert.equal(new Set(snapshot.normalized.data.map(row => row.model_name)).size, 52);
+    assert.equal(snapshot.normalized.unpricedModels.length, 11);
+    assert.ok(snapshot.normalized.unpricedModels.includes("viduq4-preview"));
+    assert.equal(snapshot.normalized.data.filter(row => row.media_type === "video").length, 0);
+    const fable = snapshot.normalized.data.find(row => row.model_name === "claude-fable-5" && row.proxy_group_name === "Claude MAX");
+    assert.equal(fable.input_price, 13);
+    assert.equal(fable.output_price, 65);
+    assert.equal(fable.cache_read_price, 1.3);
+    const opus = snapshot.normalized.data.find(row => row.model_name === "claude-opus-5" && row.proxy_group_name === "Claude 特惠");
+    assert.equal(opus.input_price, 1.5);
+    assert.equal(opus.output_price, 7.5);
+    const peak = snapshot.normalized.data.find(row => row.model_name === "deepseek-v4-pro" && row.tier_name === "peak" && row.proxy_group_name === "国产模型 官转渠道");
+    assert.equal(peak.input_price, 4.5);
+    assert.match(peak.billing_conditions[0].expression, /Asia\/Shanghai/);
+    const serviceTier = snapshot.normalized.data.find(row => row.model_name === "gpt-6-sol");
+    assert.ok(serviceTier.billing_conditions.every(condition => condition.type === "context"));
+    const image = snapshot.normalized.data.find(row => row.model_name === "gpt-image-2");
+    assert.equal(image.media_type, "image");
+    assert.ok(image.image_price > 0);
+    const comparisons = buildComparisonRows({ stations: [station], snapshots: [snapshot], references: { models: [] }, usage: { input: 1_000_000, output: 1_000_000 } });
+    const offers = comparisons.flatMap(row => row.offers);
+    const offer = offers.find(row => row.modelName === "claude-fable-5" && row.groupName === "Claude MAX");
+    assert.equal(offer.quotedPrices.input, 13, "比价链不能重复乘分组倍率");
+    assert.equal(offer.quotedPrices.output, 65);
+    assert.ok(offers.some(row => row.modelName === "gpt-image-2" && row.billingMode === "image"));
+    assert.ok(offers.every(row => !snapshot.normalized.unpricedModels.includes(row.modelName)));
   });
 });
 

@@ -15,7 +15,8 @@ import { fileURLToPath } from "node:url";
 
 import { applyPriceMap } from "../src/core/price-map.js";
 import { parseBillingTiers } from "../src/core/normalizers.js";
-import { PRICE_MAP_BASES } from "../src/core/price-maps/index.js";
+import { resolvePriceMap } from "../src/core/price-maps/index.js";
+import { sitePlugin as token91Plugin } from "../src/site-plugins/providers/91token.js";
 import { stellaislePlazaRows } from "../src/core/price-maps/stellaisle.js";
 
 const FIXTURES = new URL("../test/fixtures/", import.meta.url);
@@ -27,6 +28,16 @@ export const GOLDEN_CASES = Object.freeze([
   // 同形状不同站点：base 都是 tokenflux，但报文各一份，快照分开存（name 才是文件名）。
   { name: "centos", base: "tokenflux", fixture: "centos-pricing.json", note: "ai.centos.hk 2026-11-19 实测，页面标 ¥" },
   { name: "maolaoapi", base: "tokenflux", fixture: "maolaoapi-pricing.json", note: "maolaoapi.com 2026-11-19 实测，页面标 $" },
+  {
+    name: "91token", base: "tokenflux", fixture: "91token-pricing.json",
+    priceMap: token91Plugin.preset.adapter.priceMap,
+    note: "91token.com 63 个模型全量匿名报文；52 个文本/图片模型出价，11 个复杂视频表达式明确不支持",
+    expectedUnresolved: [
+      "MiniMax-H3", "doubao-seedance-2-0", "doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini",
+      "doubao-seedance-2-5", "viduq3-ad", "viduq3-pro", "viduq3-turbo", "viduq4-preview",
+      "wan3.0-video", "wan3.0-video-prime"
+    ]
+  },
   { base: "allrouter", fixture: "allrouter-pricing.json" },
   { base: "relayrouter", fixture: "relayrouter-pricing.json" },
   { name: "openlux", base: "relayrouter", fixture: "openlux-pricing.json", note: "www.openlux.ai 2026-11-20 实测，9 行：token + 分档 + 按次（图/视频）+ 两种缓存放法" },
@@ -77,8 +88,8 @@ const cell = value => {
 export function renderGolden(caseItem) {
   const { base, fixture, expand } = caseItem;
   const label = caseName(caseItem);
-  const map = PRICE_MAP_BASES[base];
-  if (!map) throw new Error(`未知的 price-map base：${base}`);
+  const { map, error } = resolvePriceMap(caseItem.priceMap || { base });
+  if (error) throw new Error(`无效的 price-map 声明：${error}`);
   const raw = JSON.parse(readFileSync(new URL(fixture, FIXTURES), "utf8"));
   const payload = expand ? { data: expand(raw) } : raw;
   const { rows, unresolved } = applyPriceMap(map, payload, { parseTiers: parseBillingTiers });

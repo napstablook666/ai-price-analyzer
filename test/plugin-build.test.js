@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { execFileSync } from "node:child_process";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
@@ -29,6 +30,13 @@ test("catalog 与插件目录一一对应，且顺序来自 manifest.order", () 
   }
 });
 
+test("数字开头的插件 ID 生成后仍是合法的 ES 模块", () => {
+  const { files } = build();
+  const catalog = files.get(path.join(root, "src", "site-plugins", "catalog.js"));
+  assert.doesNotThrow(() => execFileSync(process.execPath, ["--input-type=module", "--check"], {
+    input: catalog, stdio: ["pipe", "pipe", "pipe"]
+  }));
+});
 test("每个生成的插件都暴露 modelAliases 数组", async () => {
   for (const entry of SITE_PLUGIN_CATALOG) {
     const module = entry.load();

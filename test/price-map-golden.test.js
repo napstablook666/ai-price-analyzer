@@ -41,12 +41,15 @@ test("每份 golden 与当前映射一致", () => {
   }
 });
 
-test("fixture 跑完不该留下解析不出价的模型", () => {
+test("fixture 的未解析模型必须与明确记录的已知缺口完全一致", () => {
   for (const item of GOLDEN_CASES) {
     const text = renderGolden(item);
     const summary = text.split("\n").find(line => line.startsWith("# rows:")) || "";
     const count = Number((summary.match(/unresolved: (\d+)/) || [])[1]);
-    assert.equal(count, 0, `${item.base} 有模型没解析出价，看 golden 尾部的清单`);
+    const expected = item.expectedUnresolved || [];
+    const misses = (text.split("# unresolved\n")[1] || "").trim().split("\n").filter(Boolean).map(line => line.split("=")[0]);
+    assert.equal(count, expected.length, `${caseName(item)} 未解析模型数量变了`);
+    assert.deepEqual(misses.sort(), [...expected].sort(), `${caseName(item)} 已知缺口外不能静默丢价`);
   }
 });
 

@@ -13,7 +13,8 @@ import { assertResponseFormatHandlers, getResponseFormatDefinition, getResponseF
 import { AIAPI_EFFECTIVE_PRICE_FIELDS } from "./aiapi-contract.js";
 // 28：长度档边界识别与「中间档写在最后」的区间填充都变了，老快照要重算。
 // 29：飓星API 改按分组广场展开报价，一条模型变多条分组价，老快照的价格口径对不上。
-export const NORMALIZATION_VERSION = 29;
+// 30：保留峰谷互斥条件，服务档倍率使用 context 条件，不再误标时段折扣。
+export const NORMALIZATION_VERSION = 30;
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 const number = (value, fallback = 1) => {
@@ -200,7 +201,7 @@ export class ParsingStrategy {
 const TIER_CALL_PATTERN = /tier\s*\(/gi;
 // len <= N / p <= N 这类长度条件决定档位区间，hour(...) 之类的时间条件不算。
 const TIER_BOUNDARY_PATTERN = /(?:^|[^a-z0-9_])(?:len|length|tokens?|input_tokens?|p)\s*(<=|<|>=|>)\s*(\d+(?:\.\d+)?)[\s)]*$/i;
-const TIER_TIME_RULE_PATTERN = /\*\s*\(\s*(.*?)\?\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*\)/i;
+const TIER_MULTIPLIER_PATTERN = /\*\s*\(\s*([^?]*?)\?\s*(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s*\)/gi;
 
 function balancedSpan(source, start) {
   let depth = 1;
@@ -401,23 +402,31 @@ export function parseBillingTiers(expression) {
       maxInclusive
     });
   }
-  const timeDiscount = expression.match(TIER_TIME_RULE_PATTERN);
-  if (timeDiscount) {
-    const timeCondition = timeDiscount[1].trim();
-    const multiplier = Number(timeDiscount[2]);
-    const fallbackMultiplier = Number(timeDiscount[3]);
+  // 两个绝对价档按时间互斥切换，不能把低峰价当成无条件报价。
+  const timeBranch = branches.length === 1 && branches[0];
+  if (tiers.length === 2 && timeBranch && /\b(?:hour|weekday)\s*\(/i.test(timeBranch.condition) &&
+      tiers.every(tier => tier.minTokens === null && tier.maxTokens === null)) {
+    tiers[0].billingConditions = [{ type: "time", expression: timeBranch.condition }];
+    tiers[1].billingConditions = [{ type: "time", expression: `!(${timeBranch.condition})` }];
+  }
+  for (const multiplierRule of expression.matchAll(TIER_MULTIPLIER_PATTERN)) {
+    const condition = multiplierRule[1].trim();
+    const type = /\b(?:hour|weekday)\s*\(/i.test(condition) ? "time" : "context";
+    const multiplier = Number(multiplierRule[2]);
+    const fallbackMultiplier = Number(multiplierRule[3]);
     for (const tier of tiers) {
-      tier.timeDiscount = multiplier;
-      tier.timeCondition = timeCondition;
-      tier.billingConditions = [{
-        type: "time",
-        expression: timeCondition,
+      if (type === "time") {
+        tier.timeDiscount = multiplier;
+        tier.timeCondition = condition;
+      }
+      (tier.billingConditions ||= []).push({
+        type,
+        expression: condition,
         multiplier,
         fallback_multiplier: fallbackMultiplier
-      }];
+      });
     }
   }
-  // 只有出现长度条件时才补区间下界，否则普通单档模型不该凭空多出 min_tokens。
   // 只有出现长度条件时才补区间下界，否则普通单档模型不该凭空多出 min_tokens。
   if (tiers.some(tier => tier.minTokens !== null || tier.maxTokens !== null)) {
     // 表达式的书写顺序不等于区间顺序。站点会把「中间档」写在最后：

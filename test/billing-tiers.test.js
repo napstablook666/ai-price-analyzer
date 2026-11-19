@@ -85,6 +85,31 @@ test("preserves a time condition as a verifiable billing rule", () => {
   assert.match(tier.billingConditions[0].expression, /hour\("Asia\/Shanghai"\) >= 22/);
 });
 
+test("服务档倍率保留 context 条件，不冒充时段折扣", () => {
+  const tiers = parseBillingTiers('(len <= 272000 ? tier("standard", p * 2 + c * 10) : tier("long_context", p * 4 + c * 15)) * (param("service_tier") == "fast" ? 2 : 1) * (param("service_tier") == "priority" ? 2.5 : 1)');
+  assert.equal(tiers.length, 2);
+  for (const tier of tiers) {
+    assert.equal(tier.timeDiscount, undefined);
+    assert.equal(tier.timeCondition, undefined);
+    assert.deepEqual(tier.billingConditions.map(rule => [rule.type, rule.multiplier, rule.fallback_multiplier]), [
+      ["context", 2, 1], ["context", 2.5, 1]
+    ]);
+    assert.match(tier.billingConditions[0].expression, /param\("service_tier"\) == "fast"/);
+  }
+  assert.deepEqual(tiers.map(tier => [tier.input, tier.minTokens, tier.maxTokens]), [[2, 0, 272000], [4, 272001, null]]);
+});
+
+test("峰谷两档保留互斥时段条件，不能丢成无条件低价", () => {
+  const condition = 'weekday("Asia/Shanghai") >= 1 && weekday("Asia/Shanghai") <= 5 && hour("Asia/Shanghai") >= 9';
+  const tiers = parseBillingTiers(`${condition} ? tier("peak", p * 9 + c * 27) : tier("off_peak", p * 4.5 + c * 13.5)`);
+  assert.deepEqual(tiers.map(tier => tier.billingConditions), [
+    [{ type: "time", expression: condition }],
+    [{ type: "time", expression: `!(${condition})` }]
+  ]);
+  assert.deepEqual(tiers.map(tier => tier.input), [9, 4.5]);
+  assert.ok(tiers.every(tier => tier.minTokens === null && tier.maxTokens === null));
+});
+
 test("picks the cheapest single recharge tier that covers the spend", () => {
   assert.equal(resolveRechargeTier([], 100), null);
   assert.equal(resolveRechargeTier(JUZIAI_TIERS, 0), null);

@@ -2,6 +2,7 @@
 
 // 站点图标映射：模型列旁边的站点标记、中转站筛选、供应商列表都用它。
 export const SITE_LOGOS = {
+  "91token": "icons/sites/91token.ico",
   "aiapi": "icons/sites/aiapi.svg",
   "all-in-one": "icons/sites/all-in-one.svg",
   "allrouter": "icons/sites/allrouter.svg",

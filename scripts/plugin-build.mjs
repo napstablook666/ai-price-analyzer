@@ -137,7 +137,7 @@ function renderRegistryJson(plugins) {
 function renderCatalog(plugins) {
   const imports = orderedPlugins(plugins).map(plugin => ({
     plugin,
-    local: `${plugin.id.replace(/[^a-zA-Z0-9]+(.)?/g, (_, chr) => (chr ? chr.toUpperCase() : ""))}Plugin`
+    local: `${plugin.id.replace(/[^a-zA-Z0-9]+(.)?/g, (_, chr) => (chr ? chr.toUpperCase() : "")).replace(/^[0-9]/, "_$&")}Plugin`
   }));
   const importLines = imports
     .map(({ plugin, local }) => `import { sitePlugin as ${local} } from "./providers/${plugin.id}.js";`)
