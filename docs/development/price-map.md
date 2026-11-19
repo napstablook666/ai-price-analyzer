@@ -1,6 +1,6 @@
 # 价格映射文档 📐
 
-一个站点一份 `src/core/price-maps/<站点>.js`。站点改字段名，改这份文件，不动代码。
+映射分两层。`src/core/price-maps/<形状>.js` 描述一种报文形状（`base`），注册在 `PRICE_MAP_BASES` 里；站点自己在 `adapter.priceMap` 里声明用哪个 base、覆盖哪几个字段。**只是字段名不同，写声明，不动代码。** 形状真的不一样，才加一份 base。
 
 `src/core/price-map.js` 是解释器，不含任何站点的名字。
 
@@ -212,7 +212,7 @@ unit: [
 
 按次规则的顶层价可以缺，只要 `sizeTiers` 每一档自带绝对价（`priceField`）。有的站点只给 1K / 2K / 4K 三档价，不给统一价，这时不该整条丢掉。
 
-已经迁到映射文档的站点：`tokenflux`、`cheaprouter`、`true-sota`、`sidrune`、`relayrouter`。剩下的还在 `normalizers.js` 里，迁一个删一个。
+现有的 base：`tokenflux`、`newcodex`、`allrouter`、`relayrouter`、`stellaisle`、`stellaisle-plaza`、`stellaisle-carpool`、`cheaprouter`、`true-sota`、`sidrune`。`newcodex`、`allrouter`、`stellaisle` 三份是在 `tokenflux` 上展开再改几个键，其余各有各的报文形状。
 
 同一个 New API 报文，字段名不一样的站点各写一份映射就行。`relayrouter` 这一份就是样板：缓存写拆成 `cache_creation_5m_ratio` / `cache_creation_1h_ratio`，用数组写成回落链，老字段 `cache_creation_ratio` 排在后面兜底；长上下文档位在 `step_ratios` 里，档内表达式可以回落读父级记录，所以模型倍率只写在外层。
 `unresolved` 会上浮到 `unsupportedBillingModes` 和 `unpricedModels`，在站点卡片上看得见。
@@ -220,8 +220,18 @@ unit: [
 ## 新增一个站点
 
 1. 抓一份真实 payload 存到 `test/fixtures/<站点>-pricing.json`
-2. 写 `src/core/price-maps/<站点>.js`
-3. 在 `normalizers.js` 里让对应策略的 `parse()` 调 `applyPriceMap`
+2. 报文能和现有 base 对上，就在插件 `adapter.priceMap` 里写 `{ base: "<base>", source: "<站点>", currency: "USD", rules: { … } }`，只写要覆盖的键
+3. 对不上，才新增 `src/core/price-maps/<形状>.js` 并在 `index.js` 的 `PRICE_MAP_BASES` 里注册
 4. 用旧实现和新实现逐字段对比，差异归零后再切
 
-第 4 步不能省。`test/price-map.test.js` 里的 fixture 断言只保证口径对，逐字段对比才保证不丢字段。
+第 4 步不能省。`test/price-map.test.js` 里的 fixture 断言只保证口径对，逐字段对比才保证不丢字段。补了 fixture 的新 base 还要 `node scripts/price-map-golden.mjs --update`，把快照一起提交。
+
+## 退役的枚举值
+
+`responseFormat` 一度给每个同形状站点各留一个值（`newcodex`、`allrouter`、`relayrouter`）。引擎上线后这些值只剩兼容作用，现在改成「读到就迁移」：
+
+- `LEGACY_RESPONSE_FORMATS` 记着旧值对应的新声明
+- `normalizeStation` 在归一化时把旧值就地改写成 `price-map` + `priceMap`，存储里不再留旧值
+- 站点下一次保存设置也会写成新形态
+
+摘除条件写在 `src/core/response-formats.js` 的注释里：发满两个 minor，或确认不再有人带着旧值升级，就把这张表连同 `migrateStationAdapter` 和对应测试一起删。**不要再往里加新条目**，新站点一律写 `priceMap` 声明。

@@ -52,6 +52,12 @@ export function isSupportedResponseFormat(format) {
 // 当年各占一个枚举值，是因为映射引擎还没写；引擎上线后（4b3793b）枚举值就只剩
 // 「别让 11 月 18 日那天手填过的站点解析失败」这一个作用。
 // 长期挂着一张别名表，等于让历史版本的配置永久占用公开词表——所以改成读到就换掉：
+//
+// 摘除条件（写在这里，免得它变成下一代的遗留）：这三个值只服务「升级前手填过、
+// 之后一次都没再保存过设置」的站点。任何一次保存都会把 adapter 写回新形态，
+// 所以发满两个 minor（或线上再收不到这三个值相关的问题）就整张表删掉。
+// 一起删：这张表、migrateStationAdapter、schema.js 里的那一次调用、
+// test/response-formats.test.js 的四条用例、docs/development/price-map.md 的「退役的枚举值」。
 // normalizeStation 按这张表把旧值就地改写成新声明，存储里不再有旧值。
 export const LEGACY_RESPONSE_FORMATS = Object.freeze({
   newcodex: { format: "price-map", priceMap: Object.freeze({ base: "newcodex" }) },

@@ -65,7 +65,7 @@
 
 OpenRouter 把模式揉进了键名里，需要用一张后缀表拆，拆不出来的一律 `unstated`。Vercel 的 `video_duration_pricing` 已经把三个维度拆成数组项，直接用。
 
-分辨率档已经是独立行（`src/core/normalizers.js:1489` 起，每档一条 `request_unit: "second"`），不要把它们加权合并成一条「平均每秒价」。
+分辨率档已经是独立行（`src/core/normalizers.js` 里展开分辨率档，每档一条 `request_unit: "second"`），不要把它们加权合并成一条「平均每秒价」。
 
 ## 四、档位斜率
 
@@ -140,8 +140,8 @@ OpenRouter 把模式揉进了键名里，需要用一张后缀表拆，拆不出
 
 | 项 | 位置 | 状态 |
 | --- | --- | --- |
-| 三页签切换 | `src/core/media.js`、`src/dashboard.js:489` | 已有 |
-| 视频分辨率档独立成行 | `src/core/normalizers.js:1489`，`request_unit: "second"` | 已有 |
+| 三页签切换 | `src/core/media.js`、`src/dashboard.js` 的页签渲染 | 已有 |
+| 视频分辨率档独立成行 | `src/core/normalizers.js` 的分钟/秒档展开，`request_unit: "second"` | 已有 |
 | 生图按单位分榜 | `src/core/pricing.js` 的 `mediaUnitOf`、`src/dashboard.js` 的 `sortRows` | 已做 |
 | 生图尺寸档 / 质量档 | `src/core/image-billing.js` 的 `imageTierOf` | 已做，站内恒为 `unstated` |
 | 规格不同不给百分比 | `compareImageQuote` 的 `tier-mismatch` | 已做 |
