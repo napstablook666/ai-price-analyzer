@@ -10,7 +10,10 @@ const preset = {
   rechargeRateNote: "ai.centos.hk 充值折算尚未核验，当前不参与已验证比价推荐。",
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
-  priceCurrencyNote: "",
+  priceCurrencyNote:
+    "定价页标 ¥（如 ¥3 / 1M），/api/status 的 price = 1、usd_exchange_rate = 1，即 1 元 = 1 美元额度，" +
+    "报文里的 model_ratio 按美元额度记：claude-sonnet-4-5 的 ratio 1.5 对页面 ¥3 / 1M，乘 2 正好是 $3，" +
+    "claude-opus-4-6 的 ratio 2.5 对页面 $5。所以报价币种是美元额度而不是人民币，符号差异只是显示口径。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
