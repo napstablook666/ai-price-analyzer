@@ -40,21 +40,22 @@ on:
 
 | 文件 | 内容 |
 | --- | --- |
-| `ai-relay-price-extension-v1.13.0.zip` | 加载所需的那部分：`manifest.json`、三个 HTML、`styles.css`、`styles/`、`icons/`、`src/`，解压即用 |
-| `ai-price-analyzer-v1.13.0-source.zip` | 源码包：整份仓库副本（`src/`、`scripts/`、`canonical/`、`docs/`、`test/`、各类 md）+ 独立仓库的 `plugins/` |
-| `SHA256SUMS.txt` | 上面两个包的校验和 |
+| `ai-relay-price-extension-vX.Y.Z.zip` | 浏览器加载包，包含 `manifest.json`、仪表盘、设置页、运行时代码和 Windows 更新脚本 |
+| `ai-price-analyzer-vX.Y.Z-source.zip` | 扩展源码、测试、文档以及独立仓库的 `plugins/` 源码 |
+| `SHA256SUMS.txt` | 两个 ZIP 包的 SHA256 校验值 |
+| `update.json` | 带签名的自动更新清单 |
+| `update.ps1` | Windows 外部更新脚本 |
 
 Release 正文取 `RELEASE_NOTES.md`，并自动生成变更列表。
 
 ## 手工发布步骤
 
-1. 在 `plugins/` 仓库同步最新插件，本仓库跑 `node scripts/plugin-build.mjs`。
-2. 升版本：`npm run version:patch`（或 `version:minor` / `version:major`），两处一起改；也可以手改 `package.json` 与 `manifest.json`。
-3. 更新 `RELEASE_NOTES.md`，写清新增站点、修的问题、破坏性变更。
-4. `npm test`，`npm run plugins:check`。
-5. `npm run docs:build`，确认文档没坏链接。
-6. 提交，打 tag：`git tag v1.13.0 && git push origin v1.13.0`。
-7. 等 Actions 绿，检查 Release 里三个文件都在。
+1. 用 `npm run version:patch`、`version:minor` 或 `version:major` 升版本，更新锁文件、安装文档和 `RELEASE_NOTES.md`。
+2. 运行 `npm run plugins:build`。在扩展仓提交版本、文档和内置目录快照，在插件仓提交 `plugins.json`。
+3. 执行 `npm run verify`、`npm run verify:clean` 和 `npm run docs:build`。
+4. 先推送插件仓的 `main`。CI 和 Release 工作流会从这里读取插件源码。
+5. 推送扩展仓的 `main`，再将 `vX.Y.Z` 标签打在发版提交上并推送。
+6. 等 Release 工作流成功，确认五个附件齐全，核对 ZIP 校验值及包内扩展版本。
 
 ## 用户侧升级
 
