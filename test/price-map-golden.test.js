@@ -11,12 +11,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { PRICE_MAP_BASES, priceMapDiffKeys } from "../src/core/price-maps/index.js";
-import { GOLDEN_CASES, renderGolden, goldenPath, caseName } from "../scripts/price-map-golden.mjs";
+import {
+  GOLDEN_CASES,
+  renderGolden,
+  goldenPath,
+  caseName,
+  NO_FIXTURE_YET as NO_FIXTURE_YET_REASONS
+} from "../scripts/price-map-golden.mjs";
 
-// 还没补 fixture 的 base。补了就从这里删掉，别让它长期赖着。
-// 拼车市场（stellaisle-carpool）拿不到匿名 fixture：`/api/carpool-market` 未登录直接 401，
-// 它只能靠用户站内登录态在页面上采（插件里 mode: "page"、authType: "cookie"）。
-const NO_FIXTURE_YET = new Set(["stellaisle-carpool"]);
+// 还没补 fixture 的 base 只在 scripts/price-map-golden.mjs 里声明一次（连理由一起），
+// 这里和 scripts/guard-coverage.mjs 都读那一份，别各抄一个名单。
+const NO_FIXTURE_YET = new Set(Object.keys(NO_FIXTURE_YET_REASONS));
 
 // 和 tokenflux 比，差异键最多这么几个。全是 1 的时候调这个数才是对的。
 const MAX_DIFF_KEYS = 4;

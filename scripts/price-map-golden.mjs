@@ -38,6 +38,15 @@ export const GOLDEN_CASES = Object.freeze([
   { base: "sidrune", fixture: "sidrune-pricing.json", note: "20 行：6 个按张（带 1K/2K/4K 档）+ 14 个按 token" }
 ]);
 
+// 暂时拿不到 fixture 的 base，理由必须写清楚。
+// 这不是「允许不管」的名单：加一项要说清缺的是什么、什么时候能补。
+// 测试与 scripts/guard-coverage.mjs 都读这一份，别在别处另抄一个名单。
+export const NO_FIXTURE_YET = Object.freeze({
+  "stellaisle-carpool":
+    "/api/carpool-market 未登录直接 401（要 New-Api-User 头），只能在用户站内登录态下采；" +
+    "补快照的时机是下一次带登录态实测拼车页。当前形状由 test/price-map.test.js 与 core.test.js 的站内用例守着。"
+});
+
 // 只看决定价格结论的字段。enable_groups、evidence、model_ratio 这些是中间产物，
 // 它们变了但最终价没变的情况不该让快照失败。
 const FIELDS = [
