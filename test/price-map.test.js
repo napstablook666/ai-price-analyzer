@@ -128,6 +128,36 @@ test("没有匹配规则的模型进 unresolved，不能静默丢掉", () => {
   assert.equal(result.unresolved[0].model, "mystery-model");
 });
 
+// 这两条钉的是「口径」，不是实现的当前输出：ratio 1 对应多少美元必须有独立依据，
+// 否则下次有人把常数改回 1，测试只会跟着改数字，什么也拦不住。
+test("tokenflux 的倍率单位是 $2/M：ratio 1.5 出 $3", () => {
+  const payload = {
+    success: true,
+    group_ratio: { default: 1 },
+    data: [{ model_name: "claude-sonnet-4-5", quota_type: 0, model_ratio: 1.5, completion_ratio: 5, enable_groups: ["default"] }]
+  };
+  const rows = rowsOf(payload).rows;
+  assert.equal(rows.length, 1);
+  // 官方 claude-sonnet-4-5 输入 $3/M，站内 ratio 1.5。×2 对上，×1 差一半。
+  assert.equal(rows[0].input_price, 3);
+  assert.equal(rows[0].output_price, 15);
+  // 回写字段要除回来，存储里的 model_ratio 仍是站点原文的 1.5。
+  assert.equal(rows[0].model_ratio, 1.5);
+});
+
+test("声明里的 ratioBase 能覆盖族基准", () => {
+  const payload = {
+    success: true,
+    group_ratio: { default: 1 },
+    data: [{ model_name: "claude-sonnet-4-5", quota_type: 0, model_ratio: 1.5, completion_ratio: 5, enable_groups: ["default"] }]
+  };
+  const declared = resolvePriceMap({ base: "tokenflux", ratioBase: 1 });
+  assert.equal(declared.error, undefined);
+  assert.equal(declared.map.ratioBase, 1);
+  const rows = applyPriceMap(declared.map, payload, { parseTiers: parseBillingTiers }).rows;
+  assert.equal(rows[0].input_price, 1.5);
+});
+
 test("分组在 enable_groups 里但 group_ratio 没有倍率时不出行", () => {
   const payload = {
     success: true,
