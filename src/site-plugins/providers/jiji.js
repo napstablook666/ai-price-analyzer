@@ -18,6 +18,12 @@ const isModelPath = path => MODEL_PATHS.has(normalizePath(path));
 //   邀请返利 effective_rebate_rate_percent = 5，好友每次充值返 5%，返利额度可一键转入余额
 //   模型报价是 USD/1M tokens × 分组倍率（0.15–4.0），所以 1 元 = 1 美元额度，折算比例 1:1
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "alipay", faceAmount: 20, payAmount: 20, currency: "CNY", at: "2026-11-17", note: "登录态实测：充 20 元实付 ¥20.00，余额 +$20.00，无手续费" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "jiji",
   name: HOST,
   baseUrl: `https://${HOST}${MODEL_PAGE}`,

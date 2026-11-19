@@ -14,6 +14,12 @@ import { publicPricingProvider } from "../../core/provider-registry.js";
 //     余额字段 balanceUsd，0.0343 Credits 显示 ≈ ¥0.0343，所以 1 Credit 记 1 元额度
 //     邀请返现 5%，好友充值后冻结 30 天到账（不进档位计算）
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "stripe", faceAmount: 50, payAmount: 7.58, currency: "USD", paidRmb: 50, at: "2026-11-17", note: "充 ¥50 实付 $7.58 得 50 Credits，paidRmb 按 1 Credit = 1 元折算" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "soleapi",
   name: "soleapi.com",
   baseUrl: "https://soleapi.com/zh/models",

@@ -111,6 +111,52 @@
 
 状态列只在公益模式下出现在表里，付费模式把这些信号放在摘要条的「需核验」和模型列的置信度里。标签都不成立时状态列留空。
 
+## 渠道实付与结算差异
+
+「充 300 打 9.7 折」只是第一层。从页面上的面值到微信、支付宝真正扣的钱，中间还有两层，扩展把它们分开记：
+
+| 层 | 承载字段 | 来源 |
+| --- | --- | --- |
+| 面值折扣 | `rechargeTiers[].discount` | 站点 `/api/status` 的 `bulk_topup_discounts`，或插件手写 |
+| 额度折人民币 | `rechargeRate` | 站点自报的 `price` / `usd_exchange_rate`，或手填 |
+| 收银台实付 | `rechargePayments[]` | 点开收银台看到的待支付金额，人工取证 |
+
+`rechargePayments` 每项是一条付款证据：
+
+```js
+{
+  channel: "alipay",     // wechat | alipay | card | stripe | crypto | other
+  faceAmount: 300,       // 面值（美元额度）
+  payAmount: 291,        // 收银台显示金额，币种由 currency 说明
+  currency: "USD",       // CNY | USD | CREDITS
+  paidRmb: null,         // 折算成人民币的实付；USD 不给就是 null，不猜汇率
+  feeRate: 0.014,        // 可选，渠道手续费比例
+  at: "2026-11-19",      // 取证日期
+  note: "Antom 收银台待支付总额 $291.00"
+}
+```
+
+月成本按这个顺序取数：
+
+1. `rechargePayments` 里能算出 `paidRmb / faceAmount` 的条目，取折算率最低的一条（用户会挑最便宜的渠道）。月成本 = 面值成本 × 该折算率，提示写「支付宝实付 ¥…」。
+2. 没有收银台证据，走档位推算：面值 × 落档折扣 × `rechargeRate`，提示带「（推算）」。
+3. 两者都没有，直接按面值成本算。
+
+只有人民币收银台金额自动等于人民币。美元或额度的 `paidRmb` 必须手填，站点不报人民币金额时留 `null`，这条证据不进排序，但仍显示在提示里。
+
+取证流程离线跑，不随扩展发布：
+
+```bash
+cd extension
+npm run recharge:probe -- --from-plugins   # 匿名打 /api/status，落 out/recharge/<host>.json
+# 人工补 payments：点开收银台，到待支付页为止，不付款
+npm run recharge:apply                     # 写回 plugins/<id>/plugin.js 的 preset.rechargePayments
+```
+
+`recharge:apply` 幂等，重复跑不产生 diff。生成段带 `// >>> recharge-probe` 标记，手改标记内的内容下次会被覆盖。
+
+读 `rechargePayments` 时注意：`payAmount` 的币种由 `currency` 决定，不是页面符号。不少站页面标 `$` 但实际按人民币 1:1 扣款，这种要在 `note` 里写明，别只填数字。
+
 ## 汇率
 
 - 支持人民币与美元两种显示货币。

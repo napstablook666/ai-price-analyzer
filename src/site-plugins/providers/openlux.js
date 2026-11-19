@@ -8,26 +8,44 @@ import { DEFAULT_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-reg
 //   页面 /pricing：claude-opus-5-5 显示 0.353，最低分组 0.08824 × 2 × 2 = 0.35296 对得上；
 //     gpt-image-2-c 显示 0.00882 / request，报文最低分组 0.0088236 对得上。页面不带货币符号。
 //   站点自述：/relay 与 /wholesale 写着「1 美元 = 1 美元额度，用多少扣多少，最低充值 $1」，
-//     /api/status 里 currency_type = USD、price = 1、original_price = 1、
+//     /api/status 里 currency_type = USD、payment_currency_symbol = $、price = 1、original_price = 1、
 //     custom_currency_exchange_rate = 1（1 美元额度就是 1 美元），
-//     usd_exchange_rate = 6.68752（人民币付款按这个汇率折算），
+//     usd_exchange_rate = 6.68752（站内把美元额度换算成人民币显示用的值，不是收银台汇率），
 //     bulk_topup_discounts 14 档（10 面值 9.9 折，10 万面值 0.925），min_topup = 1。
-//   所以实付人民币 / 1 美元额度 = 6.68752。没有真实到账单，后续有账单以账单为准。
+//   收银台实测（2026-11-19，登录态 uid 1069525，只下单未付款）：
+//     面值 $10 → 页面「折扣 -$0.10 / 实付 $9.90」→ 下单后 /api/user/pay 返回
+//     money = "9.90"、type 分别为 antom / wxpay / alipay，三个渠道进网关后全是「USD 9.90」：
+//       antom（Alipay+，商户 COGNIS AI PTE. LTD.）→ g.alipayplus.com 收银台「支付总额 USD 9.90」；
+//       doit 收银台（支付宝/微信两条国内通道）→ 「Total Amount: USD 9.90」。
+//     全链路没有出现人民币金额，也没有汇率字段；人民币是支付宝/微信钱包在扫码那一刻按自身汇率换算的。
+//   所以：1 美元额度 = 0.99 美元实付（10 档），人民币成本 = 0.99 × 钱包汇率，
+//     站点侧唯一的人民币换算是 usd_exchange_rate 6.68752，按它折算 1 美元额度 ≈ 6.62 元。
+//     真实账单（钱包里扣的 ¥）没有拿到，等有账单以账单为准；若按中行牌价 7.3 换，约 7.23 元/美元额度。
 // 报文形状与 RelayRouter 一致，映射直接复用基座；分组倍率 0.03677 ~ 1.1，95 个分组。
 const PRICE_MAP = { base: "relayrouter" };
 
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", at: "2026-11-19", note: "用户截图，Antom 收银台待支付总额 $291.00（页面标节省 3.0%）" },
+    { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "登录态实测，doit 收银台 Total Amount USD 9.90" },
+    { channel: "wechat", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "登录态实测，doit 收银台 Total Amount USD 9.90" },
+    { channel: "card", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "登录态实测，antom（Alipay+，商户 COGNIS AI PTE. LTD.）收银台支付总额 USD 9.90" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "openlux",
   name: "OpenLux",
   baseUrl: "https://www.openlux.ai/pricing",
   // 1 美元额度 = 6.68752 元（站点 /api/status 的 usd_exchange_rate），面值折扣见档位表。
+  // 收银台是美元实付（$10 档 $9.90），人民币要过钱包汇率，6.62 是站点自报汇率的折算值。
   rechargeRmb: 6.68752,
   rechargeCredits: 1,
   rechargeRateVerified: true,
   // /api/status 的 price 在这里是「1 美元面值卖 1 美元」（payment_currency_symbol 是 $），
   // 自动采集会把它当成「1 美元额度 = 1 元」写进折算，价格直接低 6.7 倍，所以锁手填值。
   rechargeAuto: false,
-  rechargeRateNote: "站点自述「1 美元 = 1 美元额度，最低充值 $1」，price=1 是美元口径（支付币种 $），所以关掉自动采集，按站点 usd_exchange_rate 6.68752 折算人民币，未用真实账单核对。面值 10 起每档 9.9~9.25 折，已并入档位表。",
+  rechargeRateNote: "支付全链路是美元：$10 面值实付 $9.90，/api/user/pay 的 money=9.90，antom（Alipay+）和 doit（支付宝/微信）收银台都显示 USD 9.90，站点不报人民币金额，人民币由钱包扫码时按自身汇率换算。这里的 6.68752 是站点 /api/status 的 usd_exchange_rate，按它折 1 美元额度 ≈ 6.62 元；真实人民币账单未取到，按中行牌价 7.3 会更高。price=1 是美元口径，自动采集会读成 1 元/美元额度，所以锁手填值。面值 10 起每档 9.9~9.25 折，已并入档位表。",
   // bulk_topup_discounts 原样搬过来：面值（美元额度）→ 折扣。
   rechargeTiers: [
     { amount: 10, discount: 0.99 },

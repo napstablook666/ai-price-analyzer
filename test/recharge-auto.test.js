@@ -26,7 +26,7 @@ test("reads the recharge rate out of the two /api/status shapes", () => {
   // new-api 标准形状把参数包在 data 里。
   assert.deepEqual(
     parseRechargeStatus({ success: true, data: { price: 0.85, quota_per_unit: 500_000, usd_exchange_rate: 7.2 } }),
-    { rate: 0.85, price: 0.85, originalPrice: null, quotaPerUnit: 500_000, exchangeRate: 7.2 }
+    { rate: 0.85, price: 0.85, originalPrice: null, quotaPerUnit: 500_000, exchangeRate: 7.2, tiers: [], channels: [] }
   );
   // 老站直接把参数摊在顶层。
   assert.equal(parseRechargeStatus({ price: 1 }).rate, 1);
@@ -168,4 +168,65 @@ test("treats a broken /api/status as missing, not as a failed collection", async
   assert.equal(await probeRechargeRate(station, { fetchImpl: async () => { throw new TypeError("Failed to fetch"); } }), null);
   assert.equal(await probeRechargeRate(station, { fetchImpl: async () => statusResponse(500, {}) }), null);
   assert.equal(await probeRechargeRate(station, { fetchImpl: async () => jsonResponse("<html>首页</html>") }), null);
+});
+
+test("reads bulk_topup_discounts and pay_methods off /api/status", () => {
+  const parsed = parseRechargeStatus({
+    data: {
+      price: 1,
+      bulk_topup_discounts: { 300: 0.97, 10: 0.99 },
+      pay_methods: [
+        { id: "5", name: "Alipay", type: "antom", max_amount: "40000" },
+        { id: "8", name: "Credit Card", type: "antom_card", max_amount: "40000" },
+        { id: "1", name: "Crypto Pay", type: "usdt" }
+      ]
+    }
+  });
+  assert.deepEqual(parsed.tiers, [{ amount: 10, discount: 0.99 }, { amount: 300, discount: 0.97 }]);
+  assert.deepEqual(parsed.channels, [
+    { channel: "alipay", type: "antom", name: "Alipay", maxAmount: 40000 },
+    { channel: "card", type: "antom_card", name: "Credit Card", maxAmount: 40000 },
+    { channel: "crypto", type: "usdt", name: "Crypto Pay" }
+  ]);
+});
+
+test("keeps a status row that has tiers or channels but no price", () => {
+  const tiersOnly = parseRechargeStatus({ data: { bulk_topup_discounts: [{ amount: 10, discount: 0.9 }] } });
+  assert.equal(tiersOnly.rate, null);
+  assert.deepEqual(tiersOnly.tiers, [{ amount: 10, discount: 0.9 }]);
+  const channelsOnly = parseRechargeStatus({ data: { pay_methods: [{ name: "Alipay", type: "alipay" }] } });
+  assert.equal(channelsOnly.rate, null);
+  assert.equal(channelsOnly.channels.length, 1);
+});
+
+test("prices the month off the counter payment when the station has one", () => {
+  const derived = offerFor();
+  assert.equal(derived.monthlyCostPaidSource, "derived");
+  assert.ok(Math.abs(derived.monthlyCostPaid - 4.512) < 0.001, String(derived.monthlyCostPaid));
+
+  // 收银台：充 1000 额度实付 400 元 → 0.4 元/额度，面值 15.04 × 0.4。
+  const counter = offerFor({
+    station: { rechargePayments: [{ channel: "alipay", faceAmount: 1000, payAmount: 400, currency: "CNY", paidRmb: 400 }] }
+  });
+  assert.equal(counter.monthlyCostPaidSource, "counter");
+  assert.ok(Math.abs(counter.monthlyCostPaid - 6.016) < 0.001, String(counter.monthlyCostPaid));
+  assert.equal(counter.rechargePayment.channel, "alipay");
+});
+
+test("falls back to the face cost when there is neither a tier nor a payment", () => {
+  const offer = offerFor({ station: { rechargeTiers: [], rechargePayments: [] } });
+  assert.equal(offer.monthlyCostPaidSource, "derived");
+  assert.ok(Math.abs(offer.monthlyCostPaid - offer.monthlyCost) < 1e-9);
+});
+
+test("keeps a payment row without an rmb amount as evidence but does not rank by it", () => {
+  const offer = offerFor({
+    station: { rechargePayments: [{ channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", paidRmb: null }] }
+  });
+  assert.equal(offer.monthlyCostPaidSource, "derived");
+  assert.ok(Math.abs(offer.monthlyCostPaid - 4.512) < 0.001, String(offer.monthlyCostPaid));
+  // 界面要能显示「已点过收银台」，但这条不参与排序。
+  assert.equal(offer.rechargePayment.channel, "card");
+  assert.equal(offer.rechargePayment.paidRmb, null);
+  assert.equal(offer.rechargePayment.payAmount, 291);
 });

@@ -5,6 +5,7 @@ import { canonicalKey, stripDecoration, stripVendorPrefix } from "./canonical.js
 import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaUnitLabel, mediaUnitRank, pickImageQuote, toPerImage } from "./image-billing.js";
 import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { effectiveRecharge } from "./recharge.js";
+import { rechargePaymentRate, representativeRechargePayment } from "../shared/recharge-payments.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -572,10 +573,27 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     const rechargePlan = row.stationCategory === "public" || row.pricingUnavailable
       ? null
       : resolveRechargeTier(rowStation?.rechargeTiers, faceMonthlyCost);
-    // payRmb 是面值币种里的钱，换回人民币要乘回 rechargeFactor（CNY 站为 1，不受影响）。
-    const monthlyCostPaid = row.stationCategory === "public" || row.pricingUnavailable
+    // 渠道实付优先：有收银台证据就按「实付人民币 / 面值额度」折，覆盖档位推算。
+    // 没有证据才走「面值 × 落档折扣 × rechargeFactor」。两者都不成立时退回原价。
+    const paidPayment = row.stationCategory === "public" || row.pricingUnavailable
       ? null
-      : (rechargePlan ? rechargePlan.payRmb * rechargeFactor : row.monthlyCost);
+      : representativeRechargePayment(rowStation?.rechargePayments);
+    const paidRate = rechargePaymentRate(paidPayment);
+    let monthlyCostPaid;
+    let monthlyCostPaidSource;
+    if (row.stationCategory === "public" || row.pricingUnavailable) {
+      monthlyCostPaid = null;
+      monthlyCostPaidSource = null;
+    } else if (paidRate !== null) {
+      monthlyCostPaid = faceMonthlyCost * paidRate;
+      monthlyCostPaidSource = "counter";
+    } else if (rechargePlan) {
+      monthlyCostPaid = rechargePlan.payRmb * rechargeFactor;
+      monthlyCostPaidSource = "derived";
+    } else {
+      monthlyCostPaid = row.monthlyCost;
+      monthlyCostPaidSource = "derived";
+    }
     // 生图道的四种计费口径（张 / 图 token / 像素 / 次）统一折到元/张再比，折算不出来就留空。
     const imageCount = Number(usage.images) || 0;
     const imagePricing = row.billingMode === "image"
@@ -594,7 +612,11 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     const imageRechargePlan = imageMonthlyCost === null || row.stationCategory === "public"
       ? null
       : resolveRechargeTier(rowStation?.rechargeTiers, rechargeFactor > 0 ? imageMonthlyCost / rechargeFactor : imageMonthlyCost);
-    const imageMonthlyCostPaid = imageMonthlyCost === null ? null : (imageRechargePlan ? imageRechargePlan.payRmb * rechargeFactor : imageMonthlyCost);
+    const imageMonthlyCostPaid = imageMonthlyCost === null
+      ? null
+      : paidRate !== null
+        ? (rechargeFactor > 0 ? imageMonthlyCost / rechargeFactor : imageMonthlyCost) * paidRate
+        : (imageRechargePlan ? imageRechargePlan.payRmb * rechargeFactor : imageMonthlyCost);
     const offer = {
       stationId: row.stationId,
       stationName: row.stationName,
@@ -657,7 +679,9 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       officialCurrency: row.officialCurrency,
       monthlyCost: row.stationCategory === "public" || row.pricingUnavailable ? null : row.monthlyCost,
       monthlyCostPaid,
+      monthlyCostPaidSource,
       rechargePlan,
+      ...(paidPayment ? { rechargePayment: paidPayment } : {}),
       costCurrency: row.stationCategory === "public" ? row.sourceCurrency : null,
       officialMonthlyCost: row.stationCategory === "public" || !primary ? null : primary.monthlyCost,
       // 按张计价的价差要按元/张比，跟按 token 的月成本不是一回事，这里不填。

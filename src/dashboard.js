@@ -1120,6 +1120,14 @@ function costCombinedMarkup(row, currency, ranking, deltaClass, deltaLabel) {
   return `<div class="cost-combined"><div class="cost-combined-main">${monthlyCostSummaryMarkup(row, currency)}<span class="delta-tag ${deltaClass}">${deltaLabel}</span></div>${unitPriceLineMarkup(row, currency)}${monthlyCostPanelMarkup(row, currency, ranking)}</div>`;
 }
 
+const PAYMENT_CHANNEL_LABELS = { wechat: "微信", alipay: "支付宝", card: "银行卡", stripe: "Stripe", crypto: "加密货币", other: "其他渠道" };
+// 收银台金额本身就是该币种原值，不能再按当前汇率折一次。
+function formatPaymentAmount(amount, currency) {
+  const value = Number(amount);
+  if (!Number.isFinite(value)) return "—";
+  if (currency === "CREDITS") return `${value.toFixed(0)} CR`;
+  return `${currency === "USD" ? "$" : "¥"}${value.toFixed(2)}`;
+}
 // 有充值阶梯的站点，月成本按落档后的实付金额显示；排名和柱长也用这个数，不然名次和金额会打架。
 function paidMonthlyCost(row) {
   if (row.billingMode === "image") {
@@ -1140,8 +1148,23 @@ function monthlyCostSummaryMarkup(row, currency) {
 // 充值阶梯是站点规则，不是这一行的价格：提示挂在站点格的「分组」下面。
 function rechargeTierMarkup(row) {
   const plan = row.billingMode === "image" ? row.imageRechargePlan : row.rechargePlan;
-  if (!plan) return "";
-  return `<span class="station-recharge-hint" title="按估算月用量自动落档">充 ${formatPrice(plan.amount, "CNY", 2)} 档 ${plan.discount.toFixed(2)} 折</span>`;
+  const payment = row.rechargePayment;
+  if (!plan && !payment) return "";
+  const parts = [];
+  if (plan) parts.push(`充 ${formatPrice(plan.amount, "CNY", 2)} 档 ${plan.discount.toFixed(2)} 折`);
+  if (payment && Number.isFinite(payment.paidRmb)) {
+    const label = PAYMENT_CHANNEL_LABELS[payment.channel] || payment.channel;
+    parts.push(`${label}实付 ${formatPrice(payment.paidRmb, "CNY")}`);
+  } else if (payment) {
+    // 只有外币收银台金额时，人民币由钱包换算，这里只报原值，不参与排序。
+    parts.push(`收银台 ${formatPaymentAmount(payment.payAmount, payment.currency)}`);
+  } else if (plan) {
+    parts.push("（推算）");
+  }
+  const title = payment
+    ? `收银台实付：充 ${formatPaymentAmount(payment.faceAmount, payment.currency)} 额度付款 ${formatPaymentAmount(payment.payAmount, payment.currency)}`
+    : "按估算月用量自动落档，实付为推算值";
+  return `<span class="station-recharge-hint" title="${title}">${parts.join(" · ")}</span>`;
 }
 // 长条只做同模型月成本相对比较，放在单价单元格底部；名次和价差仍在月成本列。
 function monthlyCostRankTitle(row, currency, { rank, total, baseline }) {

@@ -3,6 +3,7 @@ import { DEFAULT_UPDATE_CHANNEL, DEFAULT_UPDATE_INTERVAL_MINUTES, normalizeUpdat
 import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../core/magpie-usage.js";
 import { migrateStationAdapter } from "../core/response-formats.js";
 import { normalizeRechargePlans, normalizeRechargeTiers } from "./recharge-tiers.js";
+import { normalizeRechargePayments } from "./recharge-payments.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 export const OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images/models";
@@ -211,6 +212,8 @@ export const DEFAULT_STATION = {
   rechargeTiersVerified: false,
   rechargePlans: [],
   rechargePlansVerified: false,
+  rechargePayments: [],
+  rechargePaymentsVerified: false,
   billingProfile: { tokensPerRequest: 0, source: "auto" },
   auth: { type: "none", token: "", username: "", password: "" },
   adapter: { kind: "custom", endpoint: "", method: "GET", responseFormat: "auto", rawJson: "" },
@@ -342,6 +345,8 @@ export function normalizeStation(input = {}) {
   station.rechargeTiersVerified = station.rechargeTiers.length > 0 && input.rechargeTiersVerified !== false;
   station.rechargePlans = normalizeRechargePlans(input.rechargePlans);
   station.rechargePlansVerified = station.rechargePlans.length > 0 && input.rechargePlansVerified !== false;
+  station.rechargePayments = normalizeRechargePayments(input.rechargePayments);
+  station.rechargePaymentsVerified = station.rechargePayments.length > 0 && input.rechargePaymentsVerified !== false;
   station.billingProfile = normalizeBillingProfile(input.billingProfile);
   return station;
 }

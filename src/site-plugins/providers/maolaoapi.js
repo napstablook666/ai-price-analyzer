@@ -9,6 +9,12 @@ import { MAOLAO_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-regi
 // 订阅是固定包价（98/188/358 元买 120/240/480 额度），不是可叠乘的折扣，
 // 所以不进 rechargeTiers，只写在 rechargeRateNote 里备查。
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "other", faceAmount: 10, payAmount: 10.3, currency: "CNY", at: "2026-11-17", note: "登录态后台页面实付：10 额度 → 10.3 元；渠道未记录" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "maolaoapi",
   name: "maolaoapi.com",
   baseUrl: "https://maolaoapi.com/pricing",
