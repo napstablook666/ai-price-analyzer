@@ -1,0 +1,540 @@
+{
+  "success": true,
+  "data": [
+    {
+      "model_name": "claude-opus-5-5",
+      "description": "claude-opus-5-5 是 Anthropic 全新旗舰大模型，拥有百万级上下文，自适应思考不可关闭，Agent 与代码能力突出，速度更快、定价更低，适合复杂长任务。",
+      "show_image_upload": 1,
+      "tags": "对话,工具,识图",
+      "model_type": "对话",
+      "vendor_id": 55,
+      "quota_type": 0,
+      "model_ratio": 2,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.05,
+      "cache_creation_5m_ratio": 1.25,
+      "cache_creation_1h_ratio": 2,
+      "enable_groups": [
+        "AWS-Bedrock-2",
+        "AWS-Claude-2",
+        "AWS-Claude-3",
+        "Anthropic-Claude-1",
+        "Azure-Claude-1",
+        "Claude-Code-1",
+        "Claude-Code-2",
+        "Claude-Code-3",
+        "Kiro-Claude-1"
+      ],
+      "supported_endpoint_types": [
+        "anthropic",
+        "openai"
+      ],
+      "created_time": 1790133533,
+      "usage_count": 39820939952,
+      "type": 0,
+      "available": true
+    },
+    {
+      "model_name": "gpt-6.1-sol",
+      "description": "GPT-6.1-Sol 是 OpenAI 推出的 GPT-6 Sol 升级版推理模型，在智能体编程、计算机操作与专业复杂任务上能力贴近旗舰 GPT-6 Astra",
+      "show_image_upload": 1,
+      "tags": "对话,工具,识图,思考",
+      "model_type": "对话",
+      "vendor_id": 52,
+      "quota_type": 0,
+      "model_ratio": 1,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.05,
+      "cache_creation_ratio": 1.25,
+      "cache_creation_12h_ratio": 2.5,
+      "enable_groups": [
+        "Azure-Gpt-3",
+        "Azure-Gpt-4",
+        "Azure-Gpt-5",
+        "Azure-Gpt-6",
+        "Codex-Gpt-1",
+        "Codex-Gpt-2",
+        "Codex-Gpt-3",
+        "Openai-Gpt-1",
+        "Openai-Gpt-2"
+      ],
+      "supported_endpoint_types": [
+        "openai",
+        "openai-response"
+      ],
+      "step_ratios": [
+        {
+          "step_size": 272000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 1,
+          "completion_step_ratio": 1,
+          "cache_step_ratio": 1,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        },
+        {
+          "step_size": 1000000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 2,
+          "completion_step_ratio": 1.5,
+          "cache_step_ratio": 2,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        }
+      ],
+      "created_time": 1790739472,
+      "usage_count": 25053916633,
+      "type": 0,
+      "available": true
+    },
+    {
+      "model_name": "gemini-3.8-flash",
+      "description": "Gemini-3.8-Flash is the general availability (GA) flagship multimodal model, designed for code development and AI agent scenarios. It supports configurable reasoning depth, offers a million-token context window, and is compatible with image, text, audio, and video inputs. With standout capabilities in tool invocation and multi-step task execution, it is well-suited for large-scale production workloads.",
+      "show_image_upload": 1,
+      "tags": "对话,识图,工具",
+      "model_type": "对话",
+      "vendor_id": 67,
+      "quota_type": 0,
+      "model_ratio": 0.375,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.1,
+      "enable_groups": [
+        "Aistudio-Gemini-2",
+        "Aistudio-Gemini-3",
+        "Aistudio-Gemini-4",
+        "Anti-Gemini-1",
+        "Anti-Gemini-2",
+        "Cli-Gemini-1",
+        "Vertex-Gemini-2",
+        "Vertex-Gemini-3"
+      ],
+      "supported_endpoint_types": [
+        "gemini",
+        "openai"
+      ],
+      "sort_order": 600,
+      "created_time": 1788376963,
+      "usage_count": 23111297694,
+      "type": 0,
+      "available": true
+    },
+    {
+      "model_name": "gpt-image-2-c",
+      "description": "gpt-image-2-c,支持返回url，base64,支持1k图片生成，gpt-image-2分组支持1k、2k、4k。暂不支持n参数",
+      "show_image_upload": 1,
+      "tags": "绘画",
+      "model_type": "图像",
+      "vendor_id": 93,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.12,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "Gpt-Image-1",
+        "Gpt-Image-2",
+        "Gpt-Image-3"
+      ],
+      "supported_endpoint_types": [
+        "openai-绘图",
+        "openai-编辑"
+      ],
+      "sort_order": 258,
+      "created_time": 1785206173,
+      "usage_count": 9901571906,
+      "type": 1,
+      "available": true
+    },
+    {
+      "model_name": "kling-video",
+      "description": "AI video generation model supporting text-to-video, image-to-video, and video continuation. Available in multiple versions including Video-O1 and V1.0 through V2.6, with standard (std) and high-quality (pro) modes. Supports durations of 5, 10, and 15 seconds. Some versions also support audio generation and voice customization.",
+      "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a326f18890bc.png",
+      "show_image_upload": 1,
+      "tags": "异步,视频,参考生视频",
+      "model_type": "音视频",
+      "vendor_id": 88,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.0014706,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "Kling-2"
+      ],
+      "supported_endpoint_types": [
+        "Image to video",
+        "Multi-image reference to video",
+        "Text to video"
+      ],
+      "created_time": 1761934883,
+      "usage_count": 1791817895,
+      "type": 1,
+      "available": true
+    },
+    {
+      "model_name": "wan3.0-video",
+      "description": "万相3.0是 all-in-one 视频生成模型，统一支持参考、编辑、复刻、驱动等多种创作功能，四模态全能参考，最长支持30秒视频生成，可解析文件、网页及复杂图片。生产级角色一致性保持，音画真实，带来身临其境的视听冲击力。",
+      "show_image_upload": 1,
+      "tags": "异步,视频,首尾帧",
+      "model_type": "音视频",
+      "vendor_id": 96,
+      "quota_type": 1,
+      "model_ratio": 5,
+      "model_price": 0.01,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "Alibaba-video-1",
+        "Alibaba-video-2"
+      ],
+      "supported_endpoint_types": [
+        "Wan video generation"
+      ],
+      "sort_order": 760,
+      "created_time": 1788440018,
+      "usage_count": 993256616,
+      "video_resolution_ratios": {
+        "1080p": 20,
+        "480p": 5,
+        "720p": 10
+      },
+      "type": 1,
+      "available": true
+    },
+    {
+      "model_name": "mj_imagine",
+      "description": "Midjourney imagine mode.",
+      "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a3248a235231.png",
+      "show_image_upload": 1,
+      "tags": "绘画,异步",
+      "model_type": "图像",
+      "vendor_id": 112,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.3,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "MJ-3"
+      ],
+      "supported_endpoint_types": [
+        "MJ imagine"
+      ],
+      "sort_order": 460,
+      "created_time": 1761935890,
+      "usage_count": 495858979,
+      "type": 1,
+      "available": true
+    },
+    {
+      "model_name": "text-embedding-3-large",
+      "description": "OpenAI's third-generation embedding model, more capable than the small version, suited for tasks requiring maximum performance.",
+      "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a316d32cfbf4.png",
+      "show_image_upload": 1,
+      "tags": "文本嵌入",
+      "model_type": "检索",
+      "vendor_id": 52,
+      "quota_type": 0,
+      "model_ratio": 0.065,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 1,
+      "enable_groups": [
+        "Azure-Gpt-1",
+        "Azure-Gpt-2",
+        "Azure-Gpt-3",
+        "Azure-Gpt-4",
+        "Azure-Gpt-5",
+        "Azure-Gpt-6",
+        "Openai-Gpt-1",
+        "Openai-Gpt-2"
+      ],
+      "supported_endpoint_types": [
+        "Embedding"
+      ],
+      "created_time": 1761935188,
+      "usage_count": 24851424,
+      "type": 0,
+      "available": true
+    },
+    {
+      "model_name": "doubao-seed-2-0-lite-260215",
+      "description": "Doubao-Seed-2.0-lite is a balanced model for high-frequency enterprise scenarios, trading performance against cost. It surpasses the previous-generation Doubao-Seed-1.8 in overall capability, handling unstructured information processing, content creation, search and recommendation, and data analysis. Supports long context, multi-source information fusion, multi-step instruction execution, and high-fidelity structured output — delivering consistent results at significantly reduced cost.",
+      "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/129dbafd-f077-4da7-840c-d63ae937f21e",
+      "show_image_upload": 1,
+      "tags": "对话,识图",
+      "model_type": "对话",
+      "vendor_id": 91,
+      "quota_type": 0,
+      "model_ratio": 0.045,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 6.11111111111,
+      "audio_ratio": 0.6618,
+      "cache_ratio": 0.2,
+      "enable_groups": [
+        "Doubao-2",
+        "Doubao-3"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ],
+      "step_ratios": [
+        {
+          "step_size": 32000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 1,
+          "completion_step_ratio": 1,
+          "cache_step_ratio": 1,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        },
+        {
+          "step_size": 128000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 1.5,
+          "completion_step_ratio": 1.5,
+          "cache_step_ratio": 1.5,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        },
+        {
+          "step_size": 256000,
+          "completion_step_size": -1,
+          "prompt_step_ratio": 3,
+          "completion_step_ratio": 3,
+          "cache_step_ratio": 3,
+          "prompt_thinking_step_ratio": 0,
+          "completion_thinking_step_ratio": 0
+        }
+      ],
+      "sort_order": 520,
+      "created_time": 1775111950,
+      "usage_count": 17822192,
+      "type": 0,
+      "available": true
+    }
+  ],
+  "group_ratio": {
+    "AWS-Bedrock-2": 0.58824,
+    "AWS-Claude-2": 0.88236,
+    "AWS-Claude-3": 1.1,
+    "Aistudio-Gemini-2": 0.26471,
+    "Aistudio-Gemini-3": 0.44118,
+    "Aistudio-Gemini-4": 0.95589,
+    "Alibaba-video-1": 0.65,
+    "Alibaba-video-2": 0.7,
+    "Anthropic-Claude-1": 1.1,
+    "Anti-Gemini-1": 0.07353,
+    "Anti-Gemini-2": 0.15,
+    "Azure-Claude-1": 0.44118,
+    "Azure-Gpt-1": 0.044,
+    "Azure-Gpt-2": 0.1,
+    "Azure-Gpt-3": 0.22,
+    "Azure-Gpt-4": 0.44,
+    "Azure-Gpt-5": 0.6,
+    "Azure-Gpt-6": 0.9,
+    "Claude-Code-1": 0.17647,
+    "Claude-Code-2": 0.29412,
+    "Claude-Code-3": 0.45,
+    "Cli-Gemini-1": 0.07353,
+    "Codex-Gpt-1": 0.03677,
+    "Codex-Gpt-2": 0.05883,
+    "Codex-Gpt-3": 0.07353,
+    "Doubao-2": 0.75,
+    "Doubao-3": 1.1,
+    "Gpt-Image-1": 0.07353,
+    "Gpt-Image-2": 0.09192,
+    "Gpt-Image-3": 0.13787,
+    "Kiro-Claude-1": 0.08824,
+    "Kling-2": 0.85,
+    "MJ-3": 0.147,
+    "Openai-Gpt-1": 0.58824,
+    "Openai-Gpt-2": 0.7353,
+    "Vertex-Gemini-2": 0.3,
+    "Vertex-Gemini-3": 0.9
+  },
+  "usable_group": {
+    "AWS-Bedrock-2": "AWS-Bedrock-2",
+    "AWS-Claude-2": "AWS-Claude-2",
+    "AWS-Claude-3": "AWS-Claude-3",
+    "Aistudio-Gemini-2": "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3": "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4": "Aistudio-Gemini-4",
+    "Alibaba-video-1": "Alibaba-video-1",
+    "Alibaba-video-2": "Alibaba-video-2",
+    "Anthropic-Claude-1": "Anthropic-Claude-1",
+    "Anti-Gemini-1": "Anti-Gemini-1",
+    "Anti-Gemini-2": "Anti-Gemini-2",
+    "Azure-Claude-1": "Azure-Claude-1",
+    "Azure-Gpt-1": "Azure-Gpt-1",
+    "Azure-Gpt-2": "Azure-Gpt-2",
+    "Azure-Gpt-3": "Azure-Gpt-3",
+    "Azure-Gpt-4": "Azure-Gpt-4",
+    "Azure-Gpt-5": "Azure-Gpt-5",
+    "Azure-Gpt-6": "Azure-Gpt-6",
+    "Claude-Code-1": "Claude-Code-1",
+    "Claude-Code-2": "Claude-Code-2",
+    "Claude-Code-3": "Claude-Code-3",
+    "Cli-Gemini-1": "Cli-Gemini-1",
+    "Codex-Gpt-1": "Codex-Gpt-1",
+    "Codex-Gpt-2": "Codex-Gpt-2",
+    "Codex-Gpt-3": "Codex-Gpt-3",
+    "Doubao-2": "Doubao-2",
+    "Doubao-3": "Doubao-3",
+    "Gpt-Image-1": "Gpt-Image-1",
+    "Gpt-Image-2": "Gpt-Image-2",
+    "Gpt-Image-3": "Gpt-Image-3",
+    "Kiro-Claude-1": "Kiro-Claude-1",
+    "Kling-2": "Kling-2",
+    "MJ-3": "MJ-3",
+    "Openai-Gpt-1": "Openai-Gpt-1",
+    "Openai-Gpt-2": "Openai-Gpt-2",
+    "Vertex-Gemini-2": "Vertex-Gemini-2",
+    "Vertex-Gemini-3": "Vertex-Gemini-3"
+  },
+  "vendors": [
+    {
+      "id": 52,
+      "name": "OpenAI",
+      "icon": "OpenAI"
+    },
+    {
+      "id": 55,
+      "name": "Anthropic",
+      "description": "最强大的模型! 模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!",
+      "icon": "Claude.Color",
+      "translations": {
+        "es": {
+          "description": "¡El modelo más poderoso! Agregar el prefijo \"new-\" al nombre del modelo puede resolver ciertos problemas de compatibilidad con modelos de cliente."
+        },
+        "ru": {
+          "description": "Самая мощная модель! Добавление префикса \"new-\" к имени модели может решить некоторые проблемы совместимости моделей на стороне клиента!"
+        },
+        "de": {
+          "description": "Das leistungsstärkste Modell! Das Hinzufügen des Präfixes \"new-\" zum Modellnamen kann einige Kompatibilitätsprobleme mit Client-Modellen lösen!"
+        },
+        "ko": {
+          "description": "가장 강력한 모델! 모델 이름에 \"new-\" 접두사를 추가하면 일부 클라이언트 모델 호환성 문제를 해결할 수 있습니다!!"
+        },
+        "ja": {
+          "description": "最強のモデルです！モデル名に\"new-\"プレフィックスを追加することで、特定のクライアントモデルの互換性の問題を解決できます！！"
+        },
+        "en": {
+          "description": "The most powerful model! Adding the \"new-\" prefix to the model name can solve certain client model compatibility issues!"
+        },
+        "zh": {
+          "description": "最强大的模型! 模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!"
+        }
+      }
+    },
+    {
+      "id": 67,
+      "name": "Google",
+      "description": "模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!部分模型支持区分思考和不思考,结尾带上-thinking或-nothinking,支持自定义-thinking-*思考程度(156-24576)",
+      "icon": "Gemini.Color",
+      "translations": {
+        "ru": {
+          "description": "Добавление префикса \"new-\" к имени модели может решить некоторые проблемы совместимости моделей клиента!! Некоторые модели поддерживают различение между размышлением и неразмышлением, добавляя в конце -thinking или -nothinking, поддерживается пользовательская степень размышления -thinking-* (156-24576)"
+        },
+        "ja": {
+          "description": "モデル名に\"new-\"プレフィックスを追加することで、一部のクライアントモデルの互換性の問題を解決できます!! 一部のモデルは思考と非思考を区別でき、末尾に-thinkingまたは-nothinkingを付けることができ、カスタム-thinking-*思考レベル(156-24576)をサポートします。"
+        },
+        "zh": {
+          "description": "模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!部分模型支持区分思考和不思考,结尾带上-thinking或-nothinking,支持自定义-thinking-*思考程度(156-24576)"
+        },
+        "es": {
+          "description": "Agregar el prefijo \"new-\" al nombre del modelo puede resolver ciertos problemas de compatibilidad del modelo del cliente. Algunos modelos admiten la diferenciación entre pensar y no pensar, terminando con -thinking o -nothinking, y admiten la personalización del grado de pensamiento -thinking-* (156-24576)"
+        },
+        "de": {
+          "description": "Das Hinzufügen des Präfixes \"new-\" zum Modellnamen kann bestimmte Kompatibilitätsprobleme mit Client-Modellen lösen!! Einige Modelle unterstützen die Unterscheidung zwischen Denken und Nicht-Denken, wobei am Ende -thinking oder -nothinking hinzugefügt wird. Es unterstützt benutzerdefinierte -thinking-* Denkgrade (156-24576)"
+        },
+        "ko": {
+          "description": "모델 이름에 \"new-\" 접두사를 추가하면 일부 클라이언트 모델 호환성 문제를 해결할 수 있습니다!! 일부 모델은 사고와 비사고를 구분할 수 있으며, 끝에 -thinking 또는 -nothinking을 추가할 수 있으며, 사용자 정의 -thinking-* 사고 정도(156-24576)를 지원합니다."
+        },
+        "en": {
+          "description": "Adding the prefix \"new-\" to the model name can resolve certain client model compatibility issues!! Some models support distinguishing between thinking and not thinking, ending with -thinking or -nothinking, and support custom -thinking-* levels of thinking (156-24576)"
+        }
+      }
+    },
+    {
+      "id": 93,
+      "name": "OpenAI Plus",
+      "icon": "OpenAI.Color"
+    },
+    {
+      "id": 96,
+      "name": "Qwen",
+      "icon": "Qwen"
+    },
+    {
+      "id": 91,
+      "name": "Doubao",
+      "icon": "Doubao"
+    },
+    {
+      "id": 112,
+      "name": "Midjourney",
+      "description": "支持 Chat 模式及 Midjourney 常用能力（含 V6、局部重绘、换脸等），可切换 fast / turbo / relax；兼容主流图像生成 API 接入协议，并提供中文翻译与高并发调度。",
+      "icon": "Midjourney.Color",
+      "translations": {
+        "es": {
+          "description": "Soporte para el modo Chat y capacidades comunes de Midjourney (incluyendo V6, redibujo local, intercambio de rostros, etc.), se puede cambiar entre rápido / turbo / relajado; compatible con los protocolos de acceso a API de generación de imágenes más utilizados y ofrece traducción al chino y programación de alta concurrencia."
+        },
+        "ja": {
+          "description": "Chat モードと Midjourney の一般的な機能（V6、部分再描画、顔交換など）をサポートし、fast / turbo / relax に切り替え可能です。主流の画像生成 API 接続プロトコルと互換性があり、中国語翻訳と高い同時処理を提供します。"
+        },
+        "zh": {
+          "description": "支持 Chat 模式及 Midjourney 常用能力（含 V6、局部重绘、换脸等），可切换 fast / turbo / relax；兼容主流图像生成 API 接入协议，并提供中文翻译与高并发调度。"
+        },
+        "en": {
+          "description": "Supports Chat mode and commonly used capabilities of Midjourney (including V6, inpainting, face swapping, etc.), with options to switch between fast / turbo / relax; compatible with mainstream image generation API access protocols, and provides Chinese translation and high concurrency scheduling."
+        },
+        "ko": {
+          "description": "Chat 모드 및 Midjourney에서 자주 사용하는 기능(예: V6, 부분 재구성, 얼굴 교체 등)을 지원하며, fast / turbo / relax로 전환할 수 있습니다. 주요 이미지 생성 API 접속 프로토콜과 호환되며, 중국어 번역 및 고병렬 스케줄링을 제공합니다."
+        },
+        "ru": {
+          "description": "Поддержка режима Chat и основных возможностей Midjourney (включая V6, локальную перерисовку, замену лиц и т.д.), возможность переключения между fast / turbo / relax; совместимость с основными протоколами подключения API для генерации изображений и предоставление китайского перевода и высокопараллельного распределения."
+        },
+        "de": {
+          "description": "Unterstützt den Chat-Modus und gängige Funktionen von Midjourney (einschließlich V6, lokale Neuzeichnung, Gesichtswechsel usw.), kann zwischen schnell / turbo / entspannt umschalten; kompatibel mit gängigen API-Anschlussprotokollen zur Bilderzeugung und bietet chinesische Übersetzungen sowie hochgradige Parallelverarbeitung."
+        }
+      }
+    },
+    {
+      "id": 88,
+      "name": "Kling",
+      "description": "可调用 Kling 视频生成 API，稳定高并发接入。",
+      "icon": "Kling",
+      "translations": {
+        "ko": {
+          "description": "호출 가능한 Kling 비디오 생성 API, 안정적인 고병렬 접속."
+        },
+        "de": {
+          "description": "Aufrufbare Kling Video-Generierungs-API, stabile Hochlastanbindung."
+        },
+        "en": {
+          "description": "Callable Kling video generation API, stable high concurrency access."
+        },
+        "zh": {
+          "description": "可调用 Kling 视频生成 API，稳定高并发接入。"
+        },
+        "ja": {
+          "description": "呼び出し可能なKling動画生成API、安定した高い同時接続を提供します。"
+        },
+        "es": {
+          "description": "API de generación de video Kling que se puede llamar, con acceso estable y de alta concurrencia."
+        },
+        "ru": {
+          "description": "Доступ к API генерации видео Kling, стабильный и высокопроизводительный."
+        }
+      }
+    }
+  ]
+}

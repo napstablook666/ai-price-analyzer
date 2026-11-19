@@ -290,6 +290,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
+      "id": "openlux",
+      "name": "OpenLux",
+      "version": "0.14.0",
+      "description": "公开定价接口直连采集，322 个模型覆盖按 token 与按次；1 美元 = 1 美元额度，面值越大越便宜（最高 7.5%）",
+      "hosts": [
+        "www.openlux.ai",
+        "openlux.ai"
+      ],
+      "needsCode": true
+    },
+    {
       "id": "site-checkin",
       "name": "站点签到插件",
       "version": "1.1.0",

@@ -29,6 +29,7 @@ export const GOLDEN_CASES = Object.freeze([
   { name: "maolaoapi", base: "tokenflux", fixture: "maolaoapi-pricing.json", note: "maolaoapi.com 2026-11-19 实测，页面标 $" },
   { base: "allrouter", fixture: "allrouter-pricing.json" },
   { base: "relayrouter", fixture: "relayrouter-pricing.json" },
+  { name: "openlux", base: "relayrouter", fixture: "openlux-pricing.json", note: "www.openlux.ai 2026-11-20 实测，9 行：token + 分档 + 按次（图/视频）+ 两种缓存放法" },
   { base: "cheaprouter", fixture: "cheaprouter-pricing.json" },
   { base: "true-sota", fixture: "true-sota-pricing.json" },
   // 广场的报文不拿来直接求值：先解包成「一行一个模型」，和采集时走同一个函数。

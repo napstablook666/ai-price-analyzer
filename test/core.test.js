@@ -2292,6 +2292,15 @@ test("injects every registry preset and forwards the exchange rate", () => {
   assert.deepEqual(normalizeStation(maolao).rechargeTiers.map(tier => [tier.amount, tier.discount]), [
     [10, 1], [20, 1], [50, 1], [100, 1], [200, 0.98], [500, 0.95], [1000, 0.9]
   ]);
+  // OpenLux 的 /api/status price=1 是美元口径，自动采集会把价格算低 6.7 倍，预设里锁死了手填值。
+  const openLux = added.find(station => station.id === "openlux");
+  assert.equal(openLux.rechargeRmb, 6.68752);
+  assert.equal(openLux.rechargeAuto, false);
+  assert.equal(openLux.rechargeRateVerified, true);
+  assert.equal(openLux.priceCurrency, "USD");
+  assert.equal(normalizeStation(openLux).rechargeAuto, false);
+  assert.equal(normalizeStation(openLux).rechargeRate, 6.68752);
+  assert.deepEqual(normalizeStation(openLux).rechargeTiers.map(tier => [tier.amount, tier.discount]).slice(0, 2), [[10, 0.99], [50, 0.985]]);
 });
 test("allocates a unique preset id when an existing station uses the provider id", () => {
   const stations = addProviderStationPresets([{ id: "dddai", baseUrl: "https://other.example" }], PROVIDER_REGISTRY);

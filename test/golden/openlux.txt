@@ -1,0 +1,63 @@
+# base: relayrouter
+# case: openlux
+# fixture: openlux-pricing.json
+# rows: 56 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-opus-5-5|AWS-Bedrock-2|标准|2.35296|11.7648|0.117648|2.9412|-|-|-|USD|0.58824|5
+claude-opus-5-5|AWS-Claude-2|标准|3.52944|17.6472|0.176472|4.4118|-|-|-|USD|0.88236|5
+claude-opus-5-5|AWS-Claude-3|标准|4.4|22|0.22|5.5|-|-|-|USD|1.1|5
+claude-opus-5-5|Anthropic-Claude-1|标准|4.4|22|0.22|5.5|-|-|-|USD|1.1|5
+claude-opus-5-5|Azure-Claude-1|标准|1.76472|8.8236|0.088236|2.2059|-|-|-|USD|0.44118|5
+claude-opus-5-5|Claude-Code-1|标准|0.70588|3.5294|0.035294|0.88235|-|-|-|USD|0.17647|5
+claude-opus-5-5|Claude-Code-2|标准|1.17648|5.8824|0.058824|1.4706|-|-|-|USD|0.29412|5
+claude-opus-5-5|Claude-Code-3|标准|1.8|9|0.09|2.25|-|-|-|USD|0.45|5
+claude-opus-5-5|Kiro-Claude-1|标准|0.35296|1.7648|0.017648|0.4412|-|-|-|USD|0.08824|5
+doubao-seed-2-0-lite-260215|Doubao-2|128K–256K|0.2025|1.2375|0.0405|-|-|-|-|USD|0.75|6.11111111111
+doubao-seed-2-0-lite-260215|Doubao-2|32K–128K|0.10125|0.61875|0.02025|-|-|-|-|USD|0.75|6.11111111111
+doubao-seed-2-0-lite-260215|Doubao-2|≤32K|0.0675|0.4125|0.0135|-|-|-|-|USD|0.75|6.11111111111
+doubao-seed-2-0-lite-260215|Doubao-3|128K–256K|0.297|1.815|0.0594|-|-|-|-|USD|1.1|6.11111111111
+doubao-seed-2-0-lite-260215|Doubao-3|32K–128K|0.1485|0.9075|0.0297|-|-|-|-|USD|1.1|6.11111111111
+doubao-seed-2-0-lite-260215|Doubao-3|≤32K|0.099|0.605|0.0198|-|-|-|-|USD|1.1|6.11111111111
+gemini-3.8-flash|Aistudio-Gemini-2|标准|0.1985325|0.9926625|0.01985325|-|-|-|-|USD|0.26471|5
+gemini-3.8-flash|Aistudio-Gemini-3|标准|0.330885|1.654425|0.0330885|-|-|-|-|USD|0.44118|5
+gemini-3.8-flash|Aistudio-Gemini-4|标准|0.7169175|3.5845875|0.07169175|-|-|-|-|USD|0.95589|5
+gemini-3.8-flash|Anti-Gemini-1|标准|0.0551475|0.2757375|0.00551475|-|-|-|-|USD|0.07353|5
+gemini-3.8-flash|Anti-Gemini-2|标准|0.1125|0.5625|0.01125|-|-|-|-|USD|0.15|5
+gemini-3.8-flash|Cli-Gemini-1|标准|0.0551475|0.2757375|0.00551475|-|-|-|-|USD|0.07353|5
+gemini-3.8-flash|Vertex-Gemini-2|标准|0.225|1.125|0.0225|-|-|-|-|USD|0.3|5
+gemini-3.8-flash|Vertex-Gemini-3|标准|0.675|3.375|0.0675|-|-|-|-|USD|0.9|5
+gpt-6.1-sol|Azure-Gpt-3|272K–1M|0.88|3.3|0.044|1.1|-|-|-|USD|0.22|5
+gpt-6.1-sol|Azure-Gpt-3|≤272K|0.44|2.2|0.022|0.55|-|-|-|USD|0.22|5
+gpt-6.1-sol|Azure-Gpt-4|272K–1M|1.76|6.6|0.088|2.2|-|-|-|USD|0.44|5
+gpt-6.1-sol|Azure-Gpt-4|≤272K|0.88|4.4|0.044|1.1|-|-|-|USD|0.44|5
+gpt-6.1-sol|Azure-Gpt-5|272K–1M|2.4|9|0.12|3|-|-|-|USD|0.6|5
+gpt-6.1-sol|Azure-Gpt-5|≤272K|1.2|6|0.06|1.5|-|-|-|USD|0.6|5
+gpt-6.1-sol|Azure-Gpt-6|272K–1M|3.6|13.5|0.18|4.5|-|-|-|USD|0.9|5
+gpt-6.1-sol|Azure-Gpt-6|≤272K|1.8|9|0.09|2.25|-|-|-|USD|0.9|5
+gpt-6.1-sol|Codex-Gpt-1|272K–1M|0.14708|0.55155|0.007354|0.18385|-|-|-|USD|0.03677|5
+gpt-6.1-sol|Codex-Gpt-1|≤272K|0.07354|0.3677|0.003677|0.091925|-|-|-|USD|0.03677|5
+gpt-6.1-sol|Codex-Gpt-2|272K–1M|0.23532|0.88245|0.011766|0.29415|-|-|-|USD|0.05883|5
+gpt-6.1-sol|Codex-Gpt-2|≤272K|0.11766|0.5883|0.005883|0.147075|-|-|-|USD|0.05883|5
+gpt-6.1-sol|Codex-Gpt-3|272K–1M|0.29412|1.10295|0.014706|0.36765|-|-|-|USD|0.07353|5
+gpt-6.1-sol|Codex-Gpt-3|≤272K|0.14706|0.7353|0.007353|0.183825|-|-|-|USD|0.07353|5
+gpt-6.1-sol|Openai-Gpt-1|272K–1M|2.35296|8.8236|0.117648|2.9412|-|-|-|USD|0.58824|5
+gpt-6.1-sol|Openai-Gpt-1|≤272K|1.17648|5.8824|0.058824|1.4706|-|-|-|USD|0.58824|5
+gpt-6.1-sol|Openai-Gpt-2|272K–1M|2.9412|11.0295|0.14706|3.6765|-|-|-|USD|0.7353|5
+gpt-6.1-sol|Openai-Gpt-2|≤272K|1.4706|7.353|0.07353|1.83825|-|-|-|USD|0.7353|5
+gpt-image-2-c|Gpt-Image-1|标准|-|-|-|-|0.0088236|-|image|USD|0.07353|1
+gpt-image-2-c|Gpt-Image-2|标准|-|-|-|-|0.0110304|-|image|USD|0.09192|1
+gpt-image-2-c|Gpt-Image-3|标准|-|-|-|-|0.0165444|-|image|USD|0.13787|1
+kling-video|Kling-2|标准|-|-|-|-|0.00125001|-|video|USD|0.85|1
+mj_imagine|MJ-3|标准|-|-|-|-|0.0441|-|image|USD|0.147|1
+text-embedding-3-large|Azure-Gpt-1|标准|0.00572|0.00572|-|-|-|-|-|USD|0.044|1
+text-embedding-3-large|Azure-Gpt-2|标准|0.013|0.013|-|-|-|-|-|USD|0.1|1
+text-embedding-3-large|Azure-Gpt-3|标准|0.0286|0.0286|-|-|-|-|-|USD|0.22|1
+text-embedding-3-large|Azure-Gpt-4|标准|0.0572|0.0572|-|-|-|-|-|USD|0.44|1
+text-embedding-3-large|Azure-Gpt-5|标准|0.078|0.078|-|-|-|-|-|USD|0.6|1
+text-embedding-3-large|Azure-Gpt-6|标准|0.117|0.117|-|-|-|-|-|USD|0.9|1
+text-embedding-3-large|Openai-Gpt-1|标准|0.0764712|0.0764712|-|-|-|-|-|USD|0.58824|1
+text-embedding-3-large|Openai-Gpt-2|标准|0.095589|0.095589|-|-|-|-|-|USD|0.7353|1
+wan3.0-video|Alibaba-video-1|标准|-|-|-|-|0.0065|-|video|USD|0.65|1
+wan3.0-video|Alibaba-video-2|标准|-|-|-|-|0.007|-|video|USD|0.7|1

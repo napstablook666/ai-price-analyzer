@@ -27,5 +27,6 @@ export const SITE_PLUGIN_ORDER = [
   "stellaisle-carpool",
   "newcodex",
   "allrouter",
-  "xingya"
+  "xingya",
+  "openlux"
 ];

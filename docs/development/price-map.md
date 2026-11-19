@@ -221,6 +221,7 @@ unit: [
 | ai.centos.hk | `¥3 / 1M` | USD（1 元 = 1 美元额度） |
 | token.stellaisle.com | 主站 `¥1.07`、广场 `¥8.56` | USD（FAQ 明写 1 元 = 1 美元额度） |
 | xingya.site | `🌱 6 / 次` | USD（公告「1 元 = 100 芽点」，表达式里的 0.06 就是美元） |
+| www.openlux.ai | 0 个 `$`、0 个 `¥`，只有 `0.353` 与 `/ request` 这种裸数字 | USD（自述「1 美元 = 1 美元额度」，`/api/status` 里 `currency_type=USD`、`custom_currency_exchange_rate=1`） |
 
 它只决定换算系数：`CNY` 固定 1，`USD` / `CREDITS` 取充值倍率（`rechargeRmb / rechargeCredits`，来自站点 `/api/status` 的 `price`）。所以充值是 1:1 的站改币种不动数字，标的数字照样是错的：哪天站点改成 1 元买 0.8 美元额度，币种写错就会整站报错价。
 

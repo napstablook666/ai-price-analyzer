@@ -29,6 +29,7 @@ import { sitePlugin as stellaisleCarpoolPlugin } from "./providers/stellaisle-ca
 import { sitePlugin as newcodexPlugin } from "./providers/newcodex.js";
 import { sitePlugin as allrouterPlugin } from "./providers/allrouter.js";
 import { sitePlugin as xingyaPlugin } from "./providers/xingya.js";
+import { sitePlugin as openluxPlugin } from "./providers/openlux.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -75,7 +76,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("stellaisle-carpool", "飓星API 拼车", "token.stellaisle.com", "page", () => ({ sitePlugin: stellaisleCarpoolPlugin }), { paths: ["/carpool-market"], description: "登录后读 /api/carpool-market 的座位清单，用座位价除以期间额度当折扣，折算站内模型价" }),
   entry("newcodex", "NewCodex", "newcodex.cn", "direct", () => ({ sitePlugin: newcodexPlugin }), { hosts: ["newcodex.cn","www.newcodex.cn"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，69 个模型 11 个分组；充值 1 元 = 1 美元额度，单笔 ¥100/200/500/1000 另赠 10%/20%/40%/50%" }),
   entry("allrouter", "AllRouter", "allrouter.cc", "direct", () => ({ sitePlugin: allrouterPlugin }), { hosts: ["allrouter.cc","www.allrouter.cc"], paths: ["/","/console","/console/topup"], description: "公开 /api/pricing 直连采集，52 个在售模型、102 条模型分组；分组倍率公开（default 0.75、deepseek 0.4、gpt 0.053 等），倍率 1 = $2/百万 token，37 个模型走分段或分时表达式；充值 1 元 = 1 美元额度" }),
-  entry("xingya", "星芽API", "xingya.site", "direct", () => ({ sitePlugin: xingyaPlugin }), { hosts: ["xingya.site","xingya.space"], paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，83 个模型 13 个分组；充值 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送" })
+  entry("xingya", "星芽API", "xingya.site", "direct", () => ({ sitePlugin: xingyaPlugin }), { hosts: ["xingya.site","xingya.space"], paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，83 个模型 13 个分组；充值 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送" }),
+  entry("openlux", "OpenLux", "openlux.ai", "direct", () => ({ sitePlugin: openluxPlugin }), { hosts: ["www.openlux.ai","openlux.ai"], paths: ["/pricing","/console/topup","/console/models","/"], description: "公开定价接口直连采集，322 个模型覆盖按 token 与按次；1 美元 = 1 美元额度，面值越大越便宜（最高 7.5%）" })
 ];
 
 export function sitePluginById(id) {
