@@ -16,7 +16,8 @@ export const tokenfluxPriceMap = {
   labelField: "model_name",
   // 计价币种：这一族站点的倍率价是美元（1 单位 = $2/百万），定价页也标 $。
   //   tokenflux.cloud 57 个 $ / 0 个 ¥；maolaoapi.com 44 个 $ / 0 个 ¥（2026-11-19 实测）
-  // 按人民币标价的站点在自己的声明里覆盖成 CNY：ai.centos.hk（¥3/M）、token.stellaisle.com（¥）。
+  // 页面上标 ¥ 的几家（ai.centos.hk ¥3/M、token.stellaisle.com ¥）其实是「1 元 = 1 美元额度」的
+  //   写法，报文里的数还是美元额度，所以这里统一 USD；站点级想标积分就用 priceCurrency: "CREDITS"。
   // 币种只决定换算系数：CNY 固定 1，USD/CREDITS 取充值倍率，充值是 1:1 的站改标签不动数字。
   currency: "USD",
   // model_ratio 的单位是「官方价 ÷ 2 美元/百万」，不是 1 美元。三处实测都对得上：
