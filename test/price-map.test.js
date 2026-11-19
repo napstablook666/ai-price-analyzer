@@ -553,3 +553,26 @@ test("退役的枚举值经 normalizeStation 迁移后，仍然走同一条 pric
     assert.deepEqual(migrated.group_ratio, declared.group_ratio);
   }
 });
+
+// 报价币种是站点属性，靠实测页面的符号定，不靠猜。
+// 2026-11-19 在 ego-lite 里数过：tokenflux.cloud 定价页 57 个 $ / 0 个 ¥，
+// maolaoapi.com 44 个 $ / 0 个 ¥；ai.centos.hk 与 token.stellaisle.com 标 ¥。
+// 币种决定换算系数（CNY 固定 1，USD/CREDITS 取充值倍率），标错时数字可能一样，
+// 等哪天站点充值不再是 1:1 就会整站报错价，所以在这里钉死。
+test("倍率族站点的报价币种：美元族写 USD，人民币站自己覆盖", () => {
+  const { map: base } = resolvePriceMap({ base: "tokenflux" });
+  assert.equal(base.currency, "USD");
+  assert.equal(tokenfluxPriceMap.currency, "USD");
+  for (const declaration of [{ base: "allrouter" }, { base: "relayrouter" }, { base: "tokenflux" }]) {
+    const { map, error } = resolvePriceMap(declaration);
+    assert.equal(error, undefined, `${declaration.base} 解析失败：${error}`);
+    assert.equal(map.currency, "USD", `${declaration.base} 的报价币种应为 USD`);
+  }
+  // 站点只声明差异：按人民币标价的站点把 currency 覆盖掉，其余照抄基座。
+  const { map: overridden } = resolvePriceMap({ base: "tokenflux", currency: "CNY" });
+  assert.equal(overridden.currency, "CNY");
+  // stellaisle 主站跟着基座走美元（站点 FAQ：1 元 = 1 美元额度，两者数值一致）；
+  // 分组广场那份映射自己写着 CNY，同一站点两个口径，等广场页标价核完再收拢。
+  assert.equal(stellaislePriceMap.currency, "USD");
+  assert.equal(stellaislePlazaPriceMap.currency, "CNY");
+});

@@ -19,7 +19,7 @@ export const tokenfluxPriceMap = {
   rootPath: "/data",                 // 模型数组的位置
   nameField: "model_name",
   labelField: "model_name",
-  currency: "CNY",                   // 缺省币种，行上带的优先
+  currency: "USD",                   // 缺省币种，行上带的优先；见下文「币种怎么定」
   groups: {                          // 分组倍率怎么读
     listPath: "enable_groups",
     ratioPath: "/group_ratio",
@@ -210,6 +210,19 @@ unit: [
 
 词表外的单位不丢，挂到 `raw_unit` 原样显示、不参与排序。宁可显示「元/次（原样）」，也不猜。
 
+### 币种怎么定
+
+`currency` 写的是「行里这些数字用哪种货币标的」，只从站点定价页读，不看「充值 1 元换多少额度」那句营销话术。2026-11-19 在 ego-lite 里数符号定下来的：
+
+| 站点 | 定价页 | 声明 |
+| --- | --- | --- |
+| tokenflux.cloud | 57 个 `$`，0 个 `¥` | USD |
+| maolaoapi.com | 44 个 `$`，0 个 `¥` | USD |
+| ai.centos.hk | `¥3 / 1M` | CNY |
+
+它只决定换算系数：`CNY` 固定 1，`USD` / `CREDITS` 取充值倍率（`rechargeRmb / rechargeCredits`，来自站点 `/api/status` 的 `price`）。所以充值是 1:1 的站改币种不动数字，标的数字照样是错的：哪天站点改成 1 元买 0.8 美元额度，币种写错就会整站报错价。
+
+倍率族站点跟着基座取 USD，按人民币标价的站点在自己的声明里覆盖，例如 `{ base: "tokenflux", currency: "CNY" }`。
 ## 取值纪律
 
 数字一律从原始 payload 读，任何环节都不重新构造。
