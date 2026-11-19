@@ -1,11 +1,8 @@
 #!/usr/bin/env node
-// 充值取证第一步：把站点公开的充值口径落成 JSON。
-//   - 匿名阶段：依次试 /api/status、/api/v1/status、/status，取第一个能解析出充值字段的
-//   - 登录态阶段：带 auth.json 里的 cookie 打 /api/user/aff（New API 系的账号档位）
-//   - 登录态第二阶段：读 topup/info、topup/self、payment/checkout-info、payment/orders/my，
-//     订单接口直接给出收银台金额，自动生成 payments
-//   - 收银台页面本身（Antom / Stripe / 支付宝）扩展注入不了，抓不到的仍靠人工补
+// 开发者维护工具：只读充值状态、渠道与历史订单，不创建充值订单。
+// 先复用已有证据；缺失时由开发者在浏览器核验一次待支付金额，不付款。
 // 产出落 extension/out/recharge/<host>.json，再由 recharge-apply.mjs 合进插件。
+// 普通用户使用发布的插件数据，本脚本不在扩展运行时执行。
 
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -50,24 +47,27 @@ const TIMEOUT_MS = 12_000;
 const CONCURRENCY = 4;
 const USER_AGENT = "ai-price-analyzer-recharge-probe/1";
 
-function parseArgs(argv) {
-  const args = { all: false, hosts: [], ids: [], help: false };
+export function parseArgs(argv) {
+  const args = { developer: false, all: false, hosts: [], ids: [], help: false };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--from-plugins" || arg === "--all") args.all = true;
+    if (arg === "--developer") args.developer = true;
+    else if (arg === "--from-plugins" || arg === "--all") args.all = true;
     else if (arg === "--host") args.hosts.push(String(argv[++index] || "").trim());
     else if (arg === "--id") args.ids.push(String(argv[++index] || "").trim());
     else if (arg === "--help" || arg === "-h") args.help = true;
   }
-  if (!args.all && args.hosts.filter(Boolean).length === 0 && args.ids.filter(Boolean).length === 0) args.all = true;
   return args;
 }
 
 function printHelp() {
   console.log(`用法：
-  node scripts/recharge-probe.mjs                   扫全部插件（同 --from-plugins）
-  node scripts/recharge-probe.mjs --id openlux      只采指定插件
-  node scripts/recharge-probe.mjs --host a.com      只采指定域名
+  node scripts/recharge-probe.mjs --developer --id openlux   定向采集插件
+  node scripts/recharge-probe.mjs --developer --host a.com   定向采集域名
+  node scripts/recharge-probe.mjs --developer --from-plugins 全量维护扫描
+
+仅供开发者维护：只读状态和历史订单，不创建订单、不付款。
+优先 --id 定向更新；已有证据先复用，缺失时才在浏览器补一次待支付取证。
 
 登录态：在 extension/out/recharge/auth.json 里按域名给凭据，不写就不带登录态。形如：
   {
@@ -393,6 +393,16 @@ async function main() {
     printHelp();
     return;
   }
+  if (!args.developer) {
+    console.error("开发者维护操作：请显式添加 --developer；普通用户无需运行充值探测。");
+    process.exitCode = 2;
+    return;
+  }
+  if (!args.all && args.ids.length === 0 && args.hosts.length === 0) {
+    console.error("请用 --id 或 --host 定向采集；确认需要全量维护时使用 --from-plugins。");
+    process.exitCode = 2;
+    return;
+  }
   const plugins = await loadPlugins();
   const targets = [];
   const seen = new Set();
@@ -410,7 +420,7 @@ async function main() {
     targets.push({ plugin: owner || { id: host, name: host, hosts: [host] }, host });
   }
   if (targets.length === 0) {
-    console.error("没有匹配到站点。用 --id / --host 指定，或去掉参数扫全部插件。");
+    console.error("没有匹配到站点。用 --id / --host 指定，或 --from-plugins 显式全量维护。");
     process.exitCode = 1;
     return;
   }

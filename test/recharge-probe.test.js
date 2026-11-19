@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import {
   channelFor,
+  parseArgs,
   mergePayments,
   readNewApiTopupInfo,
   readNewApiTopupOrders,
@@ -9,6 +12,27 @@ import {
   readSub2Orders
 } from "../scripts/recharge-probe.mjs";
 
+
+test("recharge probe CLI requires explicit developer and target scope", () => {
+  assert.deepEqual(parseArgs([]), { developer: false, all: false, hosts: [], ids: [], help: false });
+  assert.deepEqual(parseArgs(["--developer", "--id", "openlux"]), {
+    developer: true, all: false, hosts: [], ids: ["openlux"], help: false
+  });
+  assert.deepEqual(parseArgs(["--developer", "--from-plugins"]), {
+    developer: true, all: true, hosts: [], ids: [], help: false
+  });
+});
+
+test("recharge probe CLI refuses normal-user and unscoped invocation", () => {
+  const script = fileURLToPath(new URL("../scripts/recharge-probe.mjs", import.meta.url));
+  const normalUser = spawnSync(process.execPath, [script], { encoding: "utf8" });
+  assert.equal(normalUser.status, 2);
+  assert.match(normalUser.stderr, /开发者维护操作/);
+
+  const unscopedDeveloper = spawnSync(process.execPath, [script, "--developer"], { encoding: "utf8" });
+  assert.equal(unscopedDeveloper.status, 2);
+  assert.match(unscopedDeveloper.stderr, /--id.*--host/);
+});
 // 以下响应体取自 2026-11-19 的实测（stelleaisle / jiji），字段名不要美化。
 
 const stellaisleInfo = {

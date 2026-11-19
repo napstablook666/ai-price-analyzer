@@ -143,14 +143,22 @@
 
 只有人民币收银台金额自动等于人民币。美元或额度的 `paidRmb` 必须手填，站点不报人民币金额时留 `null`，这条证据不进排序，但仍显示在提示里。
 
-取证流程离线跑，不随扩展发布：
+
+这类取证只用于开发者维护插件预设。开发者要更新证据时，先读取已有 JSON 和历史订单，避免重复访问；只有缺少所需面值/渠道证据时，才定向创建一笔待支付订单，读取第三方收银台金额后立即停止。不得完成付款，也不要重复创建订单。核对后通过 `recharge:apply` 合入插件，随插件版本发布。
+
+普通用户无需登录目标站点。扩展只使用插件内已发布的静态数据，在本地计算成本，不创建待支付订单，也不为充值证据额外请求站点。
+
+取证脚本只在开发仓库离线运行，必须显式声明开发者操作和目标范围：
 
 ```bash
 cd extension
-npm run recharge:probe -- --from-plugins   # 匿名打 /api/status，落 out/recharge/<host>.json
-# 人工补 payments：点开收银台，到待支付页为止，不付款
-npm run recharge:apply                     # 写回 plugins/<id>/plugin.js 的 preset.rechargePayments
+npm run recharge:probe -- --developer --id openlux  # 定向维护优先
+# 确需全量维护时：
+# npm run recharge:probe -- --developer --from-plugins
+npm run recharge:apply
 ```
+
+全量扫描可能对多站产生请求，优先按插件 ID 或 host 定向采集。`recharge:probe` 只读取状态、充值配置和已有订单，不会创建支付订单。若所需面值/渠道缺乏证据，开发者可在站点页面人工生成一次待支付订单，读取第三方金额后停止；不得实际付款，也不要重复创建。
 
 `recharge:apply` 幂等，重复跑不产生 diff。生成段带 `// >>> recharge-probe` 标记，手改标记内的内容下次会被覆盖。
 

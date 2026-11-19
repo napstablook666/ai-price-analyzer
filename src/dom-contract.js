@@ -97,7 +97,6 @@ export const OPTIONS_HTML_IDS = [
   "config-price-currency-note",
   "config-price-currency-verified",
   "config-recharge-amount",
-  "config-recharge-auto",
   "config-recharge-credits",
   "config-recharge-currency",
   "config-recharge-rate",

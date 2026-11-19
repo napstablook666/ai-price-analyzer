@@ -11,7 +11,9 @@ import { MAOLAO_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-regi
 const preset = {
   // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
   rechargePayments: [
-    { channel: "other", faceAmount: 10, payAmount: 10.3, currency: "CNY", at: "2026-11-17", note: "登录态后台页面实付：10 额度 → 10.3 元；渠道未记录" },
+    { channel: "other", faceAmount: 10, payAmount: 10.3, currency: "CNY", paidRmb: 10.3, at: "2026-11-17", note: "登录态后台页面实付：10 额度 → 10.3 元；渠道未记录" },
+    { channel: "wechat", faceAmount: 300, payAmount: 309, currency: "CNY", paidRmb: 309, at: "2026-11-20", note: "钱包自定义充值 300，微信；第三方易支付待支付页显示 ¥309.00，未支付" },
+    { channel: "alipay", faceAmount: 300, payAmount: 309, currency: "CNY", paidRmb: 309, at: "2026-11-20", note: "钱包自定义充值 300，支付宝；支付宝收银台显示 ¥309.00，未支付" },
   ],
   rechargePaymentsVerified: true,
   // <<< recharge-probe

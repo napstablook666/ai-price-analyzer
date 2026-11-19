@@ -185,8 +185,8 @@ export const DEFAULT_STATION = {
   rechargeCredits: 1,
   rechargeRate: 1,
   rechargeRateVerified: true,
-  // 站点公开 /api/status 时优先用它的现价，关掉就只认上面手填的比例。
-  rechargeAuto: true,
+  // 普通采集使用随插件发布的静态数据，不自动请求充值状态。
+  rechargeAuto: false,
   rechargeRateNote: "",
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
@@ -324,7 +324,7 @@ export function normalizeStation(input = {}) {
   station.priceCurrencyNote = String(input.priceCurrencyNote || "").trim();
   // 手填比例只有显式标了「已核实」才拿来乘价格，没标就先按 1:1 估算。
   station.rechargeRateVerified = input.rechargeRateVerified === true;
-  station.rechargeAuto = input.rechargeAuto !== false;
+  station.rechargeAuto = false;
   station.rechargeRateNote = String(input.rechargeRateNote || "").trim();
   const basePricePerMillion = Number(station.basePricePerMillion);
   station.basePricePerMillion = Number.isFinite(basePricePerMillion) && basePricePerMillion >= 0 ? basePricePerMillion : SYSTEM_BASE_PRICE_PER_1M;

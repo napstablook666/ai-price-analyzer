@@ -3,6 +3,13 @@
 import { FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "wechat", faceAmount: 5, payAmount: 5, currency: "CNY", at: "2026-10-29", note: "订单 863 wxpay CANCELLED" },
+    { channel: "wechat", faceAmount: 10, payAmount: 10, currency: "CNY", at: "2026-10-15", note: "订单 698 wxpay EXPIRED" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "fuck-everyone",
   name: "fuck-everyone.com",
   baseUrl: "https://fuck-everyone.com/model-plaza?embedded=1",

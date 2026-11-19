@@ -78,7 +78,7 @@ function buildSnapshot(station, normalized, url, status = 200) {
   };
 }
 
-export async function collectStation(station, { retries = COLLECT_RETRIES, retryDelayMs = COLLECT_RETRY_DELAY_MS, probeRecharge = true, ...options } = {}) {
+export async function collectStation(station, { retries = COLLECT_RETRIES, retryDelayMs = COLLECT_RETRY_DELAY_MS, probeRecharge = false, ...options } = {}) {
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await withRecharge(station, await collectStationOnce(station, options), { ...options, probeRecharge });
@@ -298,10 +298,9 @@ async function attachAuxiliary(station, payload, strategy, { fetchImpl, pageFetc
   };
 }
 
-// 充值比例是站点级事实，站点自己公布在 /api/status 上。抓一次挂到快照顶部，
-// 主价格照常；拿不到就当这次没有自动倍率，比价回落到手填值。
-async function withRecharge(station, snapshot, { probeRecharge = true, fetchImpl = fetch, pageFetch } = {}) {
-  if (!snapshot || probeRecharge === false || station?.rechargeAuto === false) return snapshot;
+// 普通采集不探测充值状态；显式开发探测只读公开状态，不创建订单。
+async function withRecharge(station, snapshot, { probeRecharge = false, fetchImpl = fetch, pageFetch } = {}) {
+  if (!snapshot || probeRecharge !== true) return snapshot;
   const recharge = await probeRechargeRate(station, { fetchImpl, pageFetch });
   return recharge ? { ...snapshot, recharge } : snapshot;
 }

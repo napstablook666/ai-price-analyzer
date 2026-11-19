@@ -265,7 +265,6 @@
         <div class="station-money-field"><label for="config-recharge-amount">充值金额</label><div class="station-money-input"><input id="config-recharge-amount" type="number" min="0" step="any" value="1" required><select id="config-recharge-currency" data-previous-currency="CNY" aria-label="充值金额币种"><option value="CNY" selected>人民币 CNY</option><option value="USD">美元 USD</option></select></div></div>
         <label><span>到账中转币</span><input id="config-recharge-credits" type="number" min="0.000001" step="any" value="1" required></label>
         <label><span>充值比例（¥ / 币）</span><input id="config-recharge-rate" type="number" readonly aria-readonly="true"><small id="config-recharge-rate-display">每 1 中转币成本 ¥1.0000</small></label>
-        <label class="check-label wide"><input id="config-recharge-auto" type="checkbox" checked><span>按站点现价采集充值比例（读 /api/status）</span></label>
         <label><span>基础价 / 1M USD</span><input id="config-base-price" type="number" min="0" step="0.0001" value="2"></label>
         <label class="check-label wide"><input id="config-price-currency-verified" type="checkbox" checked><span>我已核实模型价格币种</span></label>
         <label class="wide"><span>核验备注</span><input id="config-price-currency-note" type="text" placeholder="例如：已确认站点模型列表报价可按 CREDITS 比较"></label>

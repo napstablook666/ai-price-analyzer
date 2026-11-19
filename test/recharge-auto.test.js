@@ -5,6 +5,7 @@ import { buildComparisonRows } from "../src/core/pricing.js";
 import { collectStation, probeRechargeRate } from "../src/core/collectors.js";
 import { resolveStationCollection } from "../src/core/request-strategy.js";
 import { effectiveRecharge, parseRechargeStatus } from "../src/core/recharge.js";
+import { normalizeStation } from "../src/shared/schema.js";
 
 const jsonResponse = body => ({
   ok: true,
@@ -115,12 +116,13 @@ test("keeps the hand-typed price when the station turns auto collection off", ()
   assert.ok(Math.abs(offer.monthlyCost - 7.52) < 0.001, String(offer.monthlyCost));
 });
 
-test("probes /api/status once per collection and hangs the rate on the snapshot", async () => {
+test("probes /api/status only when explicitly requested by a developer", async () => {
   const station = { id: "probe", name: "探测站", baseUrl: "https://probe.example", mode: "api", adapter: { responseFormat: "auto" } };
   const collection = resolveStationCollection(station);
   const seen = [];
   const snapshot = await collectStation(collection.station, {
     collection,
+    probeRecharge: true,
     fetchImpl: async url => {
       seen.push(url);
       return url.endsWith("/api/status")
@@ -134,11 +136,12 @@ test("probes /api/status once per collection and hangs the rate on the snapshot"
   assert.equal(snapshot.normalized.data.length, 1);
 });
 
-test("keeps the prices when the station has no /api/status", async () => {
+test("keeps prices when an explicit developer probe finds no /api/status", async () => {
   const station = { id: "legacy", name: "老站", baseUrl: "https://legacy.example", mode: "api", adapter: { responseFormat: "auto" } };
   const collection = resolveStationCollection(station);
   const snapshot = await collectStation(collection.station, {
     collection,
+    probeRecharge: true,
     fetchImpl: async url => url.endsWith("/api/status")
       ? statusResponse(404, { error: "not found" })
       : jsonResponse({ success: true, usable_group: { default: "默认" }, group_ratio: { default: 1 }, data: [GEMINI_ITEM] })
@@ -147,20 +150,28 @@ test("keeps the prices when the station has no /api/status", async () => {
   assert.equal(snapshot.normalized.data.length, 1);
 });
 
-test("skips the probe when the station opts out or the collector is told to", async () => {
-  const seen = [];
-  const fetchImpl = async url => {
-    seen.push(url);
-    return jsonResponse({ data: { price: 2 } });
-  };
-  const station = { id: "off", name: "锁定站", baseUrl: "https://off.example", mode: "api", rechargeAuto: false, adapter: { responseFormat: "auto" } };
-  const collection = resolveStationCollection(station);
-  await collectStation(collection.station, {
-    collection,
-    probeRecharge: false,
-    fetchImpl: async url => (url.endsWith("/api/status") ? fetchImpl(url) : jsonResponse({ success: true, usable_group: { default: "默认" }, group_ratio: { default: 1 }, data: [GEMINI_ITEM] }))
+test("ordinary collection uses published recharge evidence even with legacy auto enabled", async () => {
+  const station = normalizeStation({
+    id: "static", name: "静态充值站", baseUrl: "https://static.example", mode: "direct",
+    rechargeAuto: true, rechargeRate: 1.03, rechargeRateVerified: true,
+    rechargePayments: [{ channel: "alipay", faceAmount: 300, payAmount: 309, currency: "CNY" }]
   });
-  assert.deepEqual(seen, []);
+  assert.equal(station.rechargeAuto, false);
+  const collection = resolveStationCollection(station);
+  const seen = [];
+  const snapshot = await collectStation(collection.station, {
+    collection,
+    fetchImpl: async (url, options) => {
+      seen.push({ url, method: options?.method || "GET" });
+      return jsonResponse({ success: true, usable_group: { default: "默认" }, group_ratio: { default: 1 }, data: [GEMINI_ITEM] });
+    }
+  });
+  assert.deepEqual(seen, [{ url: "https://static.example/api/ai/pricing", method: "GET" }]);
+  assert.equal(snapshot.recharge, undefined);
+  const offer = offerFor({ station, recharge: { rate: 0.25, source: "auto" } });
+  assert.equal(offer.monthlyCostPaidSource, "counter");
+  assert.equal(offer.rechargePayment.payAmount, 309);
+  assert.ok(Math.abs(offer.monthlyCostPaid - 15.4912) < 0.001, String(offer.monthlyCostPaid));
 });
 
 test("treats a broken /api/status as missing, not as a failed collection", async () => {

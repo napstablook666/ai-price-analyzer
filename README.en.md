@@ -83,7 +83,7 @@ The same model appears under a dozen names across relay stations, and each stati
 | Item | Requirement |
 | --- | --- |
 | Browser | Chrome, Edge, or any Chromium-based browser with Manifest V3 |
-| Extension version | `version` in `manifest.json` (currently 0.15.0) |
+| Extension version | `version` in `manifest.json` (currently 0.16.0) |
 | Node.js | Development and tests only, Node 20 or newer |
 | Permissions | `storage`, `scripting`, `tabs`, `alarms`, `cookies`, `declarativeNetRequest`, and `<all_urls>` host permission |
 

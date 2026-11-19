@@ -731,11 +731,7 @@ function configRechargeRate() {
   const credits = Number($("#config-recharge-credits").value);
   const rate = derivedRechargeRate(rmb, credits);
   $("#config-recharge-rate").value = rate.toFixed(4);
-  // 自动采集开着时，这里只是兜底值：站点的 /api/status 一给价就按它的算。
-  const auto = $("#config-recharge-auto")?.checked !== false;
-  $("#config-recharge-rate-display").textContent = auto
-    ? `兜底值：每 1 中转币成本 ¥${rate.toFixed(4)}（采集到 /api/status 时以站点现价为准）`
-    : `每 1 中转币成本 ¥${rate.toFixed(4)}（已锁定手填值，不采集站点比例）`;
+  $("#config-recharge-rate-display").textContent = `每 1 中转币成本 ¥${rate.toFixed(4)}（默认读取插件中已发布的数据）`;
 }
 function stationHostName(baseUrl) {
   try { return new URL(normalizeUrl(baseUrl)).hostname.replace(/^www\./i, ""); } catch { return ""; }
@@ -980,7 +976,6 @@ function readStations() {
       rechargeCredits,
       rechargeRate: derivedRechargeRate(rechargeRmb, rechargeCredits),
       rechargeRateVerified: station.rechargeRateVerified !== false,
-      rechargeAuto: station.rechargeAuto !== false,
       rechargeRateNote: station.rechargeRateNote || "",
       priceCurrency: "CREDITS",
       priceCurrencyVerified: station.priceCurrencyVerified !== false,
@@ -1099,7 +1094,6 @@ function collectConfigStation() {
     rechargeRmb: convertRechargeAmount($("#config-recharge-amount").value, rechargeCurrency, "CNY", currentExchangeRate()) ?? 0,
     rechargeCurrency,
     rechargeCredits: Number($("#config-recharge-credits").value) || 1,
-    rechargeAuto: $("#config-recharge-auto").checked,
     priceCurrencyVerified: $("#config-price-currency-verified").checked,
     priceCurrencyNote: $("#config-price-currency-note").value.trim(),
     basePricePerMillion: nonNegativeNumber($("#config-base-price").value, 2),
@@ -1126,7 +1120,6 @@ function fillStationConfigDialog(station) {
   $("#config-price-currency-note").value = station.priceCurrencyNote || "";
   $("#config-base-price").value = nonNegativeNumber(station.basePricePerMillion, 2);
   renderTierRows(station.rechargeTiers);
-  $("#config-recharge-auto").checked = station.rechargeAuto !== false;
   $("#config-tokens-per-request").value = Number(station.billingProfile?.tokensPerRequest) > 0 ? Number(station.billingProfile.tokensPerRequest) : 0;
   configRechargeRate();
   const origin = currentSiteOrigin(station.baseUrl);
@@ -1171,7 +1164,6 @@ async function saveStationConfig() {
       priceCurrencyNote: collected.priceCurrencyNote,
       basePricePerMillion: collected.basePricePerMillion,
       rechargeTiers: collected.rechargeTiers,
-      rechargeAuto: collected.rechargeAuto,
       rechargeTiersVerified: collected.rechargeTiers.length > 0,
       billingProfile: collected.billingProfile
     });
@@ -1271,9 +1263,7 @@ async function refreshStation(stationId) {
     const status = snapshot.status === "success" ? "success" : snapshot.status === "partial" ? "partial" : "error";
     const modelCount = snapshot.normalized?.data?.length || 0;
     updateStationQueryStatus({ stationId: station.id, stationName: station.name, status, modelCount, durationMs: Date.now() - startedAt, error: snapshot.error || (status === "partial" ? partialSnapshotMessage(snapshot) : "") });
-    // 站点自己公布的充值比例会跟着这次采集一起变，改了就顺口说一声，省得用户猜价格怎么跳了。
-    const rechargeNote = Number(snapshot.recharge?.rate) > 0 ? `，充值比例 ${Number(snapshot.recharge.rate).toFixed(4)}` : "";
-    toast(status === "success" ? `已查询 ${modelCount} 个模型${rechargeNote}` : status === "partial" ? `部分查询：${modelCount} 个模型，${partialSnapshotMessage(snapshot)}${rechargeNote}` : `查询失败：${snapshot.error || "请查看仪表盘"}`);
+    toast(status === "success" ? `已查询 ${modelCount} 个模型` : status === "partial" ? `部分查询：${modelCount} 个模型，${partialSnapshotMessage(snapshot)}` : `查询失败：${snapshot.error || "请查看仪表盘"}`);
   } catch (error) {
     updateStationQueryStatus({ stationId: station.id, stationName: station.name, status: "error", error: error.message || String(error), durationMs: Date.now() - startedAt });
     toast(error.message || String(error));
@@ -1992,7 +1982,6 @@ $("#config-autofill").addEventListener("click", () => void autofillConfigStation
 $("#config-test").addEventListener("click", () => void testConfigStation());
 $("#config-recharge-amount").addEventListener("input", configRechargeRate);
 $("#config-recharge-credits").addEventListener("input", configRechargeRate);
-$("#config-recharge-auto").addEventListener("change", configRechargeRate);
 $("#config-recharge-currency").addEventListener("change", () => {
   changeRechargeCurrency($("#config-recharge-amount"), $("#config-recharge-currency"));
   configRechargeRate();
