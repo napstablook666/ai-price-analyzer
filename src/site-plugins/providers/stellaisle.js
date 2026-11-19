@@ -8,6 +8,15 @@ import {
 } from "../../core/provider-registry.js";
 
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "alipay", faceAmount: 10, payAmount: 10, currency: "CNY", at: "2026-11-19", note: "订单 585/588 收银台 expected 1000 minor = ¥10.00，payment_fee 0" },
+    { channel: "alipay", faceAmount: 1000, payAmount: 1000, currency: "CNY", at: "2026-11-19", note: "订单 589 收银台 expected 100000 minor = ¥1000.00，payment_fee 0，到账 1025 额度含 25 元赠送" },
+    { channel: "wechat", faceAmount: 10, payAmount: 10.1, currency: "CNY", feeRate: 0.01, at: "2026-11-19", note: "订单 586 收银台 expected 1010 minor = ¥10.10，payment_fee 0.1，微信收 1%" },
+    { channel: "wechat", faceAmount: 1000, payAmount: 1010, currency: "CNY", feeRate: 0.01, at: "2026-11-19", note: "订单 587 收银台 expected 101000 minor = ¥1010.00，payment_fee 10，微信收 1%" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "stellaisle",
   name: "飓星API",
   category: "paid",

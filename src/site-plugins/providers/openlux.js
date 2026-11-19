@@ -27,10 +27,10 @@ const PRICE_MAP = { base: "relayrouter" };
 const preset = {
   // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
   rechargePayments: [
-    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", at: "2026-11-19", note: "用户截图，Antom 收银台待支付总额 $291.00（页面标节省 3.0%）" },
-    { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "登录态实测，doit 收银台 Total Amount USD 9.90" },
-    { channel: "wechat", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "登录态实测，doit 收银台 Total Amount USD 9.90" },
-    { channel: "card", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "登录态实测，antom（Alipay+，商户 COGNIS AI PTE. LTD.）收银台支付总额 USD 9.90" },
+    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", at: "2026-11-19", note: "用户截图，Antom 收银台待支付总额 $291.00（页面标节省 3.0%，300×0.97 自洽）" },
+    { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "订单 827019 alipay、827020 wxpay、827021 antom、827022 antom_wechat 全为 money 9.9，渠道不加价" },
+    { channel: "wechat", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "doit 收银台 Total Amount USD 9.90" },
+    { channel: "card", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "antom（Alipay+，商户 COGNIS AI PTE. LTD.）收银台支付总额 USD 9.90" },
   ],
   rechargePaymentsVerified: true,
   // <<< recharge-probe

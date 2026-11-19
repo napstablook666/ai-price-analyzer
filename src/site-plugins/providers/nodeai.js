@@ -3,6 +3,12 @@
 import { NODEAI_MODEL_PLAZA_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "alipay", faceAmount: 10, payAmount: 10, currency: "CNY", at: "2026-11-19", note: "订单 pay_amount 10、fee_rate 0、status EXPIRED，金额即收银台待支付额" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "nodeai",
   preserveRechargeRateVerification: true,
   name: "NodeAI",

@@ -3,6 +3,12 @@
 import { requestPolicy, TRUE_SOTA_MODEL_PRICING_ENDPOINT } from "../../core/provider-registry.js";
 
 const preset = {
+  // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
+  rechargePayments: [
+    { channel: "stripe", faceAmount: 10, payAmount: 10, currency: "CNY", at: "2026-11-19", note: "订单 pay_amount 10、fee_rate 0、status EXPIRED" },
+  ],
+  rechargePaymentsVerified: true,
+  // <<< recharge-probe
   id: "true-sota",
   preserveRechargeRateVerification: true,
   name: "TrueSOTA",

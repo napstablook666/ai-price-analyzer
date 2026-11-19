@@ -20,7 +20,10 @@ const isModelPath = path => MODEL_PATHS.has(normalizePath(path));
 const preset = {
   // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
   rechargePayments: [
-    { channel: "alipay", faceAmount: 20, payAmount: 20, currency: "CNY", at: "2026-11-17", note: "登录态实测：充 20 元实付 ¥20.00，余额 +$20.00，无手续费" },
+    { channel: "alipay", faceAmount: 20, payAmount: 20, currency: "CNY", at: "2026-11-17", note: "用户实测充 20 元实付 ¥20.00，余额 +$20.00，无手续费" },
+    { channel: "alipay", faceAmount: 10, payAmount: 10, currency: "CNY", at: "2026-11-19", note: "checkout-info：alipay CNY fee_rate 0，single 5-2000，help_text「充值最低 ¥5 起」" },
+    { channel: "stripe", faceAmount: 50, payAmount: 50, currency: "CNY", at: "2026-11-19", note: "checkout-info：stripe CNY fee_rate 0，single_min 50" },
+    { channel: "wechat", faceAmount: 10, payAmount: 10, currency: "CNY", at: "2026-11-19", note: "checkout-info：wxpay CNY fee_rate 0，single 5-1000" },
   ],
   rechargePaymentsVerified: true,
   // <<< recharge-probe
