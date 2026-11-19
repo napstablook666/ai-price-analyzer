@@ -1880,7 +1880,9 @@ $("#plugin-registry-list").addEventListener("click", event => {
   const removeButton = event.target.closest("[data-plugin-uninstall]");
   if (removeButton) uninstallPluginVersion(removeButton.dataset.pluginUninstall);
 });
-$("#plugin-registry-list").addEventListener("change", event => {
+// 这里必须是 click：checkbox 被点后的 change 是纯 Event，没有 shiftKey，
+// 挂 change 会让下面的区间选择永远走不到。click 触发时 checked 已经是新值。
+$("#plugin-registry-list").addEventListener("click", event => {
   const check = event.target.closest("[data-registry-check]");
   if (!check) return;
   const id = check.dataset.registryCheck;
@@ -1916,7 +1918,8 @@ $("#registry-select-all").addEventListener("change", event => {
   }
   renderPluginRegistry();
 });
-$("#plugin-installed-list").addEventListener("change", event => {
+// 同上：click 才带 shiftKey。
+$("#plugin-installed-list").addEventListener("click", event => {
   const check = event.target.closest("[data-installed-check]");
   if (!check) return;
   const id = check.dataset.installedCheck;

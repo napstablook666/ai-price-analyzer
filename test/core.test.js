@@ -5758,6 +5758,14 @@ const worker = readFileSync(new URL("../src/service-worker.js", import.meta.url)
   assert.match(options, /state\.registryOrder = visible\.map\(entry => String\(entry\.id\)\)/);
   assert.match(options, /applyRangeSelection\(state\.registryOrder, state\.registryAnchorId, id, check\.checked, state\.registrySelected, isSelectable\)/);
   assert.match(options, /applyRangeSelection\(state\.installedOrder, state\.installedAnchorId, id, check\.checked, state\.installedSelected, isSelectable\)/);
+  // checkbox 点完的 change 是纯 Event，没有 shiftKey。挂 change 等于区间选择永远不生效，
+  // 这条只在真人带 shift 点时暴露，所以用结构断言把接线钉住。
+  const shiftHandlers = options
+    .split("addEventListener(")
+    .slice(1)
+    .filter(chunk => chunk.slice(0, 400).includes("event.shiftKey"));
+  assert.equal(shiftHandlers.length, 2, "shiftKey 应该只出现在两个批量列表的处理里");
+  for (const chunk of shiftHandlers) assert.match(chunk, /^"click"/, "shiftKey 只能在 click 处理里读");
   assert.match(options, /callService\("UNINSTALL_PLUGINS", \{ ids \}\)/);
   // 移除不再弹确认框：点垃圾桶就删，批次同样直接提交。
   assert.doesNotMatch(options, /window\.confirm\(`移除/);
