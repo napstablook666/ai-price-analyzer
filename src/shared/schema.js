@@ -1,6 +1,6 @@
 import { DEFAULT_PLUGIN_REGISTRY_URL, normalizeLocalPlugins, normalizeRegistryState } from "../core/declarative-plugin.js";
 import { DEFAULT_UPDATE_CHANNEL, DEFAULT_UPDATE_INTERVAL_MINUTES, normalizeUpdateChannel, normalizeUpdateInterval } from "../core/update-check.js";
-import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../core/magpie-usage.js";
+import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, mergeGatewayUsage, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../core/magpie-usage.js";
 import { migrateStationAdapter } from "../core/response-formats.js";
 import { normalizeRechargePlans, normalizeRechargeTiers } from "./recharge-tiers.js";
 import { normalizeRechargePayments } from "./recharge-payments.js";
@@ -33,21 +33,6 @@ const BUILTIN_30D_MONTHLY_VOLUME = {
   cacheWrite1h: 0,
 };
 
-// magpie 网关 2026-11-07 14:27 至 2026-11-14 14:27 汇总，按 30/7 折算为月用量。
-const BUILTIN_7D_MONTHLY_VOLUME = {
-  requests: 32567,
-  input: 196.25 * TOKENS_PER_MILLION,
-  cacheRead: 2077.49 * TOKENS_PER_MILLION,
-  output: 20.03 * TOKENS_PER_MILLION,
-  cacheWrite: 0.79 * TOKENS_PER_MILLION,
-  cacheWrite1h: 0,
-};
-
-const BUILTIN_PRESET_USAGE = {
-  recent30d: BUILTIN_30D_MONTHLY_VOLUME,
-  recent7d: BUILTIN_7D_MONTHLY_VOLUME,
-};
-
 export const DEFAULT_MONTHLY_USAGE = {
   ...BUILTIN_30D_MONTHLY_VOLUME,
   peakShare: 7 / 24,
@@ -59,10 +44,9 @@ export const DEFAULT_MONTHLY_USAGE = {
 
 // magpie 预设的用量来自 settings.magpieSync（网关实测）；还没同步过就退回内置快照。
 export function usagePresetUsage(id, magpieSync = null) {
-  const measured = magpieSync?.[id]?.usage;
-  if (measured) return { ...DEFAULT_MONTHLY_USAGE, ...measured };
-  const builtin = BUILTIN_PRESET_USAGE[id];
-  return builtin ? { ...DEFAULT_MONTHLY_USAGE, ...builtin } : null;
+  if (id === "baseline") return { ...DEFAULT_MONTHLY_USAGE, ...BASELINE_USAGE };
+  if (id !== "recent30d") return null;
+  return { ...DEFAULT_MONTHLY_USAGE, ...magpieSync?.recent30d?.usage };
 }
 
 export function usagePresetOptions(magpieSync = null) {
@@ -74,7 +58,6 @@ export function usagePresetOptions(magpieSync = null) {
   };
   return [
     { id: "recent30d", label: `magpie-30天（${stamp("recent30d")}）` },
-    { id: "recent7d", label: `magpie-7天（${stamp("recent7d")}）` },
     { id: "baseline", label: "基础估算（3000 万输入 / 600 万输出）" },
     { id: "custom", label: "自定义" },
   ];
@@ -83,8 +66,9 @@ export function usagePresetOptions(magpieSync = null) {
 const BASELINE_USAGE = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0, imageInputTokens: 0, imageOutputTokens: 0, imageTokens: 0, images: 0 };
 // 判定口径只看这几个字段，高峰占比与图像用量不参与。
 const USAGE_MATCH_FIELDS = ["requests", "input", "cacheRead", "cacheWrite", "cacheWrite1h", "output"];
-// 兼容旧版本保存的日用量、基础预设和已下线的「实测月用量」预设，避免已有设置继续覆盖当前默认用量。
+// 退役预设只用于迁移，不再出现在可选口径中。
 const LEGACY_USAGE_PROFILES = [
+  { requests: 32567, input: 196.25 * TOKENS_PER_MILLION, cacheRead: 2077.49 * TOKENS_PER_MILLION, output: 20.03 * TOKENS_PER_MILLION, cacheWrite: 0.79 * TOKENS_PER_MILLION },
   { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
   { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
   { requests: 45494, input: 382.95 * TOKENS_PER_MILLION, cacheRead: 2946.28 * TOKENS_PER_MILLION, output: 30.74 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
@@ -92,7 +76,7 @@ const LEGACY_USAGE_PROFILES = [
 ];
 
 function isLegacyUsage(usage) {
-  return LEGACY_USAGE_PROFILES.some(profile => Object.entries(profile).every(([field, value]) => Number(usage?.[field] ?? 0) === Number(value)));
+  return LEGACY_USAGE_PROFILES.some(profile => usageMatchesPreset(usage, profile));
 }
 
 // 设置页的输入框把 token 折成百万、保留 4 位小数，读回来就丢了尾巴。
@@ -104,13 +88,13 @@ function usageMatchValue(field, value) {
   return Math.round((raw / TOKENS_PER_MILLION) * USAGE_DISPLAY_DIGITS) / USAGE_DISPLAY_DIGITS * TOKENS_PER_MILLION;
 }
 
+function usageMatchesPreset(usage, preset) {
+  return USAGE_MATCH_FIELDS.every(field => usageMatchValue(field, preset?.[field]) === usageMatchValue(field, usage?.[field]));
+}
+
 export function usagePresetId(usage, magpieSync = null) {
-  for (const id of ["recent30d", "recent7d"]) {
-    const preset = usagePresetUsage(id, magpieSync);
-    // 判定按输入框的显示精度比，网关原始值和回填值差几百个 token 不算改过。
-    if (preset && USAGE_MATCH_FIELDS.every(field => usageMatchValue(field, preset[field]) === usageMatchValue(field, usage[field]))) return id;
-  }
-  if (USAGE_MATCH_FIELDS.every(field => usageMatchValue(field, BASELINE_USAGE[field]) === usageMatchValue(field, usage[field]))) return "baseline";
+  if (usageMatchesPreset(usage, usagePresetUsage("recent30d", magpieSync))) return "recent30d";
+  if (usageMatchesPreset(usage, BASELINE_USAGE)) return "baseline";
   return "custom";
 }
 
@@ -258,10 +242,13 @@ function normalizeModelMatchOverrides(input) {
 export function normalizeSettings(input = {}) {
   const base = cloneDefaultSettings();
   const rawUsage = input.usage && typeof input.usage === "object" ? input.usage : {};
-  const peakShare = Number(rawUsage.peakShare);
-  const usage = isLegacyUsage(rawUsage)
-    ? { ...base.usage, ...(Number.isFinite(peakShare) ? { peakShare } : {}) }
-    : { ...base.usage, ...rawUsage };
+  const magpieSync = normalizeMagpieSyncState(input.magpieSync);
+  let usage = { ...base.usage, ...rawUsage };
+  const useMagpie = !USAGE_MATCH_FIELDS.some(field => Object.prototype.hasOwnProperty.call(rawUsage, field))
+    || usageMatchesPreset(usage, BUILTIN_30D_MONTHLY_VOLUME)
+    || isLegacyUsage(usage)
+    || (input.magpieSync?.recent7d?.usage && usageMatchesPreset(usage, input.magpieSync.recent7d.usage));
+  if (useMagpie) usage = mergeGatewayUsage(usage, usagePresetUsage("recent30d", magpieSync));
   const settings = {
     ...base,
     ...input,
@@ -281,7 +268,7 @@ export function normalizeSettings(input = {}) {
     updateChannel: normalizeUpdateChannel(input.updateChannel),
     magpieBaseUrl: normalizeMagpieBaseUrl(input.magpieBaseUrl),
     magpieSyncIntervalMinutes: normalizeMagpieSyncInterval(input.magpieSyncIntervalMinutes),
-    magpieSync: normalizeMagpieSyncState(input.magpieSync),
+    magpieSync,
   };
   if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
   settings.usage.imageTokens = settings.usage.imageOutputTokens;

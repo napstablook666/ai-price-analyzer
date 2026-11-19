@@ -1245,20 +1245,19 @@ test("uses the recent 30-day workload as the default usage", () => {
   assert.equal(settings.usage.cacheWrite1h, 0);
   assert.equal(usagePresetUsage("recent30d").requests, 54378);
 });
-test("ships recent 7-day and 30-day usage presets without a measured one", () => {
-  const recent7d = usagePresetUsage("recent7d");
-  const recent30d = usagePresetUsage("recent30d");
-  assert.equal(usagePresetOptions().some(option => option.id === "measured"), false);
-  assert.equal(recent7d.requests, 32567);
-  assert.equal(recent7d.cacheRead, 2077.49 * TOKENS_PER_MILLION);
-  assert.equal(recent30d.requests, 54378);
-  assert.equal(recent30d.cacheRead, 4434.31 * TOKENS_PER_MILLION);
-  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...recent7d }), "recent7d");
-  assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...recent30d }), "recent30d");
+test("offers magpie 30-day, baseline and custom usage without the retired 7-day preset", () => {
+  assert.deepEqual(usagePresetOptions().map(option => option.id), ["recent30d", "baseline", "custom"]);
+  assert.equal(usagePresetUsage("recent7d"), null);
+  assert.equal(usagePresetUsage("recent30d").requests, 54378);
+  const baseline = usagePresetUsage("baseline");
+  assert.equal(baseline.input, 30 * TOKENS_PER_MILLION);
+  assert.equal(baseline.output, 6 * TOKENS_PER_MILLION);
+  assert.equal(usagePresetId(baseline), "baseline");
 });
 
 test("migrates old and retired usage presets to the current default", () => {
   const legacyUsages = [
+    { requests: 32567, input: 196.25 * TOKENS_PER_MILLION, cacheRead: 2077.49 * TOKENS_PER_MILLION, output: 20.03 * TOKENS_PER_MILLION, cacheWrite: 0.79 * TOKENS_PER_MILLION, peakShare: 0.4 },
     { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.5 },
     { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 },
     { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 },
@@ -1269,6 +1268,25 @@ test("migrates old and retired usage presets to the current default", () => {
   assert.equal(normalizeSettings({ usage: { ...DEFAULT_MONTHLY_USAGE, input: TOKENS_PER_MILLION } }).usage.input, TOKENS_PER_MILLION);
 });
 
+test("uses synced 30-day usage for defaults and retired presets while preserving custom fields", () => {
+  const measured = { requests: 999, input: 5_000_123, cacheRead: 7_000_000, cacheWrite: 100, output: 200_000 };
+  const retired = { requests: 321, input: 8_000_023, cacheRead: 9_000_099, cacheWrite: 200, output: 100_000 };
+  const magpieSync = { recent30d: { usage: measured, syncedAt: 10 }, recent7d: { usage: retired, syncedAt: 20 } };
+  for (const usage of [undefined, DEFAULT_MONTHLY_USAGE, { ...retired, input: 8_000_000, cacheRead: 9_000_100 }]) {
+    const settings = normalizeSettings({ magpieSync, usage: { ...usage, peakShare: 0.6, imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
+    assert.equal(usagePresetId(settings.usage, settings.magpieSync), "recent30d");
+    for (const [field, value] of Object.entries(measured)) assert.equal(settings.usage[field], value);
+    assert.equal(settings.usage.peakShare, 0.6);
+    assert.equal(settings.usage.imageInputTokens, 123);
+    assert.equal(settings.usage.imageOutputTokens, 456);
+    assert.equal(settings.usage.images, 7);
+    assert.equal(settings.magpieSync.recent7d, undefined);
+    assert.deepEqual(normalizeSettings(settings), settings);
+  }
+  for (const usage of [usagePresetUsage("baseline"), { ...DEFAULT_MONTHLY_USAGE, input: 1_234_567, cacheWrite1h: 321 }]) {
+    assert.deepEqual(normalizeSettings({ usage, magpieSync }).usage, usage);
+  }
+});
 test("matches usage presets regardless of peak share", () => {
   const usage = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.3 };
   assert.equal(usagePresetId(usage), "baseline");
@@ -1340,11 +1358,11 @@ test("uses synced magpie numbers for the presets and falls back to the builtin s
     recent30d: { usage: { requests: 999, input: 5_000_000, cacheRead: 0, cacheWrite: 0, output: 0 }, syncedAt: 1_700_000_000_000 }
   });
   assert.equal(usagePresetUsage("recent30d", magpieSync).requests, 999);
-  assert.equal(usagePresetUsage("recent7d", magpieSync).requests, 32567);
+  assert.equal(usagePresetUsage("recent7d", magpieSync), null);
   assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...usagePresetUsage("recent30d", magpieSync) }, magpieSync), "recent30d");
   assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE, ...usagePresetUsage("recent30d", magpieSync) }), "custom");
   assert.match(usagePresetOptions(magpieSync).find(option => option.id === "recent30d").label, /同步/);
-  assert.match(usagePresetOptions().find(option => option.id === "recent7d").label, /内置快照/);
+  assert.match(usagePresetOptions().find(option => option.id === "recent30d").label, /内置快照/);
 });
 
 // 回归：点「立即同步」后输入框回填的是取整到 4 位小数的百万值，读回来和网关原始值差几百个 token。
@@ -1352,8 +1370,7 @@ test("uses synced magpie numbers for the presets and falls back to the builtin s
 test("keeps the magpie preset selected after the inputs are rounded for display", () => {
   const T = TOKENS_PER_MILLION;
   const magpieSync = normalizeMagpieSyncState({
-    recent30d: { usage: { requests: 36085, input: 373_945_123, cacheRead: 1_741_243_900, cacheWrite: 907_000, output: 17_251_100 }, syncedAt: 1_700_000_000_000 },
-    recent7d: { usage: { requests: 103_161, input: 1_280_047_662, cacheRead: 4_331_021_734, cacheWrite: 787_928, output: 50_436_651 }, syncedAt: 1_700_000_000_000 }
+    recent30d: { usage: { requests: 36085, input: 373_945_123, cacheRead: 1_741_243_900, cacheWrite: 907_000, output: 17_251_100 }, syncedAt: 1_700_000_000_000 }
   });
   const asDisplayed = usage => {
     const rounded = { ...usage, requests: Math.round(usage.requests) };
@@ -1362,17 +1379,17 @@ test("keeps the magpie preset selected after the inputs are rounded for display"
     }
     return rounded;
   };
-  for (const id of ["recent30d", "recent7d"]) {
-    const measured = usagePresetUsage(id, magpieSync);
-    assert.equal(usagePresetId(asDisplayed(measured), magpieSync), id);
-    // 用户真的改了一项，仍然要判成自定义。
-    assert.equal(usagePresetId({ ...asDisplayed(measured), input: measured.input + 5 * T }, magpieSync), "custom");
-  }
+  const measured = usagePresetUsage("recent30d", magpieSync);
+  assert.equal(usagePresetId(asDisplayed(measured), magpieSync), "recent30d");
+  // 用户真的改了一项，仍然要判成自定义。
+  assert.equal(usagePresetId({ ...asDisplayed(measured), input: measured.input + 5 * T }, magpieSync), "custom");
 });
 
 test("drops an empty magpie sync state and keeps the last good numbers", () => {
   assert.equal(normalizeMagpieSyncState(null), null);
   assert.equal(normalizeMagpieSyncState({ error: "boom" }), null);
+  assert.equal(normalizeMagpieSyncState({ recent7d: { usage: { requests: 7 }, syncedAt: 999 } }), null);
+  assert.equal(magpieSyncLabel({ recent7d: { syncedAt: 999 } }), "还没同步过");
   const state = normalizeMagpieSyncState({ error: "boom", attemptedAt: 5, recent30d: { usage: { requests: 7 }, syncedAt: 9 } });
   assert.equal(state.error, "boom");
   assert.equal(state.recent30d.usage.requests, 7);

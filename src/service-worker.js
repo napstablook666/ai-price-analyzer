@@ -17,14 +17,14 @@ import { buildComparisonRows, buildStationIndexes, filterComparisonsByMode, flat
 import { normalizeProxyModelName } from "./core/matching.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
 import { snapshotNeedsRefresh } from "./core/snapshot-policy.js";
-import { normalizeSettings, normalizeStation } from "./shared/schema.js";
+import { normalizeSettings, normalizeStation, usagePresetId } from "./shared/schema.js";
 import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { buildSettingsExport, parseSettingsExport } from "./core/settings-transfer.js";
 import { mergeStationSave } from "./core/station-save.js";
 import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
 import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_RETRIES, ASSIST_RETRY_DELAY_MS, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPool, buildAssistPrompt, cacheKey, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, poolSummaryLabel, selectPendingEntries, spreadAssistResults, summarizeCache, summarizePool } from "./core/llm-matching.js";
-import { MAGPIE_USAGE_WINDOWS, fetchMagpieUsage, normalizeMagpieSyncInterval } from "./core/magpie-usage.js";
+import { MAGPIE_USAGE_WINDOWS, fetchMagpieUsage, mergeGatewayUsage, normalizeMagpieSyncInterval } from "./core/magpie-usage.js";
 import { checkForUpdate, isNewerVersion } from "./core/update-check.js";
 
 const LEGACY_REFRESH_ALARM_NAME = "refresh-stations";
@@ -821,7 +821,7 @@ async function saveUpdatePrefs(input = {}) {
   return updateStateForUi();
 }
 
-// magpie 用量同步：只读本机网关，把两个窗口的实测值写进 settings.magpieSync。
+// magpie 用量同步：只读本机网关，更新 30 天快照和正在使用它的估算用量。
 async function runMagpieUsageSync({ force = false } = {}) {
   const settings = await getSettings();
   const interval = normalizeMagpieSyncInterval(settings.magpieSyncIntervalMinutes);
@@ -833,18 +833,20 @@ async function runMagpieUsageSync({ force = false } = {}) {
     // 失败也按间隔退避，网关没开的时候不要每分钟重试。
     if (lastAttempt && nowMs - lastAttempt < interval * 60_000) return { ...(await settingsForUi()), skipped: true };
   }
+  const useMagpie = usagePresetId(settings.usage, previous) === "recent30d";
   const next = { error: "", attemptedAt: nowMs };
   for (const window of MAGPIE_USAGE_WINDOWS) {
     try {
       const result = await fetchMagpieUsage({ baseUrl: settings.magpieBaseUrl, period: window.period, days: window.days });
       next[window.id] = { usage: result.usage, syncedAt: Date.now(), window: result.window };
     } catch (error) {
-      // 单个窗口失败不影响另一个；已同步过的数字保留。
+      // 同步失败保留上次有效数字。
       if (previous?.[window.id]) next[window.id] = previous[window.id];
       next.error = error.message || String(error);
     }
   }
-  await persistSettings({ ...settings, magpieSync: next });
+  const usage = useMagpie && next.recent30d?.usage ? mergeGatewayUsage(settings.usage, next.recent30d.usage) : settings.usage;
+  await persistSettings({ ...settings, usage, magpieSync: next });
   return { ...(await settingsForUi()), lastSync: next };
 }
 

@@ -913,11 +913,7 @@ async function syncMagpieUsage() {
     state.settings = await callService("SYNC_MAGPIE_USAGE");
     renderUsagePresetOptions();
     renderMagpieUsageRow();
-    if (presetBefore === "recent30d" || presetBefore === "recent7d") {
-      const usage = usagePresetUsage(presetBefore, state.settings?.magpieSync);
-      if (usage) writeUsageInputs(usage);
-      scheduleSettingsSave();
-    }
+    if (presetBefore === "recent30d") writeUsageInputs(state.settings.usage);
     syncUsagePreset();
     const failed = state.settings?.magpieSync?.error;
     toast(failed ? `同步失败：${failed}` : "已同步 magpie 用量");

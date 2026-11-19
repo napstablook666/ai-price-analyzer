@@ -5,8 +5,7 @@ export const MAGPIE_USAGE_DEFAULT_BASE_URL = "http://127.0.0.1:3425";
 export const MAGPIE_USAGE_PATH = "/v1/magpie/usage";
 
 export const MAGPIE_USAGE_WINDOWS = [
-  { id: "recent30d", label: "magpie-30天", period: "30d", days: 30 },
-  { id: "recent7d", label: "magpie-7天", period: "7d", days: 7 }
+  { id: "recent30d", label: "magpie-30天", period: "30d", days: 30 }
 ];
 
 export const MAGPIE_SYNC_INTERVAL_OPTIONS = [
@@ -48,7 +47,7 @@ function toNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : 0;
 }
 
-// 网关把窗口内的总量放在顶层；7d 窗口要乘 30/7 才是月用量，30d 窗口原样用。
+// 网关返回最近 30 天的请求数和 token 总量。
 export function monthlyUsageFromGateway(payload, days = 30) {
   const windowDays = Number(days) > 0 ? Number(days) : 30;
   const factor = 30 / windowDays;
@@ -127,8 +126,8 @@ export function normalizeMagpieSyncState(value) {
 }
 
 export function magpieSyncLabel(state) {
-  if (!state?.recent30d?.syncedAt && !state?.recent7d?.syncedAt) return state?.error ? `上次同步失败：${state.error}` : "还没同步过";
-  const latest = Math.max(toNumber(state.recent30d?.syncedAt), toNumber(state.recent7d?.syncedAt));
+  if (!state?.recent30d?.syncedAt) return state?.error ? `上次同步失败：${state.error}` : "还没同步过";
+  const latest = toNumber(state.recent30d.syncedAt);
   const when = new Date(latest);
   const stamp = Number.isFinite(latest) && latest > 0 ? `${when.toLocaleDateString("zh-CN")} ${when.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}` : "";
   return state?.error ? `${stamp} 同步成功，本次提示：${state.error}` : `${stamp} 已同步`;

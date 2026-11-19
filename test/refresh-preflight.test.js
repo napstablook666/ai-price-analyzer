@@ -5,6 +5,7 @@ import { PAGE_RUNTIME_FETCH_TYPE } from "../src/core/bridge-protocol.js";
 import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { flattenComparisonRows, getProxyPriceQuote } from "../src/core/pricing.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, classifyPageSessionResponse, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
+import { normalizeSettings, usagePresetId, usagePresetUsage } from "../src/shared/schema.js";
 
 import { loadedSitePluginIds, resetSitePluginLoader } from "../src/site-plugins/loader.js";
 const test = (name, optionsOrFn, maybeFn) => {
@@ -225,6 +226,64 @@ async function waitFor(predicate) {
   }
   assert.fail("condition was not reached before timeout");
 }
+
+test("keeps magpie 30-day usage current through manual and scheduled syncs", async t => {
+  const requests = [];
+  const payloads = [
+    { calls: 10, input: 1_000_123, cache_read: 2_000_023, cache_write: 100, output: 300_000 },
+    { calls: 20, input: 4_000_321, cache_read: 5_000_099, cache_write: 200, output: 600_000 },
+    { calls: 30, input: 7_000_654, cache_read: 8_000_033, cache_write: 300, output: 900_000 }
+  ];
+  t.mock.method(globalThis, "fetch", async url => {
+    requests.push(String(url));
+    const payload = payloads.shift();
+    if (!payload) throw new TypeError("Failed to fetch");
+    return { ok: true, json: async () => payload };
+  });
+  const settings = normalizeSettings({ usage: { peakShare: 0.6, imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
+  await withWorker({ values: { settings } }, {}, async (worker, stores) => {
+    const first = responseData(await worker.send("SYNC_MAGPIE_USAGE"));
+    const second = responseData(await worker.send("SYNC_MAGPIE_USAGE"));
+    assert.equal(first.usage.input, 1_000_123);
+    assert.equal(second.usage.input, 4_000_321);
+    assert.equal(usagePresetId(second.usage, second.magpieSync), "recent30d");
+
+    const persisted = stores.kv.get("settings");
+    persisted.magpieSync.attemptedAt = 0;
+    stores.kv.set("settings", persisted);
+    await worker.fireAlarm("magpie-usage");
+    const scheduled = stores.kv.get("settings");
+    assert.equal(scheduled.usage.input, 7_000_654);
+    assert.equal(scheduled.usage.requests, 30);
+    assert.equal(scheduled.usage.peakShare, 0.6);
+    assert.equal(scheduled.usage.imageInputTokens, 123);
+    assert.equal(scheduled.usage.imageOutputTokens, 456);
+    assert.equal(scheduled.usage.images, 7);
+    assert.equal(usagePresetId(scheduled.usage, scheduled.magpieSync), "recent30d");
+    assert.equal(scheduled.magpieSync.recent7d, undefined);
+
+    const failed = responseData(await worker.send("SYNC_MAGPIE_USAGE"));
+    assert.match(failed.lastSync.error, /连不上本机 magpie 网关/);
+    assert.deepEqual(failed.usage, scheduled.usage);
+    assert.deepEqual(failed.magpieSync.recent30d, scheduled.magpieSync.recent30d);
+    assert.equal(usagePresetId(failed.usage, failed.magpieSync), "recent30d");
+  });
+  assert.equal(requests.length, 4);
+  assert.ok(requests.every(url => url === "http://127.0.0.1:3425/v1/magpie/usage?period=30d"));
+});
+
+test("preserves custom and baseline usage when syncing magpie", async t => {
+  t.mock.method(globalThis, "fetch", async () => ({ ok: true, json: async () => ({ calls: 50, input: 9_000_000, cache_read: 8_000_000, output: 700_000 }) }));
+  for (const usage of [usagePresetUsage("baseline"), { ...usagePresetUsage("recent30d"), input: 1_234_567, cacheWrite1h: 100, peakShare: 0.4 }]) {
+    const settings = normalizeSettings({ usage });
+    await withWorker({ values: { settings } }, {}, async worker => {
+      const synced = responseData(await worker.send("SYNC_MAGPIE_USAGE"));
+      assert.deepEqual(synced.usage, settings.usage);
+      assert.equal(synced.magpieSync.recent30d.usage.input, 9_000_000);
+      assert.equal(usagePresetId(synced.usage, synced.magpieSync), usagePresetId(settings.usage));
+    });
+  }
+});
 
 test("adds selected local plugins in one idempotent batch without eager loading", async () => {
   resetSitePluginLoader();
