@@ -10,7 +10,8 @@ import { trueSotaPriceMap } from "../src/core/price-maps/true-sota.js";
 import { sidrunePriceMap } from "../src/core/price-maps/sidrune.js";
 import { relayRouterPriceMap } from "../src/core/price-maps/relayrouter.js";
 import { allrouterPriceMap } from "../src/core/price-maps/allrouter.js";
-import { normalizeProxyData, parseBillingTiers } from "../src/core/normalizers.js";
+import { normalizePricingPayload, normalizeProxyData, parseBillingTiers } from "../src/core/normalizers.js";
+import { normalizeStation } from "../src/shared/schema.js";
 import { RESPONSE_FORMAT_DEFINITIONS } from "../src/core/response-formats.js";
 import { resolvePriceMap } from "../src/core/price-maps/index.js";
 
@@ -489,18 +490,22 @@ test("走 price-map 的格式定义必须自带可解析的 priceMap 声明", ()
   }
 });
 
-test("老枚举值和新写法产出逐行相同", () => {
+test("退役的枚举值经 normalizeStation 迁移后，仍然走同一条 price-map 解析", () => {
   const cases = [
     ["allrouter", "allrouter-pricing.json"],
     ["relayrouter", "relayrouter-pricing.json"]
   ];
   for (const [format, file] of cases) {
     const payload = JSON.parse(readFileSync(new URL(`./fixtures/${file}`, import.meta.url), "utf8"));
-    const legacy = normalizeProxyData(payload, { responseFormat: format });
+    // 走真实链路：存储里躺着的旧 responseFormat，被 normalizeStation 换成新声明，
+    // 再按 collectors 的取法（format + priceMap）解析。
+    const station = normalizeStation({ baseUrl: "https://example.com", adapter: { responseFormat: format } });
+    assert.equal(station.adapter.responseFormat, "price-map");
+    const migrated = normalizePricingPayload(payload, station.adapter.responseFormat, { priceMap: station.adapter.priceMap });
     const declared = normalizeProxyData(payload, { responseFormat: "price-map", priceMap: { base: format } });
-    assert.ok(legacy.data.length > 0, `${format} 用老写法解析不出数据`);
-    assert.equal(declared.sourceFormat, format);
-    assert.deepEqual(declared.data, legacy.data);
-    assert.deepEqual(declared.group_ratio, legacy.group_ratio);
+    assert.ok(migrated.data.length > 0, `${format} 迁移后解析不出数据`);
+    assert.equal(migrated.sourceFormat, format);
+    assert.deepEqual(migrated.data, declared.data);
+    assert.deepEqual(migrated.group_ratio, declared.group_ratio);
   }
 });

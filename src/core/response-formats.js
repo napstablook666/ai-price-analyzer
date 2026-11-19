@@ -9,14 +9,9 @@ const definitions = {
   "all-in-one-models": { label: "all-in-one.icu 租户模型", explicit: true, strategy: "all-in-one-models" },
   "fuck-everyone-model-plaza": { label: "fuck-everyone 模型广场", explicit: true, strategy: "model-plaza", profile: "fuck-everyone" },
   "tokenflux": { label: "TokenFlux 定价", explicit: true, strategy: "tokenflux" },
-  // 这三家报文都是 tokenflux 换一套字段映射，用 price-map 处理器 + 兜底声明就能覆盖；
-  // 保留各自的枚举值是为了老配置里的 responseFormat 还能认，新站直接写 "price-map"。
-  "newcodex": { label: "NewCodex 定价", explicit: true, strategy: "price-map", priceMap: { base: "newcodex" } },
-  "allrouter": { label: "AllRouter 定价", explicit: true, strategy: "price-map", priceMap: { base: "allrouter" } },
   "windhub": { label: "WindHub 公开定价", explicit: true, strategy: "windhub" },
   "stellaisle": { label: "Star API 公开定价", explicit: true, strategy: "stellaisle" },
   "stellaisle-carpool": { label: "Star API 拼车市场", explicit: true, strategy: "stellaisle-carpool" },
-  "relayrouter": { label: "RelayRouter 定价", explicit: true, strategy: "price-map", priceMap: { base: "relayrouter" } },
   // 声明式映射：报文形状由 adapter.priceMap 描述，站点差异写在插件里，不占新的枚举值。
   "price-map": { label: "声明式价格映射", explicit: true, strategy: "price-map" },
 };
@@ -51,4 +46,28 @@ export function getResponseFormatDefinition(format = "auto") {
 export function isSupportedResponseFormat(format) {
   return RESPONSE_FORMATS.has(format);
 }
+// 退役的枚举值 → 现在的等价声明。
+//
+// 这三家报文都是 tokenflux 换一套字段映射，price-map 引擎加一份声明就能覆盖。
+// 当年各占一个枚举值，是因为映射引擎还没写；引擎上线后（4b3793b）枚举值就只剩
+// 「别让 11 月 18 日那天手填过的站点解析失败」这一个作用。
+// 长期挂着一张别名表，等于让历史版本的配置永久占用公开词表——所以改成读到就换掉：
+// normalizeStation 按这张表把旧值就地改写成新声明，存储里不再有旧值。
+export const LEGACY_RESPONSE_FORMATS = Object.freeze({
+  newcodex: { format: "price-map", priceMap: Object.freeze({ base: "newcodex" }) },
+  allrouter: { format: "price-map", priceMap: Object.freeze({ base: "allrouter" }) },
+  relayrouter: { format: "price-map", priceMap: Object.freeze({ base: "relayrouter" }) }
+});
 
+// 纯函数、幂等：不认识的值原样返回；已经是新形态的再跑一遍不变。
+// 只补空缺，不覆盖站点自己写的 priceMap。
+export function migrateStationAdapter(adapter) {
+  if (!adapter || typeof adapter !== "object") return adapter;
+  const legacy = LEGACY_RESPONSE_FORMATS[String(adapter.responseFormat || "")];
+  if (!legacy) return adapter;
+  return {
+    ...adapter,
+    responseFormat: legacy.format,
+    ...(adapter.priceMap ? {} : { priceMap: { ...legacy.priceMap } })
+  };
+}

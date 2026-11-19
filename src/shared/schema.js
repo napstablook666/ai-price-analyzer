@@ -1,6 +1,7 @@
 import { DEFAULT_PLUGIN_REGISTRY_URL, normalizeLocalPlugins, normalizeRegistryState } from "../core/declarative-plugin.js";
 import { DEFAULT_UPDATE_CHANNEL, DEFAULT_UPDATE_INTERVAL_MINUTES, normalizeUpdateChannel, normalizeUpdateInterval } from "../core/update-check.js";
 import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../core/magpie-usage.js";
+import { migrateStationAdapter } from "../core/response-formats.js";
 import { normalizeRechargePlans, normalizeRechargeTiers } from "./recharge-tiers.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
@@ -313,7 +314,8 @@ export function normalizeStation(input = {}) {
   station.baseUrl = normalizeUrl(station.baseUrl);
   station.mode = station.mode === "page" ? "page" : "direct";
   station.category = STATION_CATEGORIES.includes(input.category) ? input.category : "paid";
-  station.adapter = { ...DEFAULT_STATION.adapter, ...(input.adapter || {}) };
+  // 退役的 responseFormat 旧值在这里就地换成等价声明，存储里不再留旧值。
+  station.adapter = migrateStationAdapter({ ...DEFAULT_STATION.adapter, ...(input.adapter || {}) });
   station.auth = { ...DEFAULT_STATION.auth, ...(input.auth || {}) };
   station.checkin = { token: String(input.checkin?.token || "").trim(), autoEnabled: Boolean(input.checkin?.autoEnabled) };
   const hasRatioInputs = Object.prototype.hasOwnProperty.call(input, "rechargeRmb") || Object.prototype.hasOwnProperty.call(input, "rechargeCredits");

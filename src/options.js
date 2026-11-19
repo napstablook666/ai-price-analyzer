@@ -4,7 +4,7 @@ import { callService, escapeHtml, hydrateIcons, icon, onAssistProgress, onRefres
 import { siteLogoUrl } from "./shared/site-icon.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
-import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat } from "./core/response-formats.js";
+import { RESPONSE_FORMAT_DEFINITIONS, isSupportedResponseFormat, migrateStationAdapter } from "./core/response-formats.js";
 import { getPartialDiagnostics } from "./core/partial-diagnostics.js";
 import { paginateRows } from "./dashboard-index.js";
 import { canSelfUpdate, fetchUpdateManifest } from "./core/self-update.js";
@@ -968,6 +968,22 @@ function renderSettings() {
   $("#llm-api-key").placeholder = settings.hasModelAssistantKey ? "已保存，留空则不修改" : "sk-...";
 }
 
+// 站点 adapter 原样带出去，只补表单真正管的那几个字段。
+// 以前这里写的是白名单：kind 固定成 custom、priceMap 直接丢掉。结果是「保存一次设置」
+// 就把声明式站点的价格映射抹平了——迁移写进去的 priceMap 也活不过一次保存。
+// 迁移必须先于校验：旧 responseFormat 换不成新声明，就会被下面的兜底打成 auto。
+function adapterForSave(adapter = {}) {
+  const migrated = migrateStationAdapter({ ...adapter, kind: adapter.kind || "custom" });
+  return {
+    ...migrated,
+    endpoint: migrated.endpoint || "",
+    body: migrated.body || "",
+    rawJson: migrated.rawJson || "",
+    method: migrated.method === "POST" ? "POST" : "GET",
+    responseFormat: isSupportedResponseFormat(migrated.responseFormat) ? migrated.responseFormat : "auto"
+  };
+}
+
 function readStations() {
   return state.stations.map(station => {
     const rechargeRmb = nonNegativeNumber(station.rechargeRmb, station.rechargeRate || 1);
@@ -995,7 +1011,7 @@ function readStations() {
       priceCurrencyNote: station.priceCurrencyNote || "",
       basePricePerMillion: nonNegativeNumber(station.basePricePerMillion, 2),
       auth: { type: auth.type || "none", token: auth.token || "", username: auth.username || "", password: auth.password || "" },
-      adapter: { kind: "custom", endpoint: adapter.endpoint || "", body: adapter.body || "", rawJson: adapter.rawJson || "", method: adapter.method === "POST" ? "POST" : "GET", responseFormat: isSupportedResponseFormat(adapter.responseFormat) ? adapter.responseFormat : "auto" },
+      adapter: adapterForSave(adapter),
       tags: []
     };
   });
