@@ -23,6 +23,9 @@ const GOLDEN_DIR = new URL("../test/golden/", import.meta.url);
 // fixture 的文件名和 base 名对不上是常态（早先按站点起的），所以显式列出来。
 export const GOLDEN_CASES = Object.freeze([
   { base: "tokenflux", fixture: "tokenflux-pricing.json" },
+  // 同形状不同站点：base 都是 tokenflux，但报文各一份，快照分开存（name 才是文件名）。
+  { name: "centos", base: "tokenflux", fixture: "centos-pricing.json", note: "ai.centos.hk 2026-11-19 实测，页面标 ¥" },
+  { name: "maolaoapi", base: "tokenflux", fixture: "maolaoapi-pricing.json", note: "maolaoapi.com 2026-11-19 实测，页面标 $" },
   { base: "allrouter", fixture: "allrouter-pricing.json" },
   { base: "relayrouter", fixture: "relayrouter-pricing.json" },
   { base: "cheaprouter", fixture: "cheaprouter-pricing.json" },
@@ -53,7 +56,7 @@ const cell = value => {
   return String(value);
 };
 
-export function renderGolden(base, fixtureName) {
+export function renderGolden(base, fixtureName, label = base) {
   const map = PRICE_MAP_BASES[base];
   if (!map) throw new Error(`未知的 price-map base：${base}`);
   const payload = JSON.parse(readFileSync(new URL(fixtureName, FIXTURES), "utf8"));
@@ -67,6 +70,7 @@ export function renderGolden(base, fixtureName) {
 
   return [
     `# base: ${base}`,
+    ...(label === base ? [] : [`# case: ${label}`]),
     `# fixture: ${fixtureName}`,
     `# rows: ${lines.length} · unresolved: ${misses.length}`,
     `# 更新：node scripts/price-map-golden.mjs --update`,
@@ -77,12 +81,16 @@ export function renderGolden(base, fixtureName) {
   ].join("\n") + "\n";
 }
 
-export function goldenPath(base) {
-  return new URL(`${base}.txt`, GOLDEN_DIR);
+export function goldenPath(name) {
+  return new URL(`${name}.txt`, GOLDEN_DIR);
+}
+
+export function caseName(item) {
+  return item.name || item.base;
 }
 
 export function allGoldens() {
-  return GOLDEN_CASES.map(item => ({ ...item, text: renderGolden(item.base, item.fixture) }));
+  return GOLDEN_CASES.map(item => ({ ...item, text: renderGolden(item.base, item.fixture, caseName(item)) }));
 }
 
 async function main() {
@@ -91,7 +99,7 @@ async function main() {
   let drifted = 0;
 
   for (const item of results) {
-    const target = goldenPath(item.base);
+    const target = goldenPath(caseName(item));
     let current = null;
     try {
       // 比的是字节内容，不是磁盘上的换行风格。Windows 下 core.autocrlf=true 时
@@ -106,12 +114,12 @@ async function main() {
     if (update) {
       mkdirSync(fileURLToPath(GOLDEN_DIR), { recursive: true });
       writeFileSync(target, item.text, "utf8");
-      console.log(`${item.base.padEnd(12)} 已写入`);
+      console.log(`${caseName(item).padEnd(12)} 已写入`);
       continue;
     }
 
     drifted += 1;
-    console.log(`${item.base.padEnd(12)} 与快照不一致`);
+    console.log(`${caseName(item).padEnd(12)} 与快照不一致`);
     if (current === null) {
       console.log("  文件不存在，先跑 --update");
       continue;

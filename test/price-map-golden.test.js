@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { PRICE_MAP_BASES, priceMapDiffKeys } from "../src/core/price-maps/index.js";
-import { GOLDEN_CASES, renderGolden, goldenPath } from "../scripts/price-map-golden.mjs";
+import { GOLDEN_CASES, renderGolden, goldenPath, caseName } from "../scripts/price-map-golden.mjs";
 
 // 还没补 fixture 的 base。补了就从这里删掉，别让它长期赖着。
 const NO_FIXTURE_YET = new Set(["stellaisle", "stellaisle-carpool", "stellaisle-plaza", "sidrune"]);
@@ -20,22 +20,23 @@ const NO_FIXTURE_YET = new Set(["stellaisle", "stellaisle-carpool", "stellaisle-
 const MAX_DIFF_KEYS = 4;
 
 const BASE_OF_FIXTURE = new Map(GOLDEN_CASES.map(item => [item.base, item.fixture]));
+const label = item => caseName(item);
 
 test("每份 golden 与当前映射一致", () => {
   for (const item of GOLDEN_CASES) {
     // 快照比的是内容，换行风格不算改动（Windows 签出是 CRLF，生成的是 LF）。
-    const expected = readFileSync(goldenPath(item.base), "utf8").replace(/\r\n/g, "\n");
+    const expected = readFileSync(goldenPath(label(item)), "utf8").replace(/\r\n/g, "\n");
     assert.equal(
-      renderGolden(item.base, item.fixture),
+      renderGolden(item.base, item.fixture, label(item)),
       expected,
-      `${item.base} 的产出变了。确认是新行为就 node scripts/price-map-golden.mjs --update`
+      `${label(item)} 的产出变了。确认是新行为就 node scripts/price-map-golden.mjs --update`
     );
   }
 });
 
 test("fixture 跑完不该留下解析不出价的模型", () => {
   for (const item of GOLDEN_CASES) {
-    const text = renderGolden(item.base, item.fixture);
+    const text = renderGolden(item.base, item.fixture, label(item));
     const summary = text.split("\n").find(line => line.startsWith("# rows:")) || "";
     const count = Number((summary.match(/unresolved: (\d+)/) || [])[1]);
     assert.equal(count, 0, `${item.base} 有模型没解析出价，看 golden 尾部的清单`);
@@ -44,7 +45,7 @@ test("fixture 跑完不该留下解析不出价的模型", () => {
 
 test("价格字段里不许出现 NaN", () => {
   for (const item of GOLDEN_CASES) {
-    const body = renderGolden(item.base, item.fixture)
+    const body = renderGolden(item.base, item.fixture, label(item))
       .split("\n")
       .filter(line => line && !line.startsWith("#"));
     for (const line of body) {
