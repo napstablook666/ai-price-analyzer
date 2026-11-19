@@ -299,35 +299,6 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "openlux.ai"
       ],
       "needsCode": true
-    },
-    {
-      "id": "site-checkin",
-      "name": "站点签到插件",
-      "version": "1.1.0",
-      "description": "用浏览器登录态给站点每日签到，只发签到请求，不采集价格。需要先在这个浏览器里登录过站点。",
-      "hosts": [
-        "vyceai.com"
-      ],
-      "kind": "checkin",
-      "needsCode": false,
-      "checkin": {
-        "statusPath": "/user/daily-reward",
-        "claimPath": "/user/daily-reward/claim",
-        "claimMethod": "POST",
-        "tokenStorageKey": "vyce_session",
-        "tokenCookieName": "session",
-        "loginPath": "/login",
-        "tokenHint": "登录后自动保存；也可以粘贴 vyce_session 的值或 session Cookie 的值",
-        "fields": {
-          "canClaim": "canClaim",
-          "streak": "streak",
-          "rewardAmount": "rewardAmount",
-          "bonusPercent": "streakBonusPercent",
-          "totalClaimed": "totalClaimed",
-          "lastClaim": "lastClaim"
-        },
-        "cooldownHours": 24
-      }
     }
   ]
 };

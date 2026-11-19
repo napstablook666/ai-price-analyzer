@@ -9,7 +9,6 @@ plugins/<id>/                  ← 唯一手写源，加站点只改这里
   manifest.json                站点元数据（出现在首页站点列表里）
   plugin.js                    站点适配实现，export const sitePlugin
   models.json                  站内模型写法 → 规范模型 id 的别名表
-  checkin.json                 签到适配（只有 kind: checkin 的插件才有）
   icon.svg | icon.png          站点图标，首页站点列和筛选列表都用它
 src/site-plugins/
   providers/<id>.js            ← 生成物，勿手改
@@ -72,7 +71,7 @@ npm test                  # 全部测试
 | `paths` | 否 | 允许的路径，用来和同域的其他插件区分 |
 | `category` | 否 | `paid`（默认）/ `public`（公益） |
 | `addable` | 否 | `false` 表示不显示「添加」，只能按具体地址添加 |
-| `kind` | 否 | `price`（默认，采集价格）/ `checkin`（签到插件，不采集价格、不用写 plugin.js） |
+| `kind` | 否 | `price`（默认，目前只有这一种取值） |
 | `description` | 否 | 首页的一行说明 |
 
 同域放两个插件时，两边都必须写 `paths`，否则构建直接报错。
@@ -114,29 +113,6 @@ export const sitePlugin = {
 - 禁止动态 `import()`，MV3 的 service worker 只认静态导入。
 - 插件代码跑在 service worker 里，没有 DOM；要读页面数据就走 `mode: "page"` 的采集请求，不要在插件里操作 DOM。
 
-## 签到插件（kind: checkin）
-
-只给站点做每日签到、不采集价格时，插件目录里只放 `manifest.json` 和 `checkin.json`，**不写 `plugin.js`**。manifest 里写 `"kind": "checkin"`，构建器会把它排除在采集 catalog 之外，只把 `checkin.json` 摘要塞进 `registry.json`，`needsCode` 记 `false`，所以插件仓发布后可以直接安装，不需要等扩展内置代码。
-
-`checkin.json` 字段：
-
-| 字段 | 必填 | 说明 |
-| --- | --- | --- |
-| `statusPath` | 是 | 查签到状态的接口路径 |
-| `claimPath` | 是 | 触发签到的接口路径 |
-| `claimMethod` | 否 | 默认 `POST` |
-| `tokenStorageKey` | 否 | 站点把 token 存在 `localStorage` 的键名 |
-| `tokenCookieName` | 否 | token 存在 cookie 时的名字，默认 `session` |
-| `loginPath` | 否 | 站点登录页路径，必须以 `/` 开头；未登录时面板用它打开登录页，默认站点根地址 |
-| `tokenHint` | 否 | 签到卡片「填写令牌」输入框的提示文案 |
-| `cookiePath` | 否 | 用 cookie 取 token 时带的 Path |
-| `fields` | 否 | 接口响应里各字段的路径，如 `streak` / `canClaim` / `rewardAmount` |
-| `cooldownHours` | 否 | 两次签到的最小间隔，默认 24 |
-
-登录态来自浏览器本身：签到请求带 `credentials: "include"`，没有可用 token 时由 `chrome.scripting` 在页面主世界读一次 localStorage / cookie 补上。签到时扩展还会把站点会话 cookie（`tokenCookieName`；没写这个名字时取该域下 `__Host-` / `__Secure-` 前缀项）存成快照，浏览器 cookie 丢了就用快照写回再试一次。快照是明文，存在扩展本地存储，用户可以在签到卡片上清除；`cookies` 权限就是为它加的。PATCH/DELETE 这类非简单请求需要 `extraHeaders`，扩展页面不在场时 service worker 可能被 CORS 预检拦住，这是浏览器限制，不是插件的问题。
-
-签到卡片在顶栏「菜单 → 每日签到」里，站点按 `manifest.hosts` 匹配。
-
 ## models.json
 
 站内写法和规范模型对不上时，插件自己声明别名：
@@ -167,7 +143,7 @@ node scripts/model-lookup.mjs claude sonnet
 
 ## 新增一个站点
 
-1. `mkdir plugins/<id>`，写 `manifest.json`、`plugin.js`、`models.json`（可以是 `{"aliases":{}}`）。签到插件写 `manifest.json` + `checkin.json`。
+1. `mkdir plugins/<id>`，写 `manifest.json`、`plugin.js`、`models.json`（可以是 `{"aliases":{}}`）。
 2. `node scripts/plugin-build.mjs`。
 3. `npm test`，确认 `site-plugins.test.js` 与 `plugin-build.test.js` 都过。
 4. 手动验收：加载扩展 → 首页能看到插件 → 添加站点 → 采集一次 → 比价表里模型能对上。

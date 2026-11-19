@@ -5334,7 +5334,7 @@ test("refreshes searchable multi-selected dashboard stations", () => {
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
   const source = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
   assert.match(html, /id="refresh-station-menu"[\s\S]*id="refresh-station-search"[\s\S]*id="refresh-station"[^>]*disabled/);
-  assert.match(html, /id="refresh-station-menu"[\s\S]*id="refresh-all"[\s\S]*id="collapse-toggle"[\s\S]*id="checkin-menu"/);
+  assert.match(html, /id="refresh-station-menu"[\s\S]*id="refresh-all"[\s\S]*id="collapse-toggle"[\s\S]*id="open-settings"/);
   assert.doesNotMatch(html, /id="top-menu"/);
   assert.match(source, /\$\("#refresh-station"\)\.addEventListener/);
   assert.match(source, /callService\("REFRESH_STATION", \{ stationIds \}\)/);

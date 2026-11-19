@@ -1224,60 +1224,6 @@ function renderFreshness() {
   $("#last-updated").textContent = collectedAt ? `更新于 ${new Date(collectedAt).toLocaleTimeString("zh-CN", { hour12: false })}` : "尚未刷新";
   $("#connection-dot").classList.toggle("is-live", state.rows.length > 0);
 }
-function renderCheckin(data) {
-  const list = $("#checkin-list");
-  const menu = $("#checkin-menu");
-  if (!list || !menu) return;
-  const stations = data.checkinStations || [];
-  // 签到能力由插件仓库的签到插件提供，扩展里不再内置站点适配
-  const installed = data.checkinPluginInstalled === true || stations.length > 0;
-  menu.hidden = false;
-  if (!installed) {
-    list.innerHTML = `
-      <div class="checkin-empty">
-        <span class="checkin-empty-text">签到来自插件仓库的「站点签到插件」，装好这里就出现站点卡片。</span>
-        <button class="button button-quiet" type="button" data-checkin-action="install"><span data-icon="puzzle" class="icon"></span><span>去插件仓库</span></button>
-      </div>`;
-    hydrateIcons(list);
-    return;
-  }
-  const state = data.checkinState || {};
-  if (!stations.length) {
-    list.innerHTML = `<div class="checkin-empty"><span class="checkin-empty-text">已装签到插件，但没有匹配到已启用的站点。先添加或启用对应站点。</span></div>`;
-    hydrateIcons(list);
-    return;
-  }
-  list.innerHTML = stations.map(station => {
-    const record = state[station.id] || {};
-    const claimedToday = record.lastStatus === "ok" && !record.lastResult?.includes("可签到");
-    const needsLogin = station.needsLogin === true || record.lastStatus === "needs-login";
-    const statusText = needsLogin ? "未登录" : record.lastStatus === "error" ? record.lastResult || "查询失败" : record.lastResult || "尚未查询";
-    const statusClass = needsLogin ? "checkin-status-warn" : record.lastStatus === "error" ? "checkin-status-error" : claimedToday ? "checkin-status-ok" : "checkin-status-idle";
-    const host = (station.hosts || [])[0];
-    const tokenHint = station.tokenHint || "粘贴站点令牌或 Cookie 值";
-    const sessionNote = station.hasSession ? " · 登录已保存" : "";
-    return `
-      <div class="checkin-item" data-station-id="${escapeHtml(station.id)}">
-        <div class="checkin-info">
-          <strong>${escapeHtml(station.name)}</strong>
-          <span class="checkin-meta">${host ? `${escapeHtml(host)} · ` : ""}连续签到 ${Number(record.streak) || 0} 天 · <span class="${statusClass}">${escapeHtml(statusText)}</span>${sessionNote}</span>
-        </div>
-        <div class="checkin-actions">
-          <label class="check-label"><input type="checkbox" data-checkin-action="auto" data-station-id="${escapeHtml(station.id)}" ${station.autoEnabled ? "checked" : ""}><span>自动签到</span></label>
-          ${needsLogin
-            ? `<button class="button button-quiet" type="button" data-checkin-action="login" data-station-id="${escapeHtml(station.id)}"><span>打开站点登录</span></button>`
-            : `<button class="button button-quiet" type="button" data-checkin-action="claim" data-station-id="${escapeHtml(station.id)}"><span data-icon="sparkles" class="icon"></span><span>立即签到</span></button>`}
-          <button class="button button-quiet" type="button" data-checkin-action="token" data-station-id="${escapeHtml(station.id)}" aria-expanded="false"><span>${station.hasManualToken ? "改令牌" : "填令牌"}</span></button>
-        </div>
-        <div class="checkin-token" data-token-row="${escapeHtml(station.id)}" hidden>
-          <input class="checkin-token-input" type="text" spellcheck="false" placeholder="${escapeHtml(tokenHint)}" data-checkin-token="${escapeHtml(station.id)}">
-          <button class="button button-quiet" type="button" data-checkin-action="save-token" data-station-id="${escapeHtml(station.id)}"><span>保存令牌</span></button>
-          ${station.hasSession ? `<button class="button button-quiet" type="button" data-checkin-action="forget-session" data-station-id="${escapeHtml(station.id)}"><span>清除已存登录</span></button>` : ""}
-        </div>
-      </div>`;
-  }).join("");
-  hydrateIcons(list);
-}
 const REFRESH_PREFLIGHT_LABELS = { ready: "已登录", needsLogin: "需要登录", uncertain: "需人工确认", noLoginRequired: "无需登录" };
 function renderRefreshPreflight(preflight = state.refreshPreflight) {
   const panel = $("#refresh-preflight-panel");
@@ -1357,7 +1303,6 @@ if (!preservePage) { state.page = 0; pageFilterKey = null; }
     : (hasStations ? (state.rows.length ? "点右上角刷新开始采集。" : `当前站点没有${mediaLabel}计费字段。`) : "添加中转站并刷新即可。");
   $("#empty-state-action-label").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
-  renderCheckin(data);
   renderFreshness();
   hydrateIcons();
 }
@@ -1890,111 +1835,13 @@ $("#fetch-references").addEventListener("click", async event => {
   finally { button.disabled = false; }
 });
 
-$("#checkin-refresh").addEventListener("click", async event => {
-  const button = event.currentTarget;
-  button.disabled = true;
-  try { render(await callService("CHECKIN_STATUS", {})); toast("签到状态已刷新"); }
-  catch (error) { toast(error.message); }
-  finally { button.disabled = false; }
-});
 
-document.addEventListener("click", async event => {
-  const installButton = event.target.closest("[data-checkin-action='install']");
-  if (installButton) {
-    openSettingsView("installed");
-    return;
-  }
-  const tokenButton = event.target.closest("[data-checkin-action='token']");
-  if (tokenButton) {
-    const row = tokenButton.closest(".checkin-item")?.querySelector("[data-token-row]");
-    if (row) {
-      row.hidden = !row.hidden;
-      tokenButton.setAttribute("aria-expanded", String(!row.hidden));
-      if (!row.hidden) row.querySelector("input")?.focus();
-    }
-    return;
-  }
-  const loginButton = event.target.closest("[data-checkin-action='login']");
-  if (loginButton) {
-    loginButton.disabled = true;
-    try {
-      await callService("OPEN_CHECKIN_LOGIN", { stationId: loginButton.dataset.stationId });
-      toast("已打开登录页，登录成功后签到状态会自动更新");
-    } catch (error) {
-      toast(error.message || "打开登录页失败");
-    } finally {
-      loginButton.disabled = false;
-    }
-    return;
-  }
-  const saveTokenButton = event.target.closest("[data-checkin-action='save-token']");
-  if (saveTokenButton) {
-    const input = saveTokenButton.closest(".checkin-item")?.querySelector("[data-checkin-token]");
-    saveTokenButton.disabled = true;
-    try {
-      const data = await callService("SAVE_CHECKIN", { stationId: saveTokenButton.dataset.stationId, token: input?.value || "" });
-      const result = (data.results || [])[0];
-      if (result?.error) throw new Error(result.error);
-      toast(result?.message || "令牌已保存");
-      render(await callService("GET_DASHBOARD"));
-    } catch (error) {
-      toast(error.message || "保存失败");
-    } finally {
-      saveTokenButton.disabled = false;
-    }
-    return;
-  }
-  const forgetButton = event.target.closest("[data-checkin-action='forget-session']");
-  if (forgetButton) {
-    forgetButton.disabled = true;
-    try {
-      await callService("CLEAR_CHECKIN_SESSION", { stationId: forgetButton.dataset.stationId });
-      toast("已清除保存的登录");
-      render(await callService("GET_DASHBOARD"));
-    } catch (error) {
-      toast(error.message || "清除失败");
-    } finally {
-      forgetButton.disabled = false;
-    }
-    return;
-  }
-  const claimButton = event.target.closest("[data-checkin-action='claim']");
-  if (!claimButton) return;
-  const stationId = claimButton.dataset.stationId;
-  claimButton.disabled = true;
-  claimButton.innerHTML = `${icon("loader-circle", { className: "icon spin" })}<span>签到中</span>`;
-  try {
-    const data = await callService("CHECKIN_NOW", { stationId });
-    const result = (data.results || [])[0];
-    if (result?.error) throw new Error(result.error);
-    toast(result?.message || "签到完成");
-    render(await callService("GET_DASHBOARD"));
-  } catch (error) {
-    toast(error.message || "签到失败");
-    render(await callService("GET_DASHBOARD"));
-  } finally {
-    claimButton.disabled = false;
-    claimButton.innerHTML = `${icon("sparkles", { className: "icon" })}<span>立即签到</span>`;
-  }
-});
 
-document.addEventListener("change", async event => {
-  const toggle = event.target.closest("[data-checkin-action='auto']");
-  if (!toggle) return;
-  try {
-    await callService("SAVE_CHECKIN", { stationId: toggle.dataset.stationId, autoEnabled: toggle.checked });
-    toast(toggle.checked ? "已开启自动签到（每 4 小时检查）" : "已关闭自动签到");
-  } catch (error) {
-    toast(error.message || "保存失败");
-    toggle.checked = !toggle.checked;
-  }
-});
 
 hydrateIcons();
 // 价格明细表的标题行已移除，只剩筛选面板参与折叠。
 initCardCollapse("dashboard");
 initTopMenu("refresh-station-menu");
-initTopMenu("checkin-menu");
 // 设置抽屉：顶栏齿轮就地打开站点与设置，不再跳到独立的设置页
 const settingsLayer = $("#settings-layer");
 const settingsFrame = $("#settings-frame");
@@ -2043,7 +1890,6 @@ window.addEventListener("message", event => {
 });
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
-  if (message?.type === "CHECKIN_UPDATED") load({ preservePage: true });
   // 插件安装/卸载、导入设置都会在后台改站点，比价表得跟着重拉。
   if (message?.type === "STATIONS_CHANGED") load({ preservePage: true });
 });

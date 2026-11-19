@@ -217,7 +217,6 @@ export const DEFAULT_STATION = {
   billingProfile: { tokensPerRequest: 0, source: "auto" },
   auth: { type: "none", token: "", username: "", password: "" },
   adapter: { kind: "custom", endpoint: "", method: "GET", responseFormat: "auto", rawJson: "" },
-  checkin: { token: "", autoEnabled: false },
   tags: []
 };
 
@@ -320,7 +319,8 @@ export function normalizeStation(input = {}) {
   // 退役的 responseFormat 旧值在这里就地换成等价声明，存储里不再留旧值。
   station.adapter = migrateStationAdapter({ ...DEFAULT_STATION.adapter, ...(input.adapter || {}) });
   station.auth = { ...DEFAULT_STATION.auth, ...(input.auth || {}) };
-  station.checkin = { token: String(input.checkin?.token || "").trim(), autoEnabled: Boolean(input.checkin?.autoEnabled) };
+  // 签到功能已下线：老设置里的站点级签到字段在这里清掉，不再写回存储。
+  delete station.checkin;
   const hasRatioInputs = Object.prototype.hasOwnProperty.call(input, "rechargeRmb") || Object.prototype.hasOwnProperty.call(input, "rechargeCredits");
   const rechargeRmb = Number(input.rechargeRmb);
   const rechargeCredits = Number(input.rechargeCredits);

@@ -320,7 +320,6 @@ function formatPluginTime(timestamp) {
 
 function registryEntryBadges(entry) {
   return [
-    entry.kind === "checkin" ? `<span class="station-badge">签到插件</span>` : "",
     entry.needsCode && !entry.builtin ? `<span class="station-badge is-warning">需更新扩展</span>` : "",
     entry.installed ? `<span class="plugin-source-badge is-registry">已安装</span>` : "",
     entry.updateAvailable ? `<span class="station-badge is-warning">有更新</span>` : ""
@@ -371,26 +370,7 @@ function registryDetail(entry) {
     ? (entry.builtin
       ? "采集代码随扩展打包，当前扩展版本已内置，装上就能用。"
       : "这个插件的采集代码还没随扩展发布，暂时装不了；等扩展内置这个插件后再装。")
-    : entry.kind === "checkin"
-      ? "签到插件只带接口规格，装上后在顶栏菜单里出入签到卡片，不参与价格采集。"
-      : "";
-  if (entry.kind === "checkin") {
-    const checkin = details.checkin || {};
-    return pluginDetailBlocks({
-      description: entry.description,
-      rows: [
-        ["插件 id", entry.id],
-        ["版本", entry.installed ? `${entry.version}（已装 v${entry.installedVersion || entry.version}）` : entry.version],
-        ["域名", (entry.hosts || []).join(" / ")],
-        ["状态端点", checkin.statusPath || ""],
-        ["签到端点", `${checkin.claimMethod || "POST"} ${checkin.claimPath || ""}`.trim()],
-        ["登录态", [checkin.tokenStorageKey ? `localStorage:${checkin.tokenStorageKey}` : "", checkin.tokenCookieName ? `Cookie:${checkin.tokenCookieName}` : ""].filter(Boolean).join(" · ")],
-        ["签到冷却", checkin.cooldownHours ? `${checkin.cooldownHours} 小时` : ""],
-        ["安装时间", entry.installed && details.installedAt ? formatPluginTime(details.installedAt) : ""]
-      ],
-      note
-    });
-  }
+    : "";
   return pluginDetailBlocks({
     description: entry.description,
     rows: [

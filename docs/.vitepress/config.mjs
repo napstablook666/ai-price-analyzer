@@ -55,7 +55,6 @@ export default defineConfig({
             { text: "价格对比 📊", link: "/guide/dashboard" },
             { text: "成本与推荐 💰", link: "/guide/cost" },
             { text: "基准参考价 🏛️", link: "/guide/openrouter-prices" },
-            { text: "每日签到 ✅", link: "/guide/checkin" },
           ],
         },
       ],

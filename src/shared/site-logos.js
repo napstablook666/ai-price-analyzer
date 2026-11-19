@@ -24,7 +24,6 @@ export const SITE_LOGOS = {
   "relayrouter": "icons/sites/relayrouter.svg",
   "sevenai": "icons/sites/sevenai.png",
   "sidrune": "icons/sites/sidrune.svg",
-  "site-checkin": "icons/sites/site-checkin.svg",
   "soleapi": "icons/sites/soleapi.svg",
   "stellaisle": "icons/sites/stellaisle.png",
   "stellaisle-carpool": "icons/sites/stellaisle-carpool.png",

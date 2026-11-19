@@ -147,7 +147,7 @@ cd ai-price-analyzer
 | 加站与字段逐项解释 | [docs/configuration/station-fields.md](./docs/configuration/station-fields.md) |
 | 读懂比价表 | [docs/guide/dashboard.md](./docs/guide/dashboard.md) |
 | 调成本口径 | [docs/guide/cost.md](./docs/guide/cost.md) |
-| 登录态、Token 与签到 | [docs/guide/session.md](./docs/guide/session.md)、[docs/guide/checkin.md](./docs/guide/checkin.md) |
+| 登录态与 Token | [docs/guide/session.md](./docs/guide/session.md) |
 | 写站点插件 | [docs/plugin-development.md](./docs/plugin-development.md) |
 | 架构与数据流 | [docs/architecture.md](./docs/architecture.md) |
 | 排错 | [docs/troubleshooting.md](./docs/troubleshooting.md)、[docs/faq.md](./docs/faq.md) |

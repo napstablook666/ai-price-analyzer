@@ -138,7 +138,7 @@ Run these from the repository root:
 | Adding stations and field-by-field reference | [docs/configuration/station-fields.md](./docs/configuration/station-fields.md) |
 | Reading the comparison table | [docs/guide/dashboard.md](./docs/guide/dashboard.md) |
 | Tuning the cost model | [docs/guide/cost.md](./docs/guide/cost.md) |
-| Login state, tokens, and check-in | [docs/guide/session.md](./docs/guide/session.md), [docs/guide/checkin.md](./docs/guide/checkin.md) |
+| Login state and tokens | [docs/guide/session.md](./docs/guide/session.md) |
 | Writing a site plugin | [docs/plugin-development.md](./docs/plugin-development.md) |
 | Architecture and data flow | [docs/architecture.md](./docs/architecture.md) |
 | Troubleshooting | [docs/troubleshooting.md](./docs/troubleshooting.md), [docs/faq.md](./docs/faq.md) |

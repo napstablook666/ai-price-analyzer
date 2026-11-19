@@ -6,7 +6,7 @@
 
 ```
 extension/            本仓库根：扩展源码、测试、构建脚本、文档站
-  src/core/           归一、匹配、定价、采集、签到
+  src/core/           归一、匹配、定价、采集
   src/shared/         schema、db
   src/site-plugins/   生成物：providers/*、catalog.js
   test/               node --test 用例

@@ -514,22 +514,6 @@ test("warns refresh preflight state reconciliation failures after tab removal", 
   assert.equal(warnings.length, 1);
   assert.match(String(warnings[0][0]), /刷新预检状态恢复失败/);
 });
-
-test("warns scheduled check-in failures without escaping the alarm event", async () => {
-  const previousWarn = console.warn;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args);
-  try {
-    await withWorker({ openError: new Error("station read failed") }, {}, async worker => {
-      await worker.fireAlarm("checkin-stations");
-      await new Promise(resolve => setImmediate(resolve));
-    });
-  } finally {
-    console.warn = previousWarn;
-  }
-  assert.equal(warnings.length, 1);
-  assert.match(String(warnings[0][0]), /定时签到失败/);
-});
 test("stale preflight cleans a temporary tab invalidated before loading completes", { concurrency: false }, async () => {
   const station = { id: "early-race-page", name: "Early race page", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
   await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {

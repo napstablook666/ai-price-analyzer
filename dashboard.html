@@ -37,15 +37,6 @@
         <button class="button button-primary" id="refresh-all" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新全部</span></button>
       </div>
       <button class="button button-quiet" id="collapse-toggle" type="button" title="折叠全部卡片" aria-label="折叠全部卡片"><span data-icon="chevrons-up-down" class="icon"></span><span data-collapse-label>折叠全部</span></button>
-      <details class="top-menu" id="checkin-menu">
-        <summary class="button button-quiet" aria-label="每日签到" aria-expanded="false" title="每日签到"><span data-icon="badge-check" class="icon"></span><span>每日签到</span></summary>
-        <div class="top-menu-body checkin-body" role="group" aria-label="每日签到">
-          <div class="top-menu-checkin" id="checkin-group">
-            <div class="top-menu-checkin-head"><span>签到站点</span><button class="button button-quiet" id="checkin-refresh" type="button"><span data-icon="refresh-cw" class="icon"></span><span>刷新状态</span></button></div>
-            <div class="checkin-list" id="checkin-list"></div>
-          </div>
-        </div>
-      </details>
       <button class="button button-quiet" id="open-settings" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="站点与设置" title="站点与设置"><span data-icon="settings-2" class="icon"></span><span>设置</span></button>
       <button class="theme-toggle" id="theme-toggle" type="button" data-theme-toggle aria-label="切换到夜晚主题" title="切换到夜晚"><span data-icon="moon" class="icon theme-icon-moon"></span><span data-icon="sun" class="icon theme-icon-sun"></span></button>
     </nav>
@@ -77,7 +68,7 @@
       <ul id="refresh-progress-results" aria-live="off"></ul>
     </section>
 <div class="dashboard-workspace">
-      <aside class="dashboard-sidebar" aria-label="筛选与签到">
+      <aside class="dashboard-sidebar" aria-label="筛选与排序">
         <section class="panel toolbar-panel" id="toolbar-panel" data-collapsible aria-label="筛选和排序">
 <div class="panel-heading"><div><h2>筛选和排序</h2></div></div>
           <div class="toolbar-main">

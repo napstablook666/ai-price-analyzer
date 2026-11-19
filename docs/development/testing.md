@@ -13,7 +13,6 @@ npm test
 | 文件 | 管什么 |
 | --- | --- |
 | `test/core.test.js` | 归一、匹配、定价、采集解析 |
-| `test/checkin.test.js` | 签到预设与结果归一 |
 | `test/refresh-preflight.test.js` | 刷新预检与确认签名 |
 | `test/site-plugins.test.js` | 插件生成物与 catalog 一致性 |
 | `test/plugin-build.test.js` | 构建脚本与漂移检测 |

@@ -17,12 +17,11 @@ export const PLUGIN_DECLARATIVE_KIND = "declarative";
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const VERSION_PATTERN = /^\d+\.\d+(?:\.\d+)*(?:-[0-9A-Za-z.-]+)?$/;
 const HOST_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
-const KINDS = new Set(["price", "checkin"]);
+const KINDS = new Set(["price"]);
 const CATEGORIES = new Set(["paid", "public", "benchmark"]);
 const MODES = new Set(["direct", "page"]);
 const ENDPOINT_CANDIDATES = new Set(["provider", "configured", "automatic"]);
 const CREDENTIALS = new Set(["omit", "include", "same-origin"]);
-const CHECKIN_FIELDS = ["canClaim", "streak", "rewardAmount", "bonusPercent", "totalClaimed", "lastClaim"];
 
 const PRESET_NUMBER_FIELDS = ["rechargeRmb", "rechargeCredits", "basePricePerMillion"];
 const PRESET_RATE_FIELDS = ["rechargeRateVerified", "priceCurrencyVerified", "rechargePlansVerified", "rechargePaymentsVerified"];
@@ -155,31 +154,6 @@ function normalizePrepare(raw) {
   }
   return Object.keys(prepare).length ? prepare : null;
 }
-// 签到插件只描述站点签到端点与字段映射，签到逻辑留在扩展里（MV3 不能下发代码）。
-function normalizeCheckin(raw) {
-  if (raw === undefined || raw === null) return null;
-  if (typeof raw !== "object" || Array.isArray(raw)) fail("插件字段 checkin 必须是对象");
-  const checkin = {};
-  for (const field of ["statusPath", "claimPath"]) checkin[field] = endpoint(raw[field], `checkin.${field}`);
-  checkin.claimMethod = String(raw.claimMethod || "POST").toUpperCase() === "GET" ? "GET" : "POST";
-  for (const field of ["tokenStorageKey", "tokenCookieName"]) {
-    checkin[field] = text(raw[field], `checkin.${field}`, { max: 120, required: false });
-  }
-  const loginPath = text(raw.loginPath, "checkin.loginPath", { max: 120, required: false });
-  if (loginPath && !loginPath.startsWith("/")) fail("插件字段 checkin.loginPath 必须以 / 开头");
-  checkin.loginPath = loginPath;
-  checkin.tokenHint = text(raw.tokenHint, "checkin.tokenHint", { max: 160, required: false });
-  const source = raw.fields && typeof raw.fields === "object" && !Array.isArray(raw.fields) ? raw.fields : {};
-  const fields = {};
-  for (const field of CHECKIN_FIELDS) {
-    fields[field] = text(source[field] ?? field, `checkin.fields.${field}`, { max: 64, required: false }) || field;
-  }
-  checkin.fields = fields;
-  const cooldown = raw.cooldownHours === undefined ? 24 : Number(raw.cooldownHours);
-  if (!Number.isFinite(cooldown) || cooldown <= 0 || cooldown > 720) fail("插件字段 checkin.cooldownHours 必须是 0-720 之间的数字");
-  checkin.cooldownHours = cooldown;
-  return checkin;
-}
 
 function normalizeAliases(raw) {
   if (raw === undefined || raw === null) return [];
@@ -209,11 +183,9 @@ export function normalizePluginSpec(raw) {
   if (hosts.length > 8) fail(`插件 ${id} 最多声明 8 个域名`);
   const paths = Array.isArray(raw.paths) && raw.paths.length ? [...new Set(raw.paths.map(value => endpoint(value, "paths")))] : null;
 
-  const checkin = normalizeCheckin(raw.checkin);
-  if (kind === "checkin" && !checkin) fail(`插件 ${id} 是签到插件，必须声明 checkin 端点`);
   const priceMap = normalizePriceMap(raw.priceMap, id);
-  const request = kind === "checkin" ? null : raw.request && typeof raw.request === "object" ? raw.request : { endpoint: raw.endpoint };
-  if (kind !== "checkin" && !request.endpoint) fail(`插件 ${id} 缺少采集端点 request.endpoint`);
+  const request = raw.request && typeof raw.request === "object" ? raw.request : { endpoint: raw.endpoint };
+  if (!request.endpoint) fail(`插件 ${id} 缺少采集端点 request.endpoint`);
   const endpointCandidates = request?.endpointCandidates === undefined ? "provider" : request.endpointCandidates;
   if (!ENDPOINT_CANDIDATES.has(endpointCandidates)) fail(`插件 ${id} 的 request.endpointCandidates 不合法：${endpointCandidates}`);
   const credentials = request?.credentials === undefined ? "omit" : request.credentials;
@@ -233,12 +205,12 @@ export function normalizePluginSpec(raw) {
     mode,
     category,
     kind,
-    addable: kind === "checkin" ? false : raw.addable !== false,
+    addable: raw.addable !== false,
     preservePriceCurrency: raw.preservePriceCurrency !== false,
     preserveRechargeRateVerification: Boolean(raw.preserveRechargeRateVerification),
     responseFormat,
     priceMap,
-    request: kind === "checkin" ? null : {
+    request: {
       endpoint: endpoint(request.endpoint, "request.endpoint"),
       endpointCandidates,
       method: String(request.method || "GET").toUpperCase() === "POST" ? "POST" : "GET",
@@ -249,7 +221,6 @@ export function normalizePluginSpec(raw) {
       skipCapture: request.skipCapture === true,
       pageAuth: null
     },
-    checkin,
     preset: normalizePreset(raw.preset),
     prepare: normalizePrepare(raw.prepare),
     modelAliases: normalizeAliases(raw.modelAliases)
@@ -374,7 +345,7 @@ export function normalizeRegistryState(input = {}) {
         needsCode: entry.needsCode === true,
         spec: entry.needsCode === true ? null : entry.spec || null
       }))
-      .filter(entry => entry.needsCode || entry.spec)
+      .filter(entry => entry.needsCode || (entry.spec && (entry.spec.kind || "price") === "price"))
     : [];
   // 装过就记住，不跟仓库刷新结果走：仓库拉取失败或暂时少了这个条目，不该把插件一起清掉。
   const installed = {};
@@ -416,28 +387,21 @@ export function normalizeLocalPlugins(input) {
 function installedSpecs(settings, kind) {
   const registry = normalizeRegistryState(settings.pluginRegistry);
   const local = normalizeLocalPlugins(settings.devMode === true ? settings.localPlugins : []).specs
-    .map(spec => ({ ...spec, source: "local" }))
-    .filter(spec => (spec.kind || "price") === kind);
+    .map(spec => ({ ...spec, source: "local" }));
   const localIds = new Set(local.map(spec => spec.id));
   const registrySpecs = registry.entries
     .filter(entry => !entry.needsCode && entry.spec && registry.installed[entry.id] && !localIds.has(entry.id))
-    .map(entry => ({ ...entry.spec, source: "registry" }))
-    .filter(spec => (spec.kind || "price") === kind);
+    .map(entry => ({ ...entry.spec, source: "registry" }));
   return [...local, ...registrySpecs];
 }
 
 export function installedPluginSpecs(settings = {}) {
-  return installedSpecs(settings, "price");
+  return installedSpecs(settings);
 }
 
-// 签到插件只提供站点签到适配，不参与价格采集。
-export function installedCheckinSpecs(settings = {}) {
-  return installedSpecs(settings, "checkin");
-}
 
 export function providerFromSpec(spec) {
   if (!spec || !spec.id || !Array.isArray(spec.hosts) || !spec.hosts.length) throw new Error("声明式插件规格不完整");
-  if (spec.kind === "checkin") throw new Error("签到插件不参与价格采集");
   const hosts = spec.hosts;
   const paths = Array.isArray(spec.paths) && spec.paths.length ? spec.paths : null;
   const prepare = spec.prepare || {};

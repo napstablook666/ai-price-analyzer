@@ -119,8 +119,8 @@
 
 .dashboard-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "comparison sidebar"; gap: 16px; flex: 1; min-height: 0; overflow: hidden; }
 .dashboard-sidebar { grid-area: sidebar; display: flex; flex-direction: column; align-content: start; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
-.dashboard-workspace:has(.dashboard-sidebar > [data-collapsed="true"]:not(#checkin-panel)) { grid-template-columns: minmax(0, 1fr) 44px; }
-.dashboard-sidebar:has(> [data-collapsed="true"]:not(#checkin-panel)) { width: 44px; min-width: 44px; }
+.dashboard-workspace:has(.dashboard-sidebar > [data-collapsed="true"]) { grid-template-columns: minmax(0, 1fr) 44px; }
+.dashboard-sidebar:has(> [data-collapsed="true"]) { width: 44px; min-width: 44px; }
 .dashboard-sidebar > [data-collapsed="true"] > .panel-heading { justify-content: center; min-height: 48px; padding: 12px 4px; border-bottom: 0; }
 .dashboard-sidebar > [data-collapsed="true"] > .panel-heading > div { display: none; }
 .dashboard-sidebar > [data-collapsed="true"] .collapse-toggle { margin: 0; }
@@ -274,25 +274,6 @@
 .refresh-station-hint { margin: -2px 0 0; color: var(--text-3); font-size: 11px; }
 .refresh-station-tools { justify-content: space-between; margin: 0; }
 .refresh-station-submit { width: 100%; }
-.checkin-body { width: min(340px, calc(100vw - 24px)); }
-.checkin-body .top-menu-checkin { width: 100%; }
-.top-menu-checkin { display: grid; gap: 6px; width: 288px; max-height: 300px; padding: 2px; overflow-y: auto; }
-.top-menu-checkin-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 2px; color: var(--text-2); font-size: 12px; font-weight: 600; }
-.checkin-list { display: grid; gap: 6px; }
-.top-menu-checkin .checkin-item { flex-direction: column; align-items: stretch; gap: 8px; }
-.top-menu-checkin .checkin-actions { justify-content: space-between; }
-.checkin-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 8px; border-radius: 6px; background: var(--surface-2); }
-.checkin-info { display: grid; gap: 2px; min-width: 0; }
-.checkin-info strong { font-size: 12px; }
-.checkin-meta { color: var(--text-2); font-size: 10px; }
-.checkin-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.checkin-status-warn { color: var(--warn); }
-.checkin-token { display: flex; width: 100%; gap: 8px; align-items: center; }
-.checkin-token[hidden] { display: none; }
-.checkin-token-input { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: var(--surface); font-size: 11px; }
-.checkin-item { flex-wrap: wrap; }
-.checkin-empty { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-2); font-size: 11px; }
-.checkin-empty-text { line-height: 1.5; }
 .back-to-top { position: fixed; right: 16px; bottom: 16px; z-index: 20; display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 8px; color: var(--text-2); background: var(--surface); box-shadow: var(--shadow-pop); }
 
 /* 顶栏模式开关：付费站和公益站随手切换 */
@@ -311,8 +292,6 @@
 }
 @media (min-width: 1101px) {
   .dashboard-sidebar .model-filter-inputs { grid-template-columns: 1fr; }
-  .top-menu-checkin .checkin-item, .top-menu-checkin .checkin-empty { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .top-menu-checkin .checkin-actions { width: 100%; justify-content: space-between; }
 }
 
 @media (max-width: 1280px) {
@@ -348,14 +327,13 @@
   .comparison-table tbody td.price-cell { position: static; padding-block: 0; }
   .comparison-table .price-chart { position: static; inset: auto; margin-top: 6px; }
   .comparison-table tbody tr:hover td { background: transparent; }
-  .top-menu-checkin { width: min(88vw, 320px); max-height: none; }
 }
 @media (max-width: 640px) {
   .dashboard-topbar { min-height: 60px; padding: 8px 12px; }
   .dashboard-topbar .brand-overline { display: none; }
   .dashboard-topbar .brand-mark { width: 30px; height: 30px; }
   .dashboard-topbar .refresh-actions { gap: 4px; }
-  .dashboard-topbar .refresh-station-body, .dashboard-topbar .checkin-body { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; max-height: calc(100dvh - 76px); overflow-y: auto; }
+  .dashboard-topbar .refresh-station-body { position: fixed; top: 64px; right: 12px; left: 12px; width: auto; max-height: calc(100dvh - 76px); overflow-y: auto; }
   .dashboard-topbar .button { min-height: 44px; }
   .dashboard-topbar .theme-toggle { width: 44px; height: 44px; }
   .page-shell { height: auto; }
@@ -384,8 +362,6 @@
   .comparison-pagination .button, .page-size-field select, .page-indicator input { min-height: 44px; height: 44px; }
   .comparison-pagination .page-size-field { flex-basis: 100%; justify-content: center; }
   .reference-time { display: none; }
-  .checkin-item, .checkin-empty { align-items: flex-start; flex-direction: column; }
-  .checkin-actions .button, .checkin-actions .check-label { min-height: 44px; }
   .preflight-result { grid-template-columns: 1fr; }
 }
 
