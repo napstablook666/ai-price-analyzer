@@ -214,3 +214,26 @@ test("中间档写在最后时按区间填进空隙", () => {
     [0.2, 500000, null]
   ]);
 });
+
+// openlux：报价是美元，收银台实付也是美元（$10 面值 $9.90）。收银台折成人民币后
+// 就是「每 1 美元额度 6.62 元」，价格层不能再按站点汇率折一次。
+test("收银台的美元实付直接决定实付，不重复折汇率", () => {
+  const items = [{ ...REQUEST_TWIN, price_currency: "USD" }];
+  const comparisons = comparisonsFor({
+    items,
+    station: {
+      rechargeRate: 6.68752,
+      rechargeRateVerified: true,
+      rechargeTiers: [{ amount: 10, discount: 0.99 }],
+      rechargePayments: [
+        { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", paidRmb: 1946.07 },
+        { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", paidRmb: 66.21 }
+      ],
+      rechargePaymentsVerified: true
+    }
+  });
+  const offer = offerNamed(comparisons, "[次]gemini-3.1-pro-preview");
+  assert.equal(offer.monthlyCostPaidSource, "counter");
+  // 面值 15.04 美元落在 10 档，实付 15.04 × 6.621 = 99.58 元。
+  assert.ok(Math.abs(offer.monthlyCostPaid - offer.monthlyCost * 6.621 / 6.68752) < 0.01, String(offer.monthlyCostPaid));
+});

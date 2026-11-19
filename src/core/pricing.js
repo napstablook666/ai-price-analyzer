@@ -577,7 +577,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     // 没有证据才走「面值 × 落档折扣 × rechargeFactor」。两者都不成立时退回原价。
     const paidPayment = row.stationCategory === "public" || row.pricingUnavailable
       ? null
-      : representativeRechargePayment(rowStation?.rechargePayments);
+      : representativeRechargePayment(rowStation?.rechargePayments, faceMonthlyCost);
     const paidRate = rechargePaymentRate(paidPayment);
     let monthlyCostPaid;
     let monthlyCostPaidSource;

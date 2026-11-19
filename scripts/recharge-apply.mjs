@@ -32,15 +32,22 @@ export function renderBlock(record) {
   const payments = Array.isArray(record.payments) ? record.payments : [];
   if (payments.length === 0) return null;
   const collectedDate = String(record.collectedAt || "").slice(0, 10);
+  // 收银台报美元时用站点自报的 usd_exchange_rate 折成人民币，和价格层用的是同一个汇率。
+  // 站点没报汇率就留空：宁可这条不参与折算，也不猜一个汇率进来。
+  const usdRate = Number(record.status?.parsed?.exchangeRate);
   const lines = [BLOCK_START, "  rechargePayments: ["];
   for (const payment of payments) {
+    let paidRmb = Number.isFinite(payment.paidRmb) ? payment.paidRmb : null;
+    if (paidRmb === null && payment.currency === "USD" && usdRate > 0) {
+      paidRmb = Math.round(payment.payAmount * usdRate * 100) / 100;
+    }
     const fields = [
       `channel: ${JSON.stringify(payment.channel)}`,
       `faceAmount: ${payment.faceAmount}`,
       `payAmount: ${payment.payAmount}`,
       `currency: ${JSON.stringify(payment.currency)}`
     ];
-    if (Number.isFinite(payment.paidRmb)) fields.push(`paidRmb: ${payment.paidRmb}`);
+    if (Number.isFinite(paidRmb)) fields.push(`paidRmb: ${paidRmb}`);
     if (Number.isFinite(payment.feeRate)) fields.push(`feeRate: ${payment.feeRate}`);
     const at = payment.at || collectedDate;
     if (at) fields.push(`at: ${JSON.stringify(at)}`);

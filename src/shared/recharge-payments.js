@@ -65,15 +65,30 @@ export function cheapestRechargePayment(payments) {
   return best;
 }
 
-// 展示用：有可折算条目就取最便宜那条，没有就取面值最大的一条当证据。
+// 展示用：有可折算条目就按「你实际会买的那一档」取一条，没有就取面值最大的一条当证据。
+// 档位按「不高于月消耗的最大面值」挑，和 resolveRechargeTier 的「买覆盖消耗的那档」同向。
+// 面值都比月消耗大时取最小面值：宁可高估成本，也不拿大额档的低价冒充日常价。
 // 后者不参与排序，只让「已经点过收银台」这件事在界面上看得见。
-export function representativeRechargePayment(payments) {
-  const payable = cheapestRechargePayment(payments);
-  if (payable) return payable;
+export function representativeRechargePayment(payments, faceSpend = null) {
   if (!Array.isArray(payments)) return null;
+  const spend = Number(faceSpend);
+  const payable = spend > 0 ? payableAtSpend(payments, spend) : cheapestRechargePayment(payments);
+  if (payable) return payable;
   let best = null;
   for (const payment of payments) {
     if (!best || payment.faceAmount > best.faceAmount) best = payment;
   }
   return best;
+}
+
+// 月消耗对应哪个面值的收银台证据：取不高于它的最大面值，全比它大就退回最小面值。
+function payableAtSpend(payments, spend) {
+  const payable = payments.filter(payment => rechargePaymentRate(payment) !== null);
+  if (!payable.length) return null;
+  const faces = payable.map(payment => Number(payment.faceAmount));
+  const affordable = payable.filter(payment => Number(payment.faceAmount) <= spend);
+  const target = affordable.length
+    ? Math.max(...affordable.map(payment => Number(payment.faceAmount)))
+    : Math.min(...faces);
+  return cheapestRechargePayment(payable.filter(payment => Number(payment.faceAmount) === target));
 }

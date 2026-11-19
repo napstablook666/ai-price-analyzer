@@ -27,10 +27,10 @@ const PRICE_MAP = { base: "relayrouter" };
 const preset = {
   // >>> recharge-probe（由 scripts/recharge-apply.mjs 生成，勿手改）
   rechargePayments: [
-    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", at: "2026-11-19", note: "用户截图，Antom 收银台待支付总额 $291.00（页面标节省 3.0%，300×0.97 自洽）" },
-    { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "订单 827019 alipay、827020 wxpay、827021 antom、827022 antom_wechat 全为 money 9.9，渠道不加价" },
-    { channel: "wechat", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "doit 收银台 Total Amount USD 9.90" },
-    { channel: "card", faceAmount: 10, payAmount: 9.9, currency: "USD", at: "2026-11-19", note: "antom（Alipay+，商户 COGNIS AI PTE. LTD.）收银台支付总额 USD 9.90" },
+    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", paidRmb: 1946.07, at: "2026-11-19", note: "用户截图，Antom 收银台待支付总额 $291.00（页面标节省 3.0%，300×0.97 自洽）" },
+    { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", paidRmb: 66.21, at: "2026-11-19", note: "订单 827019 alipay、827020 wxpay、827021 antom、827022 antom_wechat 全为 money 9.9，渠道不加价" },
+    { channel: "wechat", faceAmount: 10, payAmount: 9.9, currency: "USD", paidRmb: 66.21, at: "2026-11-19", note: "doit 收银台 Total Amount USD 9.90" },
+    { channel: "card", faceAmount: 10, payAmount: 9.9, currency: "USD", paidRmb: 66.21, at: "2026-11-19", note: "antom（Alipay+，商户 COGNIS AI PTE. LTD.）收银台支付总额 USD 9.90" },
   ],
   rechargePaymentsVerified: true,
   // <<< recharge-probe
@@ -45,7 +45,7 @@ const preset = {
   // /api/status 的 price 在这里是「1 美元面值卖 1 美元」（payment_currency_symbol 是 $），
   // 自动采集会把它当成「1 美元额度 = 1 元」写进折算，价格直接低 6.7 倍，所以锁手填值。
   rechargeAuto: false,
-  rechargeRateNote: "支付全链路是美元：$10 面值实付 $9.90，/api/user/pay 的 money=9.90，antom（Alipay+）和 doit（支付宝/微信）收银台都显示 USD 9.90，站点不报人民币金额，人民币由钱包扫码时按自身汇率换算。这里的 6.68752 是站点 /api/status 的 usd_exchange_rate，按它折 1 美元额度 ≈ 6.62 元；真实人民币账单未取到，按中行牌价 7.3 会更高。price=1 是美元口径，自动采集会读成 1 元/美元额度，所以锁手填值。面值 10 起每档 9.9~9.25 折，已并入档位表。",
+  rechargeRateNote: "支付全链路是美元：$10 面值实付 $9.90，/api/user/pay 的 money=9.90，antom（Alipay+）和 doit（支付宝/微信）收银台都显示 USD 9.90，站点不报人民币金额，人民币由钱包扫码时按自身汇率换算。这里的 6.68752 是站点 /api/status 的 usd_exchange_rate，收银台下单的美元实付就是结算金额（订单 826913/826920/826921 与 827019~827022 的 money 都是 9.9，渠道不加价），按它折 1 美元额度 ≈ 6.62 元，重充 $300 档是 6.49 元；真实人民币账单要等钱包扣款才看得到，按中行牌价 7.3 会更高。price=1 是美元口径，自动采集会读成 1 元/美元额度，所以锁手填值。面值 10 起每档 9.9~9.25 折，已并入档位表。",
   // bulk_topup_discounts 原样搬过来：面值（美元额度）→ 折扣。
   rechargeTiers: [
     { amount: 10, discount: 0.99 },

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { cheapestRechargePayment, normalizeRechargePayments, rechargePaymentRate } from "../src/shared/recharge-payments.js";
+import { cheapestRechargePayment, normalizeRechargePayments, rechargePaymentRate, representativeRechargePayment } from "../src/shared/recharge-payments.js";
 import { renderBlock, upsertBlock } from "../scripts/recharge-apply.mjs";
 
 test("derives the rmb amount for CNY payments and leaves foreign currency alone", () => {
@@ -80,4 +80,34 @@ test("skips a record without payments and a file without a preset", () => {
   assert.equal(renderBlock({}), null);
   const block = renderBlock({ payments: [{ channel: "alipay", faceAmount: 10, payAmount: 10, currency: "CNY" }] });
   assert.equal(upsertBlock("export const x = 1;\n", block), null);
+});
+
+test("picks the face value you would actually buy instead of the cheapest large face", () => {
+  const payments = normalizeRechargePayments([
+    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", paidRmb: 1946.07 },
+    { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD", paidRmb: 66.21 }
+  ]);
+  // 月消耗不到最小面值时按最小面值算：$300 档的 0.97 不能拿来冒充日常价。
+  assert.equal(representativeRechargePayment(payments, 5).faceAmount, 10);
+  assert.equal(representativeRechargePayment(payments, 10).faceAmount, 10);
+  // 消耗跨过 300 才用大额档。
+  assert.equal(representativeRechargePayment(payments, 320).faceAmount, 300);
+  // 不给消耗时退回最便宜的一条。
+  assert.equal(representativeRechargePayment(payments).faceAmount, 300);
+});
+
+test("fills paidRmb from the station's usd rate and keeps an explicit value", () => {
+  const block = renderBlock({
+    collectedAt: "2026-11-19T06:00:00.000Z",
+    status: { parsed: { exchangeRate: 6.68752 } },
+    payments: [
+      { channel: "alipay", faceAmount: 10, payAmount: 9.9, currency: "USD" },
+      { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", paidRmb: 1900 }
+    ]
+  });
+  assert.ok(block.includes("paidRmb: 66.21"), block);
+  assert.ok(block.includes("paidRmb: 1900"), block);
+  // 站点没报汇率就不折，宁可这条不参与折算。
+  const bare = renderBlock({ payments: [{ channel: "card", faceAmount: 10, payAmount: 9, currency: "USD" }] });
+  assert.ok(!bare.includes("paidRmb"), bare);
 });
