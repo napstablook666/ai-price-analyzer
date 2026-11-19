@@ -82,7 +82,7 @@
 | 项目 | 要求 |
 | --- | --- |
 | 浏览器 | Chrome、Edge 等 Chromium 内核浏览器，支持 Manifest V3 |
-| 扩展版本 | `0.8.0`（见 `manifest.json`） |
+| 扩展版本 | 以 `manifest.json` 的 `version` 为准（当前 0.14.0） |
 | Node.js | 只有开发和测试需要，Node 20 及以上 |
 | 权限 | `storage`、`scripting`、`tabs`、`alarms`、`cookies`、`declarativeNetRequest`，主机权限 `<all_urls>` |
 
