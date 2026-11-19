@@ -5,6 +5,11 @@ on:
     branches: [master, main]
   pull_request:
 
+concurrency:
+  # 同一个 PR / 同一个分支连着推两次，旧的这次已经没有意义，直接取消。
+  # 按 PR 号分组，push 到 main 用 sha 分组，两种情况互不打扰。
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 
