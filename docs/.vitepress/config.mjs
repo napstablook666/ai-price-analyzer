@@ -151,7 +151,7 @@ export default defineConfig({
     socialLinks: [{ icon: "github", link: repo }],
 
     footer: {
-      message: "基于 GPL-3.0 发布，密钥只保存在浏览器本地",
+      message: '基于 GPL-3.0 发布，密钥只保存在浏览器本地 · 友链 <a href="https://linux.do/" target="_blank" rel="noopener noreferrer">LINUX DO 社区</a>',
       copyright: "AI Price Analyzer Contributors",
     },
   },

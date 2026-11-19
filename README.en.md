@@ -15,6 +15,7 @@
   <a href="https://github.com/napstablook666/ai-price-analyzer/releases"><img src="https://img.shields.io/github/v/release/napstablook666/ai-price-analyzer?style=flat-square" alt="Latest release"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat-square" alt="GPL-3.0 license"></a>
   <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-%E5%9C%A8%E7%BA%BF-4F46E5?style=flat-square" alt="Documentation"></a>
+  <a href="https://linux.do/"><img src="https://img.shields.io/badge/LINUX%20DO-Community-F0B90B?style=flat-square" alt="LINUX DO community"></a>
 </p>
 
 The same model appears under a dozen names across relay stations, and each station bills top-ups, group multipliers, and cache reads differently, so comparing prices by hand is slow and error-prone. AI Price Analyzer is a Chromium Manifest V3 extension. It collects prices from the stations you add, collapses station-specific names into one canonical model identity, then uses your own usage to compute a monthly cost and a gap against the official price. There is no backend and no bundler; the repository root is the loadable extension.
