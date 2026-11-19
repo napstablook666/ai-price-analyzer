@@ -508,6 +508,10 @@ function saveProviderFavoriteFromSelection() {
     toast("先勾选供应商，再设为常用");
     return;
   }
+  const message = readProviderFavorite().length
+    ? `用当前勾选的 ${current.length} 个供应商替换已有的常用列表？`
+    : `将当前勾选的 ${current.length} 个供应商设为常用？`;
+  if (!window.confirm(message)) return;
   saveProviderFavorite(current);
   renderFacetFavoritePanel();
   placeFacetFavoritePanel();
@@ -1535,6 +1539,7 @@ document.addEventListener("click", event => {
     if (action === "apply") applyProviderFavorite();
     else if (action === "save") saveProviderFavoriteFromSelection();
     else if (action === "clear") {
+      if (!window.confirm("清除已保存的常用供应商列表？")) return;
       saveProviderFavorite([]);
       renderFacetFavoritePanel();
       placeFacetFavoritePanel();
