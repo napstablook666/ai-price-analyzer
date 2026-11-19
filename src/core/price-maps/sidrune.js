@@ -10,6 +10,8 @@
 export const sidrunePriceMap = {
   schemaVersion: "price-map/1",
   source: "sidrune",
+  // 站点的 model_ratio 按 1 = $2/M 记，写回倍率字段时按这个折算。
+  ratioBase: 2,
   rootPath: "/data/pricing",
   nameField: "name",
   currency: "USD",
@@ -53,7 +55,6 @@ export const sidrunePriceMap = {
       cacheWrite1h: "cache_write_1h_price * 1000000",
       imageInput: "image_input_price * 1000000",
       imageOutput: "image_output_price * 1000000",
-      ratioBase: 2
     }
   ]
 };

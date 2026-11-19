@@ -80,23 +80,23 @@ test("TokenFlux 按张计费：没有倍率表的模型只出一行，不编档�
 
 test("TokenFlux 按 token 计费：分组倍率乘在价格上", () => {
   const standard = rowOf("claude-opus-4-7", "default");
-  assert.equal(standard.input_price, 2.5);
-  assert.equal(standard.output_price, 12.5);
-  assert.equal(standard.cache_read_price, 0.25);
-  assert.equal(standard.cache_write_price, 3.125);
+  assert.equal(standard.input_price, 5);
+  assert.equal(standard.output_price, 25);
+  assert.equal(standard.cache_read_price, 0.5);
+  assert.equal(standard.cache_write_price, 6.25);
   assert.equal(standard.group_ratio, 1);
 
   const discounted = rowOf("claude-opus-4-7", "Claude Code 特惠");
   assert.equal(discounted.group_ratio, 0.2);
-  assert.equal(discounted.input_price, 0.5);
-  assert.equal(discounted.output_price, 2.5);
+  assert.equal(discounted.input_price, 1);
+  assert.equal(discounted.output_price, 5);
 });
 
 test("TokenFlux 只报 token 价的出图模型标成 image，进生图榜", () => {
   const row = rowOf("gpt-image-2.5-sunburst", "default");
   assert.equal(row.media_type, "image");
   assert.equal(row.image_price, null);
-  assert.equal(row.input_price, 37.5);
+  assert.equal(row.input_price, 75);
   assert.equal(row.tier_name, "标准");
 });
 
@@ -150,7 +150,7 @@ test("enable_groups 全空时只出站内基准价，不拿 group_ratio 的键�
   const rows = applyPriceMap(stellaislePriceMap, payload, { parseTiers: parseBillingTiers }).rows;
   // 站点不公开「模型 ↔ 分组」，就按倍率 1 出一条基准价，多编一行都是编。
   assert.deepEqual(rows.map(row => [row.proxy_group_name, row.group_ratio, row.input_price]), [
-    ["站内基准价", 1, 2]
+    ["站内基准价", 1, 4]
   ]);
   // 没声明 unlisted 的 map 照旧把这条记进 unresolved，不静默丢也不瞎猜。
   const fallback = rowsOf(payload);

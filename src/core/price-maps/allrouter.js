@@ -21,17 +21,17 @@
 // 三个 gpt-image-2.5 的表达式是 p*5 + cr*1.25 + img*8 + c*30：img 系数按图片 token 计，
 // 解析器不认，只报文本 token 价，按张的钱没有公开口径。
 
-import { newcodexPriceMap } from "./newcodex.js";
+import { tokenfluxPriceMap } from "./tokenflux.js";
 
 const IMAGE_ENDPOINT = { path: "supported_endpoint_types", map: { "image-generation": "image" } };
 
-// newcodex 那份就是 tokenflux + 倍率类乘 2，字段映射完全相同，只有两处要改：
-// 币种换回美元，表达式规则补上媒体类型映射。
+// 复用 tokenflux 的字段映射，只改两处：币种换成美元，表达式规则补上媒体类型映射。
+// 倍率基准（1 = $2/M）跟 tokenflux 同族，直接继承，不在本站重复声明。
 // 补 mediaType 是因为表达式规则本身不带它，而站点的出图模型恰恰全是表达式计费
 // （gpt-image-2.5 走 tier("standard", p*5 + ...)），不补就会带着每百万 token 的价掉进文本榜。
 export const allrouterPriceMap = {
-  ...newcodexPriceMap,
+  ...tokenfluxPriceMap,
   source: "allrouter",
   currency: "USD",
-  rules: newcodexPriceMap.rules.map(rule => rule.kind === "expression" ? { ...rule, mediaType: IMAGE_ENDPOINT } : rule)
+  rules: tokenfluxPriceMap.rules.map(rule => rule.kind === "expression" ? { ...rule, mediaType: IMAGE_ENDPOINT } : rule)
 };

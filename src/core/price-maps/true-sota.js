@@ -10,6 +10,8 @@
 export const trueSotaPriceMap = {
   schemaVersion: "price-map/1",
   source: "true-sota",
+  // 站点的 model_ratio 按 1 = $2/M 记，写回倍率字段时按这个折算。
+  ratioBase: 2,
   rootPath: "/data/models",
   nameField: "name",
   currency: "USD",
@@ -40,7 +42,6 @@ export const trueSotaPriceMap = {
       input: "input_price * 1000000",
       output: "output_price * 1000000",
       cacheRead: "cache_price * 1000000",
-      ratioBase: 2
     }
   ]
 };

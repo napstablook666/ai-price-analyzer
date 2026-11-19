@@ -3405,9 +3405,9 @@ test("adapts the TokenFlux pricing API and station preset", async () => {
 
   const flash = snapshot.normalized.data.find(row => row.model_name === "deepseek-v4-flash");
   assert.ok(flash);
-  assert.equal(flash.input_price, 0.07);
-  assert.equal(flash.output_price, 0.14);
-  assert.equal(flash.cache_read_price, 0.005);
+  assert.equal(flash.input_price, 0.14);
+  assert.equal(flash.output_price, 0.28);
+  assert.equal(flash.cache_read_price, 0.01);
   assert.equal(flash.cache_write_price, null);
   assert.equal(flash.price_currency, "CREDITS");
   assert.equal(flash.proxy_group_name, "default");
@@ -3498,18 +3498,18 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
 
   const token = snapshot.normalized.data.find(row => row.model_name === "centos-token");
   assert.ok(token);
-  assert.equal(token.input_price, 0.4);
-  assert.equal(token.output_price, 0.8);
-  assert.equal(token.cache_read_price, 0.1);
-  assert.equal(Number(token.cache_write_price.toFixed(6)), 0.04);
+  assert.equal(token.input_price, 0.8);
+  assert.equal(token.output_price, 1.6);
+  assert.equal(token.cache_read_price, 0.2);
+  assert.equal(Number(token.cache_write_price.toFixed(6)), 0.08);
   assert.equal(token.price_currency, "CREDITS");
   assert.equal(token.group_ratio, 1);
 
   const enterprise = snapshot.normalized.data.find(row => row.model_name === "centos-enterprise");
   assert.ok(enterprise);
-  assert.equal(enterprise.input_price, 4.5);
-  assert.equal(enterprise.output_price, 13.5);
-  assert.equal(enterprise.cache_read_price, 2.25);
+  assert.equal(enterprise.input_price, 9);
+  assert.equal(enterprise.output_price, 27);
+  assert.equal(enterprise.cache_read_price, 4.5);
   assert.equal(enterprise.group_ratio, 4.5);
 
   const requestPrice = snapshot.normalized.data.find(row => row.model_name === "centos-request");
@@ -3574,8 +3574,8 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   });
   const centosOffer = comparison.flatMap(row => row.offers).find(offer => offer.modelName === "centos-token");
   assert.ok(centosOffer);
-  assert.equal(centosOffer.costPrices.input, 0.4);
-  assert.equal(centosOffer.monthlyCost, 0.4);
+  assert.equal(centosOffer.costPrices.input, 0.8);
+  assert.equal(centosOffer.monthlyCost, 0.8);
 
   const current = [{ id: "seed", baseUrl: "https://relay.example" }];
   const stations = addProviderStationPresets(current, [providerById("centos")]);
@@ -3643,8 +3643,8 @@ test("adapts maolaoapi's public pricing API and its recharge tiers", async () =>
   assert.equal(snapshot.status, "success");
 
   const token = snapshot.normalized.data.find(row => row.model_name === "maolao-token");
-  assert.equal(token.input_price, 1);
-  assert.equal(token.output_price, 4);
+  assert.equal(token.input_price, 2);
+  assert.equal(token.output_price, 8);
   assert.equal(token.price_currency, "CREDITS");
   // 长度分档的 billing_expr 拆成两行，标准档按 p*2 / c*6 折算。
   const tiered = snapshot.normalized.data.filter(row => row.model_name === "maolao-tiered");
@@ -3693,10 +3693,10 @@ test("adapts WindHub's verified public pricing contract and keeps anonymous requ
   assert.equal(row.price_currency, "CREDITS");
   assert.equal(row.vendor, "Example vendor");
   assert.deepEqual(row.supported_endpoint_types, ["openai"]);
-  assert.equal(row.input_price, 0.4);
-  assert.equal(row.output_price, 0.8);
-  assert.equal(row.cache_read_price, 0.1);
-  assert.equal(Number(row.cache_write_price.toFixed(6)), 0.04);
+  assert.equal(row.input_price, 0.8);
+  assert.equal(row.output_price, 1.6);
+  assert.equal(row.cache_read_price, 0.2);
+  assert.equal(Number(row.cache_write_price.toFixed(6)), 0.08);
   assert.equal(row.group_ratio, 1);
 });
 
@@ -3749,8 +3749,8 @@ test("skips malformed TokenFlux rows and applies group ratios", () => {
   }, "tokenflux");
   assert.equal(normalized.data.length, 1);
   assert.equal(normalized.data[0].model_name, "codex-pool-model");
-  assert.equal(normalized.data[0].input_price, 0.2);
-  assert.equal(Number(normalized.data[0].output_price.toFixed(6)), 0.6);
+  assert.equal(normalized.data[0].input_price, 0.4);
+  assert.equal(Number(normalized.data[0].output_price.toFixed(6)), 1.2);
   assert.equal(normalized.data[0].group_ratio, 0.2);
 });
 test("adapts the Sidrune model plaza URL and station preset", () => {

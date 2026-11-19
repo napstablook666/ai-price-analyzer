@@ -8,6 +8,8 @@
 export const cheapRouterPriceMap = {
   schemaVersion: "price-map/1",
   source: "cheaprouter",
+  // 站点的 model_ratio 按 1 = $2/M 记，写回倍率字段时按这个折算。
+  ratioBase: 2,
   rootPath: "/data/items",
   nameField: "model",
   labelField: "display_name",
@@ -37,9 +39,6 @@ export const cheapRouterPriceMap = {
       output: "effective_pricing_usd.output_per_mtok_usd",
       cacheRead: "effective_pricing_usd.cache_read_per_mtok_usd",
       cacheWrite: "effective_pricing_usd.cache_write_per_mtok_usd",
-      // 站点的 model_ratio 一律按 basePrice 2 元/1M token 折算，这里跟着算，
-      // 否则上游换算出的小数位会和旧实现差一截。
-      ratioBase: 2,
       // 长上下文加价的模型会带 intervals，一档一行。没有 intervals 就只出一行。
       tiers: {
         path: "pricing_details.intervals",

@@ -21,6 +21,8 @@ const RELAY_ROUTER_MEDIA_TYPES = [
 export const relayRouterPriceMap = {
   schemaVersion: "price-map/1",
   source: "relayrouter",
+  // 倍率的基准是 2 美元/M token，声明在这里，表达式里只写 model_ratio。
+  ratioBase: 2,
   rootPath: "/data",
   nameField: "model_name",
   labelField: "model_name",
@@ -42,32 +44,31 @@ export const relayRouterPriceMap = {
     },
     {
       kind: "token",
-      // 倍率的基准是 2 美元/M token，所以乘 2 换回每百万 token 的美元价。
-      input: "model_ratio * 2",
-      output: "model_ratio * 2 * completion_ratio",
-      cacheRead: "model_ratio * 2 * cache_ratio",
+      // 倍率的基准是 2 美元/M token，这个系数在 ratioBase 里声明，表达式只写 model_ratio。
+      input: "model_ratio",
+      output: "model_ratio * completion_ratio",
+      cacheRead: "model_ratio * cache_ratio",
       cacheWrite: [
-        "model_ratio * 2 * cache_creation_5m_ratio",
-        "model_ratio * 2 * cache_creation_ratio"
+        "model_ratio * cache_creation_5m_ratio",
+        "model_ratio * cache_creation_ratio"
       ],
-      cacheWrite1h: "model_ratio * 2 * cache_creation_1h_ratio",
+      cacheWrite1h: "model_ratio * cache_creation_1h_ratio",
       // 图片 token 走站点的图片独立倍率；输出 token 不论文本还是图片一律按 completion_ratio 计。
-      imageInput: "model_ratio * 2 * image_ratio",
-      imageOutput: "model_ratio * 2 * completion_ratio",
+      imageInput: "model_ratio * image_ratio",
+      imageOutput: "model_ratio * completion_ratio",
       mediaType: RELAY_ROUTER_MEDIA_TYPES,
-      ratioBase: 2,
       tierName: "标准",
       // 档内倍率是整段生效，不是只对超出的那部分加价。
       // 档位只给上限，下限由引擎按上一档的上限补。
       tiers: {
         path: "step_ratios",
         upperField: "step_size",
-        input: "model_ratio * 2 * prompt_step_ratio",
-        output: "model_ratio * 2 * completion_ratio * completion_step_ratio",
-        cacheRead: "model_ratio * 2 * cache_ratio * cache_step_ratio",
+        input: "model_ratio * prompt_step_ratio",
+        output: "model_ratio * completion_ratio * completion_step_ratio",
+        cacheRead: "model_ratio * cache_ratio * cache_step_ratio",
         cacheWrite: [
-          "model_ratio * 2 * cache_creation_5m_ratio * cache_step_ratio",
-          "model_ratio * 2 * cache_creation_ratio * cache_step_ratio"
+          "model_ratio * cache_creation_5m_ratio * cache_step_ratio",
+          "model_ratio * cache_creation_ratio * cache_step_ratio"
         ]
       }
     }

@@ -26,7 +26,8 @@ test("退役表指向的价格映射必须还在，删了 map 文件这里就红
 test("migrateStationAdapter 幂等，不覆盖站点自己写的 priceMap", () => {
   const once = migrateStationAdapter({ responseFormat: "newcodex" });
   assert.equal(once.responseFormat, "price-map");
-  assert.deepEqual(once.priceMap, { base: "newcodex" });
+  // 倍率基准已经写在 tokenflux 映射里，newcodex 退化成「同一份声明」，不再带自己的常数。
+  assert.deepEqual(once.priceMap, { base: "tokenflux" });
   assert.deepEqual(migrateStationAdapter(once), once);
 
   const custom = migrateStationAdapter({ responseFormat: "allrouter", priceMap: { base: "tokenflux", source: "x" } });

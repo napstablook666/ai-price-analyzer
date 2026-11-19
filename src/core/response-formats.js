@@ -60,7 +60,9 @@ export function isSupportedResponseFormat(format) {
 // test/response-formats.test.js 的四条用例、docs/development/price-map.md 的「退役的枚举值」。
 // normalizeStation 按这张表把旧值就地改写成新声明，存储里不再有旧值。
 export const LEGACY_RESPONSE_FORMATS = Object.freeze({
-  newcodex: { format: "price-map", priceMap: Object.freeze({ base: "newcodex" }) },
+  // newcodex 原本是独立 base，只为把倍率乘 2；倍率基准归到 tokenflux 的 ratioBase 之后，
+  // 它跟 tokenflux 就没有任何差异了，直接退化成同一份声明。
+  newcodex: { format: "price-map", priceMap: Object.freeze({ base: "tokenflux" }) },
   allrouter: { format: "price-map", priceMap: Object.freeze({ base: "allrouter" }) },
   relayrouter: { format: "price-map", priceMap: Object.freeze({ base: "relayrouter" }) }
 });

@@ -119,7 +119,20 @@ groups: {
 
 按长度分档写 `tier_name`，出图 / 视频的规格档（1K / 2K / 4K）写 `size_tier`，两者互不干扰：前者参与上下文分档的流量加权，后者只是这一行的规格标签，用来跟官方 `variant` 对齐。
 
-站点没给 `completion_ratio` 时，按 `output / input` 推，不硬写 1。`ratioBase` 是站点把 `model_ratio` 折算成绝对价时用的分母（元或美元 / 1M token），只影响回写的 `model_ratio` 字段，不参与算价。
+站点没给 `completion_ratio` 时，按 `output / input` 推，不硬写 1。
+
+`ratioBase` 是 `model_ratio` 一个单位值多少（美元 / 1M token）。New API 派生的一族站点里，`model_ratio` 不是绝对价，是「官方价 ÷ 2」这类相对倍率，换算系数由站点自己定，所以它是**声明字段**，不要写进规则表达式：
+
+```js
+// price-maps/tokenflux.js 顶层写一次，同族站点继承
+ratioBase: 2,
+// 规则里就只写 model_ratio，不写 model_ratio * 2
+{ kind: "token", input: "model_ratio", output: "model_ratio * completion_ratio" }
+```
+
+同一个常数写在四处表达式和一处 `ratioBase` 里，改一边忘一边就会整站报低一半（2026-11-19 就是这样发现的：tokenflux 系的 `model_ratio` 一直是 ×1，倍率行的价全是真实价的一半）。求值时引擎把 `ratioBase` 乘进上下文里那条记录的 `model_ratio`，所以表达式只写一个名字；回写 `model_ratio` 字段时再除回来，两边对齐。
+
+站点偏离族基准时，在自己的声明里写 `ratioBase`（`{ base: "tokenflux", ratioBase: 1 }`），引擎会把它下发到每条 token 规则，不必复制整份 `rules` 数组。
 
 图片 token 价（图片输入、图片输出）和「写缓存 1 小时」价也能一起带出来，各写一行：
 

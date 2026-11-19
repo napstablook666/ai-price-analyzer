@@ -5,7 +5,9 @@
 // 最后在 response-formats.js 里各占一个枚举值。三处加起来四十多行，业务差异只有两三个字段。
 // 那些类的 parse() 全是一行 super.parse()，canParse() 只比 responseFormat 字符串。
 //
-// 现在站点只声明差异：{ base: "tokenflux", source: "xingya", currency: "USD" }。
+// 现在站点只声明差异：{ base: "tokenflux", source: "xingya", currency: "USD", ratioBase: 2 }。
+// ratioBase 是「一行报文里 model_ratio 一个单位值多少美元」，引擎会把它乘进求值上下文，
+// 所以老站点（1 = $2 的那批）不必再复制一份映射、也不必在表达式里写 `* 2`。
 // 引擎按 base 取内置映射，把声明里的键覆盖上去，交回 applyPriceMap 求值。
 // 新增一个同形状站点不再需要动扩展代码。
 
@@ -16,13 +18,11 @@ import { cheapRouterPriceMap } from "./cheaprouter.js";
 import { trueSotaPriceMap } from "./true-sota.js";
 import { sidrunePriceMap } from "./sidrune.js";
 import { relayRouterPriceMap } from "./relayrouter.js";
-import { newcodexPriceMap } from "./newcodex.js";
 import { allrouterPriceMap } from "./allrouter.js";
 
 // base 名 → 完整映射。名字就是站点 id，也允许按报文形状起的俗名。
 export const PRICE_MAP_BASES = Object.freeze({
   tokenflux: tokenfluxPriceMap,
-  newcodex: newcodexPriceMap,
   allrouter: allrouterPriceMap,
   stellaisle: stellaislePriceMap,
   "stellaisle-plaza": stellaislePlazaPriceMap,
@@ -69,6 +69,7 @@ export function resolvePriceMap(spec, seen = new Set()) {
   else if (base.groups) map.groups = base.groups;
   // rules 是数组，声明里给的数组整体替换（站点可能整套换掉计费模式）。
   map.rules = Array.isArray(overrides.rules) ? overrides.rules : base.rules;
+  // ratioBase 留在映射顶层，由 applyPriceMap 下发到 token 规则（声明里只写一次）。
   return { map };
 }
 

@@ -15,6 +15,12 @@ export const tokenfluxPriceMap = {
   nameField: "model_name",
   labelField: "model_name",
   currency: "CNY",
+  // model_ratio 的单位是「官方价 ÷ 2 美元/百万」，不是 1 美元。三处实测都对得上：
+  //   tokenflux   gpt-6-astra      ratio 5    ↔ billing_expr 里 p*10
+  //   allrouter   claude-opus-5-5  ratio 2    ↔ p*4；deepseek-v4.1-flash 0.15 ↔ p*0.3
+  //   centos      claude-sonnet-4-5 ratio 1.5 ↔ 官方 $3；claude-opus-4-6 2.5 ↔ 官方 $5
+  // 同族站点共用这一个常数，偏离的站点在声明里写自己的 ratioBase。
+  ratioBase: 2,
   groups: {
     listPath: "enable_groups",
     ratioPath: "/group_ratio",

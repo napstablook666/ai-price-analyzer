@@ -14,7 +14,7 @@ import { PRICE_MAP_BASES, priceMapDiffKeys } from "../src/core/price-maps/index.
 import { GOLDEN_CASES, renderGolden, goldenPath } from "../scripts/price-map-golden.mjs";
 
 // 还没补 fixture 的 base。补了就从这里删掉，别让它长期赖着。
-const NO_FIXTURE_YET = new Set(["newcodex", "stellaisle", "stellaisle-carpool", "stellaisle-plaza", "sidrune"]);
+const NO_FIXTURE_YET = new Set(["stellaisle", "stellaisle-carpool", "stellaisle-plaza", "sidrune"]);
 
 // 和 tokenflux 比，差异键最多这么几个。全是 1 的时候调这个数才是对的。
 const MAX_DIFF_KEYS = 4;

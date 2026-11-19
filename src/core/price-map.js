@@ -305,6 +305,15 @@ function compactTokens(value) {
   if (number >= 1e3) return `${Number((number / 1e3).toFixed(1))}K`;
   return String(number);
 }
+// 站点的 model_ratio 是「官方价 ÷ ratioBase」，同为 New API 派生，有的站 1 元一个单位、
+// 有的站 2 元一个单位，只有站点自己知道。把这个系数做成求值上下文里的 model_ratio，
+// 规则表达式就只写 model_ratio，不必到处写 `model_ratio * 2`。
+// 同一个常数写在四处字符串和 ratioBase 一处，改一边忘一边就会整站报低一半。
+function scaledRatioItem(item, ratioBase) {
+  const ratio = Number(readPath(item, "model_ratio"));
+  if (!Number.isFinite(ratio)) return item;
+  return { ...item, model_ratio: ratio * ratioBase };
+}
 // 上下文长度分档。档位数组里每一项都是独立的计价单元，表达式对着该项求值，
 // 和规则本身用的是同一套语法：spec 上写 input / output / cacheRead / cacheWrite。
 // 档位对象上取不到的字段回落到整条记录，所以「每档只给系数、模型倍率留在外面」
@@ -456,7 +465,18 @@ function baseRowOf(rule, item, map, group) {
 }
 
 // `parseTiers` 由调用方注入：那段表达式语法是站点私有的，不归引擎管。
+// 站点级的 ratioBase 是「一行报文里 model_ratio 一个单位值多少美元」。
+// 声明可以写在映射顶层，也可以写在单条 token 规则上；顶层写法在这里下发，
+// 于是「一个常数、一处声明」，表达式里不再出现 `model_ratio * 2`。
+function withSiteRatioBase(map) {
+  const base = Number(map?.ratioBase);
+  if (!Number.isFinite(base) || base <= 0 || base === 1) return map;
+  return { ...map, rules: (map.rules || []).map(rule => rule?.kind === "token" ? { ...rule, ratioBase: base } : rule) };
+}
+
 export function applyPriceMap(map, raw, { parseTiers } = {}) {
+  // 站点级倍率先下发到 token 规则，后面照常按 map 求值。
+  map = withSiteRatioBase(map);
   const items = readPath(raw, map.rootPath || "/data");
   const list = Array.isArray(items) ? items : [];
   const rows = [];
@@ -562,13 +582,15 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
 
     // kind === "token"
     // 上下文长度分档：档位对象里通常直接带各档的绝对价，表达式对着档位对象求值。
-    const cells = tokenCells(rule, item);
+    // 倍率换算是站点属性，先算出来：ratioBase 决定 model_ratio 一个单位值多少美元。
+    const ratioBase = Number(rule.ratioBase) > 0 ? Number(rule.ratioBase) : 1;
+    // 上下文长度分档：档位对象里通常直接带各档的绝对价，表达式对着档位对象求值。
+    const cells = tokenCells(rule, ratioBase === 1 ? item : scaledRatioItem(item, ratioBase));
     if (!cells.length) {
       unresolved.push({ model: name, reason: "输入价算不出来", source: rule.input });
       continue;
     }
     const declaredRatio = Number(readPath(item, "completion_ratio"));
-    const ratioBase = Number(rule.ratioBase) > 0 ? Number(rule.ratioBase) : 1;
     for (const cell of cells) {
       if (cell.input === null || cell.input < 0) {
         unresolved.push({ model: name, reason: "输入价算不出来", source: rule.input, ...(cell.name ? { tier: cell.name } : {}) });
