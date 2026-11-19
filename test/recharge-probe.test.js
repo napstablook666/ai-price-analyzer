@@ -167,6 +167,32 @@ test("merges auto payments under a manual entry with the same channel and face v
   assert.equal(merged[1].channel, "wechat");
 });
 
+test("refreshes a previous order entry instead of keeping the stale amount", () => {
+  const previous = [
+    { channel: "alipay", faceAmount: 300, payAmount: 291, currency: "USD", note: "订单 9001 antom pending" },
+    { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", note: "用户截图" }
+  ];
+  const fresh = [
+    { channel: "alipay", faceAmount: 300, payAmount: 288, currency: "USD", note: "订单 9002 antom paid" },
+    { channel: "card", faceAmount: 300, payAmount: 297, currency: "USD", note: "订单 9003 antom paid" }
+  ];
+  const merged = mergePayments(previous, fresh);
+  assert.equal(merged.length, 2);
+  // 上一轮脚本写的订单条目让新数据顶掉
+  assert.equal(merged[0].payAmount, 288);
+  // 手抄的截图优先于订单接口
+  assert.equal(merged[1].payAmount, 291);
+  assert.equal(merged[1].note, "用户截图");
+});
+
+test("keeps every previous entry when this run has no fresh payments", () => {
+  const previous = [
+    { channel: "alipay", faceAmount: 10, payAmount: 10, currency: "CNY", note: "订单 585 alipay paid" },
+    { channel: "wechat", faceAmount: 10, payAmount: 10.1, currency: "CNY", note: "订单 586 wxpay paid" }
+  ];
+  assert.deepEqual(mergePayments(previous, []), previous);
+});
+
 test("maps provider type names onto the six payment channels", () => {
   assert.equal(channelFor("antom_wechat"), "wechat");
   assert.equal(channelFor("wxpay"), "wechat");

@@ -260,20 +260,33 @@ export function readSub2Orders(json) {
   return payments;
 }
 
-// 同一渠道同一面值只留一条：手工补的优先，其次按面值大的留。
-export function mergePayments(manual, auto) {
-  const merged = [];
-  const seen = new Set();
-  for (const payment of [...manual, ...auto]) {
-    if (!payment || typeof payment !== "object") continue;
-    const faceAmount = Number(payment.faceAmount);
-    const payAmount = Number(payment.payAmount);
-    if (!Number.isFinite(faceAmount) || faceAmount <= 0) continue;
-    if (!Number.isFinite(payAmount) || payAmount <= 0) continue;
-    const key = `${payment.channel}:${faceAmount}:${payment.currency}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    merged.push(payment);
+// 同一渠道同一面值同一币种只留一条：手抄的优先，脚本自己写的「订单 …」允许被刷新。
+function paymentKey(payment) {
+  return `${payment.channel}:${payment.faceAmount}:${payment.currency}`;
+}
+
+function usablePayment(payment) {
+  if (!payment || typeof payment !== "object") return false;
+  const faceAmount = Number(payment.faceAmount);
+  const payAmount = Number(payment.payAmount);
+  return Number.isFinite(faceAmount) && faceAmount > 0 && Number.isFinite(payAmount) && payAmount > 0;
+}
+
+export function mergePayments(existing, fresh) {
+  const merged = existing.filter(usablePayment);
+  const index = new Map(merged.map((payment, at) => [paymentKey(payment), at]));
+  for (const payment of fresh) {
+    if (!usablePayment(payment)) continue;
+    const key = paymentKey(payment);
+    const at = index.get(key);
+    if (at === undefined) {
+      index.set(key, merged.length);
+      merged.push(payment);
+      continue;
+    }
+    // 手抄的条目优先留下；上一轮的「订单 …」是脚本自己写的，让新数据顶掉。
+    if (!String(merged[at].note || "").startsWith("订单")) continue;
+    merged[at] = payment;
   }
   return merged;
 }
@@ -358,15 +371,13 @@ async function runPool(items, worker, size) {
   return results;
 }
 
-// 重跑时保留人工补过的条目，只让脚本生成的「订单 …」被覆盖。
+// 上一轮的条目全带上：这一轮没登录也要把它们原样写回去，不能被冲掉。
+// 手抄的和「订单 …」的差别由 mergePayments 决定谁让位。
 async function loadPreviousPayments(host) {
   try {
     const previous = JSON.parse(await readFile(path.join(OUT_DIR, fileNameFor(host)), "utf8"));
     if (!Array.isArray(previous?.payments)) return [];
-    return previous.payments.filter(payment => {
-      const note = String(payment?.note || "");
-      return note && !note.startsWith("订单");
-    });
+    return previous.payments.filter(usablePayment);
   } catch {
     return [];
   }
@@ -420,7 +431,9 @@ async function main() {
   const withPayments = records.filter(record => (record.payments?.length || 0) > 0).length;
   console.log(`  status 可读 ${withStatus} · 带档位 ${withTiers} · 带渠道 ${withChannels} · 账号档位 ${withAff}`);
   console.log(`  充值接口可读 ${withTopup} · 有渠道实付 ${withPayments}`);
-  const gaps = records.filter(record => !record.status && !record.aff);
+  const gaps = records.filter(record =>
+    !record.status && !record.aff && !record.topup && (record.payments?.length || 0) === 0
+  );
   if (gaps.length) console.log(`  无证据 ${gaps.length}：${gaps.map(record => record.host).join("、")}`);
   console.log("收银台金额需要人工补进各 JSON 的 payments，再跑 npm run recharge:apply");
 }
