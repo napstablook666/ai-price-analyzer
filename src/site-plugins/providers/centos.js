@@ -6,8 +6,10 @@ const preset = {
   id: "centos",
   name: "ai.centos.hk",
   baseUrl: "https://ai.centos.hk/pricing",
-  rechargeRateVerified: false,
-  rechargeRateNote: "ai.centos.hk 充值折算尚未核验，当前不参与已验证比价推荐。",
+  rechargeRateVerified: true,
+  rechargeRateNote:
+    "官方文档（doc.centos.hk）写「充值费率——费用一比一充值」，/api/status 的 price = 1、usd_exchange_rate = 1，" +
+    "与文档一致：1 元换 1 美元额度，没有加价也没有赠送，成本价即报价。",
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
   priceCurrencyNote:

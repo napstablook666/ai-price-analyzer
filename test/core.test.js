@@ -3583,7 +3583,9 @@ test("adapts and collects the ai.centos.hk public TokenFlux pricing API", async 
   assert.equal(stations[1].id, "centos");
   assert.equal(stations[1].name, "ai.centos.hk");
   assert.equal(stations[1].baseUrl, "https://ai.centos.hk/pricing");
-  assert.equal(stations[1].rechargeRateVerified, false);
+  // 官方文档写「充值费率——费用一比一充值」，/api/status 的 price = 1、usd_exchange_rate = 1，
+  // 两处对上，所以这一条算已验证；哪天文档或字段变了，这条断言会先红。
+  assert.equal(stations[1].rechargeRateVerified, true);
   assert.equal(addProviderStationPresets(stations, [providerById("centos")]), stations);
   assert.equal(addProviderStationPresets([], [providerById("centos")]).length, 1);
   const conflict = addProviderStationPresets([{ id: "centos", baseUrl: "https://relay.example" }], [providerById("centos")]);
