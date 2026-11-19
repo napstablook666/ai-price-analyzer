@@ -1496,6 +1496,20 @@ test("uses a 1:1 comparison rate unless recharge verification is explicitly true
   assert.deepEqual(unverifiedCurrency.pricingUnavailableReasons, ["currency_unverified"]);
 });
 
+test("老设置里的签到字段在归一化时清掉", () => {
+  const settings = normalizeSettings({
+    checkinState: { "relay.example": { status: "success" } },
+    checkinLoginWatch: { "relay.example": 1730000000000 },
+    checkinAutomation: { "relay.example": true },
+    checkinResults: { "relay.example": { status: "success" } }
+  });
+  for (const key of ["checkinState", "checkinLoginWatch", "checkinAutomation", "checkinResults"]) {
+    assert.equal(settings[key], undefined, `${key} 应该从设置里清掉`);
+  }
+  const station = normalizeStation({ baseUrl: "https://relay.example", checkin: { enabled: true, lastAt: "2026-11-19" } });
+  assert.equal(station.checkin, undefined);
+});
+
 test("derives and preserves the station recharge ratio inputs", () => {
   const station = normalizeStation({ baseUrl: "https://relay.example", rechargeRmb: 12, rechargeCredits: 10 });
   assert.equal(station.rechargeRate, 1.2);

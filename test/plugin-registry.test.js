@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, pluginUpdateState, providerFromSpec, registryStateAfterRefresh } from "../src/core/declarative-plugin.js";
+import { installedPluginSpecs, normalizeLocalPlugins, normalizePluginSpec, normalizeRegistryPayload, normalizeRegistryState, pluginUpdateState, providerFromSpec, registryStateAfterRefresh } from "../src/core/declarative-plugin.js";
 import { sitePluginCatalogForStations } from "../src/site-plugins/catalog.js";
 import { PLUGIN_REGISTRY_SNAPSHOT } from "../src/site-plugins/registry-snapshot.js";
 
@@ -150,4 +150,18 @@ test("插件仓库发布的 plugins.json 与内置快照一致", () => {
   const published = JSON.parse(readFileSync(registryFile, "utf8"));
   assert.equal(published.schemaVersion, PLUGIN_REGISTRY_SNAPSHOT.schemaVersion);
   assert.deepEqual(published.plugins, PLUGIN_REGISTRY_SNAPSHOT.plugins);
+});
+
+test("老 registry 里的 checkin 条目在归一化时被丢掉，不报错", () => {
+  const state = normalizeRegistryState({
+    url: "https://example.com/plugins.json",
+    entries: [
+      { id: "site-checkin", name: "站点签到插件", version: "1.1.0", hosts: ["vyceai.com"], kind: "checkin", needsCode: false, checkin: { statusPath: "/user/daily-reward" } },
+      { id: "demo-plugin", name: "Demo", version: "1.0.0", hosts: ["demo.example"], needsCode: false, spec: { ...SPEC } }
+    ],
+    installed: { "site-checkin": { version: "1.1.0", installedAt: 1730000000000 } }
+  });
+  assert.deepEqual(state.entries.map(entry => entry.id), ["demo-plugin"]);
+  // 安装记录独立于条目清单存在，仓库里没了这一条也不该把它抹掉。
+  assert.ok(state.installed["site-checkin"]);
 });

@@ -286,7 +286,7 @@ export function normalizeSettings(input = {}) {
   if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
   settings.usage.imageTokens = settings.usage.imageOutputTokens;
   delete settings.refreshIntervalMinutes;
-  for (const legacyKey of ["llm", "jev", "providerProfiles", "activeProviders"]) delete settings[legacyKey];
+  for (const legacyKey of ["llm", "jev", "providerProfiles", "activeProviders", "checkinState", "checkinLoginWatch", "checkinAutomation", "checkinResults"]) delete settings[legacyKey];
   for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output", "requests", "imageInputTokens", "imageOutputTokens", "imageTokens", "images", "peakShare"]) {
     const value = Number(settings.usage[field]);
     settings.usage[field] = Number.isFinite(value) && value >= 0 ? value : base.usage[field];
