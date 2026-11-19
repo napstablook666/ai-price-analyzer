@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { applyPriceMap, evalExpression, readPath, shapeFingerprint, shapeSkeleton } from "../src/core/price-map.js";
+import { applyPriceMap, evalExpression, readPath } from "../src/core/price-map.js";
 import { tokenfluxPriceMap } from "../src/core/price-maps/tokenflux.js";
 import { stellaislePlazaPriceMap, stellaislePriceMap } from "../src/core/price-maps/stellaisle.js";
 import { cheapRouterPriceMap } from "../src/core/price-maps/cheaprouter.js";
@@ -54,18 +54,6 @@ test("evalExpression 只算四则运算，不执行任何代码", () => {
   for (const bad of ["process.exit(1)", "model_ratio.toString()", "`${model_ratio}`", "model_ratio +"]) {
     assert.throws(() => evalExpression(bad, scope), /表达式|语法|不支持/);
   }
-});
-
-test("结构指纹只认骨架，不认数值", () => {
-  const first = { data: [{ name: "a", price: 1 }] };
-  const second = { data: [{ name: "b", price: 99 }] };
-  const third = { data: [{ name: "a", price: 1, extra: true }] };
-
-  assert.equal(shapeSkeleton(first), shapeSkeleton(second));
-  assert.equal(shapeFingerprint(first, "tokenflux"), shapeFingerprint(second, "tokenflux"));
-  assert.notEqual(shapeFingerprint(first, "tokenflux"), shapeFingerprint(third, "tokenflux"));
-  // 盐不同就要算出不同指纹，站点之间不能串用缓存。
-  assert.notEqual(shapeFingerprint(first, "tokenflux"), shapeFingerprint(first, "windhub"));
 });
 
 test("TokenFlux 按张计费：站内自带的 1K / 2K / 4K 倍率直接成档", () => {

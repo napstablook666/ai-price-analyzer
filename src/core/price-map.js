@@ -223,43 +223,6 @@ export function evalChain(source, item, fallback) {
   return null;
 }
 
-// ---------- 结构指纹 ----------
-
-function fnv1a(text) {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}
-
-// 骨架只描述「有哪些键、各是什么类型、数组里是什么」。
-// 数值和字符串内容全部丢掉，所以同一套格式换价格不会让指纹变。
-function shapeOf(value, depth) {
-  if (depth > 8) return "…";
-  if (value === null) return "null";
-  if (Array.isArray(value)) {
-    const shapes = [...new Set(value.map(entry => shapeOf(entry, depth + 1)))];
-    return shapes.length ? `[${shapes.sort().join("|")}]` : "[]";
-  }
-  if (typeof value === "object") {
-    return `{${Object.keys(value).sort().map(key => `${key}:${shapeOf(value[key], depth + 1)}`).join(",")}}`;
-  }
-  if (typeof value === "number") return "number";
-  if (typeof value === "string") return "string";
-  return typeof value;
-}
-
-export function shapeSkeleton(value) {
-  return shapeOf(value, 0);
-}
-
-// 指纹用于缓存映射结论。键必须包含站点和提示词版本，否则改了提示词还在用旧结论。
-export function shapeFingerprint(value, ...salt) {
-  return fnv1a([shapeSkeleton(value), ...salt].join("\u0000"));
-}
-
 // ---------- 规则求值 ----------
 
 function whenMatches(when, item) {
@@ -399,24 +362,8 @@ function tokenCells(rule, item) {
   }];
 }
 
-// 把 map 文档应用到一条原始记录上。返回的是「还没乘以分组倍率」的中间结果，
-// 分组展开在外面做，因为分组倍率是站点级配置不是模型级信息。
-export const quantizePrice = quantize;
-
 export function rulesFor(item, rules = []) {
   return rules.filter(rule => whenMatches(rule.when, item));
-}
-
-export function collectSizeTiers(map, items = []) {
-  const seen = new Map();
-  for (const item of items) {
-    for (const rule of rulesFor(item, map.rules)) {
-      for (const tier of sizeTiersOf(rule.sizeTiers, item)) {
-        seen.set(tier.name, tier);
-      }
-    }
-  }
-  return [...seen.values()];
 }
 
 // ---------- 应用 ----------

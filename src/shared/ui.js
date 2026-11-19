@@ -116,14 +116,6 @@ export function toast(message) {
   toast.timer = setTimeout(() => { node.hidden = true; }, 3600);
 }
 
-export async function readJsonFile(file) {
-  const compressed = /\.gz$/i.test(file.name || "") || ["application/gzip", "application/x-gzip"].includes(file.type);
-  if (!compressed) return JSON.parse(await file.text());
-  if (typeof DecompressionStream !== "function" || typeof Blob.prototype.stream !== "function") throw new Error("当前浏览器不支持压缩 JSON 导入，请更新浏览器");
-  const stream = file.stream().pipeThrough(new DecompressionStream("gzip"));
-  return JSON.parse(await new Response(stream).text());
-}
-
 export function onRefreshProgress(callback) {
   chrome.runtime.onMessage.addListener(message => {
     if (message?.type === "REFRESH_PROGRESS") callback(message.progress);

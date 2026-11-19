@@ -1,10 +1,6 @@
 export const UPDATE_REPO = "napstablook666/ai-price-analyzer";
 export const UPDATE_PROJECT_URL = "https://github.com/napstablook666/ai-price-analyzer";
 export const UPDATE_RELEASES_URL = `${UPDATE_PROJECT_URL}/releases`;
-export const UPDATE_DOCS_URL = "https://napstablook666.github.io/ai-price-analyzer/";
-export const UPDATE_ISSUES_URL = `${UPDATE_PROJECT_URL}/issues`;
-export const UPDATE_LICENSE_URL = `${UPDATE_PROJECT_URL}/blob/main/LICENSE`;
-export const UPDATE_LICENSE_NAME = "GPL-3.0";
 
 const UPDATE_API_BASE = `https://api.github.com/repos/${UPDATE_REPO}`;
 

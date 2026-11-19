@@ -8,7 +8,6 @@ const REPO = "napstablook666/ai-price-analyzer";
 
 // releases/latest 只指向最新的正式版，预发布版拿不到自更新，只能手动下载。
 export const UPDATE_MANIFEST_URL = `https://github.com/${REPO}/releases/latest/download/update.json`;
-export const UPDATE_MANIFEST_ASSET = "update.json";
 
 // 签名公钥，生成后硬编码在这里，不从网络取。对应私钥只在 GitHub Secrets。
 export const UPDATE_SIGNING_KEY = {

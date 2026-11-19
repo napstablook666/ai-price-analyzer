@@ -91,8 +91,3 @@ export function mediaModeMatches(row = {}, mode = "text") {
   return rowType === currentMode;
 }
 
-export function mediaModeUnit(mode = "text") {
-  if (mode === "image") return "元/张";
-  if (mode === "video") return "元/次";
-  return "元/1M token";
-}

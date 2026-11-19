@@ -217,12 +217,6 @@ unit: [
 同一个 New API 报文，字段名不一样的站点各写一份映射就行。`relayrouter` 这一份就是样板：缓存写拆成 `cache_creation_5m_ratio` / `cache_creation_1h_ratio`，用数组写成回落链，老字段 `cache_creation_ratio` 排在后面兜底；长上下文档位在 `step_ratios` 里，档内表达式可以回落读父级记录，所以模型倍率只写在外层。
 `unresolved` 会上浮到 `unsupportedBillingModes` 和 `unpricedModels`，在站点卡片上看得见。
 
-## 结构指纹
-
-`shapeFingerprint(payload, source)` 把 payload 递归折成骨架（数组压成 `[]`，只留类型），取 sha 前 8 位。数值变了指纹不变，字段增删减会变。
-
-用途是将来接 AI 抽取时判断要不要重跑，现在只在测试里断言用。
-
 ## 新增一个站点
 
 1. 抓一份真实 payload 存到 `test/fixtures/<站点>-pricing.json`

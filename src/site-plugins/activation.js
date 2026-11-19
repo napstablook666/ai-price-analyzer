@@ -24,10 +24,6 @@ export function activePluginIds() {
   return activeIds || new Set(SITE_PLUGIN_CATALOG.map(plugin => plugin.id));
 }
 
-export function pluginActive(id) {
-  return activePluginIds().has(String(id || ""));
-}
-
 // 已存站点里可能有迁移前加的站点，它们的插件没走过安装流程也要能继续采集；
 // 界面上「可选站点」仍然只列已装插件的站点，这条只在按站点回查插件时使用。
 export function activeSitePluginForStation(station = {}) {

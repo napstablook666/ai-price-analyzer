@@ -104,10 +104,3 @@ export function canonicalKeysForModel(model) {
   }
   return keys;
 }
-
-export function compareCanonical(left, right) {
-  const leftModel = resolveCanonicalModel(left);
-  const rightModel = resolveCanonicalModel(right);
-  if (!leftModel || !rightModel) return leftModel === rightModel ? 0 : 1;
-  return leftModel.id === rightModel.id ? 0 : 1;
-}

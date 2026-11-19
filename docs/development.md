@@ -27,6 +27,7 @@ npm run docs:dev                         # 文档站本地预览
 npm run docs:build                       # 构建文档站
 npm run version:patch                    # 同步 package.json 与 manifest 版本
 npm run version:check                    # 检查两处版本是否一致
+npm run orphans:check                    # 找没人引用的模块与导出
 ```
 
 ## 硬约束
@@ -36,7 +37,10 @@ npm run version:check                    # 检查两处版本是否一致
 - 规范模型归一规则在 `canonical/build.mjs` 与 `src/core/canonical.js` 里必须一致。
 - 生成物（`src/site-plugins/*`、`src/shared/plugin-order.js`、`src/core/canonical-table.js`）不手改。
 - 老设置里的 `llm` / `jev` / `providerProfiles` / `activeProviders` 继续在 `normalizeSettings` 里清理。
+- 删功能要删干净：只服务它的导出、常量和用例一起删，`npm run orphans:check` 会报零引用。
 
 ## 验收
+
+`npm run verify` 一次跑完 ids、孤儿、测试、插件漂移、版本四类检查。
 
 `npm test` 全绿 + `npm run plugins:check` 无漂移。涉及采集链路的改动还要手验：加站点 → 采集 → 比价表有数据且同模型并到一行。

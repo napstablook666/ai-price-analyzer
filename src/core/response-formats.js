@@ -52,6 +52,3 @@ export function isSupportedResponseFormat(format) {
   return RESPONSE_FORMATS.has(format);
 }
 
-export function responseFormatPromptValues() {
-  return Object.keys(RESPONSE_FORMAT_DEFINITIONS).join("/");
-}

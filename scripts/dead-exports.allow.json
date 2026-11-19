@@ -1,0 +1,4 @@
+{
+  "src/site-plugins/loader.js::resetSitePluginLoader": "测试钩子：让每个用例从空的 loader 状态开始，运行时不该有消费方",
+  "src/core/price-maps/index.js::priceMapDiffKeys": "给 price-map golden 测试比对键集用，不进运行时"
+}
