@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: napstablook666/ai-price-analyzer-plugins
-          ref: main
+          ref: refs/tags/${{ github.ref_name }}
           path: plugins
           persist-credentials: false
 
@@ -53,8 +53,8 @@ jobs:
           set -euo pipefail
           version="${GITHUB_REF_NAME}"
           mkdir -p dist/source/plugins
-          tar -c --exclude=./.git --exclude=./dist . | tar -x -C dist/source
-          tar -c --exclude=.git -C plugins . | tar -x -C dist/source/plugins
+          git archive --format=tar HEAD | tar -x -C dist/source
+          git -C plugins archive --format=tar HEAD | tar -x -C dist/source/plugins
           (
             cd dist/source
             # update.bat / update.ps1 只进包，不进 update.json 的文件表：扩展不去写自己。
@@ -88,6 +88,7 @@ jobs:
         with:
           generate_release_notes: true
           body_path: RELEASE_NOTES.md
+          fail_on_unmatched_files: true
           files: |
             dist/ai-relay-price-extension-${{ github.ref_name }}.zip
             ai-price-analyzer-${{ github.ref_name }}-source.zip

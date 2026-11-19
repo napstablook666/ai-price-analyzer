@@ -53,8 +53,8 @@ Release 正文取 `RELEASE_NOTES.md`，并自动生成变更列表。
 1. 用 `npm run version:patch`、`version:minor` 或 `version:major` 升版本，更新锁文件、安装文档和 `RELEASE_NOTES.md`。
 2. 运行 `npm run plugins:build`。在扩展仓提交版本、文档和内置目录快照，在插件仓提交 `plugins.json`。
 3. 执行 `npm run verify`、`npm run verify:clean` 和 `npm run docs:build`。
-4. 先推送插件仓的 `main`。CI 和 Release 工作流会从这里读取插件源码。
-5. 推送扩展仓的 `main`，再将 `vX.Y.Z` 标签打在发版提交上并推送。
+4. 给插件仓的发版提交打 `vX.Y.Z` 标签，先推送插件仓的 `main` 和标签。普通 CI 读取插件仓的 `main`，Release 读取插件仓的同名标签。
+5. 推送扩展仓的 `main`，再给扩展仓的发版提交打 `vX.Y.Z` 标签并推送，触发 Release。
 6. 等 Release 工作流成功，确认五个附件齐全，核对 ZIP 校验值及包内扩展版本。
 
 ## 用户侧升级
