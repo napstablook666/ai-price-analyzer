@@ -258,6 +258,7 @@ async function refreshReferences(force = false) {
   if (!force && !legacy && cache.fetchedAt && Date.now() - cache.fetchedAt < 24 * 60 * 60 * 1000) return cache;
   const result = await fetchReferences({ cache });
   await setValue("references", result);
+  chrome.runtime.sendMessage({ type: "REFERENCES_CHANGED" }, () => void chrome.runtime.lastError);
   return result;
 }
 
@@ -662,7 +663,10 @@ async function refreshAll(options = {}) {
   try {
     return await task.promise;
   } finally {
-    if (refreshAllTask === task) refreshAllTask = null;
+    if (refreshAllTask === task) {
+      refreshAllTask = null;
+      notifyReferencesRefresh(Boolean(refreshReferencesTask));
+    }
   }
 }
 

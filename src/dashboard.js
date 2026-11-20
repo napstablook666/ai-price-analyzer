@@ -1,7 +1,7 @@
 import { buildStationIndexes, filterComparisonsByMediaMode, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice, priceEntryTone } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { buildMonthlyCostRankings, createDashboardIndex, deltaTone, matchesModelQueries, mediaModeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "./dashboard-index.js";
+import { buildMonthlyCostRankings, createDashboardIndex, createDashboardRowsCache, deltaTone, matchesModelQueries, mediaModeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
@@ -93,6 +93,7 @@ assertDomContract("dashboard.html", DASHBOARD_HTML_IDS);
 const $ = makeQuery("dashboard.html", DASHBOARD_HTML_IDS);
 let lastRefreshSummary = null;
 let pageFilterKey = null;
+const getDerivedRows = createDashboardRowsCache();
 const refreshRows = new Map();
 const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_write_1h_missing: "缺少 1 小时缓存价", price_missing: "中转价格未收录" };
 
@@ -861,7 +862,7 @@ function closeModelMatchDetails(except = null) {
 
 
 // 月成本排名浮层：固定定位挂在 body 层的浮层里，鼠标移进浮层滚动列表不会把它关掉。
-const monthlyCostPanelHome = new WeakMap();
+let monthlyCostTriggerState = new WeakMap();
 let monthlyCostPanelState = null;
 let monthlyCostOpenTimer = 0;
 let monthlyCostCloseTimer = 0;
@@ -878,11 +879,6 @@ function monthlyCostLayer() {
     document.body.append(layer);
   }
   return layer;
-}
-
-function monthlyCostPanelFor(trigger) {
-  const row = trigger?.closest("tr");
-  return row ? row.querySelector("[data-monthly-cost-panel]") : null;
 }
 
 // 列表现在是同模型全部报价，打开时把当前这条滚到浮层中部，省得每次手动翻。
@@ -915,14 +911,17 @@ function openMonthlyCostPanel(trigger) {
   monthlyCostCloseTimer = 0;
   monthlyCostPendingTrigger = null;
   if (!trigger?.isConnected) return;
-  const panel = monthlyCostPanelFor(trigger);
-  if (!panel) return;
-  if (monthlyCostPanelState?.panel === panel) {
-    placeMonthlyCostPanel(trigger, panel);
+  const target = monthlyCostTriggerState.get(trigger);
+  if (!target) return;
+  if (monthlyCostPanelState?.trigger === trigger) {
+    placeMonthlyCostPanel(trigger, monthlyCostPanelState.panel);
     return;
   }
   closeMonthlyCostPanel();
-  if (!monthlyCostPanelHome.has(panel)) monthlyCostPanelHome.set(panel, panel.parentElement);
+  const holder = document.createElement("div");
+  holder.innerHTML = monthlyCostPanelMarkup(target.row, target.currency, target.ranking);
+  const panel = holder.firstElementChild;
+  if (!panel) return;
   monthlyCostLayer().append(panel);
   panel.hidden = false;
   panel.dataset.floating = "true";
@@ -941,12 +940,7 @@ function closeMonthlyCostPanel() {
   const current = monthlyCostPanelState;
   if (!current) return;
   monthlyCostPanelState = null;
-  current.panel.hidden = true;
-  delete current.panel.dataset.floating;
-  current.panel.style.left = "";
-  current.panel.style.top = "";
-  const home = monthlyCostPanelHome.get(current.panel);
-  if (home?.isConnected) home.append(current.panel);
+  current.panel.remove();
   current.trigger.setAttribute("aria-expanded", "false");
 }
 
@@ -961,7 +955,7 @@ function jumpToMonthlyCostOffer(position) {
     state.page = page;
     renderRows();
   }
-  const row = $("#comparison-body")?.children[index % pageSize];
+  const row = $("#comparison-body")?.querySelector(`[data-offer-position="${index}"]`);
   if (!row) return;
   const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   row.scrollIntoView({ block: "center", behavior });
@@ -1016,17 +1010,22 @@ function stationSiteLinkMarkup(station, row) {
   return `<a class="station-site-link" href="${escapeHtml(station.baseUrl)}" target="_blank" rel="noopener noreferrer" title="打开 ${escapeHtml(station.baseUrl)}" aria-label="打开站点：${escapeHtml(row.stationName)}">${logo}${name}${icon("arrow-up-right", { size: 13, className: "icon station-link-icon" })}</a>`;
 }
 function renderRows() {
+  // 只有筛选/排序条件变化才重做全量派生数据；翻页和页大小变化复用同一份结果。
   closeMonthlyCostPanel();
+
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
-  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.cheapestGroupOnly, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
+  const filterKey = JSON.stringify([state.mediaMode, state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.cheapestGroupOnly, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
   if (pageFilterKey !== null && pageFilterKey !== filterKey) state.page = 0;
   pageFilterKey = filterKey;
-  const filtered = sortRows(collapseToCheapestGroup(state.rows.filter(row => rowMatches(row, query))));
-  const page = paginateRows(filtered, state.page, Number($("#page-size").value) || PAGE_SIZE);
+  const { filtered, monthlyCostRankings } = getDerivedRows(state.rows, filterKey, rows => {
+    const filtered = sortRows(collapseToCheapestGroup(rows.filter(row => rowMatches(row, query))));
+    return { filtered, monthlyCostRankings: buildMonthlyCostRankings(filtered) };
+  });
+  const pageSize = Number($("#page-size").value) || PAGE_SIZE;
+  const page = paginateRows(filtered, state.page, pageSize);
   state.page = page.page;
   const visible = page.rows;
-  const monthlyCostRankings = buildMonthlyCostRankings(filtered);
   const bandClasses = rowBandClasses(visible);
   const pagination = $("#comparison-pagination");
   pagination.hidden = filtered.length === 0;
@@ -1038,7 +1037,7 @@ function renderRows() {
   $("#result-count").textContent = `${filtered.length} 条报价`;
   // 分榜只在「单位价格」排序下生效：其他排序键不承诺任何单位分组。
   const groupedByUnit = state.filters.sortBy === "mediaUnitPrice" && state.mediaMode !== "text";
-  const firstVisibleIndex = filtered.indexOf(visible[0]);
+  const firstVisibleIndex = page.page * pageSize;
   $("#comparison-body").innerHTML = visible.map((row, index) => {
     const station = stationFor(row);
     // 按张的价差按元/张算，和月成本的差不是一回事，用生图那套比较结果。
@@ -1055,7 +1054,7 @@ function renderRows() {
       : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const isPublic = state.comparisonMode === "public";
     const categoryClass = ["excellent", "good", "fair", "bad"].includes(row.category) ? row.category : "";
-    const monthlyCostCurrency = row.costCurrency || currency;
+
     const officialQuotedPrices = row.officialQuotedPrices || null;
     const monthlyRanking = monthlyCostRankingFor(row, monthlyCostRankings);
     const modelName = row.displayNameOverride || row.modelName || row.displayName;
@@ -1063,14 +1062,19 @@ function renderRows() {
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     const previousRow = index === 0 ? (firstVisibleIndex > 0 ? filtered[firstVisibleIndex - 1] : null) : visible[index - 1];
     const unitGroup = groupedByUnit ? unitGroupMarkup(row, previousRow, index === 0) : "";
-    return `${unitGroup}<tr class="${rowClasses}">
+    return `${unitGroup}<tr class="${rowClasses}" data-offer-position="${firstVisibleIndex + index}">
       <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
       <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span>${rechargeTierMarkup(row)}</div></td>
-      <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking))}</td>
-      <td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, monthlyRanking, deltaClass, deltaLabel)}</td>
+      <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking, index))}</td>
+      <td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, deltaClass, deltaLabel)}</td>
       <td data-label="状态" class="public-only-column"${isPublic ? "" : " hidden"}><div class="recommendation-cell">${statusMarkup(row, false)}</div></td>
     </tr>`;
   }).join("");
+  monthlyCostTriggerState = new WeakMap();
+  for (const trigger of $("#comparison-body").querySelectorAll("[data-monthly-cost-index]")) {
+    const row = visible[Number(trigger.dataset.monthlyCostIndex)];
+    monthlyCostTriggerState.set(trigger, { row, currency, ranking: monthlyCostRankingFor(row, monthlyCostRankings) });
+  }
   for (const heading of document.querySelectorAll("th[data-sort-keys]")) {
     const keys = heading.dataset.sortKeys.split(" ");
     heading.setAttribute("aria-sort", keys.includes(state.filters.sortBy) ? (state.filters.sortDirection === "asc" ? "ascending" : "descending") : "none");
@@ -1081,11 +1085,12 @@ function renderRows() {
 }
 
 // 条长只做同模型月成本相对比较，排名来自完整筛选结果。
-function cellChartMarkup({ width, kind = "is-monthly-cost", title, trigger = false }) {
+function cellChartMarkup({ width, kind = "is-monthly-cost", title, trigger = false, index = null }) {
   const safeWidth = Number.isFinite(width) ? Math.max(0, Math.min(100, width)) : 0;
   const bar = `<span class="chart-bar" style="width:${safeWidth.toFixed(2)}%"></span>`;
   if (trigger) {
-    return `<span class="cell-chart ${kind}" data-monthly-cost-trigger role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="${escapeHtml(title)}"><span class="chart-track">${bar}</span></span>`;
+    const indexAttribute = Number.isInteger(index) ? ` data-monthly-cost-index="${index}"` : "";
+    return `<span class="cell-chart ${kind}" data-monthly-cost-trigger${indexAttribute} role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-label="${escapeHtml(title)}"><span class="chart-track">${bar}</span></span>`;
   }
   return `<span class="cell-chart ${kind}" role="img" aria-label="${escapeHtml(title)}"><span class="chart-track" title="${escapeHtml(title)}">${bar}</span></span>`;
 }
@@ -1120,8 +1125,8 @@ function unitPriceLineMarkup(row, currency) {
   return `<span class="blended-line"><span class="blended-label">混合</span>${blended}</span>`;
 }
 
-function costCombinedMarkup(row, currency, ranking, deltaClass, deltaLabel) {
-  return `<div class="cost-combined"><div class="cost-combined-main">${monthlyCostSummaryMarkup(row, currency)}<span class="delta-tag ${deltaClass}">${deltaLabel}</span></div>${unitPriceLineMarkup(row, currency)}${monthlyCostPanelMarkup(row, currency, ranking)}</div>`;
+function costCombinedMarkup(row, currency, deltaClass, deltaLabel) {
+  return `<div class="cost-combined"><div class="cost-combined-main">${monthlyCostSummaryMarkup(row, currency)}<span class="delta-tag ${deltaClass}">${deltaLabel}</span></div>${unitPriceLineMarkup(row, currency)}</div>`;
 }
 
 const PAYMENT_CHANNEL_LABELS = { wechat: "微信", alipay: "支付宝", card: "银行卡", stripe: "Stripe", crypto: "加密货币", other: "其他渠道" };
@@ -1178,9 +1183,9 @@ function monthlyCostRankTitle(row, currency, { rank, total, baseline }) {
 }
 
 // 长条是唯一能弹出排名的入口；排不出名次的报价（缺价、公益口径）不挂浮层。
-function monthlyCostChartMarkup(row, currency, ranking) {
+function monthlyCostChartMarkup(row, currency, ranking, index) {
   const width = ranking.rank ? monthlyCostBarWidth(paidMonthlyCost(row), ranking.baseline) : null;
-  return cellChartMarkup({ width, title: monthlyCostRankTitle(row, currency, ranking), trigger: Boolean(ranking.rank) });
+  return cellChartMarkup({ width, title: monthlyCostRankTitle(row, currency, ranking), trigger: Boolean(ranking.rank), index });
 }
 
 // 排名浮层只挂在长条上，停留够久或点一下才出现，表格里不再常驻名次。
@@ -1468,7 +1473,9 @@ document.addEventListener("keydown", event => {
     return;
   }
   if (event.key === "Escape") {
+    const returnFocus = monthlyCostPanelState?.panel.contains(target) ? monthlyCostPanelState.trigger : null;
     closeMonthlyCostPanel();
+    returnFocus?.focus({ preventScroll: true });
     closeFacetFavoritePanel();
   }
 });
@@ -1896,7 +1903,7 @@ window.addEventListener("message", event => {
 chrome.runtime.onMessage.addListener(message => {
   if (message?.type === "REFERENCES_REFRESHING") state.refreshInProgress = Boolean(message.active);
   // 插件安装/卸载、导入设置都会在后台改站点，比价表得跟着重拉。
-  if (message?.type === "STATIONS_CHANGED") load({ preservePage: true });
+  if (["STATIONS_CHANGED", "REFERENCES_CHANGED"].includes(message?.type)) load({ preservePage: true });
 });
 onRefreshProgress(renderRefreshProgress);
 load();

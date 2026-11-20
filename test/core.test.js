@@ -3,7 +3,7 @@ import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
-import { dropFloatingModels, fetchReferences, parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
+import { dropFloatingModels, fetchImageReferences, fetchReferences, parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
 import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, WINDHUB_PRICING_ENDPOINT, PROVIDER_REGISTRY, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
@@ -15,7 +15,7 @@ import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
-import { convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
+import { BOC_EXCHANGE_URL, OPENROUTER_IMAGES_URL, OPENROUTER_URL, convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
 import { fetchMagpieUsage, magpieSyncLabel, mergeGatewayUsage, monthlyUsageFromGateway, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../src/core/magpie-usage.js";
 import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
@@ -1197,6 +1197,95 @@ test("旧缓存里的浮动别名读出来就丢掉", async () => {
   // 网络挂了回落到缓存时也要清一遍，不然供应商栏会继续留着 ~deepseek。
   const result = await fetchReferences({ fetchImpl: () => Promise.reject(new Error("offline")), cache: { models: stale } });
   assert.deepEqual(result.models.map(model => model.id), ["deepseek/deepseek-v4"]);
+});
+
+// 使用不理会 AbortSignal 的桩，证明期限本身能结束等待，而非依赖 fetch 的实现。
+test("reference deadlines preserve cached data and do not discard successful sources", async () => {
+  const cachedModel = { id: "cached/model", provider: "cached", input: 1, output: 2 };
+  const cachedQuote = { unit: "image", value: 0.04 };
+  const cache = { models: [cachedModel], exchangeRate: 7.2, imageQuotes: { "image/a": cachedQuote }, imageModels: [], imageQuotesFetchedAt: 1 };
+  const signals = new Map();
+  const result = await fetchReferences({
+    cache,
+    now: 100_000_000,
+    timeouts: { models: 20, exchangeRate: 1000, images: 20 },
+    fetchImpl: (url, { signal }) => {
+      signals.set(url, signal);
+      if (url.startsWith(BOC_EXCHANGE_URL)) return Promise.resolve({ ok: true, text: async () => "<tr><td>美元</td><td>0</td><td>0</td><td>0</td><td>0</td><td>710</td></tr>" });
+      return new Promise(() => {});
+    }
+  });
+  assert.equal(signals.get(OPENROUTER_URL).aborted, true);
+  assert.equal(signals.get(OPENROUTER_IMAGES_URL).aborted, true);
+  assert.deepEqual(result.models, cache.models);
+  assert.deepEqual(result.imageQuotes, cache.imageQuotes);
+  assert.equal(result.exchangeRate, 7.1);
+  assert.equal(result.warnings.length, 2);
+  assert.ok(result.warnings.every(warning => warning.includes("请求超时")));
+});
+
+test("image references isolate endpoint failures and preserve each failed model cache", async () => {
+  const quote = { unit: "image", value: 0.2 };
+  const now = 100_000_000;
+  const result = await fetchImageReferences({
+    now,
+    cache: { imageQuotes: { "image/b": quote }, imageQuotesFetchedAt: 1 },
+    fetchImpl: async url => {
+      if (url === OPENROUTER_IMAGES_URL) return { ok: true, json: async () => ({ data: [{ id: "image/a" }, { id: "image/b" }] }) };
+      if (url.includes("image/b/endpoints")) throw new Error("endpoint offline");
+      return { ok: true, json: async () => ({ id: "image/a", endpoints: [{ provider_name: "provider", pricing: [{ billable: "output_image", unit: "image", cost_usd: 0.05 }] }] }) };
+    }
+  });
+  assert.equal(result.imageQuotes["image/a"].value, 0.05);
+  assert.deepEqual(result.imageQuotes["image/b"], quote);
+  assert.equal(result.imageQuotesFetchedAt, 1);
+  assert.match(result.warning, /1 个模型不可用/);
+  let requests = 0;
+  const cached = await fetchImageReferences({
+    now,
+    cache: { ...result, imageQuotesFetchedAt: now },
+    fetchImpl: async () => { requests += 1; throw new Error("should reuse cache"); }
+  });
+  assert.equal(requests, 0);
+  assert.deepEqual(cached.imageQuotes, result.imageQuotes);
+});
+
+test("image reference timeout stops pending requests and does not launch queued endpoints", async () => {
+  const endpoints = [];
+  const signals = [];
+  await assert.rejects(fetchImageReferences({
+    timeoutMs: 20,
+    fetchImpl: async (url, { signal }) => {
+      if (url === OPENROUTER_IMAGES_URL) return { ok: true, json: async () => ({ data: Array.from({ length: 10 }, (_, index) => ({ id: `image/${index}` })) }) };
+      endpoints.push(url);
+      signals.push(signal);
+      return new Promise((resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
+    }
+  }), /请求超时/);
+  assert.equal(endpoints.length, 6);
+  assert.ok(signals.every(signal => signal.aborted));
+});
+test("reference cancellation aborts every pending source and retains cache", async () => {
+  const controller = new AbortController();
+  const signals = [];
+  let allStarted;
+  const started = new Promise(resolve => { allStarted = resolve; });
+  const cache = { models: [{ id: "cached/a" }], exchangeRate: 7.1, imageQuotes: {}, imageModels: [] };
+  const task = fetchReferences({
+    cache, signal: controller.signal,
+    fetchImpl: (url, { signal }) => {
+      signals.push(signal);
+      if (signals.length === 3) allStarted();
+      return new Promise(() => {});
+    }
+  });
+  await started;
+  controller.abort(new Error("cancel reference refresh"));
+  const result = await task;
+  assert.ok(signals.every(signal => signal.aborted));
+  assert.deepEqual(result.models, cache.models);
+  assert.equal(result.exchangeRate, cache.exchangeRate);
+  assert.equal(result.warnings.length, 3);
 });
 
 test("maps OpenRouter USD credits to the unified CREDITS benchmark", () => {
@@ -5137,6 +5226,47 @@ test("serializes same-origin page stations before temporary tab cleanup", async 
   ]);
 });
 
+test("station refresh completes while cold reference requests are still pending", async () => {
+  const events = [];
+  const cache = { models: [], imageQuotes: {} };
+  let finishReferences;
+  const pendingReferences = new Promise(resolve => { finishReferences = resolve; });
+  const result = await runRefreshAll({
+    forceReferences: true,
+    getStations: async () => [{ id: "first", enabled: true }],
+    getValue: async key => { assert.equal(key, "references"); return cache; },
+    refreshOfficialReferences: force => { assert.equal(force, true); events.push("references:started"); return pendingReferences; },
+    collect: async station => { events.push("station:collected"); return { stationId: station.id, status: "success", normalized: { data: [] } }; },
+    putSnapshot: async () => { events.push("snapshot:saved"); },
+    notifyProgress: progress => events.push(progress.phase)
+  });
+  assert.equal(result.summary.successCount, 1);
+  assert.equal(result.references, cache);
+  assert.ok(events.includes("snapshot:saved"));
+  assert.equal(events.at(-1), "complete");
+  // 后台任务仍可完成，落库/广播由 service worker 的 reference 刷新入口负责。
+  finishReferences({ models: [{ id: "fresh/model" }] });
+  await pendingReferences;
+});
+
+test("reference refresh rejection warns without failing station collection", async t => {
+  const warnings = [];
+  t.mock.method(console, "warn", (...args) => warnings.push(args.join(" ")));
+  const cache = { models: [{ id: "cached/model" }] };
+  const result = await runRefreshAll({
+    getStations: async () => [{ id: "first", enabled: true }],
+    getValue: async () => cache,
+    refreshOfficialReferences: async () => { throw new Error("reference storage failed"); },
+    collect: async station => ({ stationId: station.id, status: "success", normalized: { data: [] } }),
+    putSnapshot: async () => {},
+    notifyProgress() {}
+  });
+  assert.equal(result.summary.successCount, 1);
+  assert.equal(result.references, cache);
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /基准参考价更新失败，沿用缓存：reference storage failed/);
+});
+
 test("keeps refresh progress and snapshots isolated when stations fail", async () => {
   const stations = [
     { id: "station-a", name: "A", enabled: true },
@@ -5480,7 +5610,7 @@ test("provides configurable dashboard pagination and back-to-top controls", () =
   assert.match(html, /<option value="20" selected>20<\/option>/);
   assert.match(source, /const PAGE_SIZE = 20;/);
   assert.match(css, /\.comparison-pagination\s*\{[^}]*flex-wrap:\s*wrap/);
-  assert.match(source, /paginateRows\(filtered, state\.page, Number\(\$\("#page-size"\)\.value\) \|\| PAGE_SIZE\)/);
+  assert.match(source, /paginateRows\(filtered, state\.page, pageSize\)/);
   assert.match(source, /\$\("#page-size"\)\.addEventListener\("change"/);
   // 页码本身就是输入框：第 [1] / 59 页，不再单独放「跳至」框。
   assert.match(html, /id="comparison-page-input" type="number"/);

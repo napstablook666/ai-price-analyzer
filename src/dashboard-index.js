@@ -11,6 +11,17 @@ export function createDashboardIndex(rows, stations) {
   return { searchTextByRow, modelTextByRow, stationById };
 }
 
+// 单页只取切片；报价数组或筛选键变了才重建全量派生结果。
+export function createDashboardRowsCache() {
+  let cached;
+  return (rows, key, derive) => {
+    if (!cached || cached.rows !== rows || cached.key !== key) {
+      cached = { rows, key, value: derive(rows) };
+    }
+    return cached.value;
+  };
+}
+
 export function matchesModelQueries(modelText, queries) {
   const active = queries.map(query => query.trim().toLowerCase()).filter(Boolean);
   return !active.length || active.some(query => modelText.includes(query));

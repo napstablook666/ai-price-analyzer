@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
-import { buildMonthlyCostRankings, deltaTone, modeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
+import { buildMonthlyCostRankings, createDashboardRowsCache, deltaTone, paginateRows, modeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
 import { priceEntryTone } from "../src/dashboard-pricing.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
@@ -189,6 +189,29 @@ test("monthly cost rankings use every filtered offer and keep the whole ranking"
   assert.equal(monthlyCostBarWidth(20, 100), 20);
 });
 
+test("dashboard rows cache reuses derived results for paging and invalidates data or filter changes", () => {
+  const cached = createDashboardRowsCache();
+  const rows = Array.from({ length: 60 }, (_, index) => ({ canonicalModel: "model-a", monthlyCost: index + 1 }));
+  let derivations = 0;
+  const derive = source => {
+    derivations += 1;
+    return { filtered: source.slice().reverse(), rankings: buildMonthlyCostRankings(source) };
+  };
+  const first = cached(rows, "all:cost:asc", derive);
+  assert.deepEqual(paginateRows(first.filtered, 0, 20).rows, rows.slice(40).reverse());
+  assert.equal(cached(rows, "all:cost:asc", derive), first);
+  assert.deepEqual(paginateRows(cached(rows, "all:cost:asc", derive).filtered, 1, 20).rows, rows.slice(20, 40).reverse());
+  assert.equal(paginateRows(cached(rows, "all:cost:asc", derive).filtered, 0, 50).rows.length, 50);
+  assert.equal(derivations, 1);
+  for (const key of ["search:cost:asc", "station:cost:asc", "model:cost:asc", "all:cost:desc", "image:cost:asc"]) {
+    assert.notEqual(cached(rows, key, derive), first);
+  }
+  const beforeRefresh = derivations;
+  const refreshed = rows.map(row => ({ ...row, monthlyCost: row.monthlyCost * 2 }));
+  const updated = cached(refreshed, "image:cost:asc", derive);
+  assert.equal(derivations, beforeRefresh + 1);
+  assert.equal(updated.rankings.get("model-a").at(-1).monthlyCost, 120);
+});
 test("dashboard aligns price matrices and exposes same-model monthly cost rankings", () => {
   const html = readFileSync(new URL("../dashboard.html", import.meta.url), "utf8");
   const script = readFileSync(new URL("../src/dashboard.js", import.meta.url), "utf8");
@@ -254,7 +277,7 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.match(script, /<div class="cost-combined"><div class="cost-combined-main">/);
   assert.match(script, /<div class="cost-combined-main">.*<span class="delta-tag/);
   assert.match(script, /<span class="blended-line"><span class="blended-label">混合<\/span>/);
-  assert.match(script, /data-monthly-cost-trigger role="button" tabindex="0" aria-haspopup="true" aria-expanded="false"/);
+  assert.match(script, /data-monthly-cost-trigger\$\{indexAttribute\} role="button" tabindex="0" aria-haspopup="true" aria-expanded="false"/);
   assert.match(script, /monthlyCostLayer\(\)\.append\(panel\)/);
   assert.match(script, /document\.addEventListener\("mouseover", event =>/);
   assert.match(script, /details\.dataset\.hoverOpen = "true"/);

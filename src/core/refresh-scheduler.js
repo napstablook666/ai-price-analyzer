@@ -69,15 +69,12 @@ export async function runRefreshAll({
     notifyProgress({ phase: "complete", total, completed: 0, summary });
     return { results, references, summary };
   }
-  notifyProgress({ phase: "references", status: "running", total, completed: 0, message: "正在确认基准参考价" });
-  let references;
-  try {
-    references = await refreshOfficialReferences(forceReferences);
-  } catch (error) {
-    notifyProgress({ phase: "error", total, completed: 0, message: `基准参考价查询失败：${errorMessage(error)}` });
-    throw error;
-  }
-  notifyProgress({ phase: "references", status: "success", total, completed: 0, message: "基准参考价已就绪" });
+  // 采集先用已有基准；刷新结果落库后由后台单独通知页面更新。
+  let references = await getValue("references", {});
+  void Promise.resolve().then(() => refreshOfficialReferences(forceReferences)).then(
+    updated => { references = updated; },
+    error => console.warn(`基准参考价更新失败，沿用缓存：${errorMessage(error)}`)
+  );
 
   let completed = 0;
   const reportStation = (station, snapshot, index, slot, stationStartedAt) => {

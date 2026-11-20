@@ -188,6 +188,36 @@ export function aggregateImageQuotes(rows = []) {
 const IMAGE_QUOTE_TTL = 24 * 60 * 60 * 1000;
 const IMAGE_FETCH_CONCURRENCY = 6;
 
+const REFERENCE_TIMEOUTS = { models: 12_000, exchangeRate: 8_000, images: 20_000 };
+
+async function withReferenceDeadline(label, timeoutMs, signal, work) {
+  if (signal?.aborted) throw signal.reason;
+  const controller = new AbortController();
+  const abort = () => controller.abort(signal.reason);
+  if (signal?.aborted) abort();
+  else signal?.addEventListener("abort", abort, { once: true });
+  let timer;
+  let onAbort;
+  const deadline = new Promise((resolve, reject) => {
+    onAbort = () => reject(controller.signal.reason);
+    if (controller.signal.aborted) onAbort();
+    else controller.signal.addEventListener("abort", onAbort, { once: true });
+    timer = setTimeout(() => controller.abort(new Error(`${label}请求超时（${timeoutMs}ms）`)), timeoutMs);
+  });
+  try {
+    return await Promise.race([
+      deadline,
+      Promise.resolve().then(() => {
+        controller.signal.throwIfAborted();
+        return work(controller.signal);
+      })
+    ]);
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener("abort", abort);
+    controller.signal.removeEventListener("abort", onAbort);
+  }
+}
 async function runWithConcurrency(items, limit, worker) {
   const queue = [...items];
   await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, async () => {
@@ -195,32 +225,41 @@ async function runWithConcurrency(items, limit, worker) {
   }));
 }
 
-export async function fetchImageReferences({ fetchImpl = fetch, signal, now = Date.now(), cache = {} } = {}) {
+export async function fetchImageReferences({ fetchImpl = fetch, signal, now = Date.now(), cache = {}, timeoutMs = REFERENCE_TIMEOUTS.images } = {}) {
   const cachedQuotes = cache.imageQuotes && typeof cache.imageQuotes === "object" ? cache.imageQuotes : null;
   const cachedModels = Array.isArray(cache.imageModels) ? cache.imageModels : [];
   const fetchedAt = Number(cache.imageQuotesFetchedAt) || 0;
   if (cachedQuotes && cachedModels.length && now - fetchedAt < IMAGE_QUOTE_TTL) {
     return { imageQuotes: cachedQuotes, imageModels: cachedModels, imageQuotesFetchedAt: fetchedAt, warning: "" };
   }
-  const listResponse = await fetchImpl(OPENROUTER_IMAGES_URL, { signal });
-  if (!listResponse.ok) throw new Error(`OpenRouter images ${listResponse.status}`);
-  const imageModels = parseImageModels(await listResponse.json());
-  const rows = [];
-  let failed = 0;
-  await runWithConcurrency(imageModels.map(model => model.id), IMAGE_FETCH_CONCURRENCY, async id => {
-    const response = await fetchImpl(`${OPENROUTER_IMAGES_URL}/${id}/endpoints`, { signal });
-    if (!response.ok) {
-      failed += 1;
-      return;
+  return withReferenceDeadline("OpenRouter 图价", timeoutMs, signal, async requestSignal => {
+    const listResponse = await fetchImpl(OPENROUTER_IMAGES_URL, { signal: requestSignal });
+    if (!listResponse.ok) throw new Error(`OpenRouter images ${listResponse.status}`);
+    const imageModels = parseImageModels(await listResponse.json());
+    const rows = [];
+    const failedIds = [];
+    await runWithConcurrency(imageModels.map(model => model.id), IMAGE_FETCH_CONCURRENCY, async id => {
+      requestSignal.throwIfAborted();
+      try {
+        const response = await fetchImpl(`${OPENROUTER_IMAGES_URL}/${id}/endpoints`, { signal: requestSignal });
+        if (!response.ok) throw new Error(`OpenRouter image endpoints ${response.status}`);
+        rows.push(...parseImageEndpoints(await response.json()));
+      } catch (error) {
+        if (requestSignal.aborted) throw error;
+        failedIds.push(id);
+      }
+    });
+    const imageQuotes = aggregateImageQuotes(rows);
+    for (const id of failedIds) {
+      if (cachedQuotes?.[id]) imageQuotes[id] = cachedQuotes[id];
     }
-    rows.push(...parseImageEndpoints(await response.json()));
+    return {
+      imageQuotes,
+      imageModels,
+      imageQuotesFetchedAt: failedIds.length ? fetchedAt : now,
+      warning: failedIds.length ? `OpenRouter 图价 ${failedIds.length} 个模型不可用，沿用已有缓存` : ""
+    };
   });
-  return {
-    imageQuotes: aggregateImageQuotes(rows),
-    imageModels,
-    imageQuotesFetchedAt: now,
-    warning: failed ? `OpenRouter 图价 ${failed} 个模型不可用` : ""
-  };
 }
 
 // 图价模型里 58 个不在 /models 中，补进去才能参与匹配。已有条目以 /models 为准。
@@ -252,7 +291,7 @@ export function parseOfficialExchangeRate(html) {
   return ratePerHundred / 100;
 }
 
-export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.now(), cache = {} } = {}) {
+export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.now(), cache = {}, timeouts = {} } = {}) {
   const result = {
     models: cache.models || [],
     exchangeRate: Number(cache.exchangeRate) || DEFAULT_EXCHANGE_RATE,
@@ -263,15 +302,17 @@ export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.no
     warnings: []
   };
   const [modelsResult, rateResult, imageResult] = await Promise.allSettled([
-    fetchImpl(OPENROUTER_URL, { signal }).then(response => {
+    withReferenceDeadline("OpenRouter 模型价", timeouts.models ?? REFERENCE_TIMEOUTS.models, signal, async requestSignal => {
+      const response = await fetchImpl(OPENROUTER_URL, { signal: requestSignal });
       if (!response.ok) throw new Error(`OpenRouter ${response.status}`);
-      return response.json();
-    }).then(parseOpenRouterData),
-    fetchImpl(`${BOC_EXCHANGE_URL}?_=${now}`, { signal }).then(response => {
+      return parseOpenRouterData(await response.json());
+    }),
+    withReferenceDeadline("汇率", timeouts.exchangeRate ?? REFERENCE_TIMEOUTS.exchangeRate, signal, async requestSignal => {
+      const response = await fetchImpl(`${BOC_EXCHANGE_URL}?_=${now}`, { signal: requestSignal });
       if (!response.ok) throw new Error(`BOC ${response.status}`);
-      return response.text();
-    }).then(parseOfficialExchangeRate),
-    fetchImageReferences({ fetchImpl, signal, now, cache })
+      return parseOfficialExchangeRate(await response.text());
+    }),
+    fetchImageReferences({ fetchImpl, signal, now, cache, timeoutMs: timeouts.images ?? REFERENCE_TIMEOUTS.images })
   ]);
   if (modelsResult.status === "fulfilled" && modelsResult.value.length) result.models = modelsResult.value;
   else result.warnings.push(modelsResult.reason?.message || "OpenRouter 数据为空");
