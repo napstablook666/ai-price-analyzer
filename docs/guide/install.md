@@ -31,20 +31,21 @@ cd ai-price-analyzer
 
 然后在浏览器里加载 `ai-price-analyzer` 目录本身（里面有 `manifest.json`）。
 
-如果你要改站点采集逻辑，还需要把插件仓库放进 `plugins/`：
+如果你要改站点采集逻辑，在扩展仓库旁边签出插件仓库。下面的命令从 `ai-price-analyzer` 目录执行。
 
 ```bash
-git clone https://github.com/napstablook666/ai-price-analyzer-plugins.git plugins
-node scripts/plugin-build.mjs      # 生成 src/site-plugins/*
+git clone https://github.com/napstablook666/ai-price-analyzer-plugins.git ../plugins
+npm run plugins:build
 ```
 
-插件源码不在扩展仓库里，`src/site-plugins/providers/*.js` 和 `catalog.js` 是生成物，直接改会在 `npm test` 里被判为漂移。
+构建器默认读取 `../plugins/`，签出到其他位置时用 `PLUGIN_DIR` 指向插件仓库。插件源码不在扩展仓库里，`src/site-plugins/providers/*.js` 和 `catalog.js` 是生成物，直接改会在 `npm test` 里被判为漂移。
 
 ## 更新
 
-- Release 安装：下载新包解压覆盖旧目录，然后在 `chrome://extensions` 里点扩展卡片上的刷新按钮。
-- 源码安装：`git pull` 后同样点刷新。改了插件源码的，先跑 `node scripts/plugin-build.mjs`。
-- 忘了看版本：设置页「关于 → 版本与更新」里有当前版本、检查更新按钮和最近一次检查状态，默认每 6 小时自动检查一次。
+- 在设置页「关于 → 一键更新」绑定当前加载的扩展目录，检查到新版本后点击「立即更新」。更新会校验发布清单签名和文件摘要。
+- Windows 用户可以双击扩展目录里的 `update.bat` 更新。
+- 也可以下载新包覆盖原目录，再到 `chrome://extensions` 或 `edge://extensions` 重新加载扩展。源码安装使用 `git pull` 后重新加载，改过插件源码的先运行 `npm run plugins:build`。
+- 设置页「关于 → 版本与更新」可查看当前版本和最近一次检查结果，默认每 6 小时检查一次。
 
 扩展版本、插件生成物、`package.json` 三处版本号要保持一致，`npm run version:check` 会校验。
 

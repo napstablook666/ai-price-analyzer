@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">AI Price Analyzer</h1>
 
-<p align="center">在浏览器里横向比较 AI 中转站模型价格：采集一次，按模型身份对齐，用你的实际用量算月成本。</p>
+<p align="center">比较 AI 中转站报价，按自己的用量估算成本。</p>
 
 <p align="center">
   <a href="./README.md">简体中文</a> |
@@ -18,192 +18,144 @@
   <a href="https://linux.do/"><img src="https://img.shields.io/badge/LINUX%20DO-Community-F0B90B?style=flat-square" alt="LINUX DO 社区"></a>
 </p>
 
-同一个模型在几十家中转站有十几种写法，充值比例、分组倍率、缓存价各算各的，翻价目页比价既慢又容易算错。AI Price Analyzer 是 Chromium Manifest V3 扩展：从你添加的站点采集价目，把站内写法收敛到统一的模型身份，再按你填的用量算出月成本和相对基准价的差距。没有服务端，没有打包器，仓库根目录加载进浏览器就能跑。
+同一个模型，各站的叫法可能不同，充值比例、分组倍率和缓存价格也得一起看。AI Price Analyzer 把你添加的站点报价收集到浏览器里，先对齐模型名，再用同一组用量估算各站成本，省去来回翻价目页、手动换算的麻烦。
+
+它是一个 Chromium Manifest V3 扩展，支持 Chrome、Edge 等浏览器。下载后加载即可使用，不需要部署服务端，也不需要先装 Node.js。
+
+[下载扩展](https://github.com/napstablook666/ai-price-analyzer/releases) · [安装指南](./docs/guide/install.md) · [在线文档](https://napstablook666.github.io/ai-price-analyzer/)
+
+## 能做什么
+
+| 你想看什么 | 扩展怎么处理 |
+| --- | --- |
+| 同一个模型在哪家更便宜 | 将不同写法匹配到统一模型身份，各站点、分组和计费条件分别展示。 |
+| 按自己的用量，一个月要花多少 | 输入、输出和缓存读写分别计算，并计入已配置的充值比例、分组倍率与计费档位。 |
+| 生图、视频怎么比 | 文本、图像和视频分开比较，保留按次、按张、按秒等计费单位。 |
+| 不想反复填用量 | 可读取本机 magpie 网关最近 30 天的用量，默认每 6 小时同步，也能手动填写。 |
+| 陌生模型名认不出来 | 可接自己的 OpenAI 兼容模型服务辅助识别，查看和撤销判定；人工指定始终优先。 |
+| 想补一个站点 | 从插件仓库安装站点适配，或按插件协议补充采集规则。 |
 
 ## 预览
 
-**价格对比**：一行是「站点 + 分组 + 模型」，同一模型归到同一行，右侧筛选和排序。
+### 价格对比
 
-<p align="center"><img src="./assets/screenshots/comparison-text.jpg" width="880" alt="文本模型价格对比"></p>
+按模型查看不同站点和分组的报价，用筛选、排序和月成本条比较差距。同一模型下的报价保留各自的来源与计费条件。
 
-**成本估算**：把单价折成月账单，接本机 magpie 网关可以自动同步真实用量。
+<img src="./assets/screenshots/comparison-text.jpg" width="880" alt="文本模型价格对比">
 
-<p align="center"><img src="./assets/screenshots/cost-usage.jpg" width="880" alt="成本估算设置"></p>
+### 用量与成本估算
 
-**AI 辅助识别**：规则猜不到的模型名交给自己的模型服务判定，接受的结论写成人工确认。
+填入输入、输出和缓存用量，查看这组用量在不同站点的预计成本。使用本机 magpie 网关时，也可以直接同步最近 30 天的用量。
 
-<p align="center"><img src="./assets/screenshots/ai-matching.jpg" width="880" alt="AI 辅助识别与判定队列"></p>
+<img src="./assets/screenshots/cost-usage.jpg" width="880" alt="用量与成本估算设置">
 
-## 亮点
+### 模型名辅助识别
 
-| 亮点 | 为什么会在意 |
-| --- | --- |
-| 一个站点一份采集规则 | 站点知识放在插件仓库的 `<id>/` 目录里，加站不用动扩展核心。 |
-| 先对齐模型身份再比价 | 人工指定、插件别名、AI 判定、规范模型表依次收敛，`GLM-5.3`、`z-ai/glm-5.3`、`glm-5.3:thinking` 落到同一行。 |
-| 接口直连与页面桥接都支持 | CORS 放行的 JSON 接口直接采；需要登录态的站点复用当前浏览器会话。 |
-| 文本、生图、视频分开比 | 三种计价单位互不换算，各占一张表，只和同单位、同档位的报价比大小。 |
-| 用量可以自动来 | 填本机 magpie 网关地址，默认用最近 30 天的用量算月成本，每 6 小时同步一次。 |
-| 规则猜不到的交给 AI | 用你自己的 OpenAI 兼容服务判定陌生模型名，结论进判定队列，人工指定永远优先。 |
-| 按你的用量算钱 | 输入、缓存读写、输出、按次、按秒、按张、高峰档位分别计价，落到月成本和混合单价。 |
-| 数据留在本机 | 快照存 IndexedDB，站点凭据存扩展本地存储，模型服务密钥只存本机、不进导出文件；网络请求只去你添加的站点、你填的本机 magpie 网关和两个公开参考源。 |
-| 生成物有测试兜底 | 核心、采集、匹配、插件生成物都有 `node:test` 用例，漂移会红。 |
+查看未匹配的名称、AI 判定和人工指定。AI 的有效判定会缓存使用，需要时可撤销或改成人工指定，不会自动变成人工覆盖。
 
-## 架构
+<img src="./assets/screenshots/ai-matching.jpg" width="880" alt="模型名辅助识别与判定队列">
 
-```text
-┌──────────────────────┐   ┌──────────────────────┐   ┌──────────────────────┐
-│ site-plugin          │──▶│ provider-registry    │──▶│ adapters             │
-└──────────────────────┘   └──────────────────────┘   └───────────┬──────────┘
-                                                                  │ snapshot
-                                                                  ▼
-┌──────────────────────┐                              ┌───────────▼──────────┐
-│ openrouter + boc     │─────────────────────────────▶│ matching             │
-└──────────────────────┘                              └───────────┬──────────┘
-                                                                  │
-                                                                  ▼
-                                                      ┌───────────▼──────────┐
-                                                      │ pricing              │
-                                                      └───────────┬──────────┘
-                                                                  │
-                                                                  ▼
-                                                      ┌───────────▼──────────┐
-                                                      │ dashboard            │
-                                                      └──────────────────────┘
-```
-
-- `src/site-plugins/providers/<id>.js`：每个站点一份采集规则，由插件仓库生成。
-- `src/core/provider-registry.js`：请求策略，统一处理直连、页面登录态和 Cookie 会话。
-- `src/core/adapters.js`：按 `responseFormat` 分支解析响应，产出每站一份快照。
-- `src/core/matching.js`：把站内模型名匹配到规范模型 id，参考价和规范表一起参与判定。
-- `src/core/pricing.js`：把快照、参考价和你的用量算成比价行。
-- `src/service-worker.js`：消息入口，`REFRESH_ALL` / `REFRESH_STATION` 采集，`FETCH_REFERENCES` 拉官方价，`GET_DASHBOARD` 出比价数据，`ADAPT_STATION` 识别站点。
+截图展示界面和操作方式，其中的报价不代表当前价格，使用时请重新采集。
 
 ## 安装
 
-| 项目 | 要求 |
-| --- | --- |
-| 浏览器 | Chrome、Edge 等 Chromium 内核浏览器，支持 Manifest V3 |
-| 扩展版本 | 以 `manifest.json` 的 `version` 为准（当前 0.16.0） |
-| Node.js | 只有开发和测试需要，Node 20 及以上 |
-| 权限 | `storage`、`scripting`、`tabs`、`alarms`、`cookies`、`declarativeNetRequest`，主机权限 `<all_urls>` |
+需要支持 Manifest V3 的 Chrome、Edge 等 Chromium 浏览器，当前版本见 [manifest.json](./manifest.json)。
 
-`<all_urls>` 是故意的：站点域名由插件决定，加站不需要重新授权。扩展只在你添加过的站点上注入页面脚本。
+1. 在 [Releases](https://github.com/napstablook666/ai-price-analyzer/releases) 下载 `ai-relay-price-extension-v<version>.zip`。
+2. 解压到固定目录，确认里面直接能看到 `manifest.json`。
+3. 打开 `chrome://extensions`，Edge 用户打开 `edge://extensions`，启用「开发者模式」。
+4. 点击「加载已解压的扩展」，选择上一步的目录，然后将扩展固定到工具栏。
 
-从 Release 安装：
-
-1. 打开 [Releases](https://github.com/napstablook666/ai-price-analyzer/releases)，下载 `ai-relay-price-extension-v<version>.zip`。
-2. 解压到一个固定目录，不要放在会被清理的临时目录里。
-3. 确认目录里**直接能看到** `manifest.json`，多套一层文件夹是最常见的加载失败原因。
-4. 打开 `chrome://extensions`（Edge 是 `edge://extensions`），打开「开发者模式」。
-5. 点「加载已解压的扩展」，选中第 3 步的目录。
-
-更新有两条路，都不用重新下载、解压、覆盖：
-
-- **扩展内**：设置 → 关于 → 一键更新，点「绑定目录」选中你加载扩展的那个目录（只授权一次）。以后检查到新版本，同一位置出现「立即更新」，点完扩展自己重启。
-- **扩展外**：扩展目录里有个 `update.bat`，双击它。脚本下载、验签、覆盖，浏览器一分钟内自己刷新。目录里若已有 `update.ps1` 就一起用，没有也会从发布页取。
-
-两条路都吃同一份签名过的 `update.json`，签名对不上就中止，一个字节都不写。`update.json` 里只有运行时文件的摘要，测试、构建脚本、文档不在覆盖范围内。
-
-从 0.9.0 起 `manifest.json` 带了 `key`，扩展 ID 固定下来，代价是**旧版本的数据读不到**。升级前先在设置 → 关于 →「配置迁移」导出一次，装好新版本再导入，站点和设置都能回来；密钥不进导出文件，要重填。
-
-从源码安装：
+从源码安装也不需要构建，克隆后直接加载仓库根目录。
 
 ```bash
 git clone https://github.com/napstablook666/ai-price-analyzer.git
 cd ai-price-analyzer
 ```
 
-然后在浏览器里加载这个目录本身。要改站点采集逻辑时，再把插件仓库签出来，见[两个仓库](#两个仓库)。
+更多安装说明见[安装指南](./docs/guide/install.md)。
 
 ## 快速开始
 
-1. 点工具栏图标打开价格对比面板，顶栏齿轮进「站点与设置」。
-2. 添加站点：填站点网址点「分析站点」，扩展会试探该站的价目接口和页面结构，把识别到的配置填进表单；也可以先在「插件仓库」装好站点插件，再到「已安装」一键加站。
-3. 确认配置：采集模式、接口路径、请求方式、认证方式、充值比例。第一次原样保存，跑通再回来调。
-4. 点「刷新全部」。需要登录的站点会先过一次登录态预检，分出「已登录 / 需要登录 / 需人工确认 / 无需登录」，按提示登录后重试。
-5. 看表：每行是一个「站点 + 分组 + 模型」的报价，默认按混合单价升序，单元格底部是同模型的月成本长条。
-6. 打开「偏好与成本 → 成本估算设置」，选成本口径预设或直接填输入输出用量，月成本和价差会跟着重算。
+1. 点击扩展图标打开比价面板，通过齿轮进入「站点与设置」。
+2. 在「插件仓库」安装需要的站点插件，再从「已安装」添加站点。也可以输入站点网址，用「分析站点」识别配置。
+3. 核对采集方式、认证信息和充值比例，保存后点击「刷新全部」。遇到登录提示，在当前浏览器登录对应站点后重试。
+4. 回到比价面板，选一个模型，查看各站点、分组的报价和匹配情况。
+5. 在「偏好与成本 → 成本估算设置」填入用量，或同步本机 magpie 网关最近 30 天的用量，再比较月成本。
 
-跑完这一轮，面板里应该有一张带参考价、匹配置信度和月成本的表。逐项说明见[在线文档](https://napstablook666.github.io/ai-price-analyzer/)。
+第一次使用，先加一个站点跑通采集。看到报价后，再补其他站点和成本参数。字段含义见[站点配置](./docs/configuration/station-fields.md)，表格读法见[比价面板](./docs/guide/dashboard.md)。
 
-## 常用命令
+## 更新
 
-以下命令都在仓库根目录执行：
+- 在设置的「关于 → 一键更新」绑定扩展目录，检查到新版本后点击「立即更新」。更新会校验发布清单签名和文件摘要。
+- Windows 用户也可以双击扩展目录里的 `update.bat`。
+- 仍可手动下载新包覆盖原目录，再到浏览器扩展页重新加载。源码安装则使用 `git pull` 后重新加载。
 
-| 命令 | 作用 |
-| --- | --- |
-| `npm test` | 全部测试，改完必须绿 |
-| `node scripts/plugin-build.mjs` | 改完插件源后重新生成 `src/site-plugins/` |
-| `node scripts/plugin-build.mjs --check` | 只校验生成物有没有漂移 |
-| `node scripts/model-lookup.mjs <模型写法>` | 查规范模型 id，例如 `claude 4.6` |
-| `node canonical/build.mjs --offline` | 用缓存重算规范模型表 |
-| `npm run version:check` | 检查 `package.json` 与 `manifest.json` 版本是否一致 |
-| `npm run docs:dev` | 本地预览文档站 |
+从 0.9.0 以前的版本迁移时，扩展 ID 的变化可能导致旧数据无法直接读取。先在「关于 → 配置迁移」导出配置，安装后再导入；密钥不包含在导出文件中，需要重新填写。
+
+## 数据与权限
+
+设置、采集快照和判定结果保存在浏览器本地，本项目不运行服务端账户或分析服务。需要登录的站点会按对应适配规则使用浏览器会话或你配置的凭据。
+
+- 价格来自你添加的站点页面或接口；公开参考价和汇率来自 [OpenRouter](https://openrouter.ai/api/v1/models) 与[中国银行](https://www.boc.cn/sourcedb/whpj/)。
+- 默认会尝试读取本机 magpie 网关的用量汇总，可在设置中关闭同步。AI 辅助识别启用后，会向你配置的模型服务发送待识别名称和候选信息。
+- 插件索引和版本更新使用项目的 GitHub 资源。站点与模型服务密钥保存在本机，不包含在配置导出中。
+- 扩展声明 `storage`、`scripting`、`tabs`、`alarms`、`cookies`、`declarativeNetRequest` 及 `<all_urls>` 主机权限，以适配用户添加的不同站点。页面采集按已配置站点运行。
+
+请勿将 Cookie、密钥、授权请求头或私人接口响应贴进 Issue、Pull Request 和截图。详细说明见 [PRIVACY.md](./PRIVACY.md)，漏洞反馈见 [SECURITY.md](./SECURITY.md)。
+
+## 使用限制与免责声明
+
+**价格与成本估算仅供参考，实际收费以站点的结算规则和账单为准。**
+
+- 采集的是当时可见的价目。币种、充值优惠、分组和计费档位发生变化后，需要重新采集或核对配置。
+- 月成本依赖你填写或同步的用量。带 `≈`、「估算」、「价格推导」、「币种待核验」标记的结果，需要额外核实。
+- 模型名称匹配可能出错，也不能证明站点实际提供的模型身份或质量。
+- 本项目不代下单、不核对账单，不为任何站点的信誉、稳定性或服务质量背书。充值和采购前请独立核实。
+
+完整说明见[免责声明](./docs/disclaimer.md)。
 
 ## 文档
 
 | 想做什么 | 看哪里 |
 | --- | --- |
-| 安装、加载、常见坑 | [docs/guide/install.md](./docs/guide/install.md) |
-| 加站与字段逐项解释 | [docs/configuration/station-fields.md](./docs/configuration/station-fields.md) |
-| 读懂比价表 | [docs/guide/dashboard.md](./docs/guide/dashboard.md) |
-| 调成本口径 | [docs/guide/cost.md](./docs/guide/cost.md) |
-| 登录态与 Token | [docs/guide/session.md](./docs/guide/session.md) |
-| 写站点插件 | [docs/plugin-development.md](./docs/plugin-development.md) |
-| 架构与数据流 | [docs/architecture.md](./docs/architecture.md) |
-| 排错 | [docs/troubleshooting.md](./docs/troubleshooting.md)、[docs/faq.md](./docs/faq.md) |
-| 完整手册 | [docs/user-guide.md](./docs/user-guide.md)、[docs/development.md](./docs/development.md) |
-| 在线文档站 | <https://napstablook666.github.io/ai-price-analyzer/> |
+| 安装和上手 | [安装指南](./docs/guide/install.md)、[快速开始](./docs/guide/quick-start.md) |
+| 添加站点、处理登录 | [站点字段](./docs/configuration/station-fields.md)、[登录态与 Token](./docs/guide/session.md) |
+| 看懂报价和月成本 | [比价面板](./docs/guide/dashboard.md)、[成本估算](./docs/guide/cost.md) |
+| 采集失败或结果不对 | [故障排查](./docs/troubleshooting.md)、[常见问题](./docs/faq.md) |
+| 写插件、了解数据流 | [插件协议](./docs/plugin-development.md)、[架构说明](./docs/architecture.md) |
+| 开发和发布 | [开发文档](./docs/development.md)、[贡献指南](./CONTRIBUTING.md) |
+| 完整手册 | [用户指南](./docs/user-guide.md)、[在线文档站](https://napstablook666.github.io/ai-price-analyzer/) |
 
-## 两个仓库
+## 开发与贡献
 
-项目拆成两个公开仓库：
+扩展代码在本仓库，站点适配的手写源在 [ai-price-analyzer-plugins](https://github.com/napstablook666/ai-price-analyzer-plugins)。开发和测试需要 Node.js 20 及以上，普通安装不需要。
 
-- **扩展仓库**（本仓库）：MV3 页面、service worker、采集与匹配核心、生成的插件运行时代码、测试、文档。
-- **插件仓库**：[ai-price-analyzer-plugins](https://github.com/napstablook666/ai-price-analyzer-plugins)，站点适配器的唯一手写源，一个站点一个目录。
-
-开发站点插件时把插件仓库签出到本仓库旁边的 `plugins/`：
+开发站点插件时，将两个仓库并排签出。以下命令从它们的共同父目录执行。
 
 ```bash
 git clone https://github.com/napstablook666/ai-price-analyzer.git
-cd ai-price-analyzer
 git clone https://github.com/napstablook666/ai-price-analyzer-plugins.git plugins
+cd ai-price-analyzer
+npm run plugins:build
 ```
 
-构建器从 `plugins/<id>/` 生成 `src/site-plugins/providers/<id>.js`、`src/site-plugins/catalog.js` 和 `src/shared/plugin-order.js`。生成物签入本仓库，所以只下发布包也能直接加载；插件源改动后仍要重新生成，不要手改生成物。插件仓库在别处时用 `PLUGIN_DIR` 指过去。
+构建器默认从 `../plugins/` 读取源码，再生成本仓库的 `src/site-plugins/` 等运行时文件。插件仓库在其他位置时，用 `PLUGIN_DIR` 指向它；不要手改生成物。普通用户下载的扩展包已包含生成物。
 
-## 数据来源与隐私
+以下命令在扩展仓库根目录运行。
 
-- 模型和价格来自你配置的中转站页面或接口。
-- 公开参考源只有两个：OpenRouter 模型目录 `https://openrouter.ai/api/v1/models`，中国银行外汇牌价 `https://www.boc.cn/sourcedb/whpj/`。
-- 两个可选请求，都由你自己填地址才生效：本机 magpie 网关（只读用量汇总）和你配置的 OpenAI 兼容模型服务（只发陌生模型名与候选列表）。不填就不发。
-- 设置和采集快照存在扩展本地存储与 IndexedDB，本项目不运行服务端账户或分析服务。
-- 不要在 Issue 或 Pull Request 里粘贴私有 API 响应、Cookie、授权请求头、账户标识或凭据。
+| 命令 | 用途 |
+| --- | --- |
+| `npm test` | 运行全部测试 |
+| `npm run verify` | 检查 DOM 引用、代码约束、测试、插件漂移和版本一致性 |
+| `npm run verify:clean` | 在干净签出上运行验收 |
+| `npm run plugins:build` | 修改插件后重新生成运行时文件 |
+| `npm run plugins:check` | 检查插件生成物有无漂移 |
+| `npm run models:lookup -- "claude 4.6"` | 查询规范模型 ID |
+| `npm run models:build -- --offline` | 使用本地缓存重建规范模型表 |
+| `npm run docs:dev` | 预览文档站 |
 
-详细说明见 [PRIVACY.md](./PRIVACY.md)，漏洞报告方式见 [SECURITY.md](./SECURITY.md)。
-
-
-## 免责声明
-
-扩展算的是估算值，仅供参考，以站点后台的实际扣费为准。
-
-- 价格来自你配置的站点当时展示的价目页或接口。站点改价、改分组倍率、改计费口径之后，旧快照不会自己变对。
-- 月成本、折算单价、混合单价都建立在「偏好与成本」里那组月用量上。你填的用量和真实账单不会一致，算出来的金额只是同一把尺子下的横向对比。
-- 带 `≈`、「估算」、「价格推导」、「币种待核验」标记的数字误差最大，别拿它们当报价依据。
-- 扩展不核对账单、不代下单，也不代表任何站点的官方价格。依据这些数字做充值或采购决定，风险由使用者承担。
-
-完整说明见 [docs/disclaimer.md](./docs/disclaimer.md)。
-## 发布
-
-发布由 Git tag 触发。先用 `npm run version:patch`（或 `minor` / `major`）同步版本号，再推 `v0.7.0` 这样的 tag。版本号在 `package.json`、`manifest.json`、tag 名三处必须一致；README 与 `docs/` 里写死的版本号顺手一起改。GitHub Actions 会产出三个文件：
-
-- `ai-relay-price-extension-v<version>.zip`：可直接加载的 Chromium 扩展。
-- `ai-price-analyzer-v<version>-source.zip`：构建所用的源码和插件快照。
-- `SHA256SUMS.txt`：上面两个文件的校验和。
-
-## 贡献
-
-改动流程、提交前检查与代码约定见 [CONTRIBUTING.md](./CONTRIBUTING.md)。站点插件相关改动请一并看插件仓库的 [DEVELOPMENT.md](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/DEVELOPMENT.md)。
+提问题时，请附上扩展版本、站点名称、复现步骤和脱敏截图。提交改动前看[贡献指南](./CONTRIBUTING.md)，站点适配另见插件仓库的[开发说明](https://github.com/napstablook666/ai-price-analyzer-plugins/blob/main/DEVELOPMENT.md)。
 
 ## 许可证
 
