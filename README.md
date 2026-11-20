@@ -15,7 +15,6 @@
   <a href="https://github.com/napstablook666/ai-price-analyzer/releases"><img src="https://img.shields.io/github/v/release/napstablook666/ai-price-analyzer?style=flat-square" alt="最新版本"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat-square" alt="GPL-3.0 许可证"></a>
   <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-%E5%9C%A8%E7%BA%BF-4F46E5?style=flat-square" alt="在线文档"></a>
-  <a href="https://linux.do/"><img src="https://img.shields.io/badge/LINUX%20DO-Community-F0B90B?style=flat-square" alt="LINUX DO 社区"></a>
 </p>
 
 同一个模型，各站的叫法可能不同，充值比例、分组倍率和缓存价格也得一起看。AI Price Analyzer 把你添加的站点报价收集到浏览器里，先对齐模型名，再用同一组用量估算各站成本，省去来回翻价目页、手动换算的麻烦。
@@ -160,3 +159,15 @@ npm run plugins:build
 ## 许可证
 
 [GPL-3.0](./LICENSE)
+
+---
+
+<p align="center">
+  <a href="https://linux.do?ref=seal-click" title="Best Community · LINUX DO">
+    <img src="https://linuxdo-seal.cuishushu.com/seals/seal-best-community.svg" width="309" height="95" alt="Best Community · LINUX DO">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://linux.do/">LINUX DO</a> · 新的理想型社区 · Where possible begins.
+</p>

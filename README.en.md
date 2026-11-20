@@ -15,7 +15,6 @@
   <a href="https://github.com/napstablook666/ai-price-analyzer/releases"><img src="https://img.shields.io/github/v/release/napstablook666/ai-price-analyzer?style=flat-square" alt="Latest release"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPL--3.0-22C55E?style=flat-square" alt="GPL-3.0 license"></a>
   <a href="https://napstablook666.github.io/ai-price-analyzer/"><img src="https://img.shields.io/badge/docs-%E5%9C%A8%E7%BA%BF-4F46E5?style=flat-square" alt="Documentation"></a>
-  <a href="https://linux.do/"><img src="https://img.shields.io/badge/LINUX%20DO-Community-F0B90B?style=flat-square" alt="LINUX DO community"></a>
 </p>
 
 The same model can have different names across AI gateways. Top-up ratios, group multipliers, and cache prices also affect what you pay. AI Price Analyzer collects prices from the stations you add, matches their model names, and estimates costs with the same usage figures so you can compare offers without switching between pricing pages.
@@ -160,3 +159,15 @@ When reporting a problem, include the extension version, station name, reproduct
 ## License
 
 [GPL-3.0](./LICENSE)
+
+---
+
+<p align="center">
+  <a href="https://linux.do?ref=seal-click" title="Best Community · LINUX DO">
+    <img src="https://linuxdo-seal.cuishushu.com/seals/seal-best-community.svg" width="309" height="95" alt="Best Community · LINUX DO">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://linux.do/">LINUX DO</a> · Where possible begins.
+</p>
