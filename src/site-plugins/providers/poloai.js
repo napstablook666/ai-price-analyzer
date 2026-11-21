@@ -14,7 +14,7 @@ const PRICE_MAP = {
   rules: [
     { when: { path: "billing_usage_schema.resolution", present: true }, kind: "unsupported", sourcePath: "billing_expr", reason: "Seedance 分辨率、参考视频与 token 用量联合计费暂不支持" },
     { when: { path: "billing_usage_schema.clips", present: true }, kind: "unsupported", sourcePath: "billing_usage_schema", reason: "歌曲或歌词按 clips 数量计价，暂不能当作每请求价格" },
-    { when: { path: "special_prices", present: true }, kind: "unsupported", sourcePath: "special_prices", reason: "图片分辨率专项价格尚未映射为尺寸档" },
+    { when: { path: "special_prices", present: true }, kind: "unsupported", sourcePath: "special_prices", reason: "图片尺寸专项价格的计费单位尚未核实，暂不参与比价" },
     { when: { path: "text_model_price", present: true }, kind: "unsupported", sourcePath: "text_model_price", reason: "思考模式与普通模式分档暂不支持" },
     { when: { path: "model_name", equals: "gpt-6.1-terra" }, kind: "unsupported", sourcePath: "billing_expr", reason: "12h 缓存写入暂不支持" },
     { when: { path: "description", equals: "按秒计费，模型参数和请求格式同步gpt官方" }, kind: "request", price: "model_price", unit: "second", mediaType: "video" },

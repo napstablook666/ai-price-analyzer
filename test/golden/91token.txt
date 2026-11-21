@@ -136,12 +136,12 @@ wan3.0-video|阿里万相|480P|-|-|-|-|0.156|-|video|CREDITS|0.52|1
 wan3.0-video|阿里万相|720P|-|-|-|-|0.312|-|video|CREDITS|0.52|1
 
 # unresolved
-MiniMax-H3=计费表达式解析不出来
-doubao-seedance-2-0-fast=计费表达式解析不出来
-doubao-seedance-2-0-mini=计费表达式解析不出来
-doubao-seedance-2-0=计费表达式解析不出来
-doubao-seedance-2-5=计费表达式解析不出来
-viduq3-ad=计费表达式解析不出来
-viduq3-pro=计费表达式解析不出来
-viduq3-turbo=计费表达式解析不出来
-viduq4-preview=计费表达式解析不出来
+MiniMax-H3=视频按输入与输出秒数及分辨率联合计费，暂不支持
+doubao-seedance-2-0-fast=视频按 token 用量、分辨率和参考视频联合计费，暂不支持
+doubao-seedance-2-0-mini=视频按 token 用量、分辨率和参考视频联合计费，暂不支持
+doubao-seedance-2-0=视频按 token 用量、分辨率和参考视频联合计费，暂不支持
+doubao-seedance-2-5=视频按 token 用量、分辨率和参考视频联合计费，暂不支持
+viduq3-ad=视频按实际 credits 或分辨率与时长估算计费，暂不支持
+viduq3-pro=视频按实际 credits 或分辨率与时长估算计费，暂不支持
+viduq3-turbo=视频按实际 credits 或分辨率与时长估算计费，暂不支持
+viduq4-preview=视频按实际 credits 或分辨率与时长估算计费，暂不支持

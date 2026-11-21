@@ -31,6 +31,12 @@ export const sidrunePriceMap = {
   },
   rules: [
     {
+      when: { path: "billing_mode", equals: "video" },
+      kind: "unsupported",
+      sourcePath: "media",
+      reason: "视频按输出 token、分辨率等条件计费，暂不能折算为文本输入价"
+    },
+    {
       when: { path: "billing_mode", equals: "image" },
       kind: "request",
       // 顶层这笔是默认档，真正区分大小的是下面的三档。

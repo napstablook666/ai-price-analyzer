@@ -7,6 +7,7 @@ import { addProviderStationPresets } from "../src/core/station-presets.js";
 import { SITE_PLUGIN_CATALOG, sitePluginCatalogForStations, sitePluginForStation } from "../src/site-plugins/catalog.js";
 import { loadSitePlugin, loadSitePlugins, loadedSitePluginIds, pruneSitePlugins, resetSitePluginLoader, syncSitePlugins } from "../src/site-plugins/loader.js";
 import { collectStation } from "../src/core/collectors.js";
+
 import { resolveStationCollection } from "../src/core/request-strategy.js";
 import { buildComparisonRows } from "../src/core/pricing.js";
 
@@ -125,7 +126,18 @@ test("91Token 匿名采集保留计费条件与9个复杂计费缺口，充值�
     assert.equal(new Set(snapshot.normalized.data.map(row => row.model_name)).size, 54);
     assert.equal(snapshot.normalized.unpricedModels.length, 9);
     assert.ok(snapshot.normalized.unpricedModels.includes("viduq4-preview"));
+    assert.deepEqual(snapshot.normalized.unsupportedBillingModes.slice().sort(), [
+      "视频按 token 用量、分辨率和参考视频联合计费，暂不支持",
+      "视频按实际 credits 或分辨率与时长估算计费，暂不支持",
+      "视频按输入与输出秒数及分辨率联合计费，暂不支持"
+    ].sort());
+    assert.deepEqual(snapshot.normalized.unpricedModels.slice().sort(), [
+      "doubao-seedance-2-5", "viduq3-ad", "viduq3-pro", "viduq3-turbo", "doubao-seedance-2-0",
+      "doubao-seedance-2-0-fast", "viduq4-preview", "MiniMax-H3", "doubao-seedance-2-0-mini"
+    ].sort());
     assert.equal(snapshot.normalized.data.filter(row => row.media_type === "video").length, 6);
+    assert.ok(snapshot.normalized.data.every(row => !snapshot.normalized.unpricedModels.includes(row.model_name)),
+      "unsupported video model names must not also have ordinary token-price rows");
     const fable = snapshot.normalized.data.find(row => row.model_name === "claude-fable-5" && row.proxy_group_name === "Claude MAX");
     assert.equal(fable.input_price, 13);
     assert.equal(fable.output_price, 65);
@@ -408,7 +420,7 @@ test("PoloAI 匿名采价保留未支持计费项，登录充值报价1:1与四�
     assert.equal(rows.some(row => snapshot.rawMeta.unpricedModels.includes(row.model_name)), false);
     assert.deepEqual(snapshot.rawMeta.unsupportedBillingModes.slice().sort(), [
       "12h 缓存写入暂不支持", "Seedance 分辨率、参考视频与 token 用量联合计费暂不支持",
-      "图片分辨率专项价格尚未映射为尺寸档", "歌曲或歌词按 clips 数量计价，暂不能当作每请求价格",
+      "图片尺寸专项价格的计费单位尚未核实，暂不参与比价", "歌曲或歌词按 clips 数量计价，暂不能当作每请求价格",
       "思考模式与普通模式分档暂不支持"
     ].sort());
 
@@ -527,4 +539,97 @@ test("every source module parses as a valid ES module", () => {
     }
   };
   visit(new URL("../src/", import.meta.url));
+});
+
+test("sidrune 视频走明确未支持分路，混合采集保留有效图片档位和 partial", async () => {
+  await withCleanRegistry(async () => {
+    const plugin = await loadSitePlugin("sidrune");
+    const [preset] = addProviderStationPresets([], [plugin], { exchangeRate: 7.2 });
+    const collection = resolveStationCollection(preset);
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/sidrune-pricing.json", import.meta.url), "utf8"));
+    const names = ["doubao-seedance-2-0-260128", "doubao-seedance-2-5-260628", "doubao-seedance-2-0-fast-260128", "doubao-seedance-2-0-mini-260615"];
+    // 只保留真实视频报价的分路字段，分组复用现有 fixture。
+    fixture.data.pricing.push(...names.map(name => ({
+      name, group_ids: [46], billing_mode: "video", input_price: null, output_price: null,
+      media: { protocol: "seedance", kind: "video", currency: "CNY", prices: [{ unit: "million_output_tokens", amount: "70", resolution: "480p", input: "text", audio: false }] }
+    })));
+    const snapshot = await collectStation(collection.station, {
+      collection, retries: 1,
+      fetchImpl: async () => new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } })
+    });
+    assert.equal(snapshot.status, "partial");
+    assert.deepEqual(snapshot.normalized.unpricedModels.slice().sort(), names.slice().sort());
+    assert.deepEqual(snapshot.normalized.unsupportedBillingModes, ["视频按输出 token、分辨率等条件计费，暂不能折算为文本输入价"]);
+    assert.ok(snapshot.normalized.data.every(row => !names.includes(row.model_name)));
+    const images = snapshot.normalized.data.filter(row => row.model_name === "gpt-image-2" && row.proxy_group_name === "GPT-Pro");
+    assert.deepEqual(images.map(row => [row.size_tier, row.image_price]), [["1K", 0.15], ["2K", 0.25], ["4K", 0.35]]);
+  });
+});
+
+for (const id of ["openlux", "relayrouter"]) {
+  test(`${id} 采集区分零价缺口和有效按次价，不把缺失、非法或负价当免费`, async () => {
+    await withCleanRegistry(async () => {
+      const plugin = await loadSitePlugin(id);
+      const collection = resolveStationCollection(plugin.preset);
+      const fixture = JSON.parse(readFileSync(new URL(`./fixtures/${id}-pricing.json`, import.meta.url), "utf8"));
+      fixture.group_ratio["MJ-3"] = 0.147;
+      const base = { quota_type: 1, model_ratio: 0, enable_groups: ["MJ-3"], supported_endpoint_types: ["MJ action"], model_type: "图像" };
+      fixture.data.push(
+        { ...base, model_name: "mj_custom_zoom", model_price: 0 },
+        { ...base, model_name: "mj_inpaint", model_price: 0 },
+        { ...base, model_name: "request-missing" },
+        { ...base, model_name: "request-invalid", model_price: "bad" },
+        { ...base, model_name: "request-negative", model_price: -1 },
+        { ...base, model_name: "mj_imagine", model_price: 0.3 }
+      );
+      const snapshot = await collectStation(collection.station, {
+        collection, retries: 1,
+        fetchImpl: async () => new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } })
+      });
+      const expected = ["mj_custom_zoom", "mj_inpaint", "request-missing", "request-invalid", "request-negative"];
+      assert.equal(snapshot.status, "partial");
+      assert.deepEqual(snapshot.normalized.unpricedModels.slice().sort(), expected.slice().sort());
+      assert.deepEqual(snapshot.normalized.unsupportedBillingModes.slice().sort(), [
+        "站点按次报价为 0，尚未确认免费，不参与比价", "按次价格缺失、无效或为负数，无法给出单位价"
+      ].sort());
+      assert.ok(snapshot.normalized.data.every(row => !expected.includes(row.model_name)));
+      const valid = snapshot.normalized.data.find(row => row.model_name === "mj_imagine");
+      assert.equal(valid.request_price, 0.0441);
+      const offers = buildComparisonRows({ stations: [collection.station], snapshots: [snapshot], references: { models: [] }, usage: { input: 1_000_000, output: 1_000_000 } }).flatMap(row => row.offers);
+      assert.ok(offers.every(row => !expected.includes(row.modelName)));
+    });
+  });
+}
+
+test("PoloAI special_prices 经真实 collectStation 映射保留尺寸、价格与分组倍率", async () => {
+  await withCleanRegistry(async () => {
+    const plugin = await loadSitePlugin("poloai");
+    const original = plugin.preset.adapter.priceMap;
+    const priceMap = {
+      ...original,
+      rules: original.rules.map(rule => rule.sourcePath === "special_prices"
+        ? { when: { path: "special_prices", present: true }, kind: "request", price: "model_price", unit: "image", mediaType: "image", sizeTiers: { path: "special_prices", format: "object" } }
+        : rule)
+    };
+    const collection = resolveStationCollection(plugin.preset);
+    collection.station.adapter.priceMap = priceMap;
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/poloai-pricing-sample.json", import.meta.url), "utf8"));
+    const target = fixture.data.find(item => item.model_name === "gemini-3-pro-image-preview");
+    assert.ok(target);
+    fixture.data = [target];
+    const snapshot = await collectStation(collection.station, {
+      collection, retries: 1,
+      fetchImpl: async () => new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } })
+    });
+    assert.equal(snapshot.status, "success");
+    assert.deepEqual(snapshot.normalized.data.map(row => [row.size_tier, row.image_price, row.proxy_group_name]), [
+      ["1k", 0.36, "gemini-nanobanana"], ["1k", 0.72, "gemini-as"], ["1k", 0.96, "nanobanana-临时高价"],
+      ["1k", 1.32, "企业极速｜一key调用全模型"], ["1k", 1.632, "A-Claude/GPT-svip 极速通道"], ["1k", 0.48, "nanobanana-稳定"],
+      ["2k", 0.36, "gemini-nanobanana"], ["2k", 0.72, "gemini-as"], ["2k", 0.96, "nanobanana-临时高价"],
+      ["2k", 1.32, "企业极速｜一key调用全模型"], ["2k", 1.632, "A-Claude/GPT-svip 极速通道"], ["2k", 0.48, "nanobanana-稳定"],
+      ["4k", 0.36, "gemini-nanobanana"], ["4k", 0.72, "gemini-as"], ["4k", 0.96, "nanobanana-临时高价"],
+      ["4k", 1.32, "企业极速｜一key调用全模型"], ["4k", 1.632, "A-Claude/GPT-svip 极速通道"], ["4k", 0.48, "nanobanana-稳定"]
+    ]);
+    assert.deepEqual(snapshot.normalized.unpricedModels || [], []);
+  });
 });
