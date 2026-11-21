@@ -128,11 +128,11 @@ export const sitePlugin = {
 ```
 
 匹配优先级（`src/core/matching.js`）：
-
 1. 人工确认的覆盖（`modelMatchOverrides`）
 2. 插件别名（本文件）
-3. 规范模型层：`claude-4.6-sonnet`、`anthropic/claude-sonnet-4.6:batch`、`Anthropic: Claude Sonnet 4.6` 自动归到一起
-4. 精确 / 后缀 / 忽略版本 / 模糊等内置规则
+3. 已接受的 AI 匹配缓存（`llmMatchCache`；独立于人工覆盖）
+4. 规范模型层：`claude-4.6-sonnet`、`anthropic/claude-sonnet-4.6:batch`、`Anthropic: Claude Sonnet 4.6` 自动归到一起
+5. 精确 / 后缀 / 忽略版本 / 模糊等内置规则
 
 绝大多数拼写差（大小写、`_`/`.`/空格、`provider/` 前缀、`:free` `:thinking` 后缀、`-[日期]` 尾巴）系统已经能自己收敛，不用写别名。写之前先查：
 

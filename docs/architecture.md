@@ -1,39 +1,45 @@
 # 项目结构与数据流
 
-浏览器扩展：抓取多个 AI 中转站的模型价格，把同一模型在不同站的价格和倍率对齐，出一张比价表。
+浏览器扩展从多个 AI 中转站采集模型报价，归一报价结构和模型身份后，与 OpenRouter 基准价对齐，生成同模型的比价行。
 
 ## 一条数据从哪来、到哪去
 
-```
-站点插件采集          src/site-plugins/providers/<id>.js
-  ↓  请求策略          core/provider-registry.js  requestPolicy / localStoragePageAuth / cookiePageAuth / cookieRefreshAuth
-  ↓  响应解析          core/adapters.js  normalizeEndpoint + responseFormat 分支
-快照（每站一份）      { stationId, models: [{ model_name, price… }], capturedAt }
-  ↓
-基准参考价            core/openrouter.js  parseOpenRouterData（OpenRouter 模型目录）
-  ↓
-匹配                  core/matching.js  matchModelWithOverrides
-  ↓
-比价行                core/pricing.js   buildComparisonRows
-  ↓
-界面                  dashboard.js / dashboard-pricing.js
+```text
+plugins/<id>/{manifest.json,plugin.js,models.json}   插件仓库手写源
+  ↓ scripts/plugin-build.mjs
+src/site-plugins/{providers/<id>.js,catalog.js,...}   扩展仓库生成物
+  ↓ 插件激活、站点准备
+core/request-strategy.js::resolveStationCollection   解析请求策略与 endpoint
+  ↓ service-worker.js::collect
+core/collectors.js::collectStation                  按 direct/page 与认证策略请求
+  ↓ core/normalizers.js::normalizePricingPayload
+规范报价数组 + group_ratio + 计费元数据
+  ↓ IndexedDB snapshot
+{ stationId, collectedAt, status, source, normalized, rawMeta, ... }
+  ↓ service-worker.js::dashboard
+最新有效 snapshot + references + 设置中的覆盖/插件别名/AI 缓存
+  ↓ core/pricing.js::buildComparisonRows
+按模型身份和报价组生成 comparisons/offers
+  ↓ dashboard.js / dashboard-pricing.js
+筛选、排序、计价模式展示与月成本排名
 ```
 
-消息入口在 `src/service-worker.js`：`REFRESH_ALL` / `REFRESH_STATION` 采集，`FETCH_REFERENCES` 拉基准价，`GET_DASHBOARD` 出比价数据，`ADAPT_STATION` 识别站点地址。
+快照的报价数据在 `snapshot.normalized.data`，采集时间是 `snapshot.collectedAt`。`normalized` 还承载 `sourceFormat`、分组倍率和归一诊断；`rawMeta` 保存请求 URL、HTTP 状态及诊断镜像。页面拿到的比价结果由后台从最新 snapshot、基准 references 和当前设置计算，并有短期内存缓存，不是直接读取原始响应。
+
+消息入口在 `src/service-worker.js`：`REFRESH_ALL` / `REFRESH_STATION` 触发采集，`FETCH_REFERENCES` 刷新基准参考，`GET_DASHBOARD` 返回比价数据，`ADAPT_STATION` 识别站点地址。请求策略与页面认证的准备由 `core/request-strategy.js`、插件定义和后台采集协调共同完成；响应格式解析入口是 `core/normalizers.js::normalizePricingPayload`，`core/adapters.js` 主要负责从站点配置推断 adapter，不是报价解析主入口。
 
 ## 统一模型是怎么做到的
 
-同一个模型在各站叫法不同（`GLM-5.3` / `z-ai/glm-5.3` / `glm-5.3:thinking`），靠三层收敛，不需要人工维护映射表：
+模型身份通过通用归一、站点别名、人工确认和可选 AI 缓存逐层解析。实际匹配优先级如下：
 
-1. **规范模型层** `core/canonical.js` + `core/canonical-table.js`
-   表由 `canonical/build.mjs` 生成，入口集合直接靠齐 OpenRouter 的模型列表：每个 OpenRouter 模型一个规范 id（`glm-5-3`），名称与拼写以 OpenRouter 为准，models.dev 的厂商原生写法并进来当别名；OpenRouter 没有的模型不进表（匹配不到基准价格，留着只会白占体积）。查表时先归一：取 id 末段、去 `:free` `@eu` `-v1` `-日期` 这类装饰、小写、空格与 `.` `_` 统一成 `-`。
-   → `matchModel` 里作为最高优先级的 `canonical` 规则，把站内写法和基准模型对上。
-2. **插件别名** `plugins/<id>/models.json`
-   自动归一还是认错时，插件自己声明 `"站内写法": "规范模型 id"`，只影响这个站。
-3. **人工覆盖** `modelMatchOverrides`
-   用户在界面上确认过的匹配，优先级最高，存进设置里。
+1. **人工覆盖** `modelMatchOverrides`：用户确认的站点写法映射，优先级最高。
+2. **插件别名** `plugins/<id>/models.json`：仅覆盖该站点声明的拼写。
+3. **AI 匹配缓存** `llmMatchCache`：已接受的站点写法与官方模型映射；它是独立缓存，不写入人工覆盖。
+4. **规范模型匹配**：`core/canonical.js` 使用 `canonical-table.js` 将常见路径、版本和装饰写法归到规范身份。
+5. **内置规则**：精确、后缀、忽略版本、模糊匹配，作为兜底。
 
-统一模型身份不靠 LLM：身份来自规范表，站点差异交给插件别名，个别错配留给人工覆盖。
+前四层的入口是 `core/matching.js::matchModelWithOverrides`；规范模型与内置规则在 `matchModel` 中处理。规范表由 `canonical/build.mjs` 生成，OpenRouter 提供可比价的模型身份，models.dev 补充厂商原生别名。AI 只提供经过缓存的可选辅助判断，不能替代规范身份；站点专属差异优先放插件别名，用户纠正放人工覆盖。
+
 ## 按次计费与充值阶梯怎么进比价
 
 按次计价的站（`quota_type` = 1，`model_price` 是「一次」的价）不能直接塞进按 token 的混合单价里，否则会把按次成本摊进 token 分母，得出一个没有意义的数。约定如下：
