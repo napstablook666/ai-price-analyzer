@@ -41,6 +41,7 @@
 | `cacheWrite1h` | 0 |
 | `output` | 28.98 M |
 | `requests` | 54,378 |
+| `timeProfile` | `uniform`（全天均匀） |
 | `peakShare` | 7/24 ≈ 0.29 |
 | `imageInputTokens` / `imageOutputTokens` / `images` | 0 |
 
@@ -70,7 +71,7 @@ magpie-30天的数字来自本机网关 `GET /v1/magpie/usage?period=30d`。扩�
 
 预设的下拉文案会带同步日期，例如 `magpie-30天（11 月 16 日同步）`；没同步过时显示「内置快照」。
 
-`peakShare` 是 0 到 1 的比例，不是百分比数字。填 `7` 会被夹到 `1`。
+`peakShare` 是 0 到 1 的比例，不是百分比数字。填 `7` 会被夹到 `1`。它只在站点没写时段窗口时用：站点把窗口写进计费表达式（`weekday("Asia/Shanghai") >= 1 && ...`）时，占比由 `timeProfile` 那条负荷曲线和窗口的重叠直接算出来，界面上的百分比被忽略。
 
 负值、空值、非数字一律落回预设默认值，不做报错。
 

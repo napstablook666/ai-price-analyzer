@@ -6,6 +6,7 @@ import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaU
 import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { effectiveRecharge } from "./recharge.js";
 import { rechargePaymentRate, representativeRechargePayment } from "../shared/recharge-payments.js";
+import { shareOfTiers } from "./time-window.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -223,8 +224,13 @@ function referencePrices(model, exchangeRate = 1) {
   };
 }
 
-export function getTierShares(items, peakShare = 7 / 24) {
+// 分档占比的算法优先级：站点给出的时段窗口算得出，就按「窗口 × 使用时段」算；
+// 算不出来（没窗口表达式、或表达式超出解析范围）才退回「按档位名猜 + 峰值占比标量」。
+export function getTierShares(items, options = {}) {
   if (items.length <= 1) return [1];
+  const { peakShare, profile } = typeof options === "number" ? { peakShare: options } : (options || {});
+  const derived = shareOfTiers(items, profile);
+  if (derived) return derived;
   const peak = Math.min(1, Math.max(0, Number(peakShare) || 0));
   const shares = items.map(item => {
     const name = String(item.tier_name || "").toLowerCase();
@@ -395,7 +401,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         tierItemsByGroup.get(key).push(item);
       }
     });
-    for (const [key, items] of tierItemsByGroup) tierSharesByGroup.set(key, new Map(items.map((item, index) => [item, getTierShares(items, usage.peakShare)[index]])));
+    for (const [key, items] of tierItemsByGroup) tierSharesByGroup.set(key, new Map(items.map((item, index) => [item, getTierShares(items, { peakShare: usage.peakShare, profile: usage.timeProfile })[index]])));
 
     snapshot.normalized.data.forEach((item, itemIndex) => {
       if (item.catalogOnly) return;
