@@ -164,14 +164,14 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
         throw new Error(requestError(station, requestStrategy, response));
       }
       const options = normalizationOptionsFor(station);
-      const payload = await readResponse(response, requestStrategy);
-      if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
+      const payload = await readResponse(response);
       // 主价格之外还要取的报文（拼车市场就是这种：座位在 /api/carpool-market，
       // 单价在 /api/pricing），拿不到不算采集失败，但要记下来。
       const aux = typeof payload === "string"
         ? { payload, issues: [] }
         : await attachAuxiliary(station, payload, requestStrategy, { fetchImpl, pageFetch });
-      const enriched = aux.payload;
+      const enriched = requestStrategy.decodeResponse ? requestStrategy.decodeResponse(aux.payload) : aux.payload;
+      if (enriched && typeof enriched === "object" && hasInvalidPricingValue(enriched, priceKeys)) throw new Error("价格数据校验失败");
       const normalized = typeof enriched === "string"
         ? { sourceFormat: "text", data: [], group_ratio: {}, error: "响应不是 JSON" }
         : normalizePricingPayload(enriched, station.adapter?.responseFormat || "auto", options);

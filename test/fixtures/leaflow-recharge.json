@@ -1,0 +1,17 @@
+{
+  "capturedOn": "2026-11-21",
+  "sources": [
+    "https://console.leaflow.net/billing/top-ups/new",
+    "GET /api/billing/api/v1/billing-accounts/{accountId}/payment-options"
+  ],
+  "accountCurrency": "USD",
+  "minimumAmount": 1,
+  "quickAmounts": [10, 50, 100, 500],
+  "paymentGateway": "stripe",
+  "paymentMethods": ["card", "alipay"],
+  "usdFaceValueVerified": true,
+  "cnyExchangeRate": null,
+  "ordersCreated": false,
+  "paymentsMade": false,
+  "note": "Logged-in recharge form and payment options only. No account identifiers, balances, orders, sessions or payment details retained. Quick amounts are USD face values, not CNY paid amounts or bonus tiers."
+}

@@ -31,5 +31,6 @@ export const SITE_PLUGIN_ORDER = [
   "openlux",
   "91token",
   "spiderai",
-  "poloai"
+  "poloai",
+  "leaflow"
 ];

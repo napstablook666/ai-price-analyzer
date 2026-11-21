@@ -1,0 +1,6247 @@
+{
+  "capturedOn": "2026-11-21",
+  "sources": [
+    "GET /api/products/canopy/api/v1/models",
+    "GET /api/billing/api/v1/prices?currency=USD&product_id=canopy&page_size=200"
+  ],
+  "note": "Logged-in complete model catalog and billing rates. Account identifiers, sessions, headers and unrelated products omitted. Unlisted historical billing rows intentionally retained to guard catalog joins.",
+  "items": [
+    {
+      "id": "claude-opus-5-5",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "claude-opus-5-5",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "claude-opus-5-5",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "claude-opus-5-5",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "claude-opus-5-5",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "claude-opus-5-5",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cosyvoice-v3-flash",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "audio_characters",
+            "meter_lookup_key": "audio_characters",
+            "unit": "character",
+            "dimension_keys": [
+              "model"
+            ],
+            "dimensions": {
+              "model": "01a1f93c-8903-7d6d-9a10-12d5d9ff9ba4"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cosyvoice-v3-plus",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "audio_characters",
+            "meter_lookup_key": "audio_characters",
+            "unit": "character",
+            "dimension_keys": [
+              "model"
+            ],
+            "dimensions": {
+              "model": "01a1f93c-8b13-717f-8030-4fd6344ac976"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cosyvoice-v3.5-flash",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "audio_characters",
+            "meter_lookup_key": "audio_characters",
+            "unit": "character",
+            "dimension_keys": [
+              "model"
+            ],
+            "dimensions": {
+              "model": "01a1f920-e7bf-7c50-ace7-9896209e45ef"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cosyvoice-v3.5-plus",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "audio_characters",
+            "meter_lookup_key": "audio_characters",
+            "unit": "character",
+            "dimension_keys": [
+              "model"
+            ],
+            "dimensions": {
+              "model": "01a1f920-e9de-7321-a706-a76ccd42d6bb"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cyber/deepseek-v4.1-flash",
+      "status": "available",
+      "access_granted": false,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "cyber/wan3.0-video",
+      "status": "available",
+      "access_granted": false,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "video_seconds",
+            "meter_lookup_key": "video_seconds",
+            "unit": "second",
+            "dimension_keys": [
+              "model",
+              "resolution"
+            ],
+            "dimensions": {
+              "model": "01a1e360-5aa6-701a-8598-f235e0b10a10",
+              "resolution": "480p"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "decision-model-preview",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "deepseek-v4.1-flash",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "deepseek-v4.1-flash-1017",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash-1017",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash-1017",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "cache_read",
+              "model": "deepseek-v4.1-flash-1017"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash-1017",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "deepseek-v4.1-flash-1017",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gpt-6-astra",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-astra",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-astra",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-astra",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-astra",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-astra",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gpt-6-sol",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-sol",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-sol",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-sol",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-sol",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "gpt-6-sol",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "gpt-image-2",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "images",
+            "meter_lookup_key": "images",
+            "unit": "image",
+            "dimension_keys": [
+              "model",
+              "size",
+              "quality"
+            ],
+            "dimensions": {
+              "quality": "low",
+              "model": "gpt-image-2",
+              "size": "1024x1024"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "kimi-k3",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "kimi-k3.1-pro",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3.1-pro",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3.1-pro",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3.1-pro",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3.1-pro",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "kimi-k3.1-pro",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen-audio-3.1-asr-flash-message",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "audio_input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+              "token_kind": "audio_input"
+            }
+          },
+          {
+            "kind": "audio_cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+              "token_kind": "audio_cache_read"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen-audio-3.1-asr-flash-streaming",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "output",
+              "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "audio_input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "audio_input",
+              "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d"
+            }
+          },
+          {
+            "kind": "audio_cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+              "token_kind": "audio_cache_read"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen-audio-3.1-realtime-flash",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "cache_read",
+              "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823"
+            }
+          },
+          {
+            "kind": "audio_input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+              "token_kind": "audio_input"
+            }
+          },
+          {
+            "kind": "audio_output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+              "token_kind": "audio_output"
+            }
+          },
+          {
+            "kind": "audio_cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+              "token_kind": "audio_cache_read"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen-image-2.1-turbo",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "images",
+            "meter_lookup_key": "images",
+            "unit": "image",
+            "dimension_keys": [
+              "model",
+              "size",
+              "quality"
+            ],
+            "dimensions": {
+              "model": "qwen-image-2.1-turbo",
+              "size": "1024x1024",
+              "quality": "auto"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen3.7-flash",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-flash",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "output",
+              "model": "qwen3.7-flash"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-flash",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "cache_write",
+              "model": "qwen3.7-flash"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-flash",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen3.7-plus",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-plus",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-plus",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-plus",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-plus",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.7-plus",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen3.8-flash",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-flash",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-flash",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-flash",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "token_kind": "cache_write",
+              "model": "qwen3.8-flash"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-flash",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "qwen3.8-max",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "input",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-max",
+              "token_kind": "input"
+            }
+          },
+          {
+            "kind": "output",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-max",
+              "token_kind": "output"
+            }
+          },
+          {
+            "kind": "cache_read",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-max",
+              "token_kind": "cache_read"
+            }
+          },
+          {
+            "kind": "cache_write",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-max",
+              "token_kind": "cache_write"
+            }
+          },
+          {
+            "kind": "reasoning",
+            "meter_lookup_key": "tokens",
+            "unit": "token",
+            "dimension_keys": [
+              "model",
+              "token_kind"
+            ],
+            "dimensions": {
+              "model": "qwen3.8-max",
+              "token_kind": "reasoning"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "seedance-2-0",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "video_seconds",
+            "meter_lookup_key": "video_seconds",
+            "unit": "second",
+            "dimension_keys": [
+              "model",
+              "resolution"
+            ],
+            "dimensions": {
+              "model": "seedance-2-0",
+              "resolution": "480p"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "seedance-2-5",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "video_seconds",
+            "meter_lookup_key": "video_seconds",
+            "unit": "second",
+            "dimension_keys": [
+              "model",
+              "resolution"
+            ],
+            "dimensions": {
+              "model": "seedance-2-5",
+              "resolution": "480p"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "speech-2.8-turbo",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "audio_characters",
+            "meter_lookup_key": "audio_characters",
+            "unit": "character",
+            "dimension_keys": [
+              "model"
+            ],
+            "dimensions": {
+              "model": "speech-2.8-turbo"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "wan3.0-video",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "video_seconds",
+            "meter_lookup_key": "video_seconds",
+            "unit": "second",
+            "dimension_keys": [
+              "model",
+              "resolution"
+            ],
+            "dimensions": {
+              "resolution": "480p",
+              "model": "wan3.0-video"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "wan3.0-video-prime",
+      "status": "available",
+      "access_granted": true,
+      "billing": {
+        "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+        "meters": [
+          {
+            "kind": "video_seconds",
+            "meter_lookup_key": "video_seconds",
+            "unit": "second",
+            "dimension_keys": [
+              "model",
+              "resolution"
+            ],
+            "dimensions": {
+              "model": "wan3.0-video-prime",
+              "resolution": "480p"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "__aux": {
+    "prices": {
+      "items": [
+        {
+          "product_id": "canopy",
+          "plan_id": "01a10a9f-78bf-7439-b56d-dcf261019da2",
+          "currency": "USD",
+          "active": true,
+          "rates": [
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+                "token_kind": "audio_cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.2",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.4659000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-fable-5-1",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "50.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.7425000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash-2026-07-15",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1854000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-flash",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0594000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3.1-pro",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-opus-5-5",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "5.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "audio_input",
+                "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.8480000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-sonnet-5-5",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3-vl-plus",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6750000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-character",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash-0731",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1448000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_read",
+                "model": "claude-fable-5-1"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_read",
+                "model": "gpt-6-astra"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-2.4t-a95b",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-sonnet-5-5",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3-vl-plus",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5400000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-4-argon",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-pro-0813",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.4344000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash-2026-07-15",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1485000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2060000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-2.4t-a95b",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3.1-pro",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2830000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.2",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+                "token_kind": "audio_output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.6960000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.0800000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k2.7-code",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.0056600000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-opus-5-5",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "20.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "qwen3.7-plus-2026-05-26"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.9709000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.0320000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "qwen3.8-max-0902"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.9510000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-2025-12-01",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.8000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-luna",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0900000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-2.4t-a95b",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "6.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6360000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-05-20",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.8567000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-05-20",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.4559000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "gemini-4-argon"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "20.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus-2026-05-26",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1494000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-astra",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "50.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-sonnet-5-5",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-opus-5-5",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "20.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.4559000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1170000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3-vl-plus",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.3200000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-3.8-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0090000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "qwen3.8-2.4t-a95b"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "6.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-27b",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.3500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-fable-5-1",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "12.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max-0902",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.9510000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash-2026-07-15",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0297000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-3.8-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6360000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash-2026-02-23",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.3600000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-plus",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "5.9418000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash-2026-07-15",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5940000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_read",
+                "model": "deepseek-v4.1-flash"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0060000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-27b",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-06-08",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.4559000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus-2026-05-26",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.7434000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_read",
+                "model": "qwen3.6-plus"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0999000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-plus",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.9909000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3.1-pro",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-27b",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6250000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+                "token_kind": "audio_cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "input",
+                "model": "glm-5.3"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.0179000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-3.8-flash",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "7.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-2025-12-01",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.8000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-sol",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "qwen3.5-flash-2026-02-23"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-opus-5-5",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max-0902",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.6500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1310000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "claude-fable-5-1"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "50.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-05-20",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.4850000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-pro-0813",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1448000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.8000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.3",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.5613000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-plus",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.2384000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2970000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "qwen3.8-max-0902"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0630000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-27b",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.8567000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_read",
+                "model": "qwen-plus"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2160000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.4850000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-character",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1035000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-4-argon",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6600000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-06-08",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.4559000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.2",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2475000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0630000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-sol",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-flash",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.4700000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-sol",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-flash",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0160000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-fable-5-1",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "gpt-6-sol"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2830000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-3.8-flash",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "7.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.3",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.5613000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "input",
+                "model": "qwen3.8-2.4t-a95b"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-astra",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k2.7-code",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.3417900000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash-0731",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0378000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-05-20",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1485000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-4-argon",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-character",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0207000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "qwen3.7-flash-2026-07-15"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5940000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+                "token_kind": "audio_cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6.1-sol",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.9510000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3-vl-plus",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.3200000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus-2026-05-26",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.9709000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "input",
+                "model": "qwen3.7-max-2026-06-08"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.4850000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-4-argon",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "20.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "input",
+                "model": "glm-5.2"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.9900000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1660000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-sonnet-5-5",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "kimi-k3.1-pro"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3-vl-plus",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1080000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "claude-opus-5-5",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-luna",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "deepseek-v4-pro-0813"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k2.7-code",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1609200000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a6-a21b-7c27-a20f-7a0b4db5472d",
+                "token_kind": "audio_input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.8480000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash-1017",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2830000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "qwen3.7-plus"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.3010000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash-0731",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.3816000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus-2026-05-26",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.9288000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.8000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-sol",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-pro-0813",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.4344000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.2",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.4659000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3.1-pro",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.8260000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash-0731",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2830000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-06-08",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2970000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6.1-sol",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5940000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-27b",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.3",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6360000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash-2026-02-23",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0900000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "glm-5.3",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2547000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-character",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2583000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.4559000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6.1-sol",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "claude-sonnet-5-5"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "qwen3.5-flash"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.3600000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_read",
+                "model": "qwen-plus-2025-12-01"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "deepseek-v4.1-flash-1017"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2830000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-flash",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.4700000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0060000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1310000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+                "token_kind": "audio_input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.8480000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1310000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "reasoning",
+                "model": "qwen3.7-flash"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.6600000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8a8-4ac8-76a2-94f7-bde93d777b1f",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.4000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.9510000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.6500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k2.7-code",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.3417900000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0330000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash-1017",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0060000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "qwen3.7-max-2026-06-08"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.8567000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash-2026-02-23",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-flash",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0400000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2100000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "kimi-k3"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-astra",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "12.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash-1017",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1310000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.5000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-max-2026-05-20",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "4.4559000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "deepseek-v4-flash"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.4000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1f8ab-13f3-7531-a76e-cbe1cb97c823",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2120000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gemini-3.8-flash",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1500000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "output",
+                "model": "deepseek-v4-flash-0731"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1448000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.3600000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash-1017",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1310000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6.1-sol",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "10.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k3",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.1000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "token_kind": "cache_write",
+                "model": "qwen-plus-2025-12-01"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-astra",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "50.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4.1-flash",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.1310000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-2025-12-01",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "1.0800000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-flash",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.5649000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-flash",
+                "token_kind": "reasoning"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.5649000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-luna",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-flash",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2060000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.6-plus",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "5.9418000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e2fc-e2ac-780f-97e0-40243e65dbbf",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2830000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-luna",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0100000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.8-max-0902",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2060000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.5-flash-2026-02-23",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.3600000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6.1-sol",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "2.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen-plus-character",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2583000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "qwen3.7-plus",
+                "token_kind": "output"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "3.3010000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "gpt-6-luna",
+                "token_kind": "cache_write"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1250000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "kimi-k2.7-code",
+                "token_kind": "input"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.8045100000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "deepseek-v4-pro-0813",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1143000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "tokens"
+              },
+              "unit": "token",
+              "dimensions": {
+                "model": "01a1e487-eaa7-7257-a061-b4c7fc69a5ef",
+                "token_kind": "cache_read"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1000000",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "auto",
+                "size": "1024x1024",
+                "model": "qwen-image-3.0-pro"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0343800000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2-channel-2",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2-channel-1",
+                "quality": "medium"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0530000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "medium",
+                "size": "1024x1536",
+                "model": "gpt-image-2-channel-1"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0410000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2-channel-1",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0050000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2-channel-1",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1536",
+                "model": "gpt-image-2-channel-1",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0050000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2-channel-2",
+                "quality": "medium"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0530000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1536",
+                "model": "gpt-image-2-channel-1",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2110000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "auto",
+                "size": "2048x2048",
+                "model": "qwen-image-2.1-turbo"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0141330000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "model": "qwen-image-3.0",
+                "quality": "auto",
+                "size": "1024x1024"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0247540000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2-channel-1",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2110000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2",
+                "quality": "medium"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0410000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "model": "gpt-image-2",
+                "quality": "high",
+                "size": "1024x1536"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "model": "gpt-image-2",
+                "quality": "low",
+                "size": "1536x1024"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0050000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "2048x2048",
+                "model": "qwen-image-3.0",
+                "quality": "auto"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0247540000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "auto",
+                "size": "1024x1024",
+                "model": "qwen-image-2.1-turbo"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0141330000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1536",
+                "model": "gpt-image-2",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0050000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2-channel-2",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0050000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1536",
+                "model": "gpt-image-2-channel-2",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0050000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2-channel-2",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2110000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "model": "gpt-image-2-channel-2",
+                "quality": "medium",
+                "size": "1024x1536"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0410000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "low",
+                "size": "1024x1024",
+                "model": "gpt-image-2-channel-2"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0060000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2-channel-1",
+                "quality": "medium"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0410000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1536x1024",
+                "model": "gpt-image-2",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1536",
+                "model": "gpt-image-2-channel-2",
+                "quality": "high"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1536",
+                "model": "gpt-image-2",
+                "quality": "medium"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0410000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2-channel-1",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0060000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2",
+                "quality": "low"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0060000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "size": "1024x1024",
+                "model": "gpt-image-2",
+                "quality": "medium"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0530000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "auto",
+                "size": "2048x2048",
+                "model": "qwen-image-3.0-pro"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0687610000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "quality": "medium",
+                "size": "1536x1024",
+                "model": "gpt-image-2-channel-2"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0410000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "audio_characters"
+              },
+              "unit": "character",
+              "dimensions": {
+                "model": "01a1f93c-8903-7d6d-9a10-12d5d9ff9ba4"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000141200",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "audio_characters"
+              },
+              "unit": "character",
+              "dimensions": {
+                "model": "01a1f920-e9de-7321-a706-a76ccd42d6bb"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000211900",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "audio_characters"
+              },
+              "unit": "character",
+              "dimensions": {
+                "model": "01a1f920-e7bf-7c50-ace7-9896209e45ef"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000141200",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "audio_characters"
+              },
+              "unit": "character",
+              "dimensions": {
+                "model": "01a1f93c-8b13-717f-8030-4fd6344ac976"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000282500",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "audio_characters"
+              },
+              "unit": "character",
+              "dimensions": {
+                "model": "speech-2.8-turbo"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000600000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "wan3.0-video",
+                "resolution": "1080p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650250000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "seedance-2-5",
+                "resolution": "480p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1030000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "seedance-2-5",
+                "resolution": "1080p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.5690000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "01a1e360-5aa6-701a-8598-f235e0b10a10",
+                "resolution": "480p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0412560000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "01a1e360-5aa6-701a-8598-f235e0b10a10",
+                "resolution": "720p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0825130000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "wan3.0-video",
+                "resolution": "480p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0412560000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "seedance-2-0",
+                "resolution": "4k"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.7800000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "wan3.0-video-prime",
+                "resolution": "1080p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2543990000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "wan3.0-video",
+                "resolution": "720p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0825130000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "wan3.0-video-prime",
+                "resolution": "480p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0636000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "seedance-2-5",
+                "resolution": "720p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.2310000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "wan3.0-video-prime",
+                "resolution": "720p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1271990000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "seedance-2-0",
+                "resolution": "1080p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.3700000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "01a1e360-5aa6-701a-8598-f235e0b10a10",
+                "resolution": "1080p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1650250000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "resolution": "720p",
+                "model": "seedance-2-0"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.1500000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "video_seconds"
+              },
+              "unit": "second",
+              "dimensions": {
+                "model": "seedance-2-0",
+                "resolution": "480p"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0700000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "input_images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "model": "qwen-image-3.0-pro"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            },
+            {
+              "meter": {
+                "lookup_key": "input_images"
+              },
+              "unit": "image",
+              "dimensions": {
+                "model": "qwen-image-3.0"
+              },
+              "billing_scheme": "per_unit",
+              "usage_type": "metered",
+              "interval": "none",
+              "tiers_mode": "none",
+              "unit_amount": "0.0000000000",
+              "unit_quantity": "1",
+              "currency": "USD"
+            }
+          ]
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "page_size": 200,
+        "total_count": 1
+      }
+    }
+  }
+}

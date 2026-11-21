@@ -15,6 +15,7 @@ export const SITE_LOGOS = {
   "hepingan": "icons/sites/hepingan.png",
   "jiji": "icons/sites/jiji.png",
   "killai": "icons/sites/killai.png",
+  "leaflow": "icons/sites/leaflow.svg",
   "liuguang": "icons/sites/liuguang.svg",
   "maolaoapi": "icons/sites/maolaoapi.svg",
   "newcodex": "icons/sites/newcodex.svg",

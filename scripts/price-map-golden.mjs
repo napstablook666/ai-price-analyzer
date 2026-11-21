@@ -19,6 +19,7 @@ import { resolvePriceMap } from "../src/core/price-maps/index.js";
 import { sitePlugin as token91Plugin } from "../src/site-plugins/providers/91token.js";
 import { sitePlugin as spideraiPlugin } from "../src/site-plugins/providers/spiderai.js";
 import { sitePlugin as poloaiPlugin } from "../src/site-plugins/providers/poloai.js";
+import { sitePlugin as leaflowPlugin } from "../src/site-plugins/providers/leaflow.js";
 import { stellaislePlazaRows } from "../src/core/price-maps/stellaisle.js";
 
 const FIXTURES = new URL("../test/fixtures/", import.meta.url);
@@ -53,6 +54,18 @@ export const GOLDEN_CASES = Object.freeze([
     expectedUnresolved: [
       "doubao-seedance-2-0-260128", "doubao-seedance-2-0-fast-260128", "doubao-seedance-2-0-mini-260615",
       "gemini-3-pro-image-preview", "gpt-6.1-terra", "qwen-plus", "suno_lyrics", "suno_music"
+    ]
+  },
+  {
+    name: "leaflow", base: "tokenflux", fixture: "leaflow-pricing.json",
+    priceMap: leaflowPlugin.preset.adapter.priceMap,
+    extraFields: ["size_tier", "request_unit"],
+    decode: text => leaflowPlugin.request.decodeResponse(JSON.parse(text)),
+    note: "2026-11-21 登录完整目录28模型 + 277计费行；文本/缓存/图片规格/视频秒价，8音频与2受限模型明确未解析",
+    expectedUnresolved: [
+      "cosyvoice-v3-flash", "cosyvoice-v3-plus", "cosyvoice-v3.5-flash", "cosyvoice-v3.5-plus",
+      "cyber/deepseek-v4.1-flash", "cyber/wan3.0-video",
+      "qwen-audio-3.1-asr-flash-message", "qwen-audio-3.1-asr-flash-streaming", "qwen-audio-3.1-realtime-flash", "speech-2.8-turbo"
     ]
   },
   { base: "allrouter", fixture: "allrouter-pricing.json" },
@@ -112,7 +125,8 @@ export function renderGolden(caseItem) {
   const payload = expand ? { data: expand(raw) } : raw;
   const { rows, unresolved } = applyPriceMap(map, payload, { parseTiers: parseBillingTiers });
 
-  const lines = rows.map(row => FIELDS.map(field => cell(row[field])).join("|")).sort();
+  const fields = [...FIELDS, ...(caseItem.extraFields || [])];
+  const lines = rows.map(row => fields.map(field => cell(row[field])).join("|")).sort();
   // unresolved 是「这条模型没解析出价」的清单，它变了同样说明映射漏了东西。
   const misses = unresolved
     .map(entry => `${cell(entry.model)}=${cell(entry.reason)}`)
@@ -124,7 +138,7 @@ export function renderGolden(caseItem) {
     `# fixture: ${fixture}`,
     `# rows: ${lines.length} · unresolved: ${misses.length}`,
     `# 更新：node scripts/price-map-golden.mjs --update`,
-    `# 字段：${FIELDS.join("|")}`,
+    `# 字段：${fields.join("|")}`,
     "",
     ...lines,
     ...(misses.length ? ["", "# unresolved", ...misses] : [])
