@@ -1,3 +1,5 @@
+import { effectiveMonthlyCost } from "./shared/monthly-cost.js";
+
 export function createDashboardIndex(rows, stations) {
   const searchTextByRow = new WeakMap(rows.map(row => [
     row,
@@ -81,9 +83,7 @@ export function buildMonthlyCostRankings(rows = []) {
     if (row?.stationCategory === "public" || row?.pricingUnavailable) return;
     // 有充值阶梯的站按落档后的实付金额排名，否则名次会和表里显示的金额对不上。
     // 生图行的人民币成本单独算过一版，和按月 token 摊出来的不是同一个数，优先用它。
-    const rawMonthlyCost = row?.billingMode === "image"
-      ? (Number.isFinite(row?.imageMonthlyCostPaid) ? row.imageMonthlyCostPaid : row?.imageMonthlyCost)
-      : (Number.isFinite(row?.monthlyCostPaid) ? row.monthlyCostPaid : row?.monthlyCost);
+    const rawMonthlyCost = effectiveMonthlyCost(row);
     if (rawMonthlyCost === null || rawMonthlyCost === undefined || rawMonthlyCost === "") return;
     const monthlyCost = Number(rawMonthlyCost);
     const key = monthlyCostModelKey(row);

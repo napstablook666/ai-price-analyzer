@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { buildComparisonRows, pickPrimaryOfficial } from "../src/core/pricing.js";
 import { buildMonthlyCostRankings, createDashboardRowsCache, deltaTone, paginateRows, modeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor } from "../src/dashboard-index.js";
+import { effectiveMonthlyCost } from "../src/shared/monthly-cost.js";
 import { priceEntryTone } from "../src/dashboard-pricing.js";
 
 const USAGE = { input: 1_000_000, output: 1_000_000 };
@@ -71,6 +72,16 @@ test("pickPrimaryOfficial prefers the undecorated exact name, then the cheapest 
   assert.equal(pickPrimaryOfficial([{ name: "m:batch", monthlyCost: 9 }, { name: "m@eu", monthlyCost: 1 }], "m").name, "m@eu");
 
   assert.equal(pickPrimaryOfficial([], "m"), null);
+});
+
+test("effectiveMonthlyCost selects paid monthly value for each billing mode", () => {
+  assert.equal(effectiveMonthlyCost({ monthlyCost: 100, monthlyCostPaid: 80 }), 80);
+  assert.equal(effectiveMonthlyCost({ monthlyCost: 0, monthlyCostPaid: 10 }), 10);
+  assert.equal(effectiveMonthlyCost({ monthlyCost: 100, monthlyCostPaid: null }), 100);
+  assert.equal(effectiveMonthlyCost({ billingMode: "image", imageMonthlyCost: 40, imageMonthlyCostPaid: 30, monthlyCostPaid: 5 }), 30);
+  assert.equal(effectiveMonthlyCost({ billingMode: "image", imageMonthlyCost: 0, imageMonthlyCostPaid: null }), 0);
+  assert.equal(effectiveMonthlyCost({ billingMode: "image", imageMonthlyCost: null, monthlyCostPaid: 5 }), null);
+  assert.equal(effectiveMonthlyCost({ billingMode: "request", monthlyCost: 20, monthlyCostPaid: 16 }), 16);
 });
 
 
@@ -255,7 +266,7 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.match(script, /querySelector\("\.monthly-cost-ranking-item\.is-current"\)/);
   assert.match(script, /buildMonthlyCostRankings\(filtered\)/);
   assert.match(script, /monthlyCostRankingFor\(row, monthlyCostRankings\)/);
-  assert.match(script, /monthlyCostBarWidth\(paidMonthlyCost\(row\), ranking\.baseline\)/);
+  assert.match(script, /monthlyCostBarWidth\(effectiveMonthlyCost\(row\), ranking\.baseline\)/);
   // 浮层只挂在长条上：金额只是文字，长条要停够 MONTHLY_COST_OPEN_DELAY 才弹。
   assert.equal(script.includes('class="cost-amount" data-monthly-cost-trigger'), false);
   assert.match(script, /function monthlyCostSummaryMarkup\(row, currency\) \{/);

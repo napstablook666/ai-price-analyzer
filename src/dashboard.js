@@ -11,6 +11,7 @@ import { siteIconMarkup } from "./shared/site-icon.js";
 import { IMAGE_UNIT_LABELS, IMAGE_UNIT_SUFFIXES, mediaUnitLabel, mediaUnitRank } from "./core/image-billing.js";
 import { DASHBOARD_HTML_IDS } from "./dom-contract.js";
 import { assertDomContract, makeQuery } from "./core/dom-guard.js";
+import { effectiveMonthlyCost } from "./shared/monthly-cost.js";
 
 // 供应商不写死名单：默认全选（null）。用户改过就记进 localStorage 的 JSON，下次打开沿用。
 const PROVIDER_FILTER_STORE = "model-atlas:provider-filter";
@@ -194,7 +195,7 @@ function collapseToCheapestGroup(rows) {
   const cheapest = new Map();
   for (const row of rows) {
     const key = [row.stationId, row.modelName, row.canonicalModel, row.mediaType, row.sizeTier || "", row.requestUnit || ""].join("\u0000");
-    const cost = paidMonthlyCost(row);
+    const cost = effectiveMonthlyCost(row);
     const best = cheapest.get(key);
     if (!best || (Number.isFinite(cost) && (!Number.isFinite(best.cost) || cost < best.cost))) cheapest.set(key, { row, cost });
   }
@@ -366,7 +367,7 @@ function groupFacetStats(rows) {
     if (!name) continue;
     const entry = stats.get(name) || { models: new Set(), cost: 0 };
     entry.models.add(row.canonicalModel || row.modelName);
-    const cost = paidMonthlyCost(row);
+    const cost = effectiveMonthlyCost(row);
     if (Number.isFinite(cost)) entry.cost += cost;
     stats.set(name, entry);
   }
@@ -605,7 +606,7 @@ function sortValue(row, key) {
   if (key === "model") return `${row.displayName} ${row.modelName}`;
   if (key === "blendedUnitPrice") return unitPriceSortValue(row);
   if (key === "mediaUnitPrice") return mediaUnitPriceSortValue(row);
-  if (key === "monthlyCost") return paidMonthlyCost(row);
+  if (key === "monthlyCost") return effectiveMonthlyCost(row);
   return row[key];
 }
 function compareSortValues(left, right, direction) {
@@ -1137,19 +1138,11 @@ function formatPaymentAmount(amount, currency) {
   if (currency === "CREDITS") return `${value.toFixed(0)} CR`;
   return `${currency === "USD" ? "$" : "¥"}${value.toFixed(2)}`;
 }
-// 有充值阶梯的站点，月成本按落档后的实付金额显示；排名和柱长也用这个数，不然名次和金额会打架。
-function paidMonthlyCost(row) {
-  if (row.billingMode === "image") {
-    if (Number.isFinite(row.imageMonthlyCostPaid)) return row.imageMonthlyCostPaid;
-    return row.imageMonthlyCost;
-  }
-  return Number.isFinite(row.monthlyCostPaid) ? row.monthlyCostPaid : row.monthlyCost;
-}
 
 // 金额只是显示，浮层只挂在下面那根长条上，免得鼠标扫过金额就弹东西。
 function monthlyCostSummaryMarkup(row, currency) {
-  const amount = formatPrice(paidMonthlyCost(row), row.costCurrency || currency);
-  const noUsage = row.billingMode === "image" && !Number.isFinite(paidMonthlyCost(row)) && row.stationCategory !== "public";
+  const amount = formatPrice(effectiveMonthlyCost(row), row.costCurrency || currency);
+  const noUsage = row.billingMode === "image" && !Number.isFinite(effectiveMonthlyCost(row)) && row.stationCategory !== "public";
   if (noUsage) return `<strong class="cost-amount cost-amount-missing">填出图张数</strong>`;
   return `<strong class="cost-amount">${amount}</strong>`;
 }
@@ -1178,13 +1171,13 @@ function rechargeTierMarkup(row) {
 // 长条只做同模型月成本相对比较，放在单价单元格底部；名次和价差仍在月成本列。
 function monthlyCostRankTitle(row, currency, { rank, total, baseline }) {
   return rank
-    ? `同模型第 ${rank} / ${total} 名，实付月成本 ${formatPrice(paidMonthlyCost(row), row.costCurrency || currency)}；柱长按组内最高月成本 ${formatPrice(baseline, row.costCurrency || currency)} 归一`
+    ? `同模型第 ${rank} / ${total} 名，实付月成本 ${formatPrice(effectiveMonthlyCost(row), row.costCurrency || currency)}；柱长按组内最高月成本 ${formatPrice(baseline, row.costCurrency || currency)} 归一`
     : "月成本不可用，无法参与同模型排名";
 }
 
 // 长条是唯一能弹出排名的入口；排不出名次的报价（缺价、公益口径）不挂浮层。
 function monthlyCostChartMarkup(row, currency, ranking, index) {
-  const width = ranking.rank ? monthlyCostBarWidth(paidMonthlyCost(row), ranking.baseline) : null;
+  const width = ranking.rank ? monthlyCostBarWidth(effectiveMonthlyCost(row), ranking.baseline) : null;
   return cellChartMarkup({ width, title: monthlyCostRankTitle(row, currency, ranking), trigger: Boolean(ranking.rank), index });
 }
 
