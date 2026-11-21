@@ -491,6 +491,30 @@ test("RelayRouter 按次计价模型只出按次价，并带上媒体类型", ()
   assert.equal(video.media_type, "video");
 });
 
+test("RelayRouter 的按次价为 0 时锁进缺口，不虚构价格也不误伤同报文其他模型", () => {
+  const payload = {
+    success: true,
+    group_ratio: { "MJ-3": 0.147 },
+    data: [
+      { model_name: "mj_custom_zoom", quota_type: 1, model_ratio: 0, model_price: 0, enable_groups: ["MJ-3"], supported_endpoint_types: ["MJ action"], model_type: "图像" },
+      { model_name: "mj_inpaint", quota_type: 1, model_ratio: 0, model_price: 0, enable_groups: ["MJ-3"], supported_endpoint_types: ["MJ action"], model_type: "图像" },
+      { model_name: "mj_imagine", quota_type: 1, model_ratio: 0, model_price: 0.3, enable_groups: ["MJ-3"], supported_endpoint_types: ["MJ imagine"], model_type: "图像" },
+      { model_name: "mj_upload", quota_type: 1, model_ratio: 0, model_price: 0.003, enable_groups: ["MJ-3"], supported_endpoint_types: ["MJ action"], model_type: "图像" }
+    ]
+  };
+  const out = relayRows(payload);
+  assert.deepEqual(out.unresolved, [
+    { model: "mj_custom_zoom", reason: "按次价格缺失或非正数，无法给出单位价" },
+    { model: "mj_inpaint", reason: "按次价格缺失或非正数，无法给出单位价" }
+  ]);
+  assert.equal(out.rows.filter(row => ["mj_custom_zoom", "mj_inpaint"].includes(row.model_name)).length, 0, "零价模型不许出行");
+  const imagine = relayRow("mj_imagine", "MJ-3", payload);
+  assert.equal(imagine.request_price, 0.0441, "0.3 × 0.147，正价模型照常出价");
+  assert.equal(imagine.media_type, "image");
+  const upload = relayRow("mj_upload", "MJ-3", payload);
+  assert.equal(upload.request_price, 0.000441, "小额正价照常出价，量级不能错");
+});
+
 // ---- AllRouter：/api/pricing 就是 tokenflux 形状，分组倍率公开 ----
 
 // 真实 payload 裁出来的 5 条：倍率类、分时表达式、长度分档表达式、出图表达式各一。
