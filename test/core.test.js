@@ -4035,7 +4035,7 @@ test("collects Sidrune public model prices without credentials", async () => {
 });
 
 
-test("Sidrune 的媒体报价维度不当作价格，合法结构仍能采集", async () => {
+test("Sidrune 的媒体报价维度不当作价格，不连累同批合法报价", async () => {
   const mediaPayload = {
     code: 0,
     data: {
@@ -4060,11 +4060,11 @@ test("Sidrune 的媒体报价维度不当作价格，合法结构仍能采集", 
   }, {
     fetchImpl: async () => response(mediaPayload)
   });
-  assert.equal(snapshot.status, "success");
+  // 整单响应不被拒绝：文本模型照常出价，媒体模型进显式缺口。
+  assert.equal(snapshot.status, "partial");
   assert.equal(snapshot.normalized.invalidPricingValues, undefined);
   assert.equal(snapshot.normalized.data[0].input_price, 4);
-  // 视频媒体价没有 token 单价字段，进入明确缺口，而不是让整单响应被拒。
-  assert.ok(snapshot.normalized.unresolved.some(item => item.model === "seedance-video"));
+  assert.deepEqual(snapshot.normalized.unpricedModels, ["seedance-video"]);
 });
 
 test("Sidrune 媒体结构里的数值型或无 unit 的 input 仍 fail-closed", async () => {
