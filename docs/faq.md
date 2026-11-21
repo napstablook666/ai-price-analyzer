@@ -62,7 +62,7 @@ Chromium 内核：Chrome、Edge、Brave 等。Firefox 和 Safari 不保证能用
 
 ## 需要科学上网吗
 
-访问中转站通常直连即可。拉基准价和汇率需要能访问 OpenRouter、models.dev 和中国银行网站；失败时会用缓存值，不影响采集。
+访问中转站通常直连即可。更新基准价需要访问 OpenRouter、models.dev；参考汇率取 ExchangeRate-API，失败时切换 Frankfurter / ECB。网络失败会沿用缓存并提示，不影响采集。
 
 ## 换电脑怎么迁移
 

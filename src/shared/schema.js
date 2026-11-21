@@ -7,7 +7,6 @@ import { normalizeRechargePayments } from "./recharge-payments.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 export const OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images/models";
-export const BOC_EXCHANGE_URL = "https://www.boc.cn/sourcedb/whpj/";
 export const DEFAULT_EXCHANGE_RATE = 7.3;
 export const SYSTEM_BASE_PRICE_PER_1M = 2.0;
 
@@ -145,6 +144,7 @@ export const DEFAULT_MODEL_ASSISTANT = {
 
 const DEFAULT_SETTINGS = {
   defaultCurrency: "CNY",
+  exchangeRateMode: "auto",
   exchangeRate: DEFAULT_EXCHANGE_RATE,
   recommendationProfile: "price",
   evidenceThreshold: 60,
@@ -282,6 +282,8 @@ export function normalizeSettings(input = {}) {
   }
   settings.defaultCurrency = settings.defaultCurrency === "USD" ? "USD" : "CNY";
   settings.exchangeRate = Number.isFinite(Number(settings.exchangeRate)) && Number(settings.exchangeRate) > 0 ? Number(settings.exchangeRate) : DEFAULT_EXCHANGE_RATE;
+  const legacyManual = !Object.prototype.hasOwnProperty.call(input, "exchangeRateMode") && settings.exchangeRate !== DEFAULT_EXCHANGE_RATE;
+  settings.exchangeRateMode = input.exchangeRateMode === "manual" || legacyManual ? "manual" : "auto";
   settings.showUnmatched = Boolean(settings.showUnmatched);
   settings.comparisonMode = settings.comparisonMode === "public" ? "public" : "paid";
   return settings;

@@ -1,5 +1,6 @@
-import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "./shared/schema.js";
+import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "./shared/schema.js";
 import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_SYNC_INTERVAL_OPTIONS, magpieSyncLabel } from "./core/magpie-usage.js";
+import { exchangeRateInfo } from "./core/exchange-rate.js";
 import { callService, escapeHtml, hydrateIcons, icon, onAssistProgress, onRefreshProgress, toast } from "./shared/ui.js";
 import { siteLogoUrl } from "./shared/site-icon.js";
 import { initCardCollapse } from "./shared/collapse.js";
@@ -12,7 +13,7 @@ import { applyUpdate, isExtensionDirectory, restoreBackup } from "./core/self-up
 import { OPTIONS_HTML_IDS } from "./dom-contract.js";
 import { assertDomContract, makeQuery } from "./core/dom-guard.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
+const state = { stations: [], sitePlugins: [], settings: null, references: {}, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
 // 页面一打开就核契约：缺的节点一次列全，不再等到切到某个视图才在别处炸。
 assertDomContract("options.html", OPTIONS_HTML_IDS);
 const $ = makeQuery("options.html", OPTIONS_HTML_IDS);
@@ -709,7 +710,7 @@ function derivedRechargeRate(rmb, credits) {
 
 function currentExchangeRate() {
   const rate = Number($("#exchange-rate")?.value);
-  return Number.isFinite(rate) && rate > 0 ? Math.max(0.0001, rate) : DEFAULT_EXCHANGE_RATE;
+  return Number.isFinite(rate) && rate > 0 ? rate : exchangeRateInfo(state.settings || {}, state.references).rate;
 }
 
 function formatRechargeAmount(value) {
@@ -919,10 +920,22 @@ async function syncMagpieUsage() {
   }
 }
 
+function renderExchangeRate(settings = state.settings) {
+  const info = exchangeRateInfo(settings, state.references);
+  $("#exchange-rate-mode").value = settings.exchangeRateMode;
+  $("#exchange-rate").disabled = settings.exchangeRateMode !== "manual";
+  $("#exchange-rate").value = String(info.rate);
+  const source = $("#exchange-rate-source");
+  source.hidden = !["ExchangeRate-API", "Frankfurter / ECB"].includes(info.source);
+  source.textContent = info.source;
+  source.href = info.source === "ExchangeRate-API" ? "https://www.exchangerate-api.com/" : "https://frankfurter.dev/";
+  $("#exchange-rate-status").textContent = [info.mode === "auto" ? "自动参考" : info.source, info.date, info.warning].filter(Boolean).join(" · ");
+}
+
 function renderSettings() {
   const settings = state.settings;
   $("#currency").value = settings.defaultCurrency;
-  $("#exchange-rate").value = Number(settings.exchangeRate || DEFAULT_EXCHANGE_RATE).toFixed(4);
+  renderExchangeRate();
   $("#evidence-threshold").value = Number.isFinite(Number(settings.evidenceThreshold)) ? String(Number(settings.evidenceThreshold)) : "60";
   renderUsagePresetOptions();
   writeUsageInputs(settings.usage);
@@ -1001,7 +1014,8 @@ function readSettings() {
     ...state.settings,
     defaultCurrency: $("#currency").value,
 evidenceThreshold: Math.max(0, Math.min(100, Math.round(Number($("#evidence-threshold").value) || 0))),
-    exchangeRate: Math.max(0.0001, Number($("#exchange-rate").value) || DEFAULT_EXCHANGE_RATE),
+    exchangeRateMode: $("#exchange-rate-mode").value,
+    exchangeRate: $("#exchange-rate-mode").value === "manual" ? Number($("#exchange-rate").value) : state.settings.exchangeRate,
     usage: readUsageInputs(),
     showUnmatched: $("#show-unmatched").checked,
     modelAssistant: readAssistantSettings(),
@@ -1536,6 +1550,7 @@ async function load() {
     state.stations = data.stations || [];
     state.sitePlugins = pluginWorkspace.catalog?.length ? pluginWorkspace.catalog : data.sitePlugins || [];
     state.settings = data.settings;
+    state.references = data.references || {};
     renderSettings();
     renderPluginWorkspace();
     renderAbout();
@@ -1993,6 +2008,11 @@ $("#magpie-sync-interval").addEventListener("change", event => void saveMagpieIn
 $("#sync-magpie-usage").addEventListener("click", () => void syncMagpieUsage());
 fillMagpieIntervalOptions();
 
+$("#exchange-rate-mode").addEventListener("change", () => {
+  renderExchangeRate({ ...state.settings, exchangeRateMode: $("#exchange-rate-mode").value, exchangeRate: currentExchangeRate() });
+  refreshRechargeDisplays();
+});
+
 $("#exchange-rate").addEventListener("input", refreshRechargeDisplays);
 $("#refresh-exchange-rate").addEventListener("click", () => refreshExchangeRate());
 async function refreshExchangeRate() {
@@ -2000,12 +2020,12 @@ async function refreshExchangeRate() {
   button.disabled = true;
   try {
     const data = await callService("FETCH_REFERENCES");
-    const rate = Number(data.references?.exchangeRate);
-    if (!Number.isFinite(rate) || rate <= 0) throw new Error("中国银行汇率数据不可用");
-    $("#exchange-rate").value = rate.toFixed(4);
-    scheduleSettingsSave();
+    state.references = data.references || {};
+    renderExchangeRate(readSettings());
     refreshRechargeDisplays();
-    toast(`汇率已更新：${rate.toFixed(4)}`);
+    const info = exchangeRateInfo({ exchangeRateMode: "auto" }, state.references);
+    if (info.warning) throw new Error(info.warning);
+    toast(`参考汇率已更新：${info.rate}（${info.date}），${$("#exchange-rate-mode").value === "manual" ? "手动值保持不变" : "已自动应用"}`);
   } catch (error) {
     toast(error.message);
   } finally {
@@ -2113,6 +2133,14 @@ async function syncStationsFromService() {
 }
 
 chrome.runtime.onMessage.addListener(message => {
+  if (message?.type === "REFERENCES_CHANGED") {
+    void callService("GET_DASHBOARD").then(data => {
+      state.references = data.references || {};
+      renderExchangeRate(readSettings());
+      refreshRechargeDisplays();
+    }).catch(error => toast(`读取参考汇率失败：${error.message}`));
+    return;
+  }
   if (message?.type !== "STATIONS_CHANGED") return;
   if (message.origin && message.origin === CLIENT_ID) return;
   if (stationsDirty) {

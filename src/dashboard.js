@@ -4,7 +4,8 @@ import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcon
 import { buildMonthlyCostRankings, createDashboardIndex, createDashboardRowsCache, deltaTone, matchesModelQueries, mediaModeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
-import { DEFAULT_EXCHANGE_RATE, STATION_CATEGORY_LABELS } from "./shared/schema.js";
+import { STATION_CATEGORY_LABELS } from "./shared/schema.js";
+import { exchangeRateInfo } from "./core/exchange-rate.js";
 import { COMPARISON_MEDIA_MODES, MEDIA_MODE_LABELS, mediaModeOf, normalizeMediaType } from "./core/media.js";
 import { providerIconMarkup, providerLogoFor } from "./shared/provider-icons.js";
 import { siteIconMarkup } from "./shared/site-icon.js";
@@ -103,7 +104,7 @@ const PRICING_REASON_LABELS = { currency_unverified: "币种待核验", cache_wr
 function formatPrice(value, currency = "CNY", precision = 4) {
   const number = Number(value);
   if (value === null || value === undefined || !Number.isFinite(number)) return "—";
-  const rate = Number(state.data?.references?.exchangeRate) || DEFAULT_EXCHANGE_RATE;
+  const rate = exchangeRateInfo(state.data?.settings, state.data?.references).rate;
   const displayValue = currency === "USD" ? number / rate : number;
   const symbol = currency === "USD" ? "$" : currency === "CREDITS" ? "CR" : "¥";
   return precision === 4 ? formatMoney(displayValue, symbol) : `${symbol}${displayValue.toFixed(precision)}`;
@@ -1210,11 +1211,12 @@ function renderReferenceStatus() {
   const count = ref.models?.length || 0;
   const fetched = ref.fetchedAt ? new Date(ref.fetchedAt) : null;
   $("#reference-status").textContent = count ? `基准价 ${count}` : "基准价未加载";
-  $("#reference-note").textContent = fetched ? fetched.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }) : "";
+  const rate = exchangeRateInfo(state.data?.settings, ref);
+  $("#reference-note").textContent = `1 USD ≈ ${rate.rate.toFixed(4)} CNY${rate.warning ? " · 待更新" : ""}`;
   $("#reference-dot").classList.toggle("is-live", count > 0);
   const warnings = ref.warnings?.length ? ref.warnings.join("；") : "";
-  const cacheNote = "基准目录每日缓存 · USD credit 1:1 · 人民币按设置汇率";
-  pill.title = fetched ? `${cacheNote}${warnings ? `；${warnings}` : ""}` : warnings || cacheNote;
+  const cacheNote = `基准目录每日缓存 · USD credit 1:1 · 汇率${rate.source}${rate.date ? `（${rate.date}）` : ""}`;
+  pill.title = [cacheNote, rate.warning, warnings, fetched ? `基准获取于 ${fetched.toLocaleString("zh-CN")}` : ""].filter(Boolean).join("；");
   pill.hidden = false;
   $("#freshness-sep").hidden = false;
 }

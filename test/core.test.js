@@ -3,7 +3,8 @@ import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
-import { dropFloatingModels, fetchImageReferences, fetchReferences, parseOpenRouterData, parseOfficialExchangeRate } from "../src/core/openrouter.js";
+import { dropFloatingModels, fetchImageReferences, fetchReferences, parseOpenRouterData, referencesNeedRefresh } from "../src/core/openrouter.js";
+import { exchangeRateInfo, fetchExchangeRate } from "../src/core/exchange-rate.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
 import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, WINDHUB_PRICING_ENDPOINT, PROVIDER_REGISTRY, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
@@ -15,7 +16,7 @@ import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
-import { BOC_EXCHANGE_URL, OPENROUTER_IMAGES_URL, OPENROUTER_URL, convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
+import { OPENROUTER_IMAGES_URL, OPENROUTER_URL, convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
 import { fetchMagpieUsage, magpieSyncLabel, mergeGatewayUsage, monthlyUsageFromGateway, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../src/core/magpie-usage.js";
 import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
@@ -1207,11 +1208,11 @@ test("reference deadlines preserve cached data and do not discard successful sou
   const signals = new Map();
   const result = await fetchReferences({
     cache,
-    now: 100_000_000,
+    now: Date.parse("2026-11-21T12:00:00Z"),
     timeouts: { models: 20, exchangeRate: 1000, images: 20 },
     fetchImpl: (url, { signal }) => {
       signals.set(url, signal);
-      if (url.startsWith(BOC_EXCHANGE_URL)) return Promise.resolve({ ok: true, text: async () => "<tr><td>美元</td><td>0</td><td>0</td><td>0</td><td>0</td><td>710</td></tr>" });
+      if (url.startsWith("https://open.er-api.com/")) return Promise.resolve({ ok: true, json: async () => ({ result: "success", base_code: "USD", rates: { CNY: 7.1 }, time_last_update_unix: Date.parse("2026-11-21T00:00:00Z") / 1000 }) });
       return new Promise(() => {});
     }
   });
@@ -1313,9 +1314,90 @@ test("maps OpenRouter USD credits to the unified CREDITS benchmark", () => {
   assert.equal(offer.officialMonthlyCost, 56);
 });
 
-test("parses China Bank HTML exchange rate", () => {
-  const html = "<table><tr><td>美元</td><td>718.12</td><td>716.33</td><td>720.88</td><td>720.88</td><td>719.03</td></tr></table>";
-  assert.equal(parseOfficialExchangeRate(html), 7.1903);
+test("fetches a dated USD/CNY reference and falls back to an independent provider", async () => {
+  const now = Date.parse("2026-11-21T12:00:00Z");
+  const quote = { result: "success", base_code: "USD", rates: { CNY: 6.69198 }, time_last_update_unix: Date.parse("2026-11-21T00:00:00Z") / 1000 };
+  const fetched = await fetchExchangeRate({ now, fetchImpl: async () => ({ ok: true, json: async () => quote }) });
+  assert.deepEqual(fetched, { exchangeRate: 6.69198, exchangeRateSource: "ExchangeRate-API", exchangeRateDate: "2026-11-21", exchangeRateFetchedAt: now });
+  const requests = [];
+  const backup = await fetchExchangeRate({ now, fetchImpl: async url => {
+    requests.push(url);
+    if (requests.length === 1) throw new Error("primary offline");
+    return { ok: true, json: async () => ({ amount: 1, base: "USD", date: "2026-11-20", rates: { CNY: 6.6777 } }) };
+  } });
+  assert.equal(requests.length, 2);
+  assert.equal(backup.exchangeRate, 6.6777);
+  assert.equal(backup.exchangeRateSource, "Frankfurter / ECB");
+  assert.equal(backup.exchangeRateDate, "2026-11-20");
+});
+
+test("exchange-rate failover is bounded even when the primary ignores AbortSignal", async () => {
+  const now = Date.parse("2026-11-21T12:00:00Z");
+  let primarySignal;
+  const quote = await fetchExchangeRate({ now, timeoutMs: 10, fetchImpl: async (url, { signal }) => {
+    if (url.startsWith("https://open.er-api.com/")) { primarySignal = signal; return new Promise(() => {}); }
+    return { ok: true, json: async () => ({ amount: 1, base: "USD", date: "2026-11-20", rates: { CNY: 6.6777 } }) };
+  } });
+  assert.equal(primarySignal.aborted, true);
+  assert.equal(quote.exchangeRateSource, "Frankfurter / ECB");
+});
+
+test("rejects untrusted exchange-rate amounts, currencies and quote dates", async () => {
+  const now = Date.parse("2026-11-21T12:00:00Z");
+  const primary = { result: "success", base_code: "USD", rates: { CNY: 6.7 }, time_last_update_unix: now / 1000 };
+  const invalid = [
+    { ...primary, base_code: "EUR" },
+    { ...primary, result: "error" },
+    { ...primary, rates: { CNY: 0 } },
+    { ...primary, rates: { CNY: "6.7" } },
+    { ...primary, rates: { CNY: Infinity } },
+    { ...primary, time_last_update_unix: now / 1000 - 8 * 86400 },
+    { ...primary, time_last_update_unix: now / 1000 + 3 * 86400 },
+    { ...primary, time_last_update_unix: null }
+  ];
+  for (const payload of invalid) {
+    await assert.rejects(fetchExchangeRate({ now, fetchImpl: async () => ({ ok: true, json: async () => payload }) }), /汇率更新失败/);
+  }
+  await assert.rejects(fetchExchangeRate({ now, fetchImpl: async () => ({ ok: false, status: 503 }) }), /HTTP 503/);
+});
+
+test("cancelling exchange rates does not start the backup provider", async () => {
+  const controller = new AbortController();
+  let requests = 0;
+  const task = fetchExchangeRate({ signal: controller.signal, fetchImpl: async () => {
+    requests += 1;
+    controller.abort(new Error("cancel rates"));
+    return new Promise(() => {});
+  } });
+  await assert.rejects(task, /cancel rates/);
+  assert.equal(requests, 1);
+});
+
+test("exchange-rate failure keeps the previous value and its original timestamp", async () => {
+  const cache = { models: [], exchangeRate: 6.8, exchangeRateSource: "ExchangeRate-API", exchangeRateDate: "2026-11-19", exchangeRateFetchedAt: 12345 };
+  const result = await fetchReferences({ cache, fetchImpl: async () => { throw new Error("offline"); } });
+  for (const key of ["exchangeRate", "exchangeRateSource", "exchangeRateDate", "exchangeRateFetchedAt"]) assert.equal(result[key], cache[key]);
+  assert.ok(result.warnings.some(warning => warning.startsWith("汇率")));
+  const empty = await fetchReferences({ fetchImpl: async () => { throw new Error("offline"); } });
+  assert.equal(empty.exchangeRate, null);
+  assert.equal(empty.exchangeRateFetchedAt, 0);
+});
+
+test("automatic rates win over the legacy default; manual payment rates stay exact", () => {
+  const references = { exchangeRate: 6.69198, exchangeRateSource: "ExchangeRate-API", exchangeRateDate: "2026-11-21", exchangeRateFetchedAt: Date.now() };
+  const automatic = normalizeSettings({ exchangeRate: 7.3 });
+  assert.equal(automatic.exchangeRateMode, "auto");
+  assert.equal(exchangeRateInfo(automatic, references).rate, 6.69198);
+  const manual = normalizeSettings({ exchangeRateMode: "manual", exchangeRate: 6.71849 });
+  assert.equal(exchangeRateInfo(manual, references).rate, 6.71849);
+  assert.equal(exchangeRateInfo(manual, references).source, "手动指定");
+  const fallback = exchangeRateInfo(normalizeSettings(), {});
+  assert.equal(fallback.rate, DEFAULT_EXCHANGE_RATE);
+  assert.equal(fallback.mode, "fallback");
+  assert.match(fallback.warning, /估算/);
+  const stale = exchangeRateInfo(automatic, { ...references, exchangeRateFetchedAt: 1 });
+  assert.equal(stale.rate, references.exchangeRate);
+  assert.match(stale.warning, /缓存待更新/);
 });
 
 test("calculates token workload per million, not per token", () => {
@@ -1489,9 +1571,24 @@ test("drops an empty magpie sync state and keeps the last good numbers", () => {
 });
 
 
-test("normalizes the official exchange-rate override", () => {
+test("exchange-rate freshness is independent from the model catalog and failed retries back off", () => {
+  const now = Date.parse("2026-11-21T12:00:00Z");
+  const current = { models: [], fetchedAt: now, exchangeRateFetchedAt: now };
+  assert.equal(referencesNeedRefresh(current, now), false);
+  assert.equal(referencesNeedRefresh({ ...current, exchangeRateFetchedAt: 0 }, now), true);
+  assert.equal(referencesNeedRefresh({ ...current, fetchedAt: now - 25 * 3600_000 }, now), true);
+  assert.equal(referencesNeedRefresh({ ...current, exchangeRateFetchedAt: 0, attemptedAt: now }, now), false);
+});
+
+test("migrates legacy exchange-rate defaults to automatic and preserves explicit manual settings", () => {
+  assert.equal(normalizeSettings().exchangeRateMode, "auto");
+  assert.equal(normalizeSettings({ exchangeRate: 7.3 }).exchangeRateMode, "auto");
+  assert.equal(normalizeSettings({ exchangeRate: 7.25 }).exchangeRateMode, "manual");
   assert.equal(normalizeSettings({ exchangeRate: 7.25 }).exchangeRate, 7.25);
-  assert.equal(normalizeSettings({ exchangeRate: 0 }).exchangeRate, 7.3);
+  assert.equal(normalizeSettings({ exchangeRate: 0 }).exchangeRate, DEFAULT_EXCHANGE_RATE);
+  assert.equal(normalizeSettings({ exchangeRate: 6.71849 }).exchangeRate, 6.71849);
+  assert.equal(normalizeSettings({ exchangeRate: 7.25, exchangeRateMode: "auto" }).exchangeRateMode, "auto");
+  assert.equal(normalizeSettings({ exchangeRate: 7.3, exchangeRateMode: "manual" }).exchangeRateMode, "manual");
 });
 
 test("converts recharge amounts between CNY and USD using the configured rate", () => {

@@ -12,7 +12,8 @@ import { DEFAULT_PLUGIN_REGISTRY_URL, comparePluginVersions, installedPluginSpec
 import { ensurePageBridge, findOrOpenPageTab } from "./core/page-tabs.js";
 import { runWithConcurrency, withKeyedLock } from "./core/concurrency.js";
 import { runRefreshAll } from "./core/refresh-scheduler.js";
-import { dropFloatingModels, fetchReferences } from "./core/openrouter.js";
+import { fetchReferences, referencesNeedRefresh } from "./core/openrouter.js";
+import { exchangeRateInfo } from "./core/exchange-rate.js";
 import { buildComparisonRows, buildStationIndexes, filterComparisonsByMode, flattenComparisonRows, summarizeComparisons } from "./core/pricing.js";
 import { normalizeProxyModelName } from "./core/matching.js";
 import { NORMALIZATION_VERSION } from "./core/normalizers.js";
@@ -34,6 +35,7 @@ const MARKER_FILE_NAME = "update-marker.json";
 const MARKER_WATCH_PERIOD_MINUTES = 1;
 const UPDATE_STATE_KEY = "update-state";
 const MAGPIE_USAGE_ALARM_NAME = "magpie-usage";
+const REFERENCE_ALARM_NAME = "refresh-references";
 
 const REFRESH_CONCURRENCY = 3;
 const REFRESH_PREFLIGHT_SESSION_KEY = "ai-price-analyzer:refresh-preflight";
@@ -253,9 +255,7 @@ function errorSnapshot(station, error, previous) {
 
 async function refreshReferences(force = false) {
   const cache = await getValue("references", {});
-  // 旧缓存里留着 ~vendor 浮动别名时不再按 24 小时有效期直接返回：重拉一次，供应商分组才会立即清干净。
-  const legacy = dropFloatingModels(cache.models).length !== (Array.isArray(cache.models) ? cache.models.length : 0);
-  if (!force && !legacy && cache.fetchedAt && Date.now() - cache.fetchedAt < 24 * 60 * 60 * 1000) return cache;
+  if (!force && !referencesNeedRefresh(cache)) return cache;
   const result = await fetchReferences({ cache });
   await setValue("references", result);
   chrome.runtime.sendMessage({ type: "REFERENCES_CHANGED" }, () => void chrome.runtime.lastError);
@@ -535,7 +535,7 @@ async function preflightPageStation(station, requestRevision) {
 
 async function createRefreshPreflight() {
   await restoreRefreshPreflightState();
-  if (refreshAllTask || refreshReferencesTask) throw new Error("当前正在刷新，请稍后再执行登录预检");
+  if (refreshAllTask || (refreshReferencesTask && refreshReferencesForced)) throw new Error("当前正在刷新，请稍后再执行登录预检");
   // 预检要和采集用同一套插件状态。service worker 睡醒后注册表是空的，
   // providerForStation 拿不到插件，站点就会被判成「无需登录」一路放过。
   await ensureWorkspacePlugins();
@@ -683,6 +683,9 @@ async function dashboard() {
     getPreparedStations(),
     getValue("references", {})
   ]);
+  if (referencesNeedRefresh(references)) {
+    void refreshOfficialReferences().catch(error => console.warn("[AI比价] 刷新参考数据失败", error));
+  }
   const comparisonStations = stations.filter(station => station.enabled === true);
   const refresh = refreshScope(stations, savedSettings.comparisonMode);
   const stationsById = new Map(comparisonStations.map(station => [station.id, station]));
@@ -693,12 +696,13 @@ async function dashboard() {
   unsupportedBillingModes: snapshot.normalized?.unsupportedBillingModes || snapshot.rawMeta?.unsupportedBillingModes || [],
   unpricedModels: snapshot.normalized?.unpricedModels || snapshot.rawMeta?.unpricedModels || []
   }));
-  const effectiveReferences = { ...references, exchangeRate: savedSettings.exchangeRate || references.exchangeRate, openRouterRechargeRate: savedSettings.exchangeRate || references.openRouterRechargeRate || references.exchangeRate };
+  const rate = exchangeRateInfo(savedSettings, references).rate;
+  const effectiveReferences = { ...references, exchangeRate: rate, openRouterRechargeRate: rate };
   const llmCache = await getValue("llmMatchCache", {});
   const llmMatches = llmMatchesFromCache(llmCache);
   const revision = getComparisonRevision();
   const cacheable = revisionAtStart === revision;
-  const comparisonKey = JSON.stringify([revision, normalizedSnapshots.map(snapshot => snapshot.id), llmMatches]);
+  const comparisonKey = JSON.stringify([revision, rate, normalizedSnapshots.map(snapshot => snapshot.id), llmMatches]);
   let comparisonResult = cacheable && comparisonCache?.key === comparisonKey ? comparisonCache : null;
   if (!comparisonResult) {
     const comparisons = buildComparisonRows({
@@ -724,7 +728,7 @@ async function dashboard() {
     .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
-  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references: effectiveReferences, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), stationIndexes: buildStationIndexes(selectedComparisons), refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
+  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), stationIndexes: buildStationIndexes(selectedComparisons), refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
 }
 
 // 采集定时器已下线，这里只清升级残留，避免旧 alarm 继续触发。
@@ -882,7 +886,8 @@ async function addSitePlugins(ids) {
     const providers = await loadSitePlugins(requested);
     const current = await getStations();
     const settings = await getSettings();
-    const next = addProviderStationPresets(current, providers, { exchangeRate: settings.exchangeRate });
+    const references = await getValue("references", {});
+    const next = addProviderStationPresets(current, providers, { exchangeRate: exchangeRateInfo(settings, references).rate });
     const addedStations = next.slice(current.length).map(prepareComparisonStation);
     const added = addedStations.map(station => activeSitePluginForStation(station)?.id).filter(Boolean);
     if (addedStations.length) await putStations([...current, ...addedStations]);
@@ -1820,6 +1825,7 @@ chrome.tabs?.onRemoved?.addListener(tabId => {
 
 chrome.runtime.onInstalled.addListener(() => {
   clearLegacyAlarms();
+  chrome.alarms.create(REFERENCE_ALARM_NAME, { periodInMinutes: 60 });
   scheduleUpdateAlarm();
   scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
@@ -1827,12 +1833,14 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 chrome.runtime.onStartup.addListener(() => {
   clearLegacyAlarms();
+  chrome.alarms.create(REFERENCE_ALARM_NAME, { periodInMinutes: 60 });
   scheduleUpdateAlarm();
   scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
   ensureWorkspacePlugins({ force: true });
 });
 chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === REFERENCE_ALARM_NAME) return refreshOfficialReferences().catch(error => console.warn("[AI比价] 刷新参考数据失败", error));
   if (alarm.name === UPDATE_ALARM_NAME) return runUpdateCheck().catch(error => console.warn("[AI比价] 检查更新失败", error));
   if (alarm.name === MARKER_WATCH_ALARM_NAME) return watchUpdateMarker().catch(error => console.warn("[AI比价] 检查更新标记失败", error));
   if (alarm.name === MAGPIE_USAGE_ALARM_NAME) return runMagpieUsageSync().catch(error => console.warn("[AI比价] 同步 magpie 用量失败", error));

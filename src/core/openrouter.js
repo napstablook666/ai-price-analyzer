@@ -1,4 +1,6 @@
-import { BOC_EXCHANGE_URL, DEFAULT_EXCHANGE_RATE, OPENROUTER_IMAGES_URL, OPENROUTER_URL } from "../shared/schema.js";
+import { OPENROUTER_IMAGES_URL, OPENROUTER_URL } from "../shared/schema.js";
+import { fetchExchangeRate } from "./exchange-rate.js";
+import { withReferenceDeadline } from "./reference-request.js";
 import { IMAGE_UNITS } from "./image-billing.js";
 
 function pricePerMillion(value) {
@@ -190,34 +192,6 @@ const IMAGE_FETCH_CONCURRENCY = 6;
 
 const REFERENCE_TIMEOUTS = { models: 12_000, exchangeRate: 8_000, images: 20_000 };
 
-async function withReferenceDeadline(label, timeoutMs, signal, work) {
-  if (signal?.aborted) throw signal.reason;
-  const controller = new AbortController();
-  const abort = () => controller.abort(signal.reason);
-  if (signal?.aborted) abort();
-  else signal?.addEventListener("abort", abort, { once: true });
-  let timer;
-  let onAbort;
-  const deadline = new Promise((resolve, reject) => {
-    onAbort = () => reject(controller.signal.reason);
-    if (controller.signal.aborted) onAbort();
-    else controller.signal.addEventListener("abort", onAbort, { once: true });
-    timer = setTimeout(() => controller.abort(new Error(`${label}请求超时（${timeoutMs}ms）`)), timeoutMs);
-  });
-  try {
-    return await Promise.race([
-      deadline,
-      Promise.resolve().then(() => {
-        controller.signal.throwIfAborted();
-        return work(controller.signal);
-      })
-    ]);
-  } finally {
-    clearTimeout(timer);
-    signal?.removeEventListener("abort", abort);
-    controller.signal.removeEventListener("abort", onAbort);
-  }
-}
 async function runWithConcurrency(items, limit, worker) {
   const queue = [...items];
   await Promise.all(Array.from({ length: Math.min(limit, queue.length) }, async () => {
@@ -276,25 +250,21 @@ export function dropFloatingModels(models) {
   return models.filter(model => !String(model?.id || "").startsWith("~") && !String(model?.provider || "").startsWith("~"));
 }
 
-function htmlText(value) {
-  return String(value || "").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim();
-}
 
-export function parseOfficialExchangeRate(html) {
-  if (typeof html !== "string") throw new Error("汇率响应不是文本");
-  const rows = [...html.matchAll(/<tr[^>]*>[\s\S]*?<\/tr>/gi)].map(match => match[0]);
-  const row = rows.find(candidate => /美元|USD/i.test(htmlText(candidate)));
-  if (!row) throw new Error("中国银行美元汇率数据不可用");
-  const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(match => htmlText(match[1]));
-  const ratePerHundred = Number((cells[5] || cells.find(cell => /^\d[\d,]*\.?\d*$/.test(cell)) || "").replace(/,/g, ""));
-  if (!Number.isFinite(ratePerHundred) || ratePerHundred <= 0) throw new Error("中国银行美元汇率数据不可用");
-  return ratePerHundred / 100;
+export function referencesNeedRefresh(cache = {}, now = Date.now()) {
+  if (cache.attemptedAt && now - cache.attemptedAt < 60 * 60 * 1000) return false;
+  const legacy = dropFloatingModels(cache.models).length !== (Array.isArray(cache.models) ? cache.models.length : 0);
+  return legacy || !cache.fetchedAt || now - cache.fetchedAt >= 24 * 60 * 60 * 1000
+    || !cache.exchangeRateFetchedAt || now - cache.exchangeRateFetchedAt >= 24 * 60 * 60 * 1000;
 }
-
 export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.now(), cache = {}, timeouts = {} } = {}) {
   const result = {
     models: cache.models || [],
-    exchangeRate: Number(cache.exchangeRate) || DEFAULT_EXCHANGE_RATE,
+    exchangeRate: cache.exchangeRate || null,
+    exchangeRateSource: cache.exchangeRateSource || "",
+    exchangeRateDate: cache.exchangeRateDate || "",
+    exchangeRateFetchedAt: cache.exchangeRateFetchedAt || 0,
+    attemptedAt: now,
     fetchedAt: cache.fetchedAt || 0,
     imageQuotes: cache.imageQuotes || {},
     imageModels: cache.imageModels || [],
@@ -307,17 +277,14 @@ export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.no
       if (!response.ok) throw new Error(`OpenRouter ${response.status}`);
       return parseOpenRouterData(await response.json());
     }),
-    withReferenceDeadline("汇率", timeouts.exchangeRate ?? REFERENCE_TIMEOUTS.exchangeRate, signal, async requestSignal => {
-      const response = await fetchImpl(`${BOC_EXCHANGE_URL}?_=${now}`, { signal: requestSignal });
-      if (!response.ok) throw new Error(`BOC ${response.status}`);
-      return parseOfficialExchangeRate(await response.text());
-    }),
+    withReferenceDeadline("汇率", timeouts.exchangeRate ?? REFERENCE_TIMEOUTS.exchangeRate, signal,
+      requestSignal => fetchExchangeRate({ fetchImpl, signal: requestSignal, now })),
     fetchImageReferences({ fetchImpl, signal, now, cache, timeoutMs: timeouts.images ?? REFERENCE_TIMEOUTS.images })
   ]);
   if (modelsResult.status === "fulfilled" && modelsResult.value.length) result.models = modelsResult.value;
   else result.warnings.push(modelsResult.reason?.message || "OpenRouter 数据为空");
-  if (rateResult.status === "fulfilled") result.exchangeRate = rateResult.value;
-  else result.warnings.push(rateResult.reason?.message || "汇率不可用");
+  if (rateResult.status === "fulfilled") Object.assign(result, rateResult.value);
+  else result.warnings.push(`汇率更新失败，${result.exchangeRate ? "沿用上次成功值" : "暂无可用缓存"}：${rateResult.reason?.message || "汇率不可用"}`);
   if (imageResult.status === "fulfilled") {
     result.imageQuotes = imageResult.value.imageQuotes;
     result.imageModels = imageResult.value.imageModels;
@@ -328,7 +295,7 @@ export async function fetchReferences({ fetchImpl = fetch, signal, now = Date.no
   }
   // 出手前统一清一遍：缓存里的旧浮动别名不该漏进 references.models，否则供应商栏又会冒出 ~vendor 分组。
   result.models = dropFloatingModels(mergeImageModels(result.models, result.imageModels));
-  if (result.models.length || rateResult.status === "fulfilled") result.fetchedAt = now;
+  if (modelsResult.status === "fulfilled" && modelsResult.value.length) result.fetchedAt = now;
   return result;
 }
 

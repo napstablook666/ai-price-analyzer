@@ -187,7 +187,8 @@ async function withWorker(seed, chromeOptions, callback) {
   const previousChrome = globalThis.chrome;
   const previousIndexedDB = globalThis.indexedDB;
   const previousKeyRange = globalThis.IDBKeyRange;
-  const db = memoryDatabase(seed);
+  const now = Date.now();
+  const db = memoryDatabase({ ...seed, values: { references: { models: [], fetchedAt: now, exchangeRate: 7.3, exchangeRateFetchedAt: now }, ...seed.values } });
   const worker = chromeApi(chromeOptions);
   globalThis.chrome = worker.chrome;
   globalThis.indexedDB = db.indexedDB;
@@ -282,6 +283,57 @@ test("preserves custom and baseline usage when syncing magpie", async t => {
       assert.equal(usagePresetId(synced.usage, synced.magpieSync), usagePresetId(settings.usage));
     });
   }
+});
+
+
+test("automatic exchange rates reach actual comparisons and manual rates survive a forced refresh", async t => {
+  const now = Date.now();
+  const station = { id: "rate-relay", name: "Rate relay", category: "paid", enabled: true, baseUrl: "https://rate-relay.example", mode: "direct", priceCurrency: "USD", priceCurrencyVerified: true, rechargeCurrency: "CNY", rechargeRmb: 1, rechargeCredits: 1, rechargeRateVerified: true, basePricePerMillion: 1 };
+  const snapshot = { id: "rate-snapshot", stationId: station.id, stationName: station.name, collectedAt: now, normalizationVersion: NORMALIZATION_VERSION, status: "success", normalized: { data: [{ model_name: "rate-model", input_price: 1, output_price: 2, price_currency: "USD" }], group_ratio: {} } };
+  const references = { fetchedAt: now, models: [{ id: "test/rate-model", name: "rate-model", provider: "test", input: 1, output: 2, price_currency: "USD" }], exchangeRate: 6.69, exchangeRateSource: "ExchangeRate-API", exchangeRateDate: new Date(now).toISOString().slice(0, 10), exchangeRateFetchedAt: now };
+  t.mock.method(globalThis, "fetch", async url => {
+    if (String(url).startsWith("https://open.er-api.com/")) return { ok: true, json: async () => ({ result: "success", base_code: "USD", rates: { CNY: 6.68 }, time_last_update_unix: now / 1000 }) };
+    if (String(url).includes("/images/models")) return { ok: true, json: async () => ({ data: [] }) };
+    return { ok: true, json: async () => ({ data: [{ id: "test/rate-model", pricing: { prompt: "0.000001", completion: "0.000002" } }] }) };
+  });
+  await withWorker({ stations: [station], snapshots: [snapshot], values: { settings: { exchangeRate: 7.3 }, references } }, {}, async (worker, stores) => {
+    const automatic = responseData(await worker.send("GET_DASHBOARD"));
+    assert.equal(automatic.settings.exchangeRateMode, "auto");
+    assert.equal(flattenComparisonRows(automatic.comparisons)[0].officialPrices.input, 6.69);
+    responseData(await worker.send("SAVE_SETTINGS", { settings: { ...automatic.settings, exchangeRateMode: "manual", exchangeRate: 6.71849 } }));
+    const manual = responseData(await worker.send("GET_DASHBOARD"));
+    assert.equal(flattenComparisonRows(manual.comparisons)[0].officialPrices.input, 6.71849);
+    const refreshed = responseData(await worker.send("FETCH_REFERENCES"));
+    assert.equal(refreshed.references.exchangeRate, 6.68);
+    assert.equal(refreshed.settings.exchangeRate, 6.71849);
+    assert.equal(flattenComparisonRows(refreshed.comparisons)[0].officialPrices.input, 6.71849);
+    assert.equal(stores.kv.get("settings").exchangeRateMode, "manual");
+    assert.ok(worker.runtimeMessages.some(message => message.type === "REFERENCES_CHANGED"));
+    responseData(await worker.send("SAVE_SETTINGS", { settings: { ...manual.settings, exchangeRateMode: "auto" } }));
+    const restored = responseData(await worker.send("GET_DASHBOARD"));
+    assert.equal(flattenComparisonRows(restored.comparisons)[0].officialPrices.input, 6.68);
+  });
+});
+
+test("dashboard returns cached data immediately and background references do not block login checks", async t => {
+  const now = Date.now();
+  let finishPrimary;
+  const pending = new Promise(resolve => { finishPrimary = resolve; });
+  t.mock.method(globalThis, "fetch", async url => {
+    if (String(url).startsWith("https://open.er-api.com/")) { await pending; return { ok: true, json: async () => ({ result: "success", base_code: "USD", rates: { CNY: 6.68 }, time_last_update_unix: now / 1000 }) }; }
+    return { ok: true, json: async () => ({ data: [] }) };
+  });
+  await withWorker({ values: { references: { models: [], fetchedAt: now, exchangeRate: 6.69 } } }, {}, async (worker, stores) => {
+    try {
+      const dashboard = responseData(await worker.send("GET_DASHBOARD"));
+      assert.equal(dashboard.references.exchangeRate, 6.69);
+      responseData(await worker.send("REFRESH_PREFLIGHT"));
+    } finally { finishPrimary(); }
+    await waitFor(() => stores.kv.get("references")?.exchangeRate === 6.68);
+    assert.equal(stores.kv.get("references").exchangeRateSource, "ExchangeRate-API");
+    await waitFor(() => worker.runtimeMessages.some(message => message.type === "REFERENCES_REFRESHING" && message.active === false));
+    assert.ok(worker.runtimeMessages.some(message => message.type === "REFERENCES_CHANGED"));
+  });
 });
 
 test("adds selected local plugins in one idempotent batch without eager loading", async () => {
@@ -392,7 +444,7 @@ test("GET_DASHBOARD prepares legacy station data and scheduler collection uses t
     normalizationVersion: NORMALIZATION_VERSION, status: "success", source: "legacy-fixture",
     normalized: { sourceFormat: "generic", group_ratio: { default: 1 }, data: [{ model_name: "recharge-model", input_price: 1, output_price: 2, price_currency: "CREDITS" }] }
   };
-  await withWorker({ stations: [station, ...protectedStations, disabledProtected, stringDisabledProtected, rechargeUnverified], snapshots: [snapshot, ...protectedSnapshots, disabledSnapshot, stringDisabledSnapshot, rechargeSnapshot], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations: [station, ...protectedStations, disabledProtected, stringDisabledProtected, rechargeUnverified], snapshots: [snapshot, ...protectedSnapshots, disabledSnapshot, stringDisabledSnapshot, rechargeSnapshot], values: { references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const dashboard = responseData(await worker.send("GET_DASHBOARD"));
     const prepared = dashboard.stations.find(value => value.id === stationId);
     const offers = flattenComparisonRows(dashboard.comparisons);
@@ -458,7 +510,7 @@ test("GET_DASHBOARD compares false and missing recharge verification at 1:1", as
     normalized: { sourceFormat: "generic", group_ratio: { default: 1 }, data: [{ model_name: `${station.id}-model`, input_price: 1, output_price: 2, price_currency: "CREDITS" }] }
   }));
 
-  await withWorker({ stations, snapshots, values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async worker => {
+  await withWorker({ stations, snapshots, values: { references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async worker => {
     const dashboard = responseData(await worker.send("GET_DASHBOARD"));
     const offers = flattenComparisonRows(dashboard.comparisons);
     assert.equal(offers.length, 3);
@@ -648,7 +700,7 @@ test("REFRESH_ALL requires live explicit confirmation, rejects expired or cancel
     rechargeRmb: 1, rechargeCurrency: "CNY", rechargeCredits: 1,
     adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "manual-model", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
   };
-  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
     assert.equal(first.results[0].status, "noLoginRequired");
     assert.equal(worker.created.length, 0);
@@ -701,7 +753,7 @@ test("station configuration changes invalidate old confirmation and require a ne
     id: "config-relay", name: "Config relay", category: "paid", baseUrl: "https://config-relay.example/pricing", enabled: true, mode: "direct",
     adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "before", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
   };
-  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
     await worker.send("SAVE_STATIONS", { stations: [{ ...station, adapter: { ...station.adapter, rawJson: JSON.stringify({ data: [{ model_name: "after", input_price: 3, output_price: 4 }], group_ratio: { default: 1 } }) } }] });
     responseError(await worker.send("REFRESH_ALL", { preflightToken: first.token, confirmed: true }), REFRESH_CONFIRMATION_REQUIRED_CODE);
@@ -724,7 +776,7 @@ test("REFRESH_ALL uses the persisted comparison group for preflight, collection,
   const stringDisabledPublic = { ...station("disabled-string-public", "public", "string-disabled-model"), enabled: "false" };
   await withWorker({
     stations: [paid, publicStation, disabledPublic, stringDisabledPublic],
-    values: { settings: { comparisonMode: "public" }, references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } }
+    values: { settings: { comparisonMode: "public" }, references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } }
   }, {}, async (worker, stores) => {
     const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
     assert.equal(preflight.comparisonMode, "public");
@@ -753,7 +805,7 @@ test("comparison mode changes invalidate a preflight token and empty groups neve
     id: "paid-only", name: "Paid only", category: "paid", baseUrl: "https://paid-only.example/pricing", enabled: true, mode: "direct",
     adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "paid-model", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
   };
-  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" }, references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" }, references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
     assert.equal(preflight.comparisonMode, "paid");
     const switched = responseData(await worker.send("SAVE_COMPARISON_MODE", { mode: "public" }));
@@ -779,7 +831,7 @@ test("single and multiple station refresh remain independent from comparison mod
     { id: "paid-one", name: "Paid one", category: "paid", baseUrl: "https://paid-one.example/pricing", enabled: true, mode: "direct", adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "paid", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) } },
     { id: "public-one", name: "Public one", category: "public", baseUrl: "https://public-one.example/pricing", enabled: true, mode: "direct", adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "public", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) } }
   ];
-  await withWorker({ stations, values: { settings: { comparisonMode: "public" }, references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations, values: { settings: { comparisonMode: "public" }, references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const result = responseData(await worker.send("REFRESH_STATION", { stationId: "paid-one" }));
     assert.equal(result.refreshSummary.successCount, 1);
     assert.deepEqual([...stores.snapshots.values()].map(snapshot => snapshot.stationId), ["paid-one"]);
@@ -798,7 +850,7 @@ test("concurrent REFRESH_ALL requests cannot consume one confirmation twice", as
     rechargeRmb: 1, rechargeCurrency: "CNY", rechargeCredits: 1,
     adapter: { endpoint: "/api/pricing", method: "GET", rawJson: JSON.stringify({ data: [{ model_name: "single-use-model", input_price: 1, output_price: 2 }], group_ratio: { default: 1 } }) }
   };
-  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
+  await withWorker({ stations: [station], values: { references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } } }, {}, async (worker, stores) => {
     const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
     const responses = await Promise.all([
       worker.send("REFRESH_ALL", { preflightToken: preflight.token, confirmed: true }),
@@ -857,7 +909,7 @@ test("REFRESH_ALL collects from the prepared station state validated at confirma
       if (name !== "stations" || ++stationReads !== 4) return;
       map.set(station.id, { ...station, adapter: { ...station.adapter, rawJson: JSON.stringify({ data: [{ model_name: "changed-after-confirmation", input_price: 9, output_price: 9 }], group_ratio: { default: 1 } }) } });
     },
-    values: { references: { fetchedAt: Date.now(), models: [], exchangeRate: 8.2 } }
+    values: { references: { fetchedAt: Date.now(), exchangeRateFetchedAt: Date.now(), models: [], exchangeRate: 8.2 } }
   }, {}, async (worker, stores) => {
     const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
     const refreshed = responseData(await worker.send("REFRESH_ALL", { preflightToken: preflight.token, confirmed: true }));
