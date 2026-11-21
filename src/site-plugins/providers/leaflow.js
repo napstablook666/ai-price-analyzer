@@ -97,15 +97,23 @@ const decodePricing = payload => ({
   data: listOf(payload, "模型目录").flatMap(model => modelRow(model, listOf(payload.__aux?.prices, "计费价格"))),
   group_ratio: { "平台价": 1 }
 });
-const rechargeRateNote = "2026-11-21 登录核验：结算账户和充值表单均为 USD，最低 1 USD，Stripe 银行卡/支付宝。尚未创建订单或核验人民币实付汇率、手续费与赠额，不能认定 1 USD 额度 = 1 元。";
+const QUICK_AMOUNTS = [10, 50, 100, 500];
+const LEGACY_RECHARGE_NOTE = "2026-11-21 登录核验：结算账户和充值表单均为 USD，最低 1 USD，Stripe 银行卡/支付宝。尚未创建订单或核验人民币实付汇率、手续费与赠额，不能认定 1 USD 额度 = 1 元。";
+const LEGACY_PLAN_NOTE = "登录充值页快捷美元面值；不是人民币实付、赠额或阶梯折扣，第三方支付未核验。";
+const alipayQuote = {
+  channel: "alipay", faceAmount: 10, payAmount: 67.18, currency: "CNY", paidRmb: 67.18, at: "2026-11-21",
+  note: "用户提供的支付宝收银台待支付报价：10 USD = 67.18 CNY，显示汇率 6.71849；截图未证明付款，账户已有同额支付宝订单超时失败。未显示单列手续费，不承诺零费率；花呗分期利息另算。"
+};
+const rechargeRateNote = "2026-11-21 支付宝待支付报价：67.18 元对应 10 USD 额度，折算 6.718 元/额度，非实时汇率。截图未证明付款，账户已有同额支付宝订单超时失败。最低 1 USD，快捷面值 10/50/100/500 USD。未显示单列手续费，银行卡人民币结算未核验；未发现通用充值赠额，限时/新手/邀请赠额不计入。";
 const preset = {
   id: "leaflow", name: "Leaflow Canopy", baseUrl: `https://${HOST}${MODEL_PAGE}`, enabled: true,
   mode: "page", auth: { type: "none" }, priceCurrency: "CREDITS", priceCurrencyVerified: true,
   priceCurrencyNote: "美元计费价按 unit_amount / unit_quantity 还原：文本按百万 token，图片按张，视频按秒；音频与未授权模型明确保留为未解析。",
-  rechargeCurrency: "USD", rechargeRateVerified: false, rechargeRateNote, rechargeAuto: false,
-  rechargePlans: [10, 50, 100, 500].map(amount => ({ kind: "topup", amount, credits: amount, currency: "USD", availability: "self_service", verified: true,
-    note: "登录充值页快捷美元面值；不是人民币实付、赠额或阶梯折扣，第三方支付未核验。" })),
-  rechargePlansVerified: true, rechargePayments: [], rechargePaymentsVerified: false,
+  rechargeCurrency: "CNY", rechargeRmb: alipayQuote.paidRmb, rechargeCredits: alipayQuote.faceAmount,
+  rechargeRateVerified: true, rechargeRateNote, rechargeAuto: false,
+  rechargePlans: QUICK_AMOUNTS.map(amount => ({ kind: "topup", amount, credits: amount, currency: "USD", availability: "self_service", verified: true,
+    note: "登录充值页快捷美元面值；未发现通用充值赠额或阶梯折扣。仅 10 USD 有支付宝人民币收银台报价，其他面值及银行卡不推算实付。" })),
+  rechargePlansVerified: true, rechargePayments: [alipayQuote], rechargePaymentsVerified: true,
   adapter: { kind: "declarative", endpoint: MODELS_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
 
@@ -113,16 +121,35 @@ const pluginSource = {
   id: "leaflow", host: HOST, mode: "page", responseFormat: "price-map", authType: "none", openTemporaryPage: true,
   preserveRechargeRateVerification: true,
   matches: ({ hostname, path }) => hostname === HOST && path === MODEL_PAGE,
-  prepare: (stationInput, { url }) => ({
-    ...stationInput, baseUrl: `${url.origin}${MODEL_PAGE}`, mode: "page", auth: { type: "none" },
-    priceCurrency: "CREDITS", priceCurrencyVerified: true,
-    priceCurrencyNote: stationInput.priceCurrencyNote || preset.priceCurrencyNote,
-    rechargeCurrency: stationInput.rechargeCurrency || "USD", rechargeAuto: false,
-    rechargeRateVerified: stationInput.rechargeRateVerified === true,
-    rechargeRateNote: stationInput.rechargeRateNote || rechargeRateNote,
-    ...(stationInput.rechargePlans == null ? { rechargePlans: preset.rechargePlans, rechargePlansVerified: true } : {}),
-    adapter: { ...(stationInput.adapter || {}), ...preset.adapter }
-  }),
+  prepare: (stationInput, { url }) => {
+    const defaultRate = [stationInput.rechargeRmb, stationInput.rechargeCredits, stationInput.rechargeRate]
+      .every(value => value == null || Number(value) === 1);
+    const defaultPlans = stationInput.rechargePlans == null ||
+      (stationInput.rechargePlans.length === QUICK_AMOUNTS.length && stationInput.rechargePlans.every((plan, index) =>
+        plan.kind === "topup" && Number(plan.amount) === QUICK_AMOUNTS[index] && Number(plan.credits) === QUICK_AMOUNTS[index] &&
+        plan.currency === "USD" && plan.availability === "self_service" && plan.verified === true &&
+        plan.discount == null && !plan.period && !plan.recurring && !plan.accumulates && plan.note === LEGACY_PLAN_NOTE));
+    // 只迁移空白或首版未核实默认值，不动用户比例、备注、档位或渠道证据。
+    const useQuote = defaultRate && stationInput.rechargeRateVerified !== true && defaultPlans &&
+      (!stationInput.rechargeRateNote || stationInput.rechargeRateNote === LEGACY_RECHARGE_NOTE) &&
+      !stationInput.rechargeTiers?.length && !stationInput.rechargePayments?.length;
+    return {
+      ...stationInput, baseUrl: `${url.origin}${MODEL_PAGE}`, mode: "page", auth: { type: "none" },
+      priceCurrency: "CREDITS", priceCurrencyVerified: true,
+      priceCurrencyNote: stationInput.priceCurrencyNote || preset.priceCurrencyNote,
+      rechargeCurrency: stationInput.rechargeCurrency || "CNY", rechargeAuto: false,
+      rechargeRateVerified: stationInput.rechargeRateVerified === true,
+      rechargeRateNote: stationInput.rechargeRateNote || rechargeRateNote,
+      ...(stationInput.rechargePlans == null ? { rechargePlans: preset.rechargePlans, rechargePlansVerified: true } : {}),
+      ...(useQuote ? {
+        rechargeCurrency: "CNY", rechargeRmb: preset.rechargeRmb, rechargeCredits: preset.rechargeCredits,
+        rechargeRate: preset.rechargeRmb / preset.rechargeCredits, rechargeRateVerified: true, rechargeRateNote,
+        rechargePlans: preset.rechargePlans, rechargePlansVerified: true,
+        rechargePayments: preset.rechargePayments, rechargePaymentsVerified: true
+      } : {}),
+      adapter: { ...(stationInput.adapter || {}), ...preset.adapter }
+    };
+  },
   preset,
   rationale: "复用项目页面 HttpOnly cookie；全量模型目录关联独立计费价格，拒绝用公开精选页或历史价格补缺。",
   request: requestPolicy(() => MODELS_ENDPOINT, {

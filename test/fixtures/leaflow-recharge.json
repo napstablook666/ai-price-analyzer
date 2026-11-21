@@ -2,16 +2,58 @@
   "capturedOn": "2026-11-21",
   "sources": [
     "https://console.leaflow.net/billing/top-ups/new",
-    "GET /api/billing/api/v1/billing-accounts/{accountId}/payment-options"
+    "GET /api/billing/api/v1/billing-accounts/{accountId}/payment-options",
+    "GET /api/billing/api/v1/top-ups?billing_account_id={accountId}",
+    "GET /api/billing/api/v1/credit-grants?billing_account_id={accountId}",
+    "User-provided Alipay checkout screenshot, 2026-11-21",
+    "https://leaflow.net/en/campaigns/"
   ],
   "accountCurrency": "USD",
   "minimumAmount": 1,
   "quickAmounts": [10, 50, 100, 500],
+  "formAmountsCheckedWithoutSubmitting": [1, 10, 50, 100, 500],
   "paymentGateway": "stripe",
   "paymentMethods": ["card", "alipay"],
   "usdFaceValueVerified": true,
-  "cnyExchangeRate": null,
+  "cnyExchangeRate": 6.718,
+  "checkoutDisplayedExchangeRate": 6.71849,
+  "cnyRateBasis": "67.18 CNY checkout total / 10 USD face value; historical quote, not a live market rate or completed payment",
+  "checkoutQuote": {
+    "channel": "alipay",
+    "faceAmount": 10,
+    "payAmount": 67.18,
+    "currency": "CNY",
+    "paidRmb": 67.18,
+    "at": "2026-11-21",
+    "paymentCompleted": false
+  },
+  "existingOrder": {
+    "amount": "10.0000000000",
+    "currency": "USD",
+    "status": "failed",
+    "payment_gateway": "stripe",
+    "method_type": "alipay",
+    "failure_reason": "payment_intent_payment_attempt_expired"
+  },
+  "fees": {
+    "separateFeeDisplayed": false,
+    "feeRate": null,
+    "cardCnySettlementVerified": false,
+    "note": "No separately listed surcharge in the observed form or Alipay quote. This is not proof of a universal zero fee. Currency conversion spread and installment interest must not be charged a second time or invented."
+  },
+  "bonus": {
+    "currentAccountCreditGrants": 0,
+    "generalTopupBonusVerified": false,
+    "topupBonusTiers": [],
+    "conditionalPrograms": [
+      { "kind": "onboarding", "registeredWithinDays": 30, "usdCredit": 1, "tokenGrants": [5000000, 20000000], "validDays": 7, "condition": "Cloud server/Fleet, Canopy activation and website deployment tasks; token grants restricted to deepseek-v4.1-flash" },
+      { "kind": "shipping-rebate", "rebateRange": [0.5, 0.9], "dailyTokenCapRange": [10000000, 100000000], "validHours": 24, "endsAt": "2026-12-02T00:00:00+08:00", "condition": "Shipping AI deepseek-v4.1-flash usage; claim the next day; referrals change the rebate, not the top-up exchange ratio" },
+      { "kind": "referral", "tokenGrant": 5000000, "validHours": 24, "condition": "One claim per user and billing account; only deepseek-v4.1-flash" },
+      { "kind": "experience-sharing", "condition": "Public content and manual review; limited-use/expiring rewards, not a general top-up bonus" },
+      { "kind": "legacy-balance", "validCalendarMonths": 6, "condition": "Recover a matching legacy account balance; not a top-up bonus" }
+    ]
+  },
   "ordersCreated": false,
   "paymentsMade": false,
-  "note": "Logged-in recharge form and payment options only. No account identifiers, balances, orders, sessions or payment details retained. Quick amounts are USD face values, not CNY paid amounts or bonus tiers."
+  "note": "Read-only investigation reuses one pre-existing expired order and the user's checkout screenshot. Identifiers, account data, balances, sessions and bank-card details are excluded. No other amount or card settlement is inferred from the 10 USD Alipay quote."
 }

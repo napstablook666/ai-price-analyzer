@@ -99,32 +99,98 @@ test("Leaflow 按 unit_quantity 折算文本与缓存，只展开实际图片规
   assert.deepEqual(offer.mediaSpecs.resolution.enum, ["720p"]);
 });
 
-test("Leaflow 美元充值面值与人民币比例分开保存，保留系统未验证1:1回退和用户确认值", async () => {
+test("Leaflow 美元面值与支付宝人民币报价分开保存，按 67.18/10 折算一次", async () => {
   const { station, snapshot } = await collectFixture();
-  assert.equal(station.rechargeCurrency, RECHARGE.accountCurrency);
-  assert.equal(station.rechargeRateVerified, false);
+  assert.equal(RECHARGE.accountCurrency, "USD");
+  assert.equal(station.rechargeCurrency, "CNY", "配置展示人民币实付，方案仍保留美元面值");
+  assert.equal(station.rechargeRmb, RECHARGE.checkoutQuote.paidRmb);
+  assert.equal(station.rechargeCredits, RECHARGE.checkoutQuote.faceAmount);
+  assert.ok(Math.abs(station.rechargeRate - RECHARGE.cnyExchangeRate) < 1e-10);
+  assert.equal(station.rechargeRateVerified, true);
   assert.equal(station.rechargeAuto, false);
   assert.equal(station.rechargePlansVerified, true);
   assert.deepEqual(station.rechargePlans.map(plan => [plan.amount, plan.credits, plan.currency]), RECHARGE.quickAmounts.map(amount => [amount, amount, RECHARGE.accountCurrency]));
-  assert.equal(RECHARGE.cnyExchangeRate, null);
+  assert.deepEqual(station.rechargeTiers, [], "条件赠额不生成通用折扣档位");
+  assert.equal(station.rechargePayments.length, 1, "不得推算其他面值或银行卡的人民币支付证据");
+  const { paymentCompleted, ...quote } = RECHARGE.checkoutQuote;
+  const { note, ...payment } = station.rechargePayments[0];
+  assert.deepEqual(payment, quote);
+  assert.equal(station.rechargePaymentsVerified, true);
+  assert.equal(paymentCompleted, false);
   assert.equal(RECHARGE.ordersCreated, false);
   assert.equal(RECHARGE.paymentsMade, false);
-  assert.deepEqual(station.rechargePayments, []);
-  assert.equal(station.rechargePaymentsVerified, false);
+  assert.equal(RECHARGE.existingOrder.status, "failed");
+  assert.equal(RECHARGE.existingOrder.failure_reason, "payment_intent_payment_attempt_expired");
+  assert.equal(RECHARGE.fees.feeRate, null);
+  assert.equal(Object.hasOwn(payment, "feeRate"), false, "未知费率不能被填成0");
+  assert.match(note, /待支付报价.*截图未证明付款.*同额支付宝订单超时失败/);
   assert.match(station.rechargeRateNote, /最低 1 USD/);
-  assert.match(station.rechargeRateNote, /尚未创建订单/);
+  assert.match(station.rechargeRateNote, /非实时汇率/);
+  assert.match(station.rechargeRateNote, /银行卡人民币结算未核验/);
   assert.equal(snapshot.recharge, undefined);
-  const fallback = offersOf(station, snapshot).find(offer => offer.modelName === "claude-opus-5-5");
-  assert.equal(fallback.costPrices.input, 4, "项目既有未确认比例回退为1，不把此值当实付证据");
-  const custom = resolveStationCollection({ ...station, rechargeRmb: 7.2, rechargeCredits: 1, rechargeRate: 7.2, rechargeRateVerified: true,
-    rechargeRateNote: "用户已确认比例", rechargePlans: [], rechargePlansVerified: false }).station;
-  assert.equal(custom.rechargeRateVerified, true);
-  assert.equal(custom.rechargeRateNote, "用户已确认比例");
-  assert.deepEqual(custom.rechargePlans, []);
-  const converted = offersOf(custom, snapshot).find(offer => offer.modelName === "claude-opus-5-5");
-  assert.equal(converted.quotedPrices.input, 4);
-  assert.ok(Math.abs(converted.costPrices.input - 4 * 7.2) < 1e-10);
-  assert.ok(Math.abs(converted.costPrices.output - 20 * 7.2) < 1e-10);
+  const offer = offersOf(station, snapshot).find(offer => offer.modelName === "claude-opus-5-5");
+  assert.equal(offer.quotedPrices.input, 4);
+  assert.ok(Math.abs(offer.costPrices.input - 4 * RECHARGE.cnyExchangeRate) < 1e-10);
+  assert.ok(Math.abs(offer.costPrices.output - 20 * RECHARGE.cnyExchangeRate) < 1e-10);
+  assert.ok(Math.abs(offer.monthlyCost - 24 * RECHARGE.cnyExchangeRate) < 1e-10, "渠道报价与比例相同，不得叠乘两遍或再加未知手续费");
+});
+
+test("Leaflow 首版未核实默认值迁移到渠道报价，用户改动完整保留", async () => {
+  const plugin = await loadSitePlugin("leaflow");
+  const legacy = {
+    ...plugin.preset, rechargeCurrency: "USD", rechargeRmb: 1, rechargeCredits: 1, rechargeRate: 1,
+    rechargeRateVerified: false,
+    rechargeRateNote: "2026-11-21 登录核验：结算账户和充值表单均为 USD，最低 1 USD，Stripe 银行卡/支付宝。尚未创建订单或核验人民币实付汇率、手续费与赠额，不能认定 1 USD 额度 = 1 元。",
+    rechargePayments: [], rechargePaymentsVerified: false,
+    rechargePlans: RECHARGE.quickAmounts.map(amount => ({ kind: "topup", amount, credits: amount, currency: "USD", availability: "self_service", verified: true,
+      note: "登录充值页快捷美元面值；不是人民币实付、赠额或阶梯折扣，第三方支付未核验。" }))
+  };
+  const migrated = resolveStationCollection(legacy).station;
+  assert.ok(Math.abs(migrated.rechargeRate - RECHARGE.cnyExchangeRate) < 1e-10);
+  assert.equal(migrated.rechargeRateVerified, true);
+  assert.equal(migrated.rechargeCurrency, "CNY");
+  assert.deepEqual(migrated.rechargePayments, resolveStationCollection(plugin.preset).station.rechargePayments);
+  assert.deepEqual(resolveStationCollection(migrated).station, migrated, "迁移幂等");
+  const blank = resolveStationCollection({ baseUrl: plugin.preset.baseUrl }).station;
+  assert.ok(Math.abs(blank.rechargeRate - RECHARGE.cnyExchangeRate) < 1e-10);
+  assert.equal(blank.rechargePayments.length, 1);
+
+  const changes = [
+    { rechargeRmb: 7.2, rechargeCredits: 1, rechargeRate: 7.2, rechargeRateVerified: true },
+    { rechargeRateNote: "用户自定义说明" },
+    { rechargeRateVerified: true },
+    { rechargePlans: [{ kind: "topup", amount: 20, credits: 30, currency: "USD", note: "人工方案" }] },
+    { rechargePlans: legacy.rechargePlans.map(plan => ({ ...plan, discount: 0.9 })) },
+    { rechargePlans: legacy.rechargePlans.map(plan => ({ ...plan, recurring: true })) },
+    { rechargeTiers: [{ amount: 100, discount: 0.9 }] },
+    { rechargePayments: [{ channel: "card", faceAmount: 10, payAmount: 70, currency: "CNY", paidRmb: 70 }] }
+  ];
+  for (const change of changes) {
+    const original = resolveStationCollection({ ...legacy, ...change }).station;
+    assert.equal(original.rechargeRate, change.rechargeRate ?? 1, JSON.stringify(change));
+    assert.equal(original.rechargeRateVerified, change.rechargeRateVerified ?? false);
+    assert.equal(original.rechargeRateNote, change.rechargeRateNote ?? legacy.rechargeRateNote);
+    assert.equal(original.rechargePayments.length, change.rechargePayments?.length ?? 0);
+    assert.equal(original.rechargePlans[0].note, change.rechargePlans?.[0].note ?? legacy.rechargePlans[0].note);
+  }
+  const rateOnly = { ...legacy, rechargeRate: 7.2, rechargeRateVerified: true };
+  delete rateOnly.rechargeRmb;
+  delete rateOnly.rechargeCredits;
+  assert.equal(resolveStationCollection(rateOnly).station.rechargeRate, 7.2, "不得给仅保存比例的记录补写默认金额");
+});
+
+test("Leaflow 条件赠额保留适用范围和期限，不冒充充值折扣或成功到账", () => {
+  assert.equal(RECHARGE.bonus.currentAccountCreditGrants, 0);
+  assert.equal(RECHARGE.bonus.generalTopupBonusVerified, false);
+  assert.deepEqual(RECHARGE.bonus.topupBonusTiers, []);
+  const onboarding = RECHARGE.bonus.conditionalPrograms.find(program => program.kind === "onboarding");
+  assert.equal(onboarding.usdCredit, 1);
+  assert.equal(onboarding.validDays, 7);
+  assert.match(onboarding.condition, /tasks.*deepseek-v4.1-flash/);
+  const rebate = RECHARGE.bonus.conditionalPrograms.find(program => program.kind === "shipping-rebate");
+  assert.equal(rebate.validHours, 24);
+  assert.deepEqual(rebate.rebateRange, [0.5, 0.9]);
+  assert.match(rebate.condition, /Shipping AI.*next day/);
 });
 
 test("Leaflow 缺失缓存留空，音频、受限模型、推理异价与未知维度不伪装文本价格", async () => {

@@ -334,8 +334,8 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "leaflow",
       "name": "Leaflow Canopy",
-      "version": "0.1.0",
-      "description": "项目模型目录与独立计费价格，使用浏览器登录态；美元充值面值已核实，人民币实付未核验",
+      "version": "0.2.0",
+      "description": "项目模型目录与美元计费价格，复用浏览器登录态；含支付宝人民币收银台报价，手续费及条件赠额分开记录",
       "hosts": [
         "01a1fe61-12f8-7a6f-9b6f-8e6ffadd40aa.leaflow.net"
       ],
