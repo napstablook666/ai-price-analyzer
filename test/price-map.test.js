@@ -300,6 +300,24 @@ test("CheapRouter 按张计费：三档同价并成一行，不重复记三笔",
   assert.equal(rows[0].request_price, null);
 });
 
+test("同价绝对规格合并时使用规格价，缺少顶层价格不能变成免费", () => {
+  const map = {
+    schemaVersion: "price-map/1", source: "equal-size-prices", rootPath: "/data", nameField: "name", currency: "USD",
+    groups: { unlisted: "默认" },
+    rules: [{ kind: "request", unit: "image", mediaType: "image", price: "fallback",
+      sizeTiers: { path: "sizes", nameField: "name", priceField: "price" } }]
+  };
+  for (const fallback of [undefined, 9]) {
+    const payload = { group_ratio: { "默认": 1 }, data: [{ name: "equal-size-image", fallback,
+      sizes: [{ name: "1K", price: 0.014133 }, { name: "2K", price: 0.014133 }] }] };
+    const { rows, unresolved } = applyPriceMap(map, payload);
+    assert.deepEqual(unresolved, []);
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].image_price, 0.014133);
+    assert.equal(rows[0].size_tier, undefined);
+  }
+});
+
 test("CheapRouter 一条价格都没有的模型进 unresolved，不静默丢", () => {
   const payload = {
     code: 0,

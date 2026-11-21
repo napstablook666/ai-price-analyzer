@@ -579,7 +579,8 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
       }
       // 分档全是同一个价就并成一行，别把同一笔钱重复三遍。
       const redundant = tierAmounts.length > 1 && new Set(tierAmounts.map(cell => cell.amount)).size === 1;
-      const sizeCells = tierAmounts.length && !redundant ? tierAmounts : [{ name: null, amount: price }];
+      const sizeCells = redundant ? [{ name: null, amount: tierAmounts[0].amount }]
+        : tierAmounts.length ? tierAmounts : [{ name: null, amount: price }];
       for (const tier of sizeCells) {
         for (const group of groups) {
           const isImage = unit === "image";
