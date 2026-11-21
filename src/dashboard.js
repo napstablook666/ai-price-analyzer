@@ -222,6 +222,14 @@ function partialStatusLabel(row) {
   return details.length ? `部分解析：${details.join("；")}` : "部分解析";
 }
 
+// 价格是时间的函数：这一行在一周 168 小时里赢多少小时，比一个折算比例更能说明问题。
+// 只有整周都报得出价的报价才有这份数据，拿不到就什么都不说。
+function hourCoverageMarkup(row) {
+  if (row.allHoursCheapest) return `<span class="status-tag">全时段最低</span>`;
+  if (!Number.isFinite(row.cheapestHourShare)) return "";
+  return `<span class="status-tag muted">${Math.round(row.cheapestHourShare * 100)}% 时段最低</span>`;
+}
+
 function statusMarkup(row, includeOfficial = true) {
   const tags = [];
   if (row.incomplete) tags.push(`<span class="status-tag warning">${icon("triangle-alert", { className: "icon" })}${partialStatusLabel(row)}</span>`);
@@ -1064,7 +1072,7 @@ function renderRows() {
     const previousRow = index === 0 ? (firstVisibleIndex > 0 ? filtered[firstVisibleIndex - 1] : null) : visible[index - 1];
     const unitGroup = groupedByUnit ? unitGroupMarkup(row, previousRow, index === 0) : "";
     return `${unitGroup}<tr class="${rowClasses}" data-offer-position="${firstVisibleIndex + index}">
-      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
+      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}${isPublic ? "" : hourCoverageMarkup(row)}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
       <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span>${rechargeTierMarkup(row)}</div></td>
       <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking, index))}</td>
       <td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, deltaClass, deltaLabel)}</td>

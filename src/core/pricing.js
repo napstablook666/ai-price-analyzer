@@ -6,7 +6,7 @@ import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaU
 import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { effectiveRecharge } from "./recharge.js";
 import { rechargePaymentRate, representativeRechargePayment } from "../shared/recharge-payments.js";
-import { shareOfTiers } from "./time-window.js";
+import { shareOfTiers, timeSelectorOf, windowHours } from "./time-window.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -346,7 +346,26 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
     const eligible = comparison.comparisonGroup === "public" ? [] : comparison.offers.filter(offer =>
       !offer.pricingUnavailable && (offer.billingMode ?? "token") === "token" && offer.matchRuleId === "exact" &&
       Number(offer.officialMonthlyCost) > 0 && Number(offer.confidenceScore) >= threshold);
-    const recommended = eligible.reduce((current, offer) => !current || offer.monthlyCost < current.monthlyCost ? offer : current, null);
+    let recommended = eligible.reduce((current, offer) => !current || offer.monthlyCost < current.monthlyCost ? offer : current, null);
+    // 价格是时间的函数，不是标量。能填满一周 168 格报价的，先逐小时比一次：
+    // 有报价在每个小时都不贵过别人，它就不依赖「你几点用」，也不用先猜一个占比。
+    const curves = eligible.filter(offer => Array.isArray(offer.hourlyCost) && offer.hourlyCost.length === 168);
+    const wins = new Map(curves.map(offer => [offer, 0]));
+    if (curves.length >= 2) {
+      for (let hour = 0; hour < 168; hour += 1) {
+        const priced = curves.filter(offer => Number.isFinite(offer.hourlyCost[hour]));
+        if (priced.length < 2) continue;
+        const lowest = Math.min(...priced.map(offer => offer.hourlyCost[hour]));
+        const holders = priced.filter(offer => offer.hourlyCost[hour] === lowest);
+        for (const holder of holders) wins.set(holder, wins.get(holder) + 1 / holders.length);
+      }
+      for (const offer of curves) {
+        offer.cheapestHourShare = wins.get(offer) / 168;
+        offer.allHoursCheapest = wins.get(offer) >= 168;
+      }
+      const universal = curves.find(offer => offer.allHoursCheapest);
+      if (universal) recommended = universal;
+    }
     for (const offer of comparison.offers) {
       // 生图行按元/张的价差分档；「按次」行的成本口径是摊出来的，不给档位。
       const mode = offer.billingMode ?? "token";
@@ -357,7 +376,7 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
       offer.recommended = offer === recommended;
       offer.recommendationLabel = comparison.comparisonGroup === "public" ? "" :
         !offer.recommendationEligible ? "需核验" :
-          offer.recommended ? "推荐" : "可选";
+          offer.recommended ? (offer.allHoursCheapest ? "推荐 · 全时段最低" : offer.cheapestHourShare === undefined ? "推荐" : "推荐 · 按当前时段") : "可选";
     }
   }
   return comparisons;
@@ -446,6 +465,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             offers: [],
             proxyPrices: {},
             costPrices: {},
+            // 本周 168 格的小时成本。档位窗口齐了就填满，填不满就留 null，不拿缺格去比。
+            hourlyCost: new Array(168).fill(null),
             officialCurrency: "CREDITS",
             sourceCurrency: null,
             quotedInSourceCurrency: false,
@@ -538,6 +559,14 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
           if (!isPublic && costPrices) row.monthlyCost += workloadCost(costPrices, usage) * share;
           // 按秒的档位是并列的单条报价，不带「占多少流量」的百分比后缀。
           if (item.tier_name) row.tierNames.add(item.request_unit === "second" ? item.tier_name : `${item.tier_name} ${Math.round(share * 100)}%`);
+          // 一档覆盖哪几个小时，就按这一档的单价填那几格。填满是「全时段可比」的前提。
+          if (item.tier_name && item.request_unit !== "second" && costPrices) {
+            const hours = windowHours(timeSelectorOf(item));
+            const hourCost = workloadCost(costPrices, usage);
+            if (hours && Number.isFinite(hourCost)) {
+              for (let hour = 0; hour < 168; hour += 1) if (hours[hour]) row.hourlyCost[hour] = hourCost;
+            }
+          }
           grouped.set(rowKey, row);
         }
       }
@@ -678,6 +707,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       quotedPrices: quotedUnit,
       prices: quotedUnit,
       costPrices: row.stationCategory === "public" || row.pricingUnavailable ? null : costUnit,
+      // 全时段成本曲线：168 小时都填上了才给，别的行拿到就能逐小时比，不必先猜一个占比。
+      hourlyCost: row.hourlyCost.every(cost => Number.isFinite(cost)) ? row.hourlyCost : null,
       sourceCurrency: row.sourceCurrency || "UNKNOWN",
       quotedInSourceCurrency: row.quotedInSourceCurrency,
       officialPrices: officialUnit,

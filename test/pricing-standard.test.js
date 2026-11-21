@@ -216,3 +216,94 @@ test("官方没有出图价时不给对比，也不编折扣", () => {
   assert.equal(offer.imageCompare.diffPercent, null);
   assert.equal(offer.category, "");
 });
+// 一周 168 格：工作日 9-12、14-18 是高峰，其余空闲。
+const peakHours = () => Array.from({ length: 168 }, (_, index) => {
+  const weekday = Math.floor(index / 24);
+  const hour = index % 24;
+  return weekday >= 1 && weekday <= 5 && ((hour >= 9 && hour < 12) || (hour >= 14 && hour < 18));
+});
+
+test("全时段都便宜的报价，推荐不靠猜占比", () => {
+  const isPeak = peakHours();
+  const flat = Array.from({ length: 168 }, () => 4);
+  const tiered = isPeak.map(peak => (peak ? 2 : 3));
+  const comparisons = [{
+    comparisonGroup: "paid",
+    offers: [
+      { pricingUnavailable: false, matchRuleId: "exact", billingMode: "token", officialMonthlyCost: 10, monthlyCost: 4, confidenceScore: 90, hourlyCost: flat },
+      { pricingUnavailable: false, matchRuleId: "exact", billingMode: "token", officialMonthlyCost: 10, monthlyCost: 2.79, confidenceScore: 90, hourlyCost: tiered }
+    ]
+  }];
+  addRecommendationStatus(comparisons, { evidenceThreshold: 60 });
+  const [flatOffer, tieredOffer] = comparisons[0].offers;
+  assert.equal(tieredOffer.allHoursCheapest, true);
+  assert.equal(tieredOffer.recommended, true);
+  assert.equal(tieredOffer.recommendationLabel, "推荐 · 全时段最低");
+  assert.equal(flatOffer.cheapestHourShare, 0);
+});
+
+test("两条曲线交错时，推荐标明是哪条曲线下的结论", () => {
+  const isPeak = peakHours();
+  const flat = Array.from({ length: 168 }, () => 4);
+  // 高峰便宜、空闲更贵，按当前占比算下来还是平价的站更划算。
+  const tiered = isPeak.map(peak => (peak ? 3 : 6));
+  const comparisons = [{
+    comparisonGroup: "paid",
+    offers: [
+      { pricingUnavailable: false, matchRuleId: "exact", billingMode: "token", officialMonthlyCost: 10, monthlyCost: 4, confidenceScore: 90, hourlyCost: flat },
+      { pricingUnavailable: false, matchRuleId: "exact", billingMode: "token", officialMonthlyCost: 10, monthlyCost: 5.38, confidenceScore: 90, hourlyCost: tiered }
+    ]
+  }];
+  addRecommendationStatus(comparisons, { evidenceThreshold: 60 });
+  const [flatOffer, tieredOffer] = comparisons[0].offers;
+  assert.equal(flatOffer.recommended, true);
+  assert.equal(flatOffer.recommendationLabel, "推荐 · 按当前时段");
+  assert.equal(flatOffer.allHoursCheapest, false);
+  assert.ok(Math.abs(flatOffer.cheapestHourShare - 133 / 168) < 1e-12);
+  assert.ok(Math.abs(tieredOffer.cheapestHourShare - 35 / 168) < 1e-12);
+});
+
+test("没有整周报价时不冒充「全时段」结论", () => {
+  const comparisons = [{
+    comparisonGroup: "paid",
+    offers: [
+      { pricingUnavailable: false, matchRuleId: "exact", billingMode: "token", officialMonthlyCost: 10, monthlyCost: 4, confidenceScore: 90, hourlyCost: null },
+      { pricingUnavailable: false, matchRuleId: "exact", billingMode: "token", officialMonthlyCost: 10, monthlyCost: 5, confidenceScore: 90, hourlyCost: null }
+    ]
+  }];
+  addRecommendationStatus(comparisons, { evidenceThreshold: 60 });
+  const [first, second] = comparisons[0].offers;
+  assert.equal(first.recommended, true);
+  assert.equal(first.recommendationLabel, "推荐");
+  assert.equal(first.cheapestHourShare, undefined);
+  assert.equal(second.allHoursCheapest, undefined);
+});
+
+test("带窗口的两档报价，整周曲线和月成本出自同一份数据", () => {
+  // 每天 9-18 是高峰：63/168 = 37.5%。
+  const window = 'hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 18';
+  const comparison = comparisonFor({
+    models: [
+      { model_name: "m1", input_price: 1, output_price: 1, price_currency: "CREDITS", tier_name: "空闲时段", billing_conditions: [{ type: "time", expression: `!(${window})` }] },
+      { model_name: "m1", input_price: 2, output_price: 2, price_currency: "CREDITS", tier_name: "高峰时段", billing_conditions: [{ type: "time", expression: window }] }
+    ],
+    references: { models: [{ name: "m1", provider: "openai", input: 1, output: 1 }] }
+  });
+  const offer = comparison.offers[0];
+  assert.equal(offer.hourlyCost.length, 168);
+  // 一档两块钱 1M 输入 + 1M 输出 = 4；空闲档 = 2。
+  const peak = offer.hourlyCost.filter(cost => cost === 4).length;
+  assert.equal(peak, 63);
+  assert.ok(Math.abs(offer.monthlyCost - (0.375 * 4 + 0.625 * 2)) < 1e-9);
+  assert.ok(offer.tierName.includes("高峰时段 38%"));
+});
+
+test("窗口不闭合的报价不给整周曲线，免得拿半周数据下结论", () => {
+  const comparison = comparisonFor({
+    models: [
+      { model_name: "m1", input_price: 2, output_price: 2, price_currency: "CREDITS", tier_name: "高峰时段", billing_conditions: [{ type: "time", expression: 'hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 18' }] }
+    ],
+    references: { models: [{ name: "m1", provider: "openai", input: 1, output: 1 }] }
+  });
+  assert.equal(comparison.offers[0].hourlyCost, null);
+});

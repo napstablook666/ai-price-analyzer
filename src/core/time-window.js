@@ -257,18 +257,32 @@ export function timeSelectorOf(item) {
   return selector ? String(selector.expression) : null;
 }
 
+// 窗口一周 168 格的布尔表，index = weekday * 24 + hour，时钟按使用时段所在的墙上钟。
+// 价格是时间的函数：这份表就是函数的定义域，占比只是它在某条曲线上的积分。
+export function windowHours(expression) {
+  const inWindow = compileTimeWindow(expression);
+  if (!inWindow) return null;
+  const hours = new Uint8Array(168);
+  for (let weekday = 0; weekday < 7; weekday += 1) {
+    for (let hour = 0; hour < 24; hour += 1) {
+      if (inWindow(weekday, hour)) hours[weekday * 24 + hour] = 1;
+    }
+  }
+  return hours;
+}
+
 // 窗口 × 负荷曲线 = 该档占一周流量的比例。算不出来（没窗口表达式/解析不了）返回 null。
 export function shareOfWindow(expression, profileId = DEFAULT_TIME_PROFILE) {
   const matcher = PROFILE_MATCHERS[isUsageTimeProfile(profileId) ? profileId : DEFAULT_TIME_PROFILE];
-  const inWindow = compileTimeWindow(expression);
-  if (!inWindow || !matcher) return null;
+  const hours = windowHours(expression);
+  if (!hours || !matcher) return null;
   let total = 0;
   let inside = 0;
   for (let weekday = 0; weekday < 7; weekday += 1) {
     for (let hour = 0; hour < 24; hour += 1) {
       if (!matcher(weekday, hour)) continue;
       total += 1;
-      if (inWindow(weekday, hour)) inside += 1;
+      if (hours[weekday * 24 + hour]) inside += 1;
     }
   }
   if (!total) return null;
