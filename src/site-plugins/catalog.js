@@ -31,6 +31,7 @@ import { sitePlugin as allrouterPlugin } from "./providers/allrouter.js";
 import { sitePlugin as xingyaPlugin } from "./providers/xingya.js";
 import { sitePlugin as openluxPlugin } from "./providers/openlux.js";
 import { sitePlugin as _91tokenPlugin } from "./providers/91token.js";
+import { sitePlugin as spideraiPlugin } from "./providers/spiderai.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -79,7 +80,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("allrouter", "AllRouter", "allrouter.cc", "direct", () => ({ sitePlugin: allrouterPlugin }), { hosts: ["allrouter.cc","www.allrouter.cc"], paths: ["/","/console","/console/topup"], description: "公开 /api/pricing 直连采集，52 个在售模型、102 条模型分组；分组倍率公开（default 0.75、deepseek 0.4、gpt 0.053 等），倍率 1 = $2/百万 token，37 个模型走分段或分时表达式；充值 1 元 = 1 美元额度" }),
   entry("xingya", "星芽API", "xingya.site", "direct", () => ({ sitePlugin: xingyaPlugin }), { hosts: ["xingya.site","xingya.space"], paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，83 个模型 13 个分组；充值 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送" }),
   entry("openlux", "OpenLux", "openlux.ai", "direct", () => ({ sitePlugin: openluxPlugin }), { hosts: ["www.openlux.ai","openlux.ai"], paths: ["/pricing","/console/topup","/console/models","/"], description: "公开定价接口直连采集，322 个模型覆盖按 token 与按次；1 美元 = 1 美元额度，面值越大越便宜（最高 7.5%）" }),
-  entry("91token", "91Token", "91token.com", "direct", () => ({ sitePlugin: _91tokenPlugin }), { hosts: ["91token.com","www.91token.com"], paths: ["/pricing","/wallet","/console","/console/topup","/"], description: "匿名采集文本与图片报价，保留分组和长度档；充值报价已核实 1:1，无自助阶梯折扣，第三方收银台实付未验证；复杂视频暂不折算" })
+  entry("91token", "91Token", "91token.com", "direct", () => ({ sitePlugin: _91tokenPlugin }), { hosts: ["91token.com","www.91token.com"], paths: ["/pricing","/wallet","/console","/console/topup","/"], description: "匿名采集文本与图片报价，保留分组和长度档；充值报价已核实 1:1，无自助阶梯折扣，第三方收银台实付未验证；复杂视频暂不折算" }),
+  entry("spiderai", "SpiderAI", "spiderai.fun", "direct", () => ({ sitePlugin: spideraiPlugin }), { paths: ["/"], description: "公开模型价格页内嵌目录匿名采集；登录核验充值比例与档位" })
 ];
 
 export function sitePluginById(id) {

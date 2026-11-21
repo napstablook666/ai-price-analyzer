@@ -1,0 +1,248 @@
+# base: tokenflux
+# case: spiderai
+# fixture: spiderai-pricing-page.html
+# rows: 241 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-fable-5-1|Claude Code 专用|-|3|15|0.3|3.75|-|-|-|USD|0.3|5
+claude-fable-5-1|Claude 官方 API|-|7.5|37.5|0.75|9.375|-|-|-|USD|0.75|5
+claude-fable-5-1|Claude 通用版|-|4|20|0.4|5|-|-|-|USD|0.4|5
+claude-fable-5-2|Claude Code 专用|-|2.4|12|0.06|3|-|-|-|USD|0.3|5
+claude-fable-5-2|Claude 官方 API|-|6|30|0.15|7.5|-|-|-|USD|0.75|5
+claude-fable-5-2|Claude 通用版|-|3.2|16|0.08|4|-|-|-|USD|0.4|5
+claude-fable-5|Claude Code 专用|-|3|15|0.3|3.75|-|-|-|USD|0.3|5
+claude-fable-5|Claude 官方 API|-|7.5|37.5|0.75|9.375|-|-|-|USD|0.75|5
+claude-fable-5|Claude 通用版|-|4|20|0.4|5|-|-|-|USD|0.4|5
+claude-haiku-4-5|Claude Code 专用|-|0.3|1.5|0.03|0.375|-|-|-|USD|0.3|5
+claude-haiku-4-5|Claude 官方 API|-|0.75|3.75|0.075|0.9375|-|-|-|USD|0.75|5
+claude-haiku-4-5|Claude 通用版|-|0.4|2|0.04|0.5|-|-|-|USD|0.4|5
+claude-haiku-5-5|Claude Code 专用|>100K|0.15|0.75|0.015|0.1875|-|-|-|USD|0.3|5
+claude-haiku-5-5|Claude Code 专用|≤100K|0.03|0.15|0.003|0.0375|-|-|-|USD|0.3|5
+claude-haiku-5-5|Claude 官方 API|>100K|0.375|1.875|0.0375|0.46875|-|-|-|USD|0.75|5
+claude-haiku-5-5|Claude 官方 API|≤100K|0.075|0.375|0.0075|0.09375|-|-|-|USD|0.75|5
+claude-haiku-5-5|Claude 通用版|>100K|0.2|1|0.02|0.25|-|-|-|USD|0.4|5
+claude-haiku-5-5|Claude 通用版|≤100K|0.04|0.2|0.004|0.05|-|-|-|USD|0.4|5
+claude-opus-4-6|Claude Code 专用|-|1.5|7.5|0.15|1.875|-|-|-|USD|0.3|5
+claude-opus-4-6|Claude 官方 API|-|3.75|18.75|0.375|4.6875|-|-|-|USD|0.75|5
+claude-opus-4-6|Claude 经济版|-|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-4-6|Claude 通用版|-|2|10|0.2|2.5|-|-|-|USD|0.4|5
+claude-opus-4-7|Claude Code 专用|-|1.5|7.5|0.15|1.875|-|-|-|USD|0.3|5
+claude-opus-4-7|Claude 官方 API|-|3.75|18.75|0.375|4.6875|-|-|-|USD|0.75|5
+claude-opus-4-7|Claude 经济版|-|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-4-7|Claude 通用版|-|2|10|0.2|2.5|-|-|-|USD|0.4|5
+claude-opus-4-8|Claude Code 专用|-|1.5|7.5|0.15|1.875|-|-|-|USD|0.3|5
+claude-opus-4-8|Claude 官方 API|-|3.75|18.75|0.375|4.6875|-|-|-|USD|0.75|5
+claude-opus-4-8|Claude 经济版|-|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-4-8|Claude 通用版|-|2|10|0.2|2.5|-|-|-|USD|0.4|5
+claude-opus-5-5|Claude Code 专用|-|1.2|6|0.06|1.5|-|-|-|USD|0.3|5
+claude-opus-5-5|Claude 官方 API|-|3|15|0.15|3.75|-|-|-|USD|0.75|5
+claude-opus-5-5|Claude 经济版|-|0.8|4|0.04|1|-|-|-|USD|0.2|5
+claude-opus-5-5|Claude 通用版|-|1.6|8|0.08|2|-|-|-|USD|0.4|5
+claude-opus-5|Claude Code 专用|-|1.5|7.5|0.15|1.875|-|-|-|USD|0.3|5
+claude-opus-5|Claude 官方 API|-|3.75|18.75|0.375|4.6875|-|-|-|USD|0.75|5
+claude-opus-5|Claude 经济版|-|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-5|Claude 通用版|-|2|10|0.2|2.5|-|-|-|USD|0.4|5
+claude-sonnet-4-6|Claude Code 专用|-|0.9|4.5|0.09|1.125|-|-|-|USD|0.3|5
+claude-sonnet-4-6|Claude 官方 API|-|2.25|11.25|0.225|2.8125|-|-|-|USD|0.75|5
+claude-sonnet-4-6|Claude 经济版|-|0.6|3|0.06|0.75|-|-|-|USD|0.2|5
+claude-sonnet-4-6|Claude 通用版|-|1.2|6|0.12|1.5|-|-|-|USD|0.4|5
+claude-sonnet-5-5|Claude Code 专用|-|0.6|3|0.06|0.75|-|-|-|USD|0.3|5
+claude-sonnet-5-5|Claude 官方 API|-|1.5|7.5|0.15|1.875|-|-|-|USD|0.75|5
+claude-sonnet-5-5|Claude 经济版|-|0.4|2|0.04|0.5|-|-|-|USD|0.2|5
+claude-sonnet-5-5|Claude 通用版|-|0.8|4|0.08|1|-|-|-|USD|0.4|5
+claude-sonnet-5|Claude Code 专用|-|0.6|3|0.06|0.75|-|-|-|USD|0.3|5
+claude-sonnet-5|Claude 经济版|-|0.4|2|0.04|0.5|-|-|-|USD|0.2|5
+claude-sonnet-5|Claude 通用版|-|0.8|4|0.08|1|-|-|-|USD|0.4|5
+deepseek-flash-economy|DeepSeek 云厂商版|offPeak|0.08|0.32|0.0016|-|-|-|-|USD|0.1|4
+deepseek-flash-economy|DeepSeek 云厂商版|peak|0.16|0.64|0.0032|-|-|-|-|USD|0.1|4
+deepseek-flash|DeepSeek 云厂商版|offPeak|0.1|0.4|0.002|-|-|-|-|USD|0.1|4
+deepseek-flash|DeepSeek 云厂商版|peak|0.2|0.8|0.004|-|-|-|-|USD|0.1|4
+deepseek-flash|DeepSeek 官方 API|offPeak|0.139|0.556|0.00278|-|-|-|-|USD|0.139|4
+deepseek-flash|DeepSeek 官方 API|peak|0.278|1.112|0.00556|-|-|-|-|USD|0.139|4
+deepseek-v4-pro|DeepSeek 云厂商版|-|0.9|2.7|0.03|-|-|-|-|USD|0.1|3
+deepseek-v4-pro|DeepSeek 官方 API|offPeak|0.6255|1.8765|0.02085|-|-|-|-|USD|0.139|3
+deepseek-v4-pro|DeepSeek 官方 API|peak|1.251|3.753|0.0417|-|-|-|-|USD|0.139|3
+gemini-2.5-flash-lite|Gemini 经济版|-|0.015|0.06|0.0015|-|-|-|-|USD|0.15|4
+gemini-2.5-flash|Gemini 经济版|-|0.045|0.375|0.0045|-|-|-|-|USD|0.15|8.33333333333
+gemini-2.5-pro|Gemini 经济版|-|0.1875|1.5|0.01875|-|-|-|-|USD|0.15|8
+gemini-3-flash-preview|Gemini 经济版|-|0.075|0.45|0.0075|-|-|-|-|USD|0.15|6
+gemini-3-flash|Gemini 经济版|-|0.075|0.45|0.0075|-|-|-|-|USD|0.15|6
+gemini-3-pro-preview|Gemini 经济版|-|0.3|1.8|0.03|-|-|-|-|USD|0.15|6
+gemini-3-pro|Gemini 经济版|-|0.3|1.8|0.03|-|-|-|-|USD|0.15|6
+gemini-3.1-flash-lite-preview|Gemini 经济版|-|0.0375|0.225|0.00375|-|-|-|-|USD|0.15|6
+gemini-3.1-flash-lite|Gemini 经济版|-|0.0375|0.225|0.00375|-|-|-|-|USD|0.15|6
+gemini-3.1-pro-preview|Gemini 经济版|-|0.3|1.8|0.03|-|-|-|-|USD|0.15|6
+gemini-3.1-pro|Gemini 经济版|-|0.3|1.8|0.03|-|-|-|-|USD|0.15|6
+gemini-3.5-flash|Gemini 经济版|-|0.225|1.35|0.0225|-|-|-|-|USD|0.15|6
+gemini-3.6-flash|Gemini 经济版|-|0.1125|0.5625|0.01125|-|-|-|-|USD|0.15|5
+gemini-3.7-flash|Gemini 经济版|-|0.1125|0.5625|0.01125|-|-|-|-|USD|0.15|5
+gemini-3.8-flash|Gemini 经济版|-|0.1125|0.5625|0.01125|-|-|-|-|USD|0.15|5
+gemini-4-argon|Gemini 经济版|-|0.3|1.5|0.015|-|-|-|-|USD|0.15|5
+gemini-4-carbon|Gemini 经济版|-|0.3|1.5|0.015|-|-|-|-|USD|0.15|5
+gemini-4-hydrogen|Gemini 经济版|-|0.225|1.125|0.01125|-|-|-|-|USD|0.15|5
+gemini-4-neon|Gemini 经济版|-|0.45|2.25|0.0225|-|-|-|-|USD|0.15|5
+glm-5.1|智谱 云厂商版|-|0.864|3.024|0.216|-|-|-|-|USD|0.108|3.5
+glm-5.1|智谱 经济版|-|0.8|2.8|0.2|-|-|-|-|USD|0.1|3.5
+glm-5.2|智谱 云厂商版|-|0.864|3.024|0.216|-|-|-|-|USD|0.108|3.5
+glm-5.2|智谱 经济版|-|0.8|2.8|0.2|-|-|-|-|USD|0.1|3.5
+glm-5.3-flashx|智谱 云厂商版|-|0.216|0.756|0.06156|-|-|-|-|USD|0.108|3.5
+glm-5.3-flashx|智谱 经济版|-|0.2|0.7|0.057|-|-|-|-|USD|0.1|3.5
+glm-5.3-flash|智谱 云厂商版|-|0.0864|0.3024|0.02484|-|-|-|-|USD|0.108|3.5
+glm-5.3-flash|智谱 经济版|-|0.08|0.28|0.023|-|-|-|-|USD|0.1|3.5
+glm-5.3|智谱 云厂商版|-|0.864|3.024|0.216|-|-|-|-|USD|0.108|3.5
+glm-5.3|智谱 经济版|-|0.8|2.8|0.2|-|-|-|-|USD|0.1|3.5
+gpt-5.6-sol|GPT Codex 专用|> 272K|2|9|0.2|-|-|-|-|USD|0.2|4.5
+gpt-5.6-sol|GPT Codex 专用|≤ 272K|1|6|0.1|-|-|-|-|USD|0.2|6
+gpt-5.6-sol|GPT 官方 API|> 272K|4.5|20.25|0.45|-|-|-|-|USD|0.45|4.5
+gpt-5.6-sol|GPT 官方 API|≤ 272K|2.25|13.5|0.225|-|-|-|-|USD|0.45|6
+gpt-5.6-sol|GPT 经济版|> 272K|1|4.5|0.1|-|-|-|-|USD|0.1|4.5
+gpt-5.6-sol|GPT 经济版|≤ 272K|0.5|3|0.05|-|-|-|-|USD|0.1|6
+gpt-5.6-sol|GPT 通用版|> 272K|2|9|0.2|-|-|-|-|USD|0.2|4.5
+gpt-5.6-sol|GPT 通用版|≤ 272K|1|6|0.1|-|-|-|-|USD|0.2|6
+gpt-5.6-terra|GPT Codex 专用|> 272K|0.8|3.6|0.08|-|-|-|-|USD|0.2|4.5
+gpt-5.6-terra|GPT Codex 专用|≤ 272K|0.4|2.4|0.04|-|-|-|-|USD|0.2|6
+gpt-5.6-terra|GPT 官方 API|> 272K|1.8|8.1|0.18|-|-|-|-|USD|0.45|4.5
+gpt-5.6-terra|GPT 官方 API|≤ 272K|0.9|5.4|0.09|-|-|-|-|USD|0.45|6
+gpt-5.6-terra|GPT 经济版|> 272K|0.4|1.8|0.04|-|-|-|-|USD|0.1|4.5
+gpt-5.6-terra|GPT 经济版|≤ 272K|0.2|1.2|0.02|-|-|-|-|USD|0.1|6
+gpt-5.6-terra|GPT 通用版|> 272K|0.8|3.6|0.08|-|-|-|-|USD|0.2|4.5
+gpt-5.6-terra|GPT 通用版|≤ 272K|0.4|2.4|0.04|-|-|-|-|USD|0.2|6
+gpt-6-astra|GPT Codex 专用|> 272K|4|15|0.4|5|-|-|-|USD|0.2|3.75
+gpt-6-astra|GPT Codex 专用|≤ 272K|2|10|0.2|2.5|-|-|-|USD|0.2|5
+gpt-6-astra|GPT 官方 API|> 272K|9|33.75|0.9|11.25|-|-|-|USD|0.45|3.75
+gpt-6-astra|GPT 官方 API|≤ 272K|4.5|22.5|0.45|5.625|-|-|-|USD|0.45|5
+gpt-6-astra|GPT 经济版|> 272K|2|7.5|0.2|2.5|-|-|-|USD|0.1|3.75
+gpt-6-astra|GPT 经济版|≤ 272K|1|5|0.1|1.25|-|-|-|USD|0.1|5
+gpt-6-astra|GPT 通用版|> 272K|4|15|0.4|5|-|-|-|USD|0.2|3.75
+gpt-6-astra|GPT 通用版|≤ 272K|2|10|0.2|2.5|-|-|-|USD|0.2|5
+gpt-6-sol|GPT Codex 专用|> 272K|0.8|3|0.08|-|-|-|-|USD|0.2|3.75
+gpt-6-sol|GPT Codex 专用|≤ 272K|0.4|2|0.04|-|-|-|-|USD|0.2|5
+gpt-6-sol|GPT 官方 API|> 272K|1.8|6.75|0.18|-|-|-|-|USD|0.45|3.75
+gpt-6-sol|GPT 官方 API|≤ 272K|0.9|4.5|0.09|-|-|-|-|USD|0.45|5
+gpt-6-sol|GPT 经济版|> 272K|0.4|1.5|0.04|-|-|-|-|USD|0.1|3.75
+gpt-6-sol|GPT 经济版|≤ 272K|0.2|1|0.02|-|-|-|-|USD|0.1|5
+gpt-6-sol|GPT 通用版|> 272K|0.8|3|0.08|-|-|-|-|USD|0.2|3.75
+gpt-6-sol|GPT 通用版|≤ 272K|0.4|2|0.04|-|-|-|-|USD|0.2|5
+gpt-6.1-sol|GPT Codex 专用|> 272K|0.8|3|0.04|-|-|-|-|USD|0.2|3.75
+gpt-6.1-sol|GPT Codex 专用|≤ 272K|0.4|2|0.02|-|-|-|-|USD|0.2|5
+gpt-6.1-sol|GPT 官方 API|> 272K|1.8|6.75|0.09|-|-|-|-|USD|0.45|3.75
+gpt-6.1-sol|GPT 官方 API|≤ 272K|0.9|4.5|0.045|-|-|-|-|USD|0.45|5
+gpt-6.1-sol|GPT 经济版|> 272K|0.4|1.5|0.02|-|-|-|-|USD|0.1|3.75
+gpt-6.1-sol|GPT 经济版|≤ 272K|0.2|1|0.01|-|-|-|-|USD|0.1|5
+gpt-6.1-sol|GPT 通用版|> 272K|0.8|3|0.04|-|-|-|-|USD|0.2|3.75
+gpt-6.1-sol|GPT 通用版|≤ 272K|0.4|2|0.02|-|-|-|-|USD|0.2|5
+gpt-6.1-terra|GPT Codex 专用|> 272K|0.4|1.5|0.02|-|-|-|-|USD|0.2|3.75
+gpt-6.1-terra|GPT Codex 专用|≤ 272K|0.2|1|0.01|-|-|-|-|USD|0.2|5
+gpt-6.1-terra|GPT 官方 API|> 272K|0.9|3.375|0.045|-|-|-|-|USD|0.45|3.75
+gpt-6.1-terra|GPT 官方 API|≤ 272K|0.45|2.25|0.0225|-|-|-|-|USD|0.45|5
+gpt-6.1-terra|GPT 经济版|> 272K|0.2|0.75|0.01|-|-|-|-|USD|0.1|3.75
+gpt-6.1-terra|GPT 经济版|≤ 272K|0.1|0.5|0.005|-|-|-|-|USD|0.1|5
+gpt-6.1-terra|GPT 通用版|> 272K|0.4|1.5|0.02|-|-|-|-|USD|0.2|3.75
+gpt-6.1-terra|GPT 通用版|≤ 272K|0.2|1|0.01|-|-|-|-|USD|0.2|5
+gpt-6.2-astra|GPT Codex 专用|> 272K|3.2|12|0.16|-|-|-|-|USD|0.2|3.75
+gpt-6.2-astra|GPT Codex 专用|≤ 272K|1.6|8|0.08|-|-|-|-|USD|0.2|5
+gpt-6.2-astra|GPT 官方 API|> 272K|7.2|27|0.36|-|-|-|-|USD|0.45|3.75
+gpt-6.2-astra|GPT 官方 API|≤ 272K|3.6|18|0.18|-|-|-|-|USD|0.45|5
+gpt-6.2-astra|GPT 经济版|> 272K|1.6|6|0.08|-|-|-|-|USD|0.1|3.75
+gpt-6.2-astra|GPT 经济版|≤ 272K|0.8|4|0.04|-|-|-|-|USD|0.1|5
+gpt-6.2-astra|GPT 通用版|> 272K|3.2|12|0.16|-|-|-|-|USD|0.2|3.75
+gpt-6.2-astra|GPT 通用版|≤ 272K|1.6|8|0.08|-|-|-|-|USD|0.2|5
+gpt-6.2-sol|GPT Codex 专用|> 272K|0.8|3|0.04|-|-|-|-|USD|0.2|3.75
+gpt-6.2-sol|GPT Codex 专用|≤ 272K|0.4|2|0.02|-|-|-|-|USD|0.2|5
+gpt-6.2-sol|GPT 官方 API|> 272K|1.8|6.75|0.09|-|-|-|-|USD|0.45|3.75
+gpt-6.2-sol|GPT 官方 API|≤ 272K|0.9|4.5|0.045|-|-|-|-|USD|0.45|5
+gpt-6.2-sol|GPT 经济版|> 272K|0.4|1.5|0.02|-|-|-|-|USD|0.1|3.75
+gpt-6.2-sol|GPT 经济版|≤ 272K|0.2|1|0.01|-|-|-|-|USD|0.1|5
+gpt-6.2-sol|GPT 通用版|> 272K|0.8|3|0.04|-|-|-|-|USD|0.2|3.75
+gpt-6.2-sol|GPT 通用版|≤ 272K|0.4|2|0.02|-|-|-|-|USD|0.2|5
+gpt-image-2.5-flare|GPT 生图|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.5-flare|GPT 生图|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.5-flare|GPT 生图|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.5-flare|GPT 经济版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.5-flare|GPT 经济版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.5-flare|GPT 经济版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.5-flare|GPT 通用版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.5-flare|GPT 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.5-flare|GPT 通用版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 生图|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 生图|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 生图|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 经济版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 经济版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 经济版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 通用版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.5-sunburst|GPT 通用版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.6-flare|GPT 生图|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.6-flare|GPT 生图|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.6-flare|GPT 生图|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.6-flare|GPT 经济版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.6-flare|GPT 经济版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.6-flare|GPT 经济版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.6-flare|GPT 通用版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.6-flare|GPT 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.6-flare|GPT 通用版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 生图|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 生图|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 生图|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 经济版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 经济版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 经济版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 通用版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2.6-sunburst|GPT 通用版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2|GPT 生图|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2|GPT 生图|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2|GPT 生图|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2|GPT 经济版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2|GPT 经济版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2|GPT 经济版|-|-|-|-|-|-|0.04|image|USD|1|1
+gpt-image-2|GPT 通用版|-|-|-|-|-|-|0.02|image|USD|1|1
+gpt-image-2|GPT 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+gpt-image-2|GPT 通用版|-|-|-|-|-|-|0.04|image|USD|1|1
+grok-4.20-0309-non-reasoning|Grok 通用版|> 200K|0.375|0.75|0.06|-|-|-|-|USD|0.15|2
+grok-4.20-0309-non-reasoning|Grok 通用版|≤ 200K|0.1875|0.375|0.03|-|-|-|-|USD|0.15|2
+grok-4.20-0309-reasoning|Grok 通用版|> 200K|0.375|0.75|0.06|-|-|-|-|USD|0.15|2
+grok-4.20-0309-reasoning|Grok 通用版|≤ 200K|0.1875|0.375|0.03|-|-|-|-|USD|0.15|2
+grok-4.20-multi-agent-0309|Grok 通用版|> 200K|0.375|0.75|0.06|-|-|-|-|USD|0.15|2
+grok-4.20-multi-agent-0309|Grok 通用版|≤ 200K|0.1875|0.375|0.03|-|-|-|-|USD|0.15|2
+grok-4.3|Grok 通用版|> 200K|0.375|0.75|0.06|-|-|-|-|USD|0.15|2
+grok-4.3|Grok 通用版|≤ 200K|0.1875|0.375|0.03|-|-|-|-|USD|0.15|2
+grok-4.5|Grok 通用版|> 200K|0.6|1.8|0.09|-|-|-|-|USD|0.15|3
+grok-4.5|Grok 通用版|≤ 200K|0.3|0.9|0.045|-|-|-|-|USD|0.15|3
+grok-4.6|Grok 通用版|> 200K|0.6|1.8|0.15|-|-|-|-|USD|0.15|3
+grok-4.6|Grok 通用版|≤ 200K|0.3|0.9|0.075|-|-|-|-|USD|0.15|3
+grok-4.7|Grok 通用版|> 200K|0.6|1.8|0.15|-|-|-|-|USD|0.15|3
+grok-4.7|Grok 通用版|≤ 200K|0.3|0.9|0.075|-|-|-|-|USD|0.15|3
+grok-build-0.1|Grok 通用版|> 200K|0.3|0.6|0.06|-|-|-|-|USD|0.15|2
+grok-build-0.1|Grok 通用版|≤ 200K|0.15|0.3|0.03|-|-|-|-|USD|0.15|2
+grok-imagine-image-quality|Grok 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+grok-imagine-image-quality|Grok 通用版|-|-|-|-|-|-|0.047|image|USD|1|1
+grok-imagine-image-quality|Grok 通用版|-|-|-|-|-|-|0.04|image|USD|1|1
+grok-imagine-image|Grok 通用版|-|-|-|-|-|-|0.02|image|USD|1|1
+grok-imagine-image|Grok 通用版|-|-|-|-|-|-|0.03|image|USD|1|1
+grok-imagine-image|Grok 通用版|-|-|-|-|-|-|0.047|image|USD|1|1
+grok-imagine-video-1.5|Grok 通用版|-|-|-|-|-|0.032|-|video|USD|1|1
+grok-imagine-video-1.5|Grok 通用版|-|-|-|-|-|0.056|-|video|USD|1|1
+grok-imagine-video-1.5|Grok 通用版|-|-|-|-|-|0.1|-|video|USD|1|1
+grok-imagine-video|Grok 通用版|-|-|-|-|-|0.028|-|video|USD|1|1
+grok-imagine-video|Grok 通用版|-|-|-|-|-|0.02|-|video|USD|1|1
+kimi-k2.6|Kimi 云厂商版|-|0.702|2.916|0.1188|0|-|-|-|USD|0.108|4.15384615385
+kimi-k2.6|Kimi 经济版|-|0.65|2.7|0.11|0|-|-|-|USD|0.1|4.15384615385
+kimi-k2.7-code|Kimi 云厂商版|-|0.702|2.916|0.1404|0|-|-|-|USD|0.108|4.15384615385
+kimi-k2.7-code|Kimi 经济版|-|0.65|2.7|0.13|0|-|-|-|USD|0.1|4.15384615385
+kimi-k3.1-pro-highspeed|Kimi 云厂商版|-|2.808|14.688|0.1404|2.808|-|-|-|USD|0.108|5.23076923077
+kimi-k3.1-pro-highspeed|Kimi 经济版|-|2.6|13.6|0.13|2.6|-|-|-|USD|0.1|5.23076923077
+kimi-k3.1-pro|Kimi 云厂商版|-|1.404|7.344|0.1404|1.404|-|-|-|USD|0.108|5.23076923077
+kimi-k3.1-pro|Kimi 经济版|-|1.3|6.8|0.13|1.3|-|-|-|USD|0.1|5.23076923077
+kimi-k3|Kimi 云厂商版|-|2.16|10.8|0.216|2.16|-|-|-|USD|0.108|5
+kimi-k3|Kimi 经济版|-|2|10|0.2|2|-|-|-|USD|0.1|5
+mimo-v2.6-flash|MiMo 经济版|-|0.108|0.216|0.00216|0|-|-|-|USD|0.108|2
+mimo-v2.6-pro|MiMo 经济版|-|0.324|0.648|0.0027|0|-|-|-|USD|0.108|2
+minimax-m2.5|MiniMax 经济版|-|0.21|0.84|0.042|0.2625|-|-|-|USD|0.1|4
+minimax-m3.1-flash|MiniMax 经济版|-|0.1|0.4|0.01|-|-|-|-|USD|0.1|4
+minimax-m3|MiniMax 经济版|> 512K|0.42|1.68|0.084|-|-|-|-|USD|0.1|4
+minimax-m3|MiniMax 经济版|≤ 512K|0.21|0.84|0.042|-|-|-|-|USD|0.1|4
+qwen3.8-flash|Qwen 经济版|-|0.08|0.27|0.01|0.14|-|-|-|USD|0.1|3.375
+qwen3.8-max|Qwen 经济版|-|1.2|3.6|0.15|1.5|-|-|-|USD|0.1|3

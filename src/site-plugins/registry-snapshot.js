@@ -310,6 +310,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "www.91token.com"
       ],
       "needsCode": true
+    },
+    {
+      "id": "spiderai",
+      "name": "SpiderAI",
+      "version": "0.1.0",
+      "description": "公开模型价格页内嵌目录匿名采集；登录核验充值比例与档位",
+      "hosts": [
+        "spiderai.fun"
+      ],
+      "needsCode": true
     }
   ]
 };

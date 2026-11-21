@@ -43,9 +43,12 @@ function requestError(station, strategy, response) {
   return `${station.name} 请求失败（${response?.status || "无响应"}）`;
 }
 
-async function readResponse(response) {
+async function readResponse(response, strategy = {}) {
   const contentType = response.headers?.get?.("content-type") || "";
-  return contentType.includes("json") ? response.json() : response.text();
+  const payload = typeof response.json === "function"
+    ? await (contentType.includes("json") ? response.json() : response.text())
+    : response.body;
+  return strategy.decodeResponse ? strategy.decodeResponse(payload) : payload;
 }
 function buildSnapshot(station, normalized, url, status = 200) {
   return {
@@ -128,7 +131,7 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
     try {
       const response = await pageFetch({ capture: true });
       if (isPageSessionFailure(requestStrategy, response)) throw new Error(requestError(station, requestStrategy, response));
-      const payload = typeof response?.json === "function" ? await readResponse(response) : response?.body;
+      const payload = await readResponse(response, requestStrategy);
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("页面响应未通过价格数据校验");
       const normalized = payload && typeof payload !== "string"
         ? normalizePricingPayload(payload, station.adapter?.responseFormat || "auto", normalizationOptionsFor(station))
@@ -151,7 +154,7 @@ async function collectStationOnce(station, { fetchImpl = fetch, pageFetch, colle
         throw new Error(requestError(station, requestStrategy, response));
       }
       const options = normalizationOptionsFor(station);
-      const payload = typeof response.json === "function" ? await readResponse(response) : response.body;
+      const payload = await readResponse(response, requestStrategy);
       if (payload && typeof payload === "object" && hasInvalidPricingValue(payload, priceKeys)) throw new Error("价格数据校验失败");
       // 主价格之外还要取的报文（拼车市场就是这种：座位在 /api/carpool-market，
       // 单价在 /api/pricing），拿不到不算采集失败，但要记下来。

@@ -29,5 +29,6 @@ export const SITE_PLUGIN_ORDER = [
   "allrouter",
   "xingya",
   "openlux",
-  "91token"
+  "91token",
+  "spiderai"
 ];

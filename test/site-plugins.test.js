@@ -202,6 +202,147 @@ test("91Token 补验只迁移首版默认充值配置，保留自定义比例、
   });
 });
 
+test("SpiderAI 安装预设后匿名采集完整目录，倍率、媒体单价与充值只换算一次", async () => {
+  await withCleanRegistry(async () => {
+    const providers = await loadSitePlugins(["spiderai"]);
+    const stations = addProviderStationPresets([], providers);
+    assert.equal(addProviderStationPresets(stations, providers), stations);
+    const collection = resolveStationCollection(stations[0]);
+    const station = collection.station;
+    assert.equal(sitePluginForStation(station).id, "spiderai");
+    assert.equal(station.mode, "direct");
+    assert.equal(station.auth.type, "none");
+    assert.equal(station.priceCurrency, "CREDITS");
+    assert.equal(station.rechargeAuto, false);
+    assert.equal(station.rechargeRateVerified, true);
+    assert.ok(Math.abs(station.rechargeRate - 6.359721088071961) < 1e-10);
+    assert.equal(station.rechargePlansVerified, true);
+    assert.deepEqual(station.rechargePlans.map(plan => [plan.amount, plan.credits]), [
+      [50, 7.86], [100, 15.73], [500, 78.62], [1000, 157.24],
+      [1500, 235.86], [2000, 314.48], [3000, 471.72], [5000, 786.20]
+    ]);
+    assert.deepEqual(station.rechargeTiers, []);
+    assert.deepEqual(station.rechargePayments, []);
+    assert.equal(station.rechargePaymentsVerified, false);
+    const html = readFileSync(new URL("./fixtures/spiderai-pricing-page.html", import.meta.url), "utf8");
+    const requests = [];
+    const snapshot = await collectStation(station, {
+      collection,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } });
+      },
+      pageFetch: async () => assert.fail("公开采价不得访问浏览器登录态")
+    });
+    assert.equal(requests.length, 1, "不应请求登录充值接口或额外模型目录");
+    assert.equal(requests[0].url, "https://spiderai.fun/");
+    assert.equal(requests[0].init.credentials, "omit");
+    assert.equal(requests[0].init.method, "GET");
+    assert.equal(requests[0].init.headers.Authorization, undefined);
+    assert.equal(snapshot.status, "success");
+    assert.equal(snapshot.source, "spiderai-public-page");
+    assert.equal(snapshot.recharge, undefined);
+    const rows = snapshot.normalized.data;
+    assert.equal(rows.length, 241);
+    assert.equal(new Set(rows.map(row => row.model_name)).size, 77);
+    assert.equal(Object.keys(snapshot.normalized.group_ratio).length, 20);
+    assert.ok(rows.every(row => row.price_currency === "CREDITS"));
+    const find = (model, group, tier) => rows.find(row => row.model_name === model && row.proxy_group_name === group && (!tier || row.tier_name === tier));
+    const opus = find("claude-opus-5-5", "Claude 经济版");
+    assert.deepEqual([opus.input_price, opus.output_price, opus.cache_write_price, opus.cache_read_price], [0.8, 4, 1, 0.04]);
+    const sol = rows.filter(row => row.model_name === "gpt-6.2-sol" && row.proxy_group_name === "GPT 经济版");
+    assert.deepEqual(sol.map(row => [row.input_price, row.output_price, row.min_tokens, row.max_tokens ?? null]), [[0.2, 1, 0, 272000], [0.4, 1.5, 272001, null]]);
+    const haiku = rows.filter(row => row.model_name === "claude-haiku-5-5" && row.proxy_group_name === "Claude 通用版");
+    assert.deepEqual(haiku.map(row => [row.min_tokens, row.max_tokens ?? null]), [[0, 100000], [100001, null]]);
+    const peak = find("deepseek-v4-pro", "DeepSeek 官方 API", "peak");
+    const offPeak = find("deepseek-v4-pro", "DeepSeek 官方 API", "offPeak");
+    assert.equal(peak.input_price, 1.251);
+    assert.equal(offPeak.input_price, 0.6255);
+    assert.ok(peak.billing_conditions.every(condition => condition.type === "time"));
+    assert.match(peak.billing_conditions[0].expression, /Asia\/Shanghai/);
+    assert.equal(offPeak.billing_conditions[0].expression, `!(${peak.billing_conditions[0].expression})`);
+    assert.equal(find("deepseek-v4-pro", "DeepSeek 云厂商版").input_price, 0.9);
+    const image = rows.find(row => row.model_name === "gpt-image-2" && row.proxy_group_name === "GPT 经济版" && row.size_tier === "4K");
+    assert.equal(image.image_price, 0.04);
+    assert.equal(image.input_price, null);
+    const video = rows.find(row => row.model_name === "grok-imagine-video" && row.size_tier === "720p");
+    assert.equal(video.request_price, 0.028);
+    assert.equal(video.request_unit, "second");
+    assert.equal(video.media_type, "video");
+    assert.ok(rows.filter(row => row.proxy_group_name === "GPT 生图").every(row => row.media_type === "image"));
+    assert.ok(!rows.some(row => row.proxy_group_name === "GPT Codex 专用" && row.image_price !== null));
+    assert.ok(!rows.some(row => /Muse|Hunyuan|TypeSafe|Gemini 官方/.test(row.proxy_group_name)));
+    const comparisons = buildComparisonRows({ stations: [station], snapshots: [snapshot], references: { models: [] }, usage: { input: 1_000_000, output: 1_000_000 } });
+    const offers = comparisons.flatMap(row => row.offers);
+    const offer = offers.find(row => row.modelName === "claude-opus-5-5" && row.groupName === "Claude 经济版");
+    assert.equal(offer.quotedPrices.input, 0.8);
+    assert.equal(offer.quotedPrices.output, 4);
+    assert.ok(Math.abs(offer.costPrices.input - 0.8 * station.rechargeRate) < 1e-10);
+    assert.equal(offer.pricingUnavailable, false);
+    assert.ok(offers.some(row => row.modelName === "gpt-image-2" && row.billingMode === "image"));
+    assert.ok(offers.some(row => row.modelName === "grok-imagine-video" && row.requestUnit === "second"));
+  });
+});
+
+test("SpiderAI 保留用户自定义充值比例、方案和证据，不补默认金额覆盖 rate-only 记录", async () => {
+  await withCleanRegistry(async () => {
+    await loadSitePlugin("spiderai");
+    const input = {
+      baseUrl: "https://spiderai.fun/#purchase", rechargeRmb: 9, rechargeCredits: 2,
+      rechargeRateVerified: true, rechargeRateNote: "手动核实", rechargeCurrency: "CNY",
+      rechargePlans: [{ kind: "topup", amount: 90, credits: 20, currency: "CNY", verified: true }],
+      rechargePlansVerified: false, rechargeTiers: [{ amount: 10, discount: 0.9 }],
+      rechargePayments: [{ channel: "alipay", faceAmount: 20, payAmount: 90, currency: "CNY", paidRmb: 90, note: "测试用自定义证据" }],
+      rechargePaymentsVerified: true, priceCurrencyNote: "保留说明"
+    };
+    const actual = resolveStationCollection(input).station;
+    assert.equal(actual.rechargeRate, 4.5);
+    assert.equal(actual.rechargeRateNote, input.rechargeRateNote);
+    assert.equal(actual.priceCurrencyNote, input.priceCurrencyNote);
+    assert.equal(actual.rechargePlans[0].credits, 20);
+    assert.equal(actual.rechargePlansVerified, false);
+    assert.equal(actual.rechargePaymentsVerified, true);
+    assert.deepEqual(actual.rechargeTiers, input.rechargeTiers);
+    const onlyRate = resolveStationCollection({ baseUrl: input.baseUrl, rechargeRate: 0.8 }).station;
+    assert.equal(onlyRate.rechargeRate, 0.8);
+    assert.equal(onlyRate.rechargeRateVerified, false);
+    assert.deepEqual(onlyRate.rechargePlans, []);
+  });
+});
+
+test("SpiderAI HTML 解码拒绝旧模板和目录漂移，未报价缓存留空且不执行脚本", async () => {
+  await withCleanRegistry(async () => {
+    const plugin = await loadSitePlugin("spiderai");
+    const decode = plugin.request.decodeResponse;
+    const html = readFileSync(new URL("./fixtures/spiderai-pricing-page.html", import.meta.url), "utf8");
+    const source = JSON.parse(html.match(/const PX_DATA=(\{[^\r\n]*\});/)[1]);
+    const page = data => `const PX_DATA=${JSON.stringify(data)};`;
+    assert.throws(() => decode("<html>login</html>"), /marker not found/);
+    assert.throws(() => decode("const PX_DATA={broken};"), SyntaxError);
+    assert.throws(() => decode(page({ ...source, usd: null })), /active USD catalogue/);
+    assert.throws(() => decode("x".repeat(4_000_001)), /bounded HTML/);
+    assert.throws(() => decode(page({ ...source, usd: { ...source.usd, rates: {} } })), /group rate missing/);
+    assert.throws(() => decode(page({ ...source, usd: { ...source.usd, media: {} } })), /media price missing/);
+    globalThis.__spideraiExecuted = false;
+    try {
+      const payload = decode(html + "\nglobalThis.__spideraiExecuted = true;");
+      assert.equal(globalThis.__spideraiExecuted, false);
+      assert.equal(payload.groups.filter(group => !group.id.includes(":media")).length, 20);
+      const changed = structuredClone(source);
+      const product = changed.catalog.find(product => product.id === "codex");
+      const model = (product.groupModels || product.models)[0];
+      model.channelBaseCny = { input: null, cacheRead: null };
+      const decoded = decode(page(changed));
+      const raw = decoded.data.find(row => row.name === model.name);
+      assert.equal(raw.tiers[0].input, null);
+      assert.equal(raw.tiers[0].cacheRead, null);
+      const collection = resolveStationCollection(plugin.preset);
+      await assert.rejects(collectStation(collection.station, {
+        collection, retries: 1, fetchImpl: async () => new Response("<html>login</html>")
+      }), /marker not found/);
+    } finally { delete globalThis.__spideraiExecuted; }
+  });
+});
 test("keeps every static script selector and local page asset connected", () => {
   for (const page of ["dashboard", "options"]) {
     const html = readFileSync(new URL(`../${page}.html`, import.meta.url), "utf8");

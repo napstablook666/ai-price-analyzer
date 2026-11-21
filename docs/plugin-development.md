@@ -104,6 +104,7 @@ export const sitePlugin = {
 - `prepare(stationInput, context)` 在添加站点时改写站点记录（baseUrl、adapter、auth），可以省略。
 - `responseFormat` 必须是 `src/core/response-formats.js` 里 `RESPONSE_FORMAT_DEFINITIONS` 的键，写错的值会被打回 `auto`。站点只是字段名不同就写 `"price-map"` 加 `adapter.priceMap`，不要为一家站点加枚举值。
 - `request` 决定采集请求怎么发：`requestPolicy(urlOrFn, { credentials })`。`page` 模式通常用 `localStoragePageAuth` / `cookiePageAuth`；登录态只在 HttpOnly cookie 里的站点用 `cookieRefreshAuth({ cookieName, refreshPath, accessTokenPath, expiresAtPath })`，由 service worker 借 DNR 换出 access token。
+- 公开价格嵌在 HTML 等非 JSON 响应时，可传 `decodeResponse(payload)`：`requestPolicy(() => "/", { credentials: "omit", decodeResponse })`。采集器读取响应后、价格校验与归一前调用此同步纯函数；无钩子时保持原响应。解码失败向上报错，不回退旧目录。提取逻辑留在插件中，只解析数据，不执行站点脚本；SpiderAI 是完整样例。
 - `preset` 是插件自带的默认站点模板，首页「添加」用的就是它。
 - `modelAliases` 不要手写，构建器会从 `models.json` 注入。
 

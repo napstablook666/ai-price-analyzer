@@ -116,6 +116,7 @@ export function requestPolicy(endpoint, options = {}) {
     cookieAuth: options.cookieAuth || null,
     preflight: options.preflight || null,
     skipCapture: options.skipCapture === true,
+    decodeResponse: typeof options.decodeResponse === "function" ? options.decodeResponse : null,
     // 主报文之外还要取的接口（比如价格在 /api/pricing、分组在另一个市场接口）。
     aux: Array.isArray(options.aux) ? options.aux : []
   };

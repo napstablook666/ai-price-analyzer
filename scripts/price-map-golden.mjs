@@ -17,6 +17,7 @@ import { applyPriceMap } from "../src/core/price-map.js";
 import { parseBillingTiers } from "../src/core/normalizers.js";
 import { resolvePriceMap } from "../src/core/price-maps/index.js";
 import { sitePlugin as token91Plugin } from "../src/site-plugins/providers/91token.js";
+import { sitePlugin as spideraiPlugin } from "../src/site-plugins/providers/spiderai.js";
 import { stellaislePlazaRows } from "../src/core/price-maps/stellaisle.js";
 
 const FIXTURES = new URL("../test/fixtures/", import.meta.url);
@@ -25,6 +26,12 @@ const GOLDEN_DIR = new URL("../test/golden/", import.meta.url);
 // fixture 的文件名和 base 名对不上是常态（早先按站点起的），所以显式列出来。
 export const GOLDEN_CASES = Object.freeze([
   { base: "tokenflux", fixture: "tokenflux-pricing.json" },
+  {
+    name: "spiderai", base: "tokenflux", fixture: "spiderai-pricing-page.html",
+    priceMap: spideraiPlugin.preset.adapter.priceMap,
+    decode: spideraiPlugin.request.decodeResponse,
+    note: "2026-11-21 匿名完整 PX_DATA；77 模型、20 分组，文本/缓存/长度/峰谷/图片/视频秒价"
+  },
   // 同形状不同站点：base 都是 tokenflux，但报文各一份，快照分开存（name 才是文件名）。
   { name: "centos", base: "tokenflux", fixture: "centos-pricing.json", note: "ai.centos.hk 2026-11-19 实测，页面标 ¥" },
   { name: "maolaoapi", base: "tokenflux", fixture: "maolaoapi-pricing.json", note: "maolaoapi.com 2026-11-19 实测，页面标 $" },
@@ -90,7 +97,8 @@ export function renderGolden(caseItem) {
   const label = caseName(caseItem);
   const { map, error } = resolvePriceMap(caseItem.priceMap || { base });
   if (error) throw new Error(`无效的 price-map 声明：${error}`);
-  const raw = JSON.parse(readFileSync(new URL(fixture, FIXTURES), "utf8"));
+  const text = readFileSync(new URL(fixture, FIXTURES), "utf8");
+  const raw = caseItem.decode ? caseItem.decode(text) : JSON.parse(text);
   const payload = expand ? { data: expand(raw) } : raw;
   const { rows, unresolved } = applyPriceMap(map, payload, { parseTiers: parseBillingTiers });
 

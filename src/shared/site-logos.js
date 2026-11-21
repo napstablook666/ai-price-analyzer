@@ -26,6 +26,7 @@ export const SITE_LOGOS = {
   "sevenai": "icons/sites/sevenai.png",
   "sidrune": "icons/sites/sidrune.svg",
   "soleapi": "icons/sites/soleapi.svg",
+  "spiderai": "icons/sites/spiderai.svg",
   "stellaisle": "icons/sites/stellaisle.png",
   "stellaisle-carpool": "icons/sites/stellaisle-carpool.png",
   "tokenflux": "icons/sites/tokenflux.png",
