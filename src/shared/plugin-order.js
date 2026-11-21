@@ -30,5 +30,6 @@ export const SITE_PLUGIN_ORDER = [
   "xingya",
   "openlux",
   "91token",
-  "spiderai"
+  "spiderai",
+  "poloai"
 ];

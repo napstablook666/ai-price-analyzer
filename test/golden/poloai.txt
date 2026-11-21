@@ -1,0 +1,30 @@
+# base: tokenflux
+# case: poloai
+# fixture: poloai-pricing-sample.json
+# rows: 13 · unresolved: 8
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-fable-5|Claude-code稳定|标准|10|50|1|12.5|-|-|-|USD|1|5
+deepseek-flash|Deepseek-new|base|0.9|3.6|0.018|-|-|-|-|USD|0.9|4
+gemini-nano-banana-2.1-c|特价香蕉画图|request|-|-|-|-|0.16|-|-|USD|1|1
+gpt-5.6-terra|Codex-gpt|long content|3.2|14.4|0.32|4|-|-|-|USD|0.8|4.5
+gpt-5.6-terra|Codex-gpt|short content|1.6|9.6|0.16|2|-|-|-|USD|0.8|6
+gpt-6-sol|Codex-gpt|short content|1.6|8|0.16|2|-|-|-|USD|0.8|5
+gpt-6-sol|Codex-gpt|第2档|3.2|12|0.32|4|-|-|-|USD|0.8|3.75
+gpt-6.2-sol|Codex-gpt|base|1.6|8|0.08|2|-|-|-|USD|0.8|5
+gpt-6.2-sol|Codex-gpt|第2档|3.2|12|0.16|4|-|-|-|USD|0.8|3.75
+gpt-image-2-c|image2c特价|image|-|-|-|-|-|0.06|image|USD|1|1
+grok-imagine-image|grok官key|-|-|-|-|-|-|0.09|image|USD|4.5|1
+o3-mini-high-all|gpt-vip|-|-|-|-|-|0.35|-|-|USD|3.5|1
+sora-2-guan|sora|-|-|-|-|-|0.45|-|video|USD|1|1
+
+# unresolved
+doubao-seedance-2-0-260128=Seedance 分辨率、参考视频与 token 用量联合计费暂不支持
+doubao-seedance-2-0-fast-260128=Seedance 分辨率、参考视频与 token 用量联合计费暂不支持
+doubao-seedance-2-0-mini-260615=Seedance 分辨率、参考视频与 token 用量联合计费暂不支持
+gemini-3-pro-image-preview=图片分辨率专项价格尚未映射为尺寸档
+gpt-6.1-terra=12h 缓存写入暂不支持
+qwen-plus=思考模式与普通模式分档暂不支持
+suno_lyrics=歌曲或歌词按 clips 数量计价，暂不能当作每请求价格
+suno_music=歌曲或歌词按 clips 数量计价，暂不能当作每请求价格

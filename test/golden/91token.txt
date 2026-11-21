@@ -1,7 +1,7 @@
 # base: tokenflux
 # case: 91token
 # fixture: 91token-pricing.json
-# rows: 123 · unresolved: 11
+# rows: 129 · unresolved: 9
 # 更新：node scripts/price-map-golden.mjs --update
 # 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
 
@@ -128,6 +128,12 @@ grok-4.6|Grok 特惠|long_context|1.2|3.6|0.3|-|-|-|-|CREDITS|0.3|3
 grok-4.6|Grok 特惠|standard|0.6|1.8|0.15|-|-|-|-|CREDITS|0.3|3
 grok-4.7|Grok 特惠|long_context|1.2|3.6|0.3|-|-|-|-|CREDITS|0.3|3
 grok-4.7|Grok 特惠|standard|0.6|1.8|0.15|-|-|-|-|CREDITS|0.3|3
+wan3.0-video-prime|阿里万相|1080P|-|-|-|-|0.936|-|video|CREDITS|0.52|1
+wan3.0-video-prime|阿里万相|480P|-|-|-|-|0.234|-|video|CREDITS|0.52|1
+wan3.0-video-prime|阿里万相|720P|-|-|-|-|0.468|-|video|CREDITS|0.52|1
+wan3.0-video|阿里万相|1080P|-|-|-|-|0.624|-|video|CREDITS|0.52|1
+wan3.0-video|阿里万相|480P|-|-|-|-|0.156|-|video|CREDITS|0.52|1
+wan3.0-video|阿里万相|720P|-|-|-|-|0.312|-|video|CREDITS|0.52|1
 
 # unresolved
 MiniMax-H3=计费表达式解析不出来
@@ -139,5 +145,3 @@ viduq3-ad=计费表达式解析不出来
 viduq3-pro=计费表达式解析不出来
 viduq3-turbo=计费表达式解析不出来
 viduq4-preview=计费表达式解析不出来
-wan3.0-video-prime=计费表达式解析不出来
-wan3.0-video=计费表达式解析不出来

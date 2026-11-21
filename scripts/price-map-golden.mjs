@@ -18,6 +18,7 @@ import { parseBillingTiers } from "../src/core/normalizers.js";
 import { resolvePriceMap } from "../src/core/price-maps/index.js";
 import { sitePlugin as token91Plugin } from "../src/site-plugins/providers/91token.js";
 import { sitePlugin as spideraiPlugin } from "../src/site-plugins/providers/spiderai.js";
+import { sitePlugin as poloaiPlugin } from "../src/site-plugins/providers/poloai.js";
 import { stellaislePlazaRows } from "../src/core/price-maps/stellaisle.js";
 
 const FIXTURES = new URL("../test/fixtures/", import.meta.url);
@@ -38,11 +39,20 @@ export const GOLDEN_CASES = Object.freeze([
   {
     name: "91token", base: "tokenflux", fixture: "91token-pricing.json",
     priceMap: token91Plugin.preset.adapter.priceMap,
-    note: "91token.com 63 个模型全量匿名报文；52 个文本/图片模型出价，11 个复杂视频表达式明确不支持",
+    note: "91token.com 63 个模型全量匿名报文；54 个文本/图片/简单按秒模型出价，9 个复杂计费表达式明确不支持",
     expectedUnresolved: [
       "MiniMax-H3", "doubao-seedance-2-0", "doubao-seedance-2-0-fast", "doubao-seedance-2-0-mini",
       "doubao-seedance-2-5", "viduq3-ad", "viduq3-pro", "viduq3-turbo", "viduq4-preview",
-      "wan3.0-video", "wan3.0-video-prime"
+      
+    ]
+  },
+  {
+    name: "poloai", base: "tokenflux", fixture: "poloai-pricing-sample.json",
+    priceMap: poloaiPlugin.preset.adapter.priceMap,
+    note: "2026-11-21 匿名报价样本；token/缓存/长度/图片/秒价与8个明确不支持的复杂计费模型",
+    expectedUnresolved: [
+      "doubao-seedance-2-0-260128", "doubao-seedance-2-0-fast-260128", "doubao-seedance-2-0-mini-260615",
+      "gemini-3-pro-image-preview", "gpt-6.1-terra", "qwen-plus", "suno_lyrics", "suno_music"
     ]
   },
   { base: "allrouter", fixture: "allrouter-pricing.json" },

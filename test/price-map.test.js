@@ -128,6 +128,26 @@ test("没有匹配规则的模型进 unresolved，不能静默丢掉", () => {
   assert.equal(result.unresolved[0].model, "mystery-model");
 });
 
+test("明确不支持的计费模式进入 unresolved，不能落到后续默认规则", () => {
+  const map = {
+    ...tokenfluxPriceMap,
+    rules: [
+      { when: { path: "special_price", present: true }, kind: "unsupported", sourcePath: "special_price", reason: "该计费口径尚未建模" },
+      ...tokenfluxPriceMap.rules
+    ]
+  };
+  const payload = {
+    group_ratio: { default: 1 },
+    data: [
+      { model_name: "special-model", special_price: { input: 1 }, enable_groups: ["default"], model_ratio: 1, completion_ratio: 1 },
+      { model_name: "regular-model", enable_groups: ["default"], model_ratio: 1, completion_ratio: 1 }
+    ]
+  };
+  const result = applyPriceMap(map, payload, { parseTiers: parseBillingTiers });
+  assert.deepEqual(result.unresolved, [{ model: "special-model", reason: "该计费口径尚未建模", source: "{\"input\":1}" }]);
+  assert.deepEqual(result.rows.map(row => row.model_name), ["regular-model"]);
+});
+
 // 这两条钉的是「口径」，不是实现的当前输出：ratio 1 对应多少美元必须有独立依据，
 // 否则下次有人把常数改回 1，测试只会跟着改数字，什么也拦不住。
 test("tokenflux 的倍率单位是 $2/M：ratio 1.5 出 $3", () => {

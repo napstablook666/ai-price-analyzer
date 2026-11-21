@@ -32,6 +32,7 @@ import { sitePlugin as xingyaPlugin } from "./providers/xingya.js";
 import { sitePlugin as openluxPlugin } from "./providers/openlux.js";
 import { sitePlugin as _91tokenPlugin } from "./providers/91token.js";
 import { sitePlugin as spideraiPlugin } from "./providers/spiderai.js";
+import { sitePlugin as poloaiPlugin } from "./providers/poloai.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -81,7 +82,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("xingya", "星芽API", "xingya.site", "direct", () => ({ sitePlugin: xingyaPlugin }), { hosts: ["xingya.site","xingya.space"], paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，83 个模型 13 个分组；充值 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送" }),
   entry("openlux", "OpenLux", "openlux.ai", "direct", () => ({ sitePlugin: openluxPlugin }), { hosts: ["www.openlux.ai","openlux.ai"], paths: ["/pricing","/console/topup","/console/models","/"], description: "公开定价接口直连采集，322 个模型覆盖按 token 与按次；1 美元 = 1 美元额度，面值越大越便宜（最高 7.5%）" }),
   entry("91token", "91Token", "91token.com", "direct", () => ({ sitePlugin: _91tokenPlugin }), { hosts: ["91token.com","www.91token.com"], paths: ["/pricing","/wallet","/console","/console/topup","/"], description: "匿名采集文本与图片报价，保留分组和长度档；充值报价已核实 1:1，无自助阶梯折扣，第三方收银台实付未验证；复杂视频暂不折算" }),
-  entry("spiderai", "SpiderAI", "spiderai.fun", "direct", () => ({ sitePlugin: spideraiPlugin }), { paths: ["/"], description: "公开模型价格页内嵌目录匿名采集；登录核验充值比例与档位" })
+  entry("spiderai", "SpiderAI", "spiderai.fun", "direct", () => ({ sitePlugin: spideraiPlugin }), { paths: ["/"], description: "公开模型价格页内嵌目录匿名采集；登录核验充值比例与档位" }),
+  entry("poloai", "PoloAPI", "poloai.top", "direct", () => ({ sitePlugin: poloaiPlugin }), { paths: ["/","/pricing","/wallet","/console/topup"], description: "匿名模型广场报价；支持分组、token/缓存、长度档与按次；登录已核实充值1:1和等额快捷金额" })
 ];
 
 export function sitePluginById(id) {

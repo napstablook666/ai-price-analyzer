@@ -1,0 +1,38 @@
+{
+  "capturedOn": "2026-11-21",
+  "sources": {
+    "wallet": "https://poloai.top/wallet",
+    "info": "GET https://poloai.top/api/user/topup/info",
+    "quote": "POST https://poloai.top/api/user/amount",
+    "subscriptions": "GET https://poloai.top/api/subscription/plans"
+  },
+  "topupInfo": {
+    "data": {
+      "amount_options": [200, 500, 1000, 2000],
+      "discount": {},
+      "enable_online_topup": true,
+      "enable_stripe_topup": true,
+      "min_topup": 50,
+      "stripe_min_topup": 70,
+      "pay_methods": [
+        { "name": "支付宝", "type": "alipay" },
+        { "name": "Stripe", "type": "stripe", "min_topup": "70" }
+      ]
+    },
+    "success": true
+  },
+  "quotes": [
+    { "amount": 70, "status": 200, "response": { "data": "70.00", "message": "success" } },
+    { "amount": 200, "status": 200, "response": { "data": "200.00", "message": "success" } },
+    { "amount": 500, "status": 200, "response": { "data": "500.00", "message": "success" } },
+    { "amount": 1000, "status": 200, "response": { "data": "1000.00", "message": "success" } },
+    { "amount": 2000, "status": 200, "response": { "data": "2000.00", "message": "success" } },
+    { "amount": 50, "status": 200, "response": { "data": "50.00", "message": "success" } },
+    { "amount": 200, "status": 200, "response": { "data": "200.00", "message": "success" } }
+  ],
+  "subscriptions": { "data": [], "success": true },
+  "currency": "CNY",
+  "creditsPerRmb": 1,
+  "ordersCreated": false,
+  "paymentsVerified": false
+}

@@ -85,6 +85,33 @@ test("preserves a time condition as a verifiable billing rule", () => {
   assert.match(tier.billingConditions[0].expression, /hour\("Asia\/Shanghai"\) >= 22/);
 });
 
+test("parses explicit per-second video tiers without guessing composite usage formulas", () => {
+  const expression = 'u("resolution") == "480P" ? tier("480P", u("seconds") * 0.3) : u("resolution") == "720P" ? tier("720P", u("seconds") * 0.6) : tier("1080P", u("seconds") * 1.2)';
+  const tiers = parseBillingTiers(expression);
+  assert.deepEqual(tiers.map(({ name, unit, fixed }) => ({ name, unit, fixed })), [
+    { name: "480P", unit: "second", fixed: 0.3 },
+    { name: "720P", unit: "second", fixed: 0.6 },
+    { name: "1080P", unit: "second", fixed: 1.2 }
+  ]);
+
+  const normalized = normalizePricingPayload({
+    success: true,
+    data: [{ model_name: "wan3.0-video", billing_expr: expression, enable_groups: ["video"] }],
+    group_ratio: { video: 0.5 },
+    usable_group: { video: "视频" }
+  }, "tokenflux");
+  assert.deepEqual(normalized.data.map(({ tier_name, request_price, request_unit, media_type, billing_unit }) => ({
+    tier_name, request_price, request_unit, media_type, billing_unit
+  })), [
+    { tier_name: "480P", request_price: 0.15, request_unit: "second", media_type: "video", billing_unit: "second" },
+    { tier_name: "720P", request_price: 0.3, request_unit: "second", media_type: "video", billing_unit: "second" },
+    { tier_name: "1080P", request_price: 0.6, request_unit: "second", media_type: "video", billing_unit: "second" }
+  ]);
+
+  assert.deepEqual(parseBillingTiers('tier("768P", u("input_video_seconds") * 0.5 + u("seconds") * 0.5)'), []);
+  assert.deepEqual(parseBillingTiers('tier("mixed", p + u("seconds") * 0.5)'), []);
+});
+
 test("服务档倍率保留 context 条件，不冒充时段折扣", () => {
   const tiers = parseBillingTiers('(len <= 272000 ? tier("standard", p * 2 + c * 10) : tier("long_context", p * 4 + c * 15)) * (param("service_tier") == "fast" ? 2 : 1) * (param("service_tier") == "priority" ? 2.5 : 1)');
   assert.equal(tiers.length, 2);

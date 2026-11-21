@@ -528,7 +528,12 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
           const row = baseRowOf(rule, item, map, group);
           // 表达式里的 unit 就是计费单位：按张计的行必须标成 image，否则会掉进文本榜。
           if (tier.unit === "image") row.media_type = "image";
-          if (tier.unit === "second") row.request_unit = "second";
+          if (tier.unit === "second") {
+            row.request_unit = "second";
+            row.media_type = "video";
+            row.billing_unit = "second";
+            row.billing_basis = "per_second";
+          }
           rows.push({
             ...row,
             model_ratio: inputPrice === null ? 0 : quantize(inputPrice / 2),
@@ -538,7 +543,7 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
             cache_read_price: cacheRead,
             cache_write_price: cacheWrite,
             cache_write_1h_price: tokenPriced && billing.cacheWrite1h > 0 ? quantize(billing.cacheWrite1h * group.ratio) : null,
-            request_price: tier.unit === "request" && tier.fixed !== null ? quantize(tier.fixed * group.ratio) : null,
+            request_price: (tier.unit === "request" || tier.unit === "second") && tier.fixed !== null ? quantize(tier.fixed * group.ratio) : null,
             image_price: tier.unit === "image" && tier.fixed !== null ? quantize(tier.fixed * group.ratio) : null,
             tier_name: tier.name,
             ...(tier.minTokens !== null && tier.minTokens !== undefined ? { min_tokens: tier.minTokens } : {}),
@@ -548,6 +553,16 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
           });
         }
       }
+      continue;
+    }
+
+    if (rule.kind === "unsupported") {
+      const source = rule.sourcePath ? readPath(item, rule.sourcePath) : undefined;
+      unresolved.push({
+        model: name,
+        reason: String(rule.reason || "计费格式暂不支持"),
+        ...(source === undefined || source === null ? {} : { source: typeof source === "string" ? source : JSON.stringify(source) })
+      });
       continue;
     }
 

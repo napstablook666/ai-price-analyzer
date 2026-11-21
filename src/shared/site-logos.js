@@ -21,6 +21,7 @@ export const SITE_LOGOS = {
   "nexavlinks": "icons/sites/nexavlinks.png",
   "nodeai": "icons/sites/nodeai.png",
   "openlux": "icons/sites/openlux.svg",
+  "poloai": "icons/sites/poloai.svg",
   "public-pricing": "icons/sites/public-pricing.png",
   "relayrouter": "icons/sites/relayrouter.svg",
   "sevenai": "icons/sites/sevenai.png",

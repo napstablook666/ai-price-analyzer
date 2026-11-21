@@ -320,6 +320,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "spiderai.fun"
       ],
       "needsCode": true
+    },
+    {
+      "id": "poloai",
+      "name": "PoloAPI",
+      "version": "0.16.1",
+      "description": "匿名模型广场报价；支持分组、token/缓存、长度档与按次；登录已核实充值1:1和等额快捷金额",
+      "hosts": [
+        "poloai.top"
+      ],
+      "needsCode": true
     }
   ]
 };

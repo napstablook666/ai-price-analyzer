@@ -86,7 +86,7 @@ test("adds multiple selected presets once and derives added state from stations"
   });
 });
 
-test("91Token 匿名采集保留计费条件与11个视频缺口，充值报价已验证但渠道实付未验证", async () => {
+test("91Token 匿名采集保留计费条件与9个复杂计费缺口，充值报价已验证但渠道实付未验证", async () => {
   await withCleanRegistry(async () => {
     const providers = await loadSitePlugins(["91token"]);
     const [preset] = addProviderStationPresets([], providers, { exchangeRate: 7.2 });
@@ -121,11 +121,11 @@ test("91Token 匿名采集保留计费条件与11个视频缺口，充值报价�
     assert.equal(snapshot.recharge, undefined);
     assert.equal(snapshot.rechargeRateVerified, true);
     assert.equal(snapshot.status, "partial");
-    assert.equal(snapshot.normalized.data.length, 123);
-    assert.equal(new Set(snapshot.normalized.data.map(row => row.model_name)).size, 52);
-    assert.equal(snapshot.normalized.unpricedModels.length, 11);
+    assert.equal(snapshot.normalized.data.length, 129);
+    assert.equal(new Set(snapshot.normalized.data.map(row => row.model_name)).size, 54);
+    assert.equal(snapshot.normalized.unpricedModels.length, 9);
     assert.ok(snapshot.normalized.unpricedModels.includes("viduq4-preview"));
-    assert.equal(snapshot.normalized.data.filter(row => row.media_type === "video").length, 0);
+    assert.equal(snapshot.normalized.data.filter(row => row.media_type === "video").length, 6);
     const fable = snapshot.normalized.data.find(row => row.model_name === "claude-fable-5" && row.proxy_group_name === "Claude MAX");
     assert.equal(fable.input_price, 13);
     assert.equal(fable.output_price, 65);
@@ -341,6 +341,127 @@ test("SpiderAI HTML 解码拒绝旧模板和目录漂移，未报价缓存留空
         collection, retries: 1, fetchImpl: async () => new Response("<html>login</html>")
       }), /marker not found/);
     } finally { delete globalThis.__spideraiExecuted; }
+  });
+});
+test("PoloAI 匿名采价保留未支持计费项，登录充值报价1:1与四档快捷金额已核实", async () => {
+  await withCleanRegistry(async () => {
+    const plugin = await loadSitePlugin("poloai");
+    const collection = resolveStationCollection(plugin.preset);
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/poloai-pricing-sample.json", import.meta.url), "utf8"));
+    const requests = [];
+    const snapshot = await collectStation(collection.station, {
+      collection,
+      retries: 1,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
+      },
+      pageFetch: async () => assert.fail("公开定价不得访问浏览器登录态")
+    });
+
+    assert.deepEqual(requests.map(({ url, init }) => [url, init.method, init.credentials]), [["https://poloai.top/api/pricing", "GET", "omit"]]);
+    assert.equal(snapshot.status, "partial");
+    assert.equal(snapshot.source, "poloai");
+    assert.equal(collection.station.priceCurrency, "USD");
+    assert.equal(collection.station.priceCurrencyVerified, true);
+    assert.equal(snapshot.rechargeRateVerified, true);
+    assert.equal(collection.station.rechargeRmb, 1);
+    assert.equal(collection.station.rechargeCredits, 1);
+    const topup = JSON.parse(readFileSync(new URL("./fixtures/poloai-topup-sample.json", import.meta.url), "utf8"));
+    assert.match(collection.station.rechargeRateNote, /登录核验.*充值1元人民币=1美元额度/);
+    assert.match(collection.station.rechargeRateNote, /支付宝最低50元，Stripe最低70元/);
+    assert.match(collection.station.rechargeRateNote, /第三方收银台实付与实际到账尚未核实/);
+    assert.equal(collection.station.rechargeAuto, false);
+    assert.equal(collection.station.rechargePlansVerified, true);
+    assert.equal(collection.station.rechargePaymentsVerified, false);
+    assert.deepEqual(collection.station.rechargeTiers, []);
+    assert.deepEqual(collection.station.rechargePayments, []);
+    assert.deepEqual(topup.topupInfo.data.discount, {});
+    assert.deepEqual(topup.subscriptions.data, []);
+    assert.deepEqual(collection.station.rechargePlans.map(plan => plan.amount), topup.topupInfo.data.amount_options);
+    for (const plan of collection.station.rechargePlans) {
+      assert.deepEqual([plan.credits, plan.currency, plan.verified, plan.availability], [plan.amount, "CNY", true, "self_service"]);
+      assert.ok(topup.quotes.some(quote => quote.amount === plan.amount && Number(quote.response.data) === plan.amount));
+    }
+    assert.ok(topup.quotes.every(quote => quote.status === 200 && Number(quote.response.data) === quote.amount));
+    assert.equal(topup.quotes.filter(quote => quote.amount === 200).length, 2);
+    assert.deepEqual(topup.topupInfo.data.pay_methods.map(method => method.type), ["alipay", "stripe"]);
+    assert.deepEqual([topup.topupInfo.data.min_topup, topup.topupInfo.data.stripe_min_topup], [50, 70]);
+    assert.equal(topup.paymentsVerified, false);
+    assert.equal(topup.ordersCreated, false);
+
+    const rows = snapshot.normalized.data;
+    const find = (name, group, tier) => rows.find(row => row.model_name === name && row.proxy_group_name === group && (!tier || row.tier_name === tier));
+    assert.deepEqual([find("claude-fable-5", "Claude-code稳定").input_price, find("claude-fable-5", "Claude-code稳定").output_price], [10, 50]);
+    assert.deepEqual(rows.filter(row => row.model_name === "gpt-6-sol").map(row => [row.input_price, row.output_price]), [[1.6, 8], [3.2, 12]]);
+    assert.equal(find("grok-imagine-image", "grok官key").image_price, 0.09);
+    assert.deepEqual([find("sora-2-guan", "sora").request_price, find("sora-2-guan", "sora").request_unit], [0.45, "second"]);
+    assert.equal(find("gemini-nano-banana-2.1-c", "特价香蕉画图").request_price, 0.16);
+    assert.equal(find("gpt-image-2-c", "image2c特价").image_price, 0.06);
+
+    assert.deepEqual(snapshot.normalized.unpricedModels, snapshot.rawMeta.unpricedModels);
+    assert.deepEqual(snapshot.rawMeta.unpricedModels.slice().sort(), [
+      "doubao-seedance-2-0-260128", "doubao-seedance-2-0-fast-260128", "doubao-seedance-2-0-mini-260615",
+      "gemini-3-pro-image-preview", "gpt-6.1-terra", "qwen-plus", "suno_lyrics", "suno_music"
+    ].sort());
+    assert.equal(rows.some(row => snapshot.rawMeta.unpricedModels.includes(row.model_name)), false);
+    assert.deepEqual(snapshot.rawMeta.unsupportedBillingModes.slice().sort(), [
+      "12h 缓存写入暂不支持", "Seedance 分辨率、参考视频与 token 用量联合计费暂不支持",
+      "图片分辨率专项价格尚未映射为尺寸档", "歌曲或歌词按 clips 数量计价，暂不能当作每请求价格",
+      "思考模式与普通模式分档暂不支持"
+    ].sort());
+
+    const offers = buildComparisonRows({ stations: [collection.station], snapshots: [snapshot], references: { models: [] }, usage: { input: 1_000_000, output: 1_000_000 } }).flatMap(row => row.offers);
+    const quote = offers.find(row => row.modelName === "claude-fable-5");
+    assert.deepEqual([quote.sourceCurrency, quote.quotedPrices.input, quote.quotedPrices.output], ["USD", 10, 50]);
+    assert.equal(quote.pricingUnavailable, false);
+  });
+});
+
+test("PoloAI 登录补验迁移旧默认配置，不覆盖自定义比例和充值证据", async () => {
+  await withCleanRegistry(async () => {
+    const plugin = await loadSitePlugin("poloai");
+    const legacy = {
+      pluginId: "poloai", baseUrl: "https://poloai.top/pricing",
+      rechargeRmb: 1, rechargeCredits: 1, rechargeRate: 1, rechargeRateVerified: true,
+      rechargeRateNote: "公开证据：PoloAPI 帮助文档《价格-充值-分组介绍》（管理员9个月前更新）明确写明充值1元人民币=1美元额度，并支持自定义金额；第三方于2026-08-21记录Stripe $10额度实扣¥10。按公开政策记1:1，status的price/stripe_unit_price仅作交叉检查，不单独作为到账证明。公开资料未列固定赠额档位；当前结算和档位仍未登录实测。",
+      rechargeTiers: [], rechargePlans: [], rechargePayments: [],
+      rechargePlansVerified: false, rechargePaymentsVerified: false,
+      priceCurrencyNote: "首版：档位尚未核验"
+    };
+    const upgraded = resolveStationCollection(legacy).station;
+    assert.equal(upgraded.rechargeRateNote, plugin.preset.rechargeRateNote);
+    assert.equal(upgraded.priceCurrencyNote, plugin.preset.priceCurrencyNote);
+    assert.equal(upgraded.rechargePlansVerified, true);
+    assert.deepEqual(upgraded.rechargePlans.map(plan => plan.amount), [200, 500, 1000, 2000]);
+    assert.equal(upgraded.rechargePaymentsVerified, false);
+    const fresh = resolveStationCollection({ baseUrl: "https://poloai.top/wallet" }).station;
+    assert.equal(fresh.baseUrl, "https://poloai.top/pricing");
+    assert.equal(fresh.rechargePlansVerified, true);
+    assert.equal(fresh.rechargePlans.length, 4);
+    const customInputs = [
+      { ...legacy, rechargeRmb: 80, rechargeCredits: 100, rechargeRate: 0.8 },
+      { ...legacy, rechargeRateNote: "保留手工备注", rechargeRateVerified: false },
+      { ...legacy, rechargePlans: [{ kind: "manual", amount: 80, credits: 100, currency: "CNY", availability: "manual", verified: true }], rechargePlansVerified: false },
+      { ...legacy, rechargeTiers: [{ amount: 100, discount: 0.9 }],
+        rechargePayments: [{ channel: "alipay", faceAmount: 100, payAmount: 80, currency: "CNY", paidRmb: 80 }], rechargePaymentsVerified: true }
+    ];
+    for (const input of customInputs) {
+      const actual = resolveStationCollection(input).station;
+      assert.equal(actual.rechargeRate, input.rechargeRate);
+      assert.equal(actual.rechargeRateVerified, input.rechargeRateVerified);
+      assert.equal(actual.rechargeRateNote, input.rechargeRateNote);
+      assert.equal(actual.priceCurrencyNote, input.priceCurrencyNote);
+      assert.deepEqual(actual.rechargeTiers, input.rechargeTiers);
+      assert.deepEqual(actual.rechargePlans.map(plan => [plan.amount, plan.credits]), input.rechargePlans.map(plan => [plan.amount, plan.credits]));
+      assert.equal(actual.rechargePlansVerified, input.rechargePlansVerified);
+      assert.equal(actual.rechargePaymentsVerified, input.rechargePaymentsVerified);
+    }
+    const rateOnly = resolveStationCollection({ baseUrl: legacy.baseUrl, rechargeRate: 0.8 }).station;
+    assert.equal(rateOnly.rechargeRate, 0.8);
+    assert.equal(rateOnly.rechargeRateVerified, false);
+    assert.deepEqual(rateOnly.rechargePlans, []);
+    assert.equal(rateOnly.rechargePlansVerified, false);
   });
 });
 test("keeps every static script selector and local page asset connected", () => {

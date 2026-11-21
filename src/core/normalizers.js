@@ -373,6 +373,25 @@ export function parseBillingTiers(expression) {
       });
       continue;
     }
+    // The explicit seconds × constant form is a per-second quote; composite usage formulas stay unresolved.
+    const perSecond = body.match(/^u\s*\(\s*["']seconds["']\s*\)\s*\*\s*(\d+(?:\.\d+)?|\.\d+)$/i);
+    if (perSecond && Number(perSecond[1]) > 0) {
+      tiers.push({
+        name,
+        input: 0,
+        output: 0,
+        ratio: 0,
+        completion: 1,
+        billing: { cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 },
+        unit: "second",
+        fixed: Number(perSecond[1]),
+        minTokens,
+        maxTokens,
+        maxInclusive
+      });
+      continue;
+    }
+    if (/\bu\s*\(/i.test(body)) continue;
     const coefficients = {};
     for (const term of body.match(/[+-]?[^+-]+/g) || []) {
       const parts = term.trim().match(/^([+-]?)\s*(?:(\d+(?:\.\d+)?|\.\d+)\s*\*\s*)?([a-z0-9]+)(?:\s*\*\s*(\d+(?:\.\d+)?|\.\d+))?$/i);
