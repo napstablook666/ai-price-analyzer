@@ -1326,7 +1326,11 @@ const MODEL_PLAZA_PROFILES = Object.freeze({
       const value = group?.rate_multiplier;
       return typeof value === "string" && !value.trim() ? null : finitePrice(value);
     },
-    nonTokenBilling: Object.freeze({})
+    nonTokenMultiplier: (group, billingMode, groupMultiplier) => billingMode === "image"
+      && group?.image_rate_independent === true
+      ? finitePrice(group?.image_rate_multiplier) ?? groupMultiplier
+      : groupMultiplier,
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request" })
   },
   nodeai: {
     sourceFormat: "nodeai-model-plaza",
@@ -1459,6 +1463,49 @@ export class ModelPlazaStrategy extends ParsingStrategy {
             ? finitePrice(pricing.image_output_price)
             : null;
           const perCall = perRequest ?? fallbackPerImage;
+          // 图片按尺寸分档时（SevenAI 的 1K/2K/4K），逐档出图价；顶层单笔只是兜底。
+          const imageTiers = imageBilled && Array.isArray(pricing.intervals) && pricing.intervals.length
+            ? pricing.intervals.map((interval, index) => ({
+              label: String(interval?.tier_label || interval?.tier_name || interval?.tier || "").trim() || `interval:${index}`,
+              amount: finitePrice(interval?.per_request_price ?? interval?.request_price)
+            }))
+            : [];
+          const perImageTiers = imageTiers.length
+            ? imageTiers.filter(tier => tier.amount !== null)
+            : [];
+          if (perImageTiers.length) {
+            for (const tier of perImageTiers) {
+              unpricedModels.delete(`${unpricedKey}:${tier.label}`);
+              data.push({
+                model_name: modelName,
+                model_display_name: String(model?.display_name || model?.label || modelName),
+                model_ratio: 0,
+                completion_ratio: 1,
+                input_price: null,
+                output_price: null,
+                cache_read_price: null,
+                cache_write_price: null,
+                request_price: null,
+                image_price: tier.amount * multiplierForPrice,
+                image_input_price: imageInput,
+                image_output_price: imageOutput,
+                price_currency: priceCurrency,
+                enable_groups: [groupName],
+                proxy_group_name: groupName,
+                group_ratio: multiplier,
+                size_tier: tier.label,
+                ...(mediaType ? { media_type: mediaType } : {}),
+                ...(mediaSpecs ? { media_specs: mediaSpecs } : {}),
+                ...(billingConditions.length ? { billing_conditions: billingConditions } : {}),
+                evidence: "exact"
+              });
+            }
+            // 档位里缺价的仍要留痕，不能悄悄丢掉。
+            for (const tier of imageTiers.filter(tier => tier.amount === null)) {
+              unpricedModels.add(`${unpricedKey}:${tier.label}`);
+            }
+            continue;
+          }
           if (perCall === null && imageInput === null && imageOutput === null) {
             unpricedModels.add(`${unpricedKey}:default`);
             continue;

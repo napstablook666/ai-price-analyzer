@@ -3305,6 +3305,66 @@ test("collects SevenAI public model-plaza intervals as comparable CREDITS", asyn
   assert.deepEqual(blankGroupRate.unpricedModels, ["GROK:grok-4.5:default"]);
 });
 
+test("parses SevenAI image billing by size tier with the image multiplier", async () => {
+  const imageGroupFixture = {
+    code: 0, message: "success",
+    data: {
+      groups: [{
+        name: "GPT-生图模型",
+        rate_multiplier: 2,
+        image_rate_independent: true,
+        image_rate_multiplier: 0.5,
+        models: [{
+          name: "gpt-2-image",
+          pricing: {
+            billing_mode: "image",
+            per_request_price: 0.2,
+            intervals: [
+              { tier_label: "1K", per_request_price: 0.1 },
+              { tier_label: "2K", per_request_price: 0.15 },
+              { tier_label: "4K", per_request_price: 0.2 }
+            ]
+          }
+        }]
+      }]
+    }
+  };
+  const normalized = normalizePricingPayload(imageGroupFixture, "sevenai-model-plaza", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(normalized.unsupportedBillingModes, undefined);
+  // 档位价只乘图片独立倍率（0.5），不重复乘文本分组倍率 2。
+  assert.deepEqual(normalized.data.map(row => [row.size_tier, row.image_price, row.media_type, row.group_ratio]), [
+    ["1K", 0.05, "image", 2],
+    ["2K", 0.075, "image", 2],
+    ["4K", 0.1, "image", 2]
+  ]);
+  assert.equal(normalized.unpricedModels, undefined);
+
+  // 图片没有独立倍率时回退分组倍率。
+  const noIndependent = structuredClone(imageGroupFixture);
+  noIndependent.data.groups[0].image_rate_independent = false;
+  const fallback = normalizePricingPayload(noIndependent, "sevenai-model-plaza");
+  assert.deepEqual(fallback.data.map(row => [row.size_tier, row.image_price]), [
+    ["1K", 0.2], ["2K", 0.3], ["4K", 0.4]
+  ]);
+
+  // 档位缺价要留痕，不能悄悄丢掉整张模型。
+  const missingTier = structuredClone(imageGroupFixture);
+  delete missingTier.data.groups[0].models[0].pricing.intervals[1].per_request_price;
+  const withGap = normalizePricingPayload(missingTier, "sevenai-model-plaza");
+  assert.deepEqual(withGap.unpricedModels, ["GPT-生图模型:gpt-2-image:2K"]);
+  assert.deepEqual(withGap.data.map(row => row.size_tier), ["1K", "4K"]);
+
+  // 顶层单笔兜底：没有分档时按整图一次价出。
+  const flatImage = {
+    code: 0, data: { groups: [{ name: "GPT-生图模型", rate_multiplier: 1, models: [{
+      name: "gpt-flat", pricing: { billing_mode: "image", per_request_price: 0.04 }
+    }] }] }
+  };
+  const flat = normalizePricingPayload(flatImage, "sevenai-model-plaza");
+  assert.deepEqual(flat.data.map(row => [row.image_price, row.media_type]), [[0.04, "image"]]);
+  assert.equal(flat.unpricedModels, undefined);
+});
+
 test("adapts KillAI pricing to a cookie session without a page", async () => {
   const preset = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], PROVIDER_REGISTRY)
     .find(station => station.baseUrl === "https://api.killai.cc/pricing");
