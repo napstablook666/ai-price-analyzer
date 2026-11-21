@@ -1,43 +1,15 @@
+import { bareModelSpelling, canonicalModelKey, stripModelDecoration } from "../shared/model-name.js";
 import CANONICAL_TABLE from "./canonical-table.js";
 
 // 规范模型层：把各家各站的不同写法收敛到同一个模型身份。
-//
-// 表由 canonical/build.mjs 生成：入口集合直接靠齐 OpenRouter 的模型列表，models.dev 只补厂商原生写法别名。归一规则必须与生成器一致：
-//   1. 取 id 最后一段，丢掉 openrouter / fireworks/models / @cf/qwen 这类路径前缀
-//   2. 去掉装饰后缀 :free :thinking :batch @eu -v1 -YYYYMMDD
-//   3. 小写，空格 `.` `_` 一律当作 `-`
-//   4. 不做任何版本数字合并，v4.1 与 v4 是两个模型
+// 表由 canonical/build.mjs 生成；名称归一规则集中在 shared/model-name.js。
+//   1. 路径只取最后一段，例如 openrouter / fireworks/models / @cf/qwen
+//   2. 去掉装饰后缀、统一大小写与分隔符
+//   3. 不合并版本数字，v4.1 与 v4 是两个模型
 
-const DECORATION_PATTERNS = [
-  /:(?:free|thinking|official|fast|online|extended|beta|none|auto|batch)$/,
-  /:peft:\d+$/,
-  /@(?:eu|us|global|jp|au|in|cn|default|\d+)$/,
-  /-v\d+(?::\d+)?$/,
-  /-(?:19|20)\d{2}(?:0\d|1[0-2])?(?:[0-3]\d)?$/,
-  // OpenRouter 生图列表里的路由代号：gpt-image-2.5-flare 与 -sunburst 是同一模型的两条通道，
-  // 计价完全一致，站点侧只会写 gpt-image-2.5。留着代码会让这种报价匹配不上官方。
-  /-(?:flare|sunburst)$/
-];
-
-export function stripDecoration(value) {
-  let current = String(value || "").toLowerCase().trim();
-  for (let round = 0; round < 3; round += 1) {
-    const before = current;
-    for (const pattern of DECORATION_PATTERNS) current = current.replace(pattern, "");
-    if (current === before) break;
-  }
-  return current;
-}
-
-export function bareSpelling(id) {
-  const segments = String(id || "").toLowerCase().trim().split("/").filter(Boolean);
-  return stripDecoration(segments[segments.length - 1] || "");
-}
-
-export function canonicalKey(value) {
-  const base = stripBracketPrefix(String(value || "").trim());
-  return bareSpelling(base).replace(/[\s._]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-}
+export const stripDecoration = stripModelDecoration;
+export const bareSpelling = bareModelSpelling;
+export const canonicalKey = canonicalModelKey;
 
 export function stripVendorPrefix(name) {
   return String(name || "").replace(/^[^:/\s]{1,24}:\s*/, "");

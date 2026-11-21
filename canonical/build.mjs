@@ -17,6 +17,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { bareModelSpelling, canonicalModelKey, stripModelDecoration } from "../src/shared/model-name.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OUT_FILE = path.join(HERE, "..", "src", "core", "canonical-table.js");
@@ -25,32 +26,9 @@ const MODELS_DEV_URL = "https://models.dev/api.json";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 const OFFLINE = process.argv.includes("--offline");
 
-const DECORATIONS = [
-  /:(?:free|thinking|official|fast|online|extended|beta|none|auto|batch)$/,
-  /:peft:\d+$/,
-  /@(?:eu|us|global|jp|au|in|cn|default|\d+)$/,
-  /-v\d+(?::\d+)?$/,
-  /-(?:19|20)\d{2}(?:0\d|1[0-2])?(?:[0-3]\d)?$/
-];
-export function stripDecoration(value) {
-  let current = String(value || "").toLowerCase().trim();
-  for (let round = 0; round < 3; round += 1) {
-    const before = current;
-    for (const pattern of DECORATIONS) current = current.replace(pattern, "");
-    if (current === before) break;
-  }
-  return current;
-}
-
-export function bareSpelling(id) {
-  const segments = String(id || "").toLowerCase().trim().split("/").filter(Boolean);
-  return stripDecoration(segments[segments.length - 1] || "");
-}
-
-export function canonicalKey(id) {
-  const base = String(id || "").trim().replace(/^(?:[\[【][^\]】]*[\]】]\s*)+/, "");
-  return bareSpelling(base).replace(/[\s._]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-}
+export const stripDecoration = stripModelDecoration;
+export const bareSpelling = bareModelSpelling;
+export const canonicalKey = canonicalModelKey;
 
 function vendorOf(id) {
   const segments = String(id || "").split("/").filter(Boolean);

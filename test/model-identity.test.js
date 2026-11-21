@@ -65,3 +65,20 @@ test("规范模型表不给浮动别名单独的 ~ 供应商", () => {
   assert.ok(models[0].aliases.includes("~anthropic/claude-sonnet-latest"));
   assert.ok(!models.some(model => String(model.vendor).startsWith("~")));
 });
+
+test("构建端与运行时共享同一模型名称归一规则", async () => {
+  const { canonicalKey: buildCanonicalKey } = await import("../canonical/build.mjs");
+  const { canonicalKey: runtimeCanonicalKey } = await import("../src/core/canonical.js");
+  const cases = new Map([
+    ["gpt-image-2.5-flare", "gpt-image-2-5"],
+    ["gpt-image-2.5-sunburst", "gpt-image-2-5"],
+    ["openrouter/anthropic/claude-sonnet-4.6:batch", "claude-sonnet-4-6"],
+    ["【限时】GLM-5.3", "glm-5-3"],
+    ["qwen/qwen3-235b-a22b-instruct-2507", "qwen3-235b-a22b-instruct-2507"],
+    ["model:peft:42@eu", "model"]
+  ]);
+  for (const [name, expected] of cases) {
+    assert.equal(runtimeCanonicalKey(name), expected, name);
+    assert.equal(buildCanonicalKey(name), expected, name);
+  }
+});
