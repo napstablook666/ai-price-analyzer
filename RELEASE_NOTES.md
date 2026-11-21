@@ -24,5 +24,5 @@
 ## 附件
 
 - `ai-relay-price-extension-v0.20.0.zip`：可直接加载的扩展目录包。
-- `ai-relay-price-source-v0.20.0.zip`：扩展与插件两仓的源码快照。
+- `ai-price-analyzer-v0.20.0-source.zip`：扩展与插件两仓的源码快照。
 - `SHA256SUMS.txt`、`update.json`、`update.ps1`：校验与签名更新清单。
