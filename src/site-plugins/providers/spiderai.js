@@ -105,6 +105,8 @@ function contextRows(data, product, model) {
   })) };
 }
 
+const TIER_LABELS = { peak: "高峰时段", offPeak: "空闲时段" };
+
 function tokenItem(data, product, model, groupId) {
   const item = { name: model.name, group_id: groupId };
   if (!model.periodPrices?.length) return { ...item, ...contextRows(data, product, model) };
@@ -113,7 +115,8 @@ function tokenItem(data, product, model, groupId) {
     if (prices.input === null || prices.output === null) throw new Error(`SpiderAI period price missing: ${model.name}`);
     const terms = Object.entries({ p: prices.input, c: prices.output, cr: prices.cacheRead, cc: prices.cacheWrite })
       .filter(([, value]) => value !== null).map(([key, value]) => `${key} * ${value}`).join(" + ");
-    return [tier.id, `tier("${tier.id}", ${terms})`];
+    // 档名会原样显示在对比表里，用页面上的说法，别让用户看到 peak/offPeak。
+    return [tier.id, `tier("${TIER_LABELS[tier.id] || tier.id}", ${terms})`];
   }));
   if (branches.size !== 2 || !branches.has("peak") || !branches.has("offPeak")) throw new Error(`SpiderAI unsupported periods: ${model.name}`);
   const peak = 'weekday("Asia/Shanghai") >= 1 && weekday("Asia/Shanghai") <= 5 && ((hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 12) || (hour("Asia/Shanghai") >= 14 && hour("Asia/Shanghai") < 18))';

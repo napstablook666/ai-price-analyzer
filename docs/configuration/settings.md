@@ -27,7 +27,7 @@
 | --- | --- | --- |
 | `evidenceThreshold` | `60` | 匹配置信度低于该值的报价不参与推荐 |
 
-推荐只看成本，不做成本与证据的加权打分；站点带时段窗口时先按整周 168 小时逐格比，某条报价全时段都不贵过同类就直接推它，这一段与占比无关：同一模型里只在国内付费站、基准匹配、成本可算的报价中挑最便宜的那条，其余按证据门槛标「需核验」或「可选」。存储里的 `recommendationProfile` 是历史遗留键，读取时会被清理。口径见[成本与推荐](../guide/cost#推荐)。
+推荐只看成本，不做成本与证据的加权打分：同一模型里只在国内付费站、基准匹配、成本可算的报价中挑月成本最低的那条，其余按证据门槛标「需核验」或「可选」。存储里的 `recommendationProfile` 是历史遗留键，读取时会被清理。口径见[成本与推荐](../guide/cost#推荐)。
 
 ## 月用量
 
@@ -41,8 +41,6 @@
 | `cacheWrite1h` | 0 |
 | `output` | 28.98 M |
 | `requests` | 54,378 |
-| `timeProfile` | `uniform`（全天均匀） |
-| `peakShare` | 7/24 ≈ 0.29 |
 | `imageInputTokens` / `imageOutputTokens` / `images` | 0 |
 
 预设：
@@ -65,13 +63,13 @@ magpie-30天的数字来自本机网关 `GET /v1/magpie/usage?period=30d`。扩�
 | `magpieSyncIntervalMinutes` | `360` | 可选 `0`（关闭）、`360`、`1440`；非法值落回 `360` |
 | `magpieSync` | `null` | 同步结果快照，见下 |
 
-`magpieSync.recent30d` 存 `{ usage, syncedAt, window }`，另有 `attemptedAt` 和 `error`。网关没开时保留已同步过的数字并记录错误。`usage` 只更新 `requests` / `input` / `cacheRead` / `cacheWrite` / `output` 五项，高峰占比、1 小时缓存写入和图像用量沿用已有值；废弃的 7 天快照会在读取设置时清理。
+`magpieSync.recent30d` 存 `{ usage, syncedAt, window }`，另有 `attemptedAt` 和 `error`。网关没开时保留已同步过的数字并记录错误。`usage` 只更新 `requests` / `input` / `cacheRead` / `cacheWrite` / `output` 五项，1 小时缓存写入和图像用量沿用已有值；废弃的 7 天快照会在读取设置时清理。
 
 网关返回最近 30 天的总量，直接作为月用量。还没同步成功过时使用内置快照（上面默认值表中的数字）。
 
 预设的下拉文案会带同步日期，例如 `magpie-30天（11 月 16 日同步）`；没同步过时显示「内置快照」。
 
-`peakShare` 是 0 到 1 的比例，不是百分比数字。填 `7` 会被夹到 `1`。它只在站点没写时段窗口时用：站点把窗口写进计费表达式（`weekday("Asia/Shanghai") >= 1 && ...`）时，占比由 `timeProfile` 那条负荷曲线和窗口的重叠直接算出来，界面上的百分比被忽略。
+旧版的分档加权配额 `peakShare` 和负荷曲线 `timeProfile` 已下线：站点把时段窗口写进计费表达式时，每个时段各出一行，按自己那一档的单价算月成本，不再摊成一个混合价。老设置里的这两个键在读取时会被清掉。
 
 负值、空值、非数字一律落回预设默认值，不做报错。
 

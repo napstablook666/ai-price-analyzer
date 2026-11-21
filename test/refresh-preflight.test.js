@@ -240,7 +240,7 @@ test("keeps magpie 30-day usage current through manual and scheduled syncs", asy
     if (!payload) throw new TypeError("Failed to fetch");
     return { ok: true, json: async () => payload };
   });
-  const settings = normalizeSettings({ usage: { peakShare: 0.6, imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
+  const settings = normalizeSettings({ usage: { imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
   await withWorker({ values: { settings } }, {}, async (worker, stores) => {
     const first = responseData(await worker.send("SYNC_MAGPIE_USAGE"));
     const second = responseData(await worker.send("SYNC_MAGPIE_USAGE"));
@@ -255,7 +255,6 @@ test("keeps magpie 30-day usage current through manual and scheduled syncs", asy
     const scheduled = stores.kv.get("settings");
     assert.equal(scheduled.usage.input, 7_000_654);
     assert.equal(scheduled.usage.requests, 30);
-    assert.equal(scheduled.usage.peakShare, 0.6);
     assert.equal(scheduled.usage.imageInputTokens, 123);
     assert.equal(scheduled.usage.imageOutputTokens, 456);
     assert.equal(scheduled.usage.images, 7);
@@ -274,7 +273,7 @@ test("keeps magpie 30-day usage current through manual and scheduled syncs", asy
 
 test("preserves custom and baseline usage when syncing magpie", async t => {
   t.mock.method(globalThis, "fetch", async () => ({ ok: true, json: async () => ({ calls: 50, input: 9_000_000, cache_read: 8_000_000, output: 700_000 }) }));
-  for (const usage of [usagePresetUsage("baseline"), { ...usagePresetUsage("recent30d"), input: 1_234_567, cacheWrite1h: 100, peakShare: 0.4 }]) {
+  for (const usage of [usagePresetUsage("baseline"), { ...usagePresetUsage("recent30d"), input: 1_234_567, cacheWrite1h: 100, images: 4 }]) {
     const settings = normalizeSettings({ usage });
     await withWorker({ values: { settings } }, {}, async worker => {
       const synced = responseData(await worker.send("SYNC_MAGPIE_USAGE"));

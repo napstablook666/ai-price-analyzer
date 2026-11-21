@@ -1,6 +1,5 @@
 import { cloneDefaultStation, convertRechargeAmount, currentSiteOrigin, DEFAULT_EXCHANGE_RATE, normalizeSettings, normalizeUrl, STATION_CATEGORY_LABELS, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "./shared/schema.js";
 import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_SYNC_INTERVAL_OPTIONS, magpieSyncLabel } from "./core/magpie-usage.js";
-import { USAGE_TIME_PROFILES } from "./core/time-window.js";
 import { callService, escapeHtml, hydrateIcons, icon, onAssistProgress, onRefreshProgress, toast } from "./shared/ui.js";
 import { siteLogoUrl } from "./shared/site-icon.js";
 import { initCardCollapse } from "./shared/collapse.js";
@@ -826,18 +825,13 @@ const USAGE_INPUTS = [
   { field: "requests", key: "requests", million: false },
   { field: "imageInputTokens", key: "image-input-tokens", million: true },
   { field: "imageOutputTokens", key: "image-output-tokens", million: true },
-  { field: "peakShare", key: "peak-share", million: false, percent: true },
   { field: "images", key: "images", million: false }
 ];
 
 function readUsageInputs() {
-  return {
-    ...Object.fromEntries(USAGE_INPUTS.map(({ field, key, million, percent }) => [
-      field, Math.max(0, Number(usageInput(key).value) || 0) * (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1)
-    ])),
-    // 负荷曲线不是数值字段，走单独的 select；它决定「窗口 × 使用时段」里的后半截。
-    timeProfile: $("#usage-time-profile").value
-  };
+  return Object.fromEntries(USAGE_INPUTS.map(({ field, key, million, percent }) => [
+    field, Math.max(0, Number(usageInput(key).value) || 0) * (percent ? 0.01 : million ? TOKENS_PER_MILLION : 1)
+  ]));
 }
 
 function roundInput(value, digits) {
@@ -862,17 +856,6 @@ function writeUsageInputs(usage) {
 
 function syncUsagePreset() {
   $("#usage-preset").value = usagePresetId(readUsageInputs(), state.settings?.magpieSync);
-}
-
-// 「使用时段」选的是负荷曲线：站点把时段窗口写进计费表达式时，
-// 分档占比 = 窗口 ∩ 这条曲线，不用人再拍一个百分比。
-function renderTimeProfileOptions(usage = {}) {
-  const select = $("#usage-time-profile");
-  if (!select) return;
-  if (!select.options.length) {
-    select.innerHTML = USAGE_TIME_PROFILES.map(profile => `<option value="${profile.id}">${escapeHtml(profile.label)}</option>`).join("");
-  }
-  select.value = usage.timeProfile || "uniform";
 }
 
 function renderUsagePresetOptions() {
@@ -943,7 +926,6 @@ function renderSettings() {
   $("#evidence-threshold").value = Number.isFinite(Number(settings.evidenceThreshold)) ? String(Number(settings.evidenceThreshold)) : "60";
   renderUsagePresetOptions();
   writeUsageInputs(settings.usage);
-  renderTimeProfileOptions(settings.usage);
   syncUsagePreset();
   renderMagpieUsageRow();
   $("#show-unmatched").checked = settings.showUnmatched;

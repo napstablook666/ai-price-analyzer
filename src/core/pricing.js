@@ -6,7 +6,6 @@ import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaU
 import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
 import { effectiveRecharge } from "./recharge.js";
 import { rechargePaymentRate, representativeRechargePayment } from "../shared/recharge-payments.js";
-import { shareOfTiers, timeSelectorOf, windowHours } from "./time-window.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -224,31 +223,6 @@ function referencePrices(model, exchangeRate = 1) {
   };
 }
 
-// 分档占比的算法优先级：站点给出的时段窗口算得出，就按「窗口 × 使用时段」算；
-// 算不出来（没窗口表达式、或表达式超出解析范围）才退回「按档位名猜 + 峰值占比标量」。
-export function getTierShares(items, options = {}) {
-  if (items.length <= 1) return [1];
-  const { peakShare, profile } = typeof options === "number" ? { peakShare: options } : (options || {});
-  const derived = shareOfTiers(items, profile);
-  if (derived) return derived;
-  const peak = Math.min(1, Math.max(0, Number(peakShare) || 0));
-  const shares = items.map(item => {
-    const name = String(item.tier_name || "").toLowerCase();
-    if (/peak|高峰|busy|high/.test(name) && !/off|低峰|非高峰|low/.test(name)) return peak;
-    if (/off|低峰|非高峰|low/.test(name)) return 1 - peak;
-    return null;
-  });
-  const known = shares.reduce((sum, share) => sum + (share ?? 0), 0);
-  const unknownCount = shares.filter(share => share === null).length;
-  if (unknownCount) {
-    if (known >= 1) return shares.map(share => share === null ? 0 : share / known);
-    const fallback = (1 - known) / unknownCount;
-    return shares.map(share => share ?? fallback);
-  }
-  if (known > 0) return shares.map(share => share / known);
-  return shares.map(() => 1 / shares.length);
-}
-
 function offerGroups(item, normalized) {
   const values = Array.isArray(item.enable_groups) && item.enable_groups.length
     ? item.enable_groups
@@ -256,7 +230,7 @@ function offerGroups(item, normalized) {
   return [...new Set(values.map(value => item.proxy_group_name || value))];
 }
 
-function addWeighted(target, source, share) {
+function addPrices(target, source) {
   for (const field of STANDARD_PRICE_FIELDS) {
     const value = source[field];
     if (value === null && !Object.hasOwn(target, field)) {
@@ -264,7 +238,7 @@ function addWeighted(target, source, share) {
       continue;
     }
     if (!Number.isFinite(value)) continue;
-    target[field] = (target[field] ?? 0) + value * share;
+    target[field] = (target[field] ?? 0) + value;
   }
 }
 // 主候选：规范模型下常有 -0731、:batch 这类兄弟条目，合并成一行后只让主候选负责算差价，
@@ -288,10 +262,6 @@ export function pickPrimaryOfficial(candidates = [], modelName = "") {
     if (leftCost !== rightCost) return leftCost < rightCost ? -1 : 1;
     return String(left?.name || "").localeCompare(String(right?.name || ""));
   })[0] || null;
-}
-
-function tierKey(item, group) {
-  return `${item.model_name}\u0000${group}`;
 }
 
 function normalizeStationCategory(station) {
@@ -347,25 +317,6 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
       !offer.pricingUnavailable && (offer.billingMode ?? "token") === "token" && offer.matchRuleId === "exact" &&
       Number(offer.officialMonthlyCost) > 0 && Number(offer.confidenceScore) >= threshold);
     let recommended = eligible.reduce((current, offer) => !current || offer.monthlyCost < current.monthlyCost ? offer : current, null);
-    // 价格是时间的函数，不是标量。能填满一周 168 格报价的，先逐小时比一次：
-    // 有报价在每个小时都不贵过别人，它就不依赖「你几点用」，也不用先猜一个占比。
-    const curves = eligible.filter(offer => Array.isArray(offer.hourlyCost) && offer.hourlyCost.length === 168);
-    const wins = new Map(curves.map(offer => [offer, 0]));
-    if (curves.length >= 2) {
-      for (let hour = 0; hour < 168; hour += 1) {
-        const priced = curves.filter(offer => Number.isFinite(offer.hourlyCost[hour]));
-        if (priced.length < 2) continue;
-        const lowest = Math.min(...priced.map(offer => offer.hourlyCost[hour]));
-        const holders = priced.filter(offer => offer.hourlyCost[hour] === lowest);
-        for (const holder of holders) wins.set(holder, wins.get(holder) + 1 / holders.length);
-      }
-      for (const offer of curves) {
-        offer.cheapestHourShare = wins.get(offer) / 168;
-        offer.allHoursCheapest = wins.get(offer) >= 168;
-      }
-      const universal = curves.find(offer => offer.allHoursCheapest);
-      if (universal) recommended = universal;
-    }
     for (const offer of comparison.offers) {
       // 生图行按元/张的价差分档；「按次」行的成本口径是摊出来的，不给档位。
       const mode = offer.billingMode ?? "token";
@@ -376,7 +327,7 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
       offer.recommended = offer === recommended;
       offer.recommendationLabel = comparison.comparisonGroup === "public" ? "" :
         !offer.recommendationEligible ? "需核验" :
-          offer.recommended ? (offer.allHoursCheapest ? "推荐 · 全时段最低" : offer.cheapestHourShare === undefined ? "推荐" : "推荐 · 按当前时段") : "可选";
+          offer.recommended ? "推荐" : "可选";
     }
   }
   return comparisons;
@@ -405,22 +356,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     const profileTokens = Number(billingProfile.tokensPerRequest) || 0;
     const tokensPerRequest = profileTokens > 0 ? profileTokens : fallbackTokensPerRequest;
     const tokensPerRequestEstimated = billingProfile.source !== "measured";
-    const tierSharesByGroup = new Map();
-    const tierItemsByGroup = new Map();
     const rawUnpricedModelKeys = snapshot.unpricedModels || snapshot.normalized?.unpricedModels;
     const unpricedModelKeys = Array.isArray(rawUnpricedModelKeys) ? rawUnpricedModelKeys.map(value => String(value)) : [];
-    snapshot.normalized.data.forEach(item => {
-      if (item.catalogOnly) return;
-      if (!item.tier_name) return;
-      // 按秒计价的视频档不参与上下文分档的流量加权。
-      if (item.request_unit === "second") return;
-      for (const group of offerGroups(item, snapshot.normalized)) {
-        const key = tierKey(item, group);
-        if (!tierItemsByGroup.has(key)) tierItemsByGroup.set(key, []);
-        tierItemsByGroup.get(key).push(item);
-      }
-    });
-    for (const [key, items] of tierItemsByGroup) tierSharesByGroup.set(key, new Map(items.map((item, index) => [item, getTierShares(items, { peakShare: usage.peakShare, profile: usage.timeProfile })[index]])));
 
     snapshot.normalized.data.forEach((item, itemIndex) => {
       if (item.catalogOnly) return;
@@ -436,8 +373,6 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         const priceQuote = getProxyPriceQuote(item, groupRatio, stationCategory === "public" ? 1 : recharge.rate, station.basePricePerMillion, priceCurrencyVerified, stationCategory === "public" ? true : recharge.verified);
         const quotedPrices = priceQuote.quotedPrices;
         const baseCostPrices = priceQuote.costPrices;
-        // 视频按秒的档位是并列选项，各占 100%，不参与分档加权。
-        const share = item.request_unit === "second" ? 1 : item.tier_name ? (tierSharesByGroup.get(tierKey(item, group))?.get(item) ?? 0) : 1;
         // 同一条报价的多个官方候选合并成一行：中转侧的数值只累加一次，官方侧按候选分桶。
         const resultsByCanonical = new Map();
         for (const result of matchResults) {
@@ -452,7 +387,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
           const mediaType = mediaTypeForPricing(item, { targetField: billingMode });
           const rowMediaKey = mediaType || (billingMode === "image" ? "image" : "text");
           // 按秒计价的视频档（分辨率）是各自独立的报价，不能像上下文分档那样加权合并。
-          const rowTierKey = item.request_unit === "second" ? `second:${item.tier_name ?? ""}` : item.tier_name ? "tier" : `item:${itemIndex}`;
+          // 每个档位一行：时段档、上下文档、按秒档都各自独立成行，不做加权合并。
+          const rowTierKey = item.tier_name ? `${item.request_unit === "second" ? "second" : "tier"}:${item.tier_name}` : `item:${itemIndex}`;
           const rowKey = [station.id, item.model_name, canonicalModel, group, rowMediaKey, rowTierKey].join("\u0000");
           const row = grouped.get(rowKey) || {
             canonicalModel,
@@ -465,8 +401,6 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             offers: [],
             proxyPrices: {},
             costPrices: {},
-            // 本周 168 格的小时成本。档位窗口齐了就填满，填不满就留 null，不拿缺格去比。
-            hourlyCost: new Array(168).fill(null),
             officialCurrency: "CREDITS",
             sourceCurrency: null,
             quotedInSourceCurrency: false,
@@ -517,8 +451,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             costPrices = null;
           }
           if (priceQuote.pricingUnavailable || (!isPublic && !costPrices)) row.pricingUnavailable = true;
-          addWeighted(row.proxyPrices, quotedPrices, share);
-          if (!isPublic && costPrices) addWeighted(row.costPrices, costPrices, share);
+          addPrices(row.proxyPrices, quotedPrices);
+          if (!isPublic && costPrices) addPrices(row.costPrices, costPrices);
           for (const result of results) {
             const official = result.match;
             if (!official) continue;
@@ -540,12 +474,12 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             const officialPrices = stationCategory === "public" ? null : referencePrices(official, references.openRouterRechargeRate || references.exchangeRate || 1);
             if (officialQuotedPrices) {
               candidate.quotedPrices ||= {};
-              addWeighted(candidate.quotedPrices, officialQuotedPrices, share);
+              addPrices(candidate.quotedPrices, officialQuotedPrices);
             }
             if (officialPrices) {
               candidate.prices ||= {};
-              addWeighted(candidate.prices, officialPrices, share);
-              candidate.monthlyCost += workloadCost(officialPrices, usage) * share;
+              addPrices(candidate.prices, officialPrices);
+              candidate.monthlyCost += workloadCost(officialPrices, usage);
             }
           }
           if (quotedPrices.cacheRead === null) {
@@ -556,17 +490,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             row.cacheWriteEstimated = true;
             row.estimatedFields.add("cacheWrite");
           }
-          if (!isPublic && costPrices) row.monthlyCost += workloadCost(costPrices, usage) * share;
-          // 按秒的档位是并列的单条报价，不带「占多少流量」的百分比后缀。
-          if (item.tier_name) row.tierNames.add(item.request_unit === "second" ? item.tier_name : `${item.tier_name} ${Math.round(share * 100)}%`);
-          // 一档覆盖哪几个小时，就按这一档的单价填那几格。填满是「全时段可比」的前提。
-          if (item.tier_name && item.request_unit !== "second" && costPrices) {
-            const hours = windowHours(timeSelectorOf(item));
-            const hourCost = workloadCost(costPrices, usage);
-            if (hours && Number.isFinite(hourCost)) {
-              for (let hour = 0; hour < 168; hour += 1) if (hours[hour]) row.hourlyCost[hour] = hourCost;
-            }
-          }
+          if (!isPublic && costPrices) row.monthlyCost += workloadCost(costPrices, usage);
+          if (item.tier_name) row.tierNames.add(item.tier_name);
           grouped.set(rowKey, row);
         }
       }
@@ -707,8 +632,6 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       quotedPrices: quotedUnit,
       prices: quotedUnit,
       costPrices: row.stationCategory === "public" || row.pricingUnavailable ? null : costUnit,
-      // 全时段成本曲线：168 小时都填上了才给，别的行拿到就能逐小时比，不必先猜一个占比。
-      hourlyCost: row.hourlyCost.every(cost => Number.isFinite(cost)) ? row.hourlyCost : null,
       sourceCurrency: row.sourceCurrency || "UNKNOWN",
       quotedInSourceCurrency: row.quotedInSourceCurrency,
       officialPrices: officialUnit,

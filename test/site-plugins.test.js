@@ -254,8 +254,9 @@ test("SpiderAI 安装预设后匿名采集完整目录，倍率、媒体单价�
     assert.deepEqual(sol.map(row => [row.input_price, row.output_price, row.min_tokens, row.max_tokens ?? null]), [[0.2, 1, 0, 272000], [0.4, 1.5, 272001, null]]);
     const haiku = rows.filter(row => row.model_name === "claude-haiku-5-5" && row.proxy_group_name === "Claude 通用版");
     assert.deepEqual(haiku.map(row => [row.min_tokens, row.max_tokens ?? null]), [[0, 100000], [100001, null]]);
-    const peak = find("deepseek-v4-pro", "DeepSeek 官方 API", "peak");
-    const offPeak = find("deepseek-v4-pro", "DeepSeek 官方 API", "offPeak");
+    // 档名就是对比表里显示的那一列，用页面上的说法。
+    const peak = find("deepseek-v4-pro", "DeepSeek 官方 API", "高峰时段");
+    const offPeak = find("deepseek-v4-pro", "DeepSeek 官方 API", "空闲时段");
     assert.equal(peak.input_price, 1.251);
     assert.equal(offPeak.input_price, 0.6255);
     assert.ok(peak.billing_conditions.every(condition => condition.type === "time"));

@@ -4,7 +4,6 @@ import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, me
 import { migrateStationAdapter } from "../core/response-formats.js";
 import { normalizeRechargePlans, normalizeRechargeTiers } from "./recharge-tiers.js";
 import { normalizeRechargePayments } from "./recharge-payments.js";
-import { DEFAULT_TIME_PROFILE, isUsageTimeProfile } from "../core/time-window.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 export const OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images/models";
@@ -36,9 +35,7 @@ const BUILTIN_30D_MONTHLY_VOLUME = {
 
 export const DEFAULT_MONTHLY_USAGE = {
   ...BUILTIN_30D_MONTHLY_VOLUME,
-  peakShare: 7 / 24,
   // 站点给了时段窗口时，分档占比由「窗口 × 这条负荷曲线」算；这里选的就是负荷曲线。
-  timeProfile: DEFAULT_TIME_PROFILE,
   imageInputTokens: 0,
   imageOutputTokens: 0,
   imageTokens: 0,
@@ -67,7 +64,7 @@ export function usagePresetOptions(magpieSync = null) {
 }
 
 const BASELINE_USAGE = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0, imageInputTokens: 0, imageOutputTokens: 0, imageTokens: 0, images: 0 };
-// 判定口径只看这几个字段，高峰占比与图像用量不参与。
+// 判定口径只看这几个字段，图像用量不参与。
 const USAGE_MATCH_FIELDS = ["requests", "input", "cacheRead", "cacheWrite", "cacheWrite1h", "output"];
 // 退役预设只用于迁移，不再出现在可选口径中。
 const LEGACY_USAGE_PROFILES = [
@@ -275,14 +272,14 @@ export function normalizeSettings(input = {}) {
   };
   if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
   settings.usage.imageTokens = settings.usage.imageOutputTokens;
+  // 分档加权下线后这两个键没有消费者了，老设置里的残留一并清掉。
+  for (const retiredKey of ["peakShare", "timeProfile"]) delete settings.usage[retiredKey];
   delete settings.refreshIntervalMinutes;
   for (const legacyKey of ["llm", "jev", "providerProfiles", "activeProviders", "checkinState", "checkinLoginWatch", "checkinAutomation", "checkinResults"]) delete settings[legacyKey];
-  for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output", "requests", "imageInputTokens", "imageOutputTokens", "imageTokens", "images", "peakShare"]) {
+  for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output", "requests", "imageInputTokens", "imageOutputTokens", "imageTokens", "images"]) {
     const value = Number(settings.usage[field]);
     settings.usage[field] = Number.isFinite(value) && value >= 0 ? value : base.usage[field];
   }
-  settings.usage.peakShare = Math.min(1, Math.max(0, Number(settings.usage.peakShare) || base.usage.peakShare));
-  settings.usage.timeProfile = isUsageTimeProfile(settings.usage.timeProfile) ? settings.usage.timeProfile : base.usage.timeProfile;
   settings.defaultCurrency = settings.defaultCurrency === "USD" ? "USD" : "CNY";
   settings.exchangeRate = Number.isFinite(Number(settings.exchangeRate)) && Number(settings.exchangeRate) > 0 ? Number(settings.exchangeRate) : DEFAULT_EXCHANGE_RATE;
   settings.showUnmatched = Boolean(settings.showUnmatched);

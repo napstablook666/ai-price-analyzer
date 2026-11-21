@@ -185,5 +185,4 @@ export const OPTIONS_HTML_IDS = [
   "top-menu",
   "uninstall-selected-plugins",
   "usage-preset",
-  "usage-time-profile",
 ];

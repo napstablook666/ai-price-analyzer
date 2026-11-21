@@ -8,7 +8,7 @@ import { collectStation as collectPreparedStation } from "../src/core/collectors
 import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, WINDHUB_PRICING_ENDPOINT, PROVIDER_REGISTRY, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
 import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEYS } from "../src/core/aiapi-contract.js";
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
-import { addRecommendationStatus, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, getTierShares, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
+import { addRecommendationStatus, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
 import { createDashboardIndex, matchesModelQueries, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
@@ -1353,7 +1353,8 @@ test("migrates old and retired usage presets to the current default", () => {
     // 已下线的「实测月用量」预设，保存过它的设置要被迁到当前默认。
     { requests: 45494, input: 382.95 * TOKENS_PER_MILLION, cacheRead: 2946.28 * TOKENS_PER_MILLION, output: 30.74 * TOKENS_PER_MILLION, cacheWrite: 0, cacheWrite1h: 0, imageTokens: 0, images: 0, peakShare: 7 / 24 }
   ];
-  for (const usage of legacyUsages) assert.deepEqual(normalizeSettings({ usage }).usage, { ...DEFAULT_MONTHLY_USAGE, peakShare: usage.peakShare });
+  // peakShare 随分档加权一起下线，老设置里的这个键要被清掉。
+  for (const usage of legacyUsages) assert.deepEqual(normalizeSettings({ usage }).usage, DEFAULT_MONTHLY_USAGE);
   assert.equal(normalizeSettings({ usage: { ...DEFAULT_MONTHLY_USAGE, input: TOKENS_PER_MILLION } }).usage.input, TOKENS_PER_MILLION);
 });
 
@@ -1362,10 +1363,9 @@ test("uses synced 30-day usage for defaults and retired presets while preserving
   const retired = { requests: 321, input: 8_000_023, cacheRead: 9_000_099, cacheWrite: 200, output: 100_000 };
   const magpieSync = { recent30d: { usage: measured, syncedAt: 10 }, recent7d: { usage: retired, syncedAt: 20 } };
   for (const usage of [undefined, DEFAULT_MONTHLY_USAGE, { ...retired, input: 8_000_000, cacheRead: 9_000_100 }]) {
-    const settings = normalizeSettings({ magpieSync, usage: { ...usage, peakShare: 0.6, imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
+    const settings = normalizeSettings({ magpieSync, usage: { ...usage, imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
     assert.equal(usagePresetId(settings.usage, settings.magpieSync), "recent30d");
     for (const [field, value] of Object.entries(measured)) assert.equal(settings.usage[field], value);
-    assert.equal(settings.usage.peakShare, 0.6);
     assert.equal(settings.usage.imageInputTokens, 123);
     assert.equal(settings.usage.imageOutputTokens, 456);
     assert.equal(settings.usage.images, 7);
@@ -1376,7 +1376,7 @@ test("uses synced 30-day usage for defaults and retired presets while preserving
     assert.deepEqual(normalizeSettings({ usage, magpieSync }).usage, usage);
   }
 });
-test("matches usage presets regardless of peak share", () => {
+test("matches usage presets regardless of retired settings", () => {
   const usage = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, imageTokens: 0, images: 0, peakShare: 0.3 };
   assert.equal(usagePresetId(usage), "baseline");
   assert.equal(usagePresetId({ ...DEFAULT_MONTHLY_USAGE }), "recent30d");
@@ -1394,11 +1394,11 @@ test("converts a magpie usage window into monthly volume", () => {
 });
 
 test("keeps user-entered fields when merging gateway usage", () => {
-  const current = { ...DEFAULT_MONTHLY_USAGE, peakShare: 0.5, imageInputTokens: 1_000_000 };
+  const current = { ...DEFAULT_MONTHLY_USAGE, imageTokens: 0.5, imageInputTokens: 1_000_000 };
   const merged = mergeGatewayUsage(current, { requests: 10, input: 1, cacheRead: 2, cacheWrite: 3, output: 4 });
   assert.equal(merged.requests, 10);
   assert.equal(merged.input, 1);
-  assert.equal(merged.peakShare, 0.5);
+  assert.equal(merged.imageTokens, 0.5);
   assert.equal(merged.imageInputTokens, 1_000_000);
 });
 
@@ -1765,8 +1765,7 @@ test("preserves generic pricing currencies across payload shapes", () => {
 
 
 
-test("weights peak and off-peak pricing into one monthly offer", () => {
-  assert.deepEqual(getTierShares([{ tier_name: "peak" }, { tier_name: "offpeak" }], 0.25), [0.25, 0.75]);
+test("每个时段档各自成行，不再加权合并", () => {
   const [comparison] = buildComparisonRows({
     stations: [{ id: "station-tier", name: "Tier station", rechargeRate: 1, basePricePerMillion: 2 }],
     snapshots: [{ stationId: "station-tier", collectedAt: 1, status: "success", normalized: { group_ratio: { Default: 1 }, data: [
@@ -1774,12 +1773,13 @@ test("weights peak and off-peak pricing into one monthly offer", () => {
       { model_name: "tiered-model", model_display_name: "Tiered", tier_name: "offpeak", proxy_group_name: "Default", enable_groups: ["Default"], input_price: 2, output_price: 2, price_currency: "USD" }
     ] } }],
     references: { exchangeRate: 1, models: [{ name: "tiered-model", provider: "official", input: 1, output: 1 }] },
-    usage: { input: TOKENS_PER_MILLION, cacheRead: 0, cacheWrite: 0, output: 0, requests: 0, peakShare: 0.25 },
+    usage: { input: TOKENS_PER_MILLION, cacheRead: 0, cacheWrite: 0, output: 0, requests: 0 },
     rules: [{ id: "exact", name: "精确名称", enabled: true }]
   });
-  assert.equal(comparison.offers[0].monthlyCost, 4);
-  assert.match(comparison.offers[0].tierName, /25%/);
-  assert.match(comparison.offers[0].tierName, /75%/);
+  assert.equal(comparison.offers.length, 2);
+  const byTier = Object.fromEntries(comparison.offers.map(offer => [offer.tierName, offer.monthlyCost]));
+  assert.equal(byTier.offpeak, 2);
+  assert.equal(byTier.peak, 10);
 });
 
 test("keeps every dashboard sort key backed by a comparison row field", () => {
@@ -3319,10 +3319,13 @@ test("collects SevenAI public model-plaza intervals as comparable CREDITS", asyn
     stations: [prepared],
     snapshots: [{ ...snapshot, stationId: prepared.id }]
   });
-  const offer = comparisons.flatMap(row => row.offers).find(row => row.stationId === prepared.id && row.tierName.includes("<200K"));
+  const offers = comparisons.flatMap(row => row.offers).filter(row => row.stationId === prepared.id);
+  // 上下文档各自成行，不再按 50/50 摊成一个均价。
+  assert.deepEqual(offers.map(row => row.tierName).sort(), ["<200K", ">200K"]);
+  const offer = offers.find(row => row.tierName === "<200K");
   assert.ok(offer);
   assert.equal(offer.pricingUnavailable, false);
-  assert.equal(offer.costPrices.input, 0.3);
+  assert.equal(offer.costPrices.input, 0.24);
   const blankGroupRate = normalizePricingPayload({
     code: 0,
     data: {

@@ -60,7 +60,7 @@ export function monthlyUsageFromGateway(payload, days = 30) {
   };
 }
 
-// 网关只报请求数与 token，高峰占比和图像用量沿用设置里已有的值。
+// 网关只报请求数与 token，其余字段沿用设置里已有的值。
 export function mergeGatewayUsage(current, measured) {
   return {
     ...current,
