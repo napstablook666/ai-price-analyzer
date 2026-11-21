@@ -201,6 +201,39 @@ const pluginSource = {
   request: requestPolicy(() => "/", { credentials: "omit", decodeResponse: decodePricingResponse })
 };
 
-const MODEL_ALIASES = [];
+const MODEL_ALIASES = [
+  {
+    "alias": "deepseek-flash",
+    "canonicalId": "deepseek-v4-1-flash"
+  },
+  {
+    "alias": "deepseek-flash-economy",
+    "canonicalId": "deepseek-v4-1-flash"
+  },
+  {
+    "alias": "gemini-3-flash",
+    "canonicalId": "gemini-3-flash-preview"
+  },
+  {
+    "alias": "gemini-3.1-pro",
+    "canonicalId": "gemini-3-1-pro-preview"
+  },
+  {
+    "alias": "grok-4.20-0309-reasoning",
+    "canonicalId": "grok-4-20"
+  },
+  {
+    "alias": "grok-4.20-0309-non-reasoning",
+    "canonicalId": "grok-4-20"
+  },
+  {
+    "alias": "grok-4.20-multi-agent-0309",
+    "canonicalId": "grok-4-20-multi-agent"
+  },
+  {
+    "alias": "kimi-k3.1-pro-highspeed",
+    "canonicalId": "kimi-k3-1-pro"
+  }
+];
 
 export const sitePlugin = { ...pluginSource, modelAliases: MODEL_ALIASES };

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides } from "../src/core/matching.js";
 import { registerSiteProvider, resetProviderRegistry, modelAliasesForStation } from "../src/core/provider-registry.js";
 import { buildCanonicalTable } from "../canonical/build.mjs";
+import { sitePlugin as spideraiPlugin } from "../src/site-plugins/providers/spiderai.js";
 
 const official = [
   { id: "glm-5-3", name: "GLM-5.3", canonicalSlug: "glm-5-3" },
@@ -80,5 +81,29 @@ test("构建端与运行时共享同一模型名称归一规则", async () => {
   for (const [name, expected] of cases) {
     assert.equal(runtimeCanonicalKey(name), expected, name);
     assert.equal(buildCanonicalKey(name), expected, name);
+  }
+});
+// spiderai 页面上的写法带经济版后缀、日期尾巴、版本点号，靠插件别名落到规范模型；删掉任何一条这里就红。
+test("spiderai 的别名把站内写法落到同一个规范模型", () => {
+  const aliases = spideraiPlugin.modelAliases || [];
+  const pairs = Object.fromEntries(aliases.map(entry => [entry.alias, entry.canonicalId]));
+  assert.deepEqual(pairs, {
+    "deepseek-flash": "deepseek-v4-1-flash",
+    "deepseek-flash-economy": "deepseek-v4-1-flash",
+    "gemini-3-flash": "gemini-3-flash-preview",
+    "gemini-3.1-pro": "gemini-3-1-pro-preview",
+    "grok-4.20-0309-reasoning": "grok-4-20",
+    "grok-4.20-0309-non-reasoning": "grok-4-20",
+    "grok-4.20-multi-agent-0309": "grok-4-20-multi-agent",
+    "kimi-k3.1-pro-highspeed": "kimi-k3-1-pro"
+  });
+  const officialList = [...new Set(aliases.map(entry => entry.canonicalId))]
+    .map(id => ({ id, name: id, canonicalSlug: id }));
+  const index = buildModelMatchIndex(officialList, [], { modelAliases: { spiderai: aliases } });
+  for (const { alias, canonicalId } of aliases) {
+    const results = matchModelWithOverrides(alias, officialList, { stationId: "spiderai", index });
+    assert.equal(results.length, 1, alias);
+    assert.equal(results[0].ruleId, "plugin-alias", alias);
+    assert.equal(results[0].canonical?.id || results[0].match.id, canonicalId, alias);
   }
 });
