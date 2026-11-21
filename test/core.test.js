@@ -4035,6 +4035,64 @@ test("collects Sidrune public model prices without credentials", async () => {
 });
 
 
+test("Sidrune 的媒体报价维度不当作价格，合法结构仍能采集", async () => {
+  const mediaPayload = {
+    code: 0,
+    data: {
+      groups: [{ id: "default", name: "Default", rate_multiplier: 2 }],
+      pricing: [
+        { name: "gpt-sidrune", group_ids: ["default"], input_price: 0.000002, output_price: 0.000008 },
+        { name: "seedance-video", group_ids: ["default"], media: {
+          protocol: "seedance", kind: "video", currency: "CNY",
+          prices: [
+            { unit: "million_output_tokens", amount: "46", resolution: "480p", input: "text", audio: false },
+            { unit: "million_output_tokens", amount: "70", resolution: "720p", input: "image", audio: true }
+          ]
+        } }
+      ]
+    }
+  };
+  const snapshot = await collectStationInput({
+    id: "station-sidrune-media",
+    name: "Sidrune",
+    baseUrl: "https://sidrune.ai/model-plaza?tab=all",
+    auth: { type: "bearer", token: "must-not-be-sent" }
+  }, {
+    fetchImpl: async () => response(mediaPayload)
+  });
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.invalidPricingValues, undefined);
+  assert.equal(snapshot.normalized.data[0].input_price, 4);
+  // 视频媒体价没有 token 单价字段，进入明确缺口，而不是让整单响应被拒。
+  assert.ok(snapshot.normalized.unresolved.some(item => item.model === "seedance-video"));
+});
+
+test("Sidrune 媒体结构里的数值型或无 unit 的 input 仍 fail-closed", async () => {
+  const badMediaPrices = [
+    { unit: "million_output_tokens", amount: "1", input: -1 },
+    { unit: "million_output_tokens", amount: "1", input: "abc" },
+    { amount: "1", input: "text" }
+  ];
+  for (const mediaPrice of badMediaPrices) {
+    const payload = {
+      code: 0,
+      data: {
+        groups: [{ id: "default", name: "Default", rate_multiplier: 1 }],
+        pricing: [{ name: "bad-model", group_ids: ["default"], media: { prices: [mediaPrice] } }]
+      }
+    };
+    await assert.rejects(
+      () => collectStationInput({
+        id: "station-sidrune-bad",
+        name: "Sidrune",
+        baseUrl: "https://sidrune.ai/model-plaza?tab=all",
+        auth: { type: "bearer", token: "must-not-be-sent" }
+      }, { fetchImpl: async () => response(payload) }),
+      /价格数据校验失败/
+    );
+  }
+});
+
 
 test("passes Jiji bearer auth through page-mode fetches", async () => {
   const requests = [];
