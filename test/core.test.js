@@ -2755,6 +2755,39 @@ test("normalizes fuck-everyone model-plaza token, image, and per-request pricing
   assert.ok(Math.abs(textPrices.cacheWrite1h - 0.45) < 1e-12);
   assert.ok(Math.abs(workloadCost(textPrices, { cacheWrite1h: 1_000_000 }) - 0.45) < 1e-12);
 });
+
+test("prices fuck-everyone video billing_mode as per-request video quotes", () => {
+  const fixture = JSON.parse(readFileSync(new URL("./fixtures/fuck-everyone-video-pricing.json", import.meta.url), "utf8"));
+  const normalized = normalizePricingPayload(fixture, "fuck-everyone-model-plaza", { priceCurrency: "CREDITS", priceCurrencyVerified: true });
+  assert.equal(normalized.unsupportedBillingModes, undefined);
+  assert.deepEqual(normalized.data.map(row => [row.proxy_group_name, Number(row.request_price.toFixed(6)), row.media_type]), [
+    ["grok特价", 0.0008, "video"],
+    ["grok heavy", 0.0112, "video"],
+    ["视频分组", 0.04, "video"]
+  ]);
+});
+
+test("collects the captured fuck-everyone video payload anonymously", async () => {
+  const fixture = JSON.parse(readFileSync(new URL("./fixtures/fuck-everyone-video-pricing.json", import.meta.url), "utf8"));
+  const [, preset] = addProviderStationPresets([{ id: "seed", baseUrl: "https://seed.example" }], [providerById("fuck-everyone")]);
+  const adapter = inferStationAdapter(preset);
+  let request;
+  const snapshot = await collectStationInput({ ...preset, adapter }, {
+    fetchImpl: async (url, init) => {
+      request = { url, init };
+      return response(fixture);
+    }
+  });
+  assert.equal(request.url, "https://fuck-everyone.com/api/v1/model-plaza");
+  assert.equal(request.init.credentials, "omit");
+  assert.equal(snapshot.status, "success");
+  assert.equal(snapshot.normalized.unsupportedBillingModes, undefined);
+  assert.deepEqual(snapshot.normalized.data.map(row => [row.proxy_group_name, Number(row.request_price.toFixed(6)), row.media_type]), [
+    ["grok特价", 0.0008, "video"],
+    ["grok heavy", 0.0112, "video"],
+    ["视频分组", 0.04, "video"]
+  ]);
+});
 test("shares partial diagnostic formatting across refresh consumers", () => {
   const diagnostics = getPartialDiagnostics({
     unsupportedBillingModes: ["per_second"],

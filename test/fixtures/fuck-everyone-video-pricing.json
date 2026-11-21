@@ -1,0 +1,59 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "groups": [
+      {
+        "id": 17,
+        "name": "grok特价",
+        "rate_multiplier": 0.02,
+        "video_rate_independent": false,
+        "video_rate_multiplier": 1,
+        "models": [
+          {
+            "name": "muse-video",
+            "pricing": {
+              "billing_mode": "video",
+              "per_request_price": 0.04,
+              "intervals": []
+            }
+          }
+        ]
+      },
+      {
+        "id": 60,
+        "name": "grok heavy",
+        "rate_multiplier": 0.28,
+        "video_rate_independent": false,
+        "video_rate_multiplier": 1,
+        "models": [
+          {
+            "name": "muse-video",
+            "pricing": {
+              "billing_mode": "video",
+              "per_request_price": 0.04,
+              "intervals": []
+            }
+          }
+        ]
+      },
+      {
+        "id": 75,
+        "name": "视频分组",
+        "rate_multiplier": 1,
+        "video_rate_independent": false,
+        "video_rate_multiplier": 1,
+        "models": [
+          {
+            "name": "muse-video",
+            "pricing": {
+              "billing_mode": "video",
+              "per_request_price": 0.04,
+              "intervals": []
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

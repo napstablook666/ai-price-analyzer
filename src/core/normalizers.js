@@ -1371,7 +1371,7 @@ const MODEL_PLAZA_PROFILES = Object.freeze({
       if (independentField && group?.[independentField] === true) return finitePrice(group?.[multiplierField]);
       return groupMultiplier;
     },
-    nonTokenBilling: Object.freeze({ image: "image", per_request: "request" })
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request", video: "request" })
   }
 });
 
