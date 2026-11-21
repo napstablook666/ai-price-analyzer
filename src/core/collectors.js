@@ -5,11 +5,21 @@ import { NORMALIZED_PRICE_FIELDS } from "./price-fields.js";
 import { buildStationRequest } from "./request-strategy.js";
 import { RECHARGE_STATUS_ENDPOINT, parseRechargeStatus } from "./recharge.js";
 
+// 媒体报价对象（如 Sidrune /data/pricing[].media.prices[]）里的 input/output 是
+// text|image|video 这类维度标签，不是价格。这类对象一定带 unit 键，拿它区分，
+// 别把维度当价格做数值校验。其他没有 unit 的 input/output 仍按价格严格校验。
+const MEDIA_DIMENSION_VALUES = new Set(["text", "image", "video", "audio"]);
+
 function hasInvalidPricingValue(value, priceKeys, depth = 0) {
   if (!value || depth > 6 || typeof value !== "object") return false;
   return Object.entries(value).some(([key, current]) => {
     const normalizedKey = key.toLowerCase();
-    if (priceKeys.has(normalizedKey) && current !== null && typeof current !== "object" && current !== "" && (!Number.isFinite(Number(current)) || Number(current) < 0)) return true;
+    const isMediaDimension = typeof current === "string"
+      && MEDIA_DIMENSION_VALUES.has(current.trim().toLowerCase())
+      && Object.hasOwn(value, "unit");
+    if (priceKeys.has(normalizedKey) && current !== null && typeof current !== "object" && current !== ""
+      && !isMediaDimension
+      && (!Number.isFinite(Number(current)) || Number(current) < 0)) return true;
     return current && typeof current === "object" && hasInvalidPricingValue(current, priceKeys, depth + 1);
   });
 }
