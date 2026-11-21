@@ -522,8 +522,8 @@ test("RelayRouter 的按次价为 0 时锁进缺口，不虚构价格也不误�
   };
   const out = relayRows(payload);
   assert.deepEqual(out.unresolved, [
-    { model: "mj_custom_zoom", reason: "按次价格缺失或非正数，无法给出单位价" },
-    { model: "mj_inpaint", reason: "按次价格缺失或非正数，无法给出单位价" }
+    { model: "mj_custom_zoom", reason: "站点按次报价为 0，尚未确认免费，不参与比价" },
+    { model: "mj_inpaint", reason: "站点按次报价为 0，尚未确认免费，不参与比价" }
   ]);
   assert.equal(out.rows.filter(row => ["mj_custom_zoom", "mj_inpaint"].includes(row.model_name)).length, 0, "零价模型不许出行");
   const imagine = relayRow("mj_imagine", "MJ-3", payload);
@@ -639,4 +639,38 @@ test("倍率族站点的报价币种：美元族写 USD，人民币站自己覆�
   assert.equal(stellaislePlazaPriceMap.currency, "USD");
   // sidrune 的 input_price 是每 token 的美元价，映射里乘 1e6 换成每百万，币种也是美元。
   assert.equal(sidrunePriceMap.currency, "USD");
+});
+
+test("显式对象尺寸档位通过归一化保留同价和异价三档、图片单位及一次分组倍率", () => {
+  const raw = JSON.parse(readFileSync(new URL("./fixtures/poloai-pricing-sample.json", import.meta.url), "utf8"));
+  const image = raw.data.find(item => item.model_name === "gemini-3-pro-image-preview");
+  assert.ok(image);
+  const map = {
+    ...tokenfluxPriceMap,
+    rules: [{ kind: "request", price: "model_price", unit: "image", mediaType: "image", sizeTiers: { path: "special_prices", format: "object" } }]
+  };
+  for (const [prices, expected] of [
+    [{ "1k": 0.24, "2k": 0.24, "4k": 0.24 }, [0.48, 0.48, 0.48]],
+    [{ "1k": "0.24", "2k": 0.4, "4k": 0.8 }, [0.48, 0.8, 1.6]]
+  ]) {
+    const payload = { success: true, group_ratio: { image: 2 }, data: [{ ...image, model_price: 999, enable_groups: ["image"], special_prices: prices }] };
+    const normalized = normalizeProxyData(payload, { responseFormat: "price-map", priceMap: map });
+    assert.equal(normalized.incomplete, undefined);
+    assert.deepEqual(normalized.data.map(row => row.size_tier), ["1k", "2k", "4k"]);
+    assert.deepEqual(normalized.data.map(row => row.image_price), expected);
+    assert.ok(normalized.data.every(row => row.media_type === "image" && row.request_price === null && row.input_price === null));
+  }
+});
+
+test("对象尺寸缺失或含无效值时整项未定价，不能回落到顶层占位价", () => {
+  const map = {
+    ...tokenfluxPriceMap,
+    rules: [{ kind: "request", price: "model_price", unit: "image", mediaType: "image", sizeTiers: { path: "special_prices", format: "object" } }]
+  };
+  for (const prices of [undefined, null, {}, [], { "1k": 0.24, "2k": "bad" }, { "1k": 0.24, " 1k ": 0.4 }, { "1k": 0 }, { "1k": -1 }, { "1k": true }, { "1k": [0.24] }, { "1k": { price: 0.24 } }, { " ": 0.24 }]) {
+    const payload = { success: true, group_ratio: { image: 2 }, data: [{ model_name: "invalid-size", model_price: 999, enable_groups: ["image"], special_prices: prices }] };
+    const result = applyPriceMap(map, payload);
+    assert.deepEqual(result.rows, []);
+    assert.deepEqual(result.unresolved, [{ model: "invalid-size", reason: "尺寸档位缺失或含无效价格，无法给出完整尺寸报价" }]);
+  }
 });

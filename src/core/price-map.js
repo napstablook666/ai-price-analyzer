@@ -288,6 +288,16 @@ const quantize = value => (value === null || value === undefined || !Number.isFi
 function sizeTiersOf(spec, item) {
   if (!spec) return [];
   const raw = readPath(item, spec.path);
+  if (spec.format === "object") {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    return Object.entries(raw)
+      .map(([name, value]) => {
+        const price = typeof value === "number" || typeof value === "string" ? Number(value) : NaN;
+        if (!name.trim() || !Number.isFinite(price) || price <= 0) return null;
+        return { name: name.trim(), factor: 1, price, raw: value };
+      })
+      .filter(Boolean);
+  }
   if (!Array.isArray(raw)) return [];
   return raw
     .map(entry => {
@@ -569,16 +579,23 @@ export function applyPriceMap(map, raw, { parseTiers } = {}) {
     if (rule.kind === "request") {
       const price = evalChain(rule.price, item);
       const unit = resolveUnit(rule.unit, item);
-      const tierAmounts = sizeTiersOf(rule.sizeTiers, item)
+      const sizeTiers = sizeTiersOf(rule.sizeTiers, item);
+      if (rule.sizeTiers?.format === "object" && (!sizeTiers.length ||
+          new Set(sizeTiers.map(tier => tier.name)).size !== sizeTiers.length ||
+          sizeTiers.length !== Object.keys(readPath(item, rule.sizeTiers.path) || {}).length)) {
+        unresolved.push({ model: name, reason: "尺寸档位缺失或含无效价格，无法给出完整尺寸报价" });
+        continue;
+      }
+      const tierAmounts = sizeTiers
         .map(tier => ({ name: tier.name, amount: tier.price !== null ? tier.price : price === null ? null : price * tier.factor }))
         .filter(tier => Number.isFinite(tier.amount) && tier.amount > 0);
       // 档位自带绝对价时，顶层价只是兜底：站点可能只给分档价，不给统一价。
       if (!tierAmounts.length && (price === null || !(price > 0))) {
-        unresolved.push({ model: name, reason: "按次价格缺失或非正数，无法给出单位价" });
+        unresolved.push({ model: name, reason: price === 0 ? "站点按次报价为 0，尚未确认免费，不参与比价" : "按次价格缺失、无效或为负数，无法给出单位价" });
         continue;
       }
-      // 分档全是同一个价就并成一行，别把同一笔钱重复三遍。
-      const redundant = tierAmounts.length > 1 && new Set(tierAmounts.map(cell => cell.amount)).size === 1;
+      // 对象档位保留显式尺寸；数组沿用同价合并行为。
+      const redundant = rule.sizeTiers?.format !== "object" && tierAmounts.length > 1 && new Set(tierAmounts.map(cell => cell.amount)).size === 1;
       const sizeCells = redundant ? [{ name: null, amount: tierAmounts[0].amount }]
         : tierAmounts.length ? tierAmounts : [{ name: null, amount: price }];
       for (const tier of sizeCells) {
