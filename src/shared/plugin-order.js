@@ -32,5 +32,6 @@ export const SITE_PLUGIN_ORDER = [
   "91token",
   "spiderai",
   "poloai",
-  "leaflow"
+  "leaflow",
+  "juziai"
 ];

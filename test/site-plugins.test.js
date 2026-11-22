@@ -87,6 +87,52 @@ test("adds multiple selected presets once and derives added state from stations"
   });
 });
 
+test("橘子API 安装预设后匿名采价，充值比例与方案保持未验证", async () => {
+  await withCleanRegistry(async () => {
+    const providers = await loadSitePlugins(["juziai"]);
+    const [preset] = addProviderStationPresets([], providers);
+    const collection = resolveStationCollection({ ...preset, baseUrl: "https://api.juziai.cc/pricing" });
+    const station = collection.station;
+
+    assert.equal(sitePluginForStation(station).id, "juziai");
+    assert.equal(station.mode, "direct");
+    assert.equal(station.auth.type, "none");
+    assert.equal(station.priceCurrency, "CREDITS");
+    assert.equal(station.priceCurrencyVerified, true);
+    assert.equal(station.rechargeAuto, false);
+    assert.equal(station.rechargeRateVerified, false);
+    assert.equal(station.rechargePlansVerified, false);
+    assert.equal(station.rechargePaymentsVerified, false);
+
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/juziai-pricing.json", import.meta.url), "utf8"));
+    const requests = [];
+    const snapshot = await collectStation(station, {
+      collection,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
+      }
+    });
+
+    assert.equal(requests.length, 1);
+    assert.equal(new URL(requests[0].url).pathname, "/api/pricing");
+    assert.equal(requests[0].init.method, "GET");
+    assert.equal(requests[0].init.credentials, "omit");
+    assert.equal(requests[0].init.headers.Authorization, undefined);
+    assert.equal(snapshot.status, "success");
+    assert.equal(snapshot.source, "tokenflux");
+    assert.equal(snapshot.rechargeRateVerified, false);
+    assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
+    assert.equal(snapshot.normalized.data.length, 9);
+    assert.equal(Object.keys(snapshot.normalized.group_ratio).length, 14);
+
+    const token = snapshot.normalized.data.find(row => row.model_name === "[量]gpt-5.5" && row.proxy_group_name === "default");
+    assert.deepEqual([token.input_price, token.output_price, token.cache_read_price], [5, 30, 0.5]);
+    const request = snapshot.normalized.data.find(row => row.model_name === "[次1]glm-5.3" && row.proxy_group_name === "default");
+    assert.equal(request.request_price, 0.03);
+  });
+});
+
 test("91Token 匿名采集保留计费条件与9个复杂计费缺口，充值报价已验证但渠道实付未验证", async () => {
   await withCleanRegistry(async () => {
     const providers = await loadSitePlugins(["91token"]);

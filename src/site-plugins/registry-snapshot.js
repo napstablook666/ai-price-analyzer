@@ -340,6 +340,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "01a1fe61-12f8-7a6f-9b6f-8e6ffadd40aa.leaflow.net"
       ],
       "needsCode": true
+    },
+    {
+      "id": "juziai",
+      "name": "橘子API",
+      "version": "0.20.0",
+      "description": "公开 /api/pricing 直连采集，173 个模型；充值比例与方案未验证",
+      "hosts": [
+        "api.juziai.cc"
+      ],
+      "needsCode": true
     }
   ]
 };

@@ -37,6 +37,7 @@ export const GOLDEN_CASES = Object.freeze([
   // 同形状不同站点：base 都是 tokenflux，但报文各一份，快照分开存（name 才是文件名）。
   { name: "centos", base: "tokenflux", fixture: "centos-pricing.json", note: "ai.centos.hk 2026-11-19 实测，页面标 ¥" },
   { name: "maolaoapi", base: "tokenflux", fixture: "maolaoapi-pricing.json", note: "maolaoapi.com 2026-11-19 实测，页面标 $" },
+  { name: "juziai", base: "tokenflux", fixture: "juziai-pricing.json", note: "api.juziai.cc 匿名报文抽样；全量实测 173 个模型、14 个分组，含按 token 与按次报价" },
   {
     name: "91token", base: "tokenflux", fixture: "91token-pricing.json",
     priceMap: token91Plugin.preset.adapter.priceMap,

@@ -1,0 +1,16 @@
+# base: tokenflux
+# case: juziai
+# fixture: juziai-pricing.json
+# rows: 9 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+[CCmax]claude-opus-4-6|CC-Max|标准|15|75|1.8|18.75|-|-|-|USD|3|5
+[K]claude-opus-4-6|claude|-|-|-|-|-|0.15|-|-|USD|1|1
+[K]claude-opus-4-6|default|-|-|-|-|-|0.15|-|-|USD|1|1
+[次1]glm-5.3|default|-|-|-|-|-|0.03|-|-|USD|1|1
+[次1]glm-5.3|国模|-|-|-|-|-|0.03|-|-|USD|1|1
+[量]gpt-5.5|default|标准|5|30|0.5|-|-|-|-|USD|1|6
+[量]gpt-5.5|gpt-Pro|标准|3.5|21|0.35|-|-|-|-|USD|0.7|6
+gpt-image-2|default|-|-|-|-|-|0.15|-|-|USD|1|1
+gpt-image-2|生图专用|-|-|-|-|-|0.15|-|-|USD|1|1

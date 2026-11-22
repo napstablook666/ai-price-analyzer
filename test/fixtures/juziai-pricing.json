@@ -1,0 +1,192 @@
+{
+  "auto_groups": [
+    "default"
+  ],
+  "data": [
+    {
+      "model_name": "[量]gpt-5.5",
+      "vendor_id": 5,
+      "quota_type": 0,
+      "model_ratio": 2.5,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 6,
+      "cache_ratio": 0.1,
+      "enable_groups": [
+        "default",
+        "gpt-Pro"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ]
+    },
+    {
+      "model_name": "[CCmax]claude-opus-4-6",
+      "vendor_id": 4,
+      "quota_type": 0,
+      "model_ratio": 2.5,
+      "model_price": 0,
+      "owner_by": "",
+      "completion_ratio": 5,
+      "cache_ratio": 0.12,
+      "create_cache_ratio": 1.25,
+      "enable_groups": [
+        "CC-Max"
+      ],
+      "supported_endpoint_types": [
+        "anthropic",
+        "openai"
+      ]
+    },
+    {
+      "model_name": "[次1]glm-5.3",
+      "vendor_id": 1,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.03,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "default",
+        "国模"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ]
+    },
+    {
+      "model_name": "[K]claude-opus-4-6",
+      "vendor_id": 4,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.15,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "claude",
+        "default",
+        "新稳",
+        "稳定"
+      ],
+      "supported_endpoint_types": [
+        "openai",
+        "anthropic"
+      ]
+    },
+    {
+      "model_name": "gpt-image-2",
+      "vendor_id": 5,
+      "quota_type": 1,
+      "model_ratio": 0,
+      "model_price": 0.15,
+      "owner_by": "",
+      "completion_ratio": 0,
+      "enable_groups": [
+        "default",
+        "生图专用"
+      ],
+      "supported_endpoint_types": [
+        "openai"
+      ]
+    }
+  ],
+  "group_ratio": {
+    "CC-Max": 3,
+    "Cursor Claude【按量】": 1,
+    "Kiro按量0.5": 1,
+    "Kiro按量特价0.25": 1,
+    "ant(反重力)": 1,
+    "claude": 1,
+    "default": 1,
+    "gpt-Pro": 0.7,
+    "grok": 1,
+    "反重力(Gemini 量)": 0.6,
+    "国模": 1,
+    "国模-量": 0.3,
+    "活动分组": 0,
+    "生图专用": 1
+  },
+  "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+  "success": true,
+  "supported_endpoint": {
+    "anthropic": {
+      "path": "/v1/messages",
+      "method": "POST"
+    },
+    "image-generation": {
+      "path": "/v1/images/generations",
+      "method": "POST"
+    },
+    "openai": {
+      "path": "/v1/chat/completions",
+      "method": "POST"
+    }
+  },
+  "usable_group": {
+    "CC-Max": "CC-Max分组",
+    "Cursor Claude【按量】": "Cursor Claude质量要比反重力更优",
+    "Kiro按量0.5": "Kiro按量稳定分组",
+    "Kiro按量特价0.25": "Kiro按量特价0.25",
+    "ant(反重力)": "反重力按量专属分组",
+    "claude": "claude分组",
+    "default": "默认分组包含大部分模型方便大家不用来回密钥。",
+    "gpt-Pro": "优质gpt Pro专属按量分组",
+    "grok": "grok分组",
+    "反重力(Gemini 量)": "反重力(Gemini 按量)",
+    "国模": "国模分组",
+    "国模-量": "国模-量特价",
+    "活动分组": "",
+    "生图专用": ""
+  },
+  "vendors": [
+    {
+      "id": 1,
+      "name": "智谱"
+    },
+    {
+      "id": 2,
+      "name": "DeepSeek",
+      "icon": "DeepSeek.Color"
+    },
+    {
+      "id": 3,
+      "name": "Google",
+      "icon": "Gemini.Color"
+    },
+    {
+      "id": 4,
+      "name": "Anthropic",
+      "icon": "Claude.Color"
+    },
+    {
+      "id": 7,
+      "name": "Moonshot",
+      "icon": "Moonshot"
+    },
+    {
+      "id": 8,
+      "name": "阿里巴巴",
+      "icon": "Qwen.Color"
+    },
+    {
+      "id": 9,
+      "name": "讯飞",
+      "icon": "Spark.Color"
+    },
+    {
+      "id": 5,
+      "name": "OpenAI",
+      "icon": "OpenAI"
+    },
+    {
+      "id": 6,
+      "name": "xAI",
+      "icon": "XAI"
+    },
+    {
+      "id": 10,
+      "name": "MiniMax",
+      "icon": "Minimax.Color"
+    }
+  ]
+}

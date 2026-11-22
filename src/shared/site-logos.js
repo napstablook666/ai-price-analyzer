@@ -14,6 +14,7 @@ export const SITE_LOGOS = {
   "fuck-everyone": "icons/sites/fuck-everyone.png",
   "hepingan": "icons/sites/hepingan.png",
   "jiji": "icons/sites/jiji.png",
+  "juziai": "icons/sites/juziai.svg",
   "killai": "icons/sites/killai.png",
   "leaflow": "icons/sites/leaflow.svg",
   "liuguang": "icons/sites/liuguang.svg",
