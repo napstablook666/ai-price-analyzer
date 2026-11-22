@@ -350,6 +350,18 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "api.juziai.cc"
       ],
       "needsCode": true
+    },
+    {
+      "id": "ooioo",
+      "name": "ooioo",
+      "version": "0.20.0",
+      "description": "匿名 /api/pricing 直连采集，37 个模型、7 个分组；全按 token 计费，USD 报价；充值比例按公开文档记 1:1，档位未登录核验",
+      "hosts": [
+        "ooioo.work",
+        "oo1oo.work",
+        "00i00.work"
+      ],
+      "needsCode": true
     }
   ]
 };

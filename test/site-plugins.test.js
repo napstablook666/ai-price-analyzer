@@ -143,6 +143,67 @@ test("橘子API 安装预设后匿名采价，充值档位与待支付金额已�
   });
 });
 
+test("ooioo 匿名采集 price-map 全目录，USD 报价与 1:1 充值比例按公开文档记录", async () => {
+  await withCleanRegistry(async () => {
+    const providers = await loadSitePlugins(["ooioo"]);
+    const [preset] = addProviderStationPresets([], providers);
+    const collection = resolveStationCollection({ ...preset, baseUrl: "https://ooioo.work/pricing" });
+    const station = collection.station;
+
+    assert.equal(sitePluginForStation(station).id, "ooioo");
+    assert.equal(station.mode, "direct");
+    assert.equal(station.auth.type, "none");
+    assert.equal(station.priceCurrency, "USD");
+    assert.equal(station.priceCurrencyVerified, true);
+    assert.equal(station.rechargeAuto, false);
+    assert.equal(station.rechargeRmb, 1);
+    assert.equal(station.rechargeCredits, 1);
+    assert.equal(station.rechargeRateVerified, true);
+    assert.equal(station.rechargePlansVerified, false);
+    assert.deepEqual(station.rechargePlans, []);
+    assert.match(station.rechargeRateNote, /充值金额与余额 1:1/);
+    assert.match(station.rechargeRateNote, /未登录核验/);
+
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/ooioo-pricing.json", import.meta.url), "utf8"));
+    const requests = [];
+    const snapshot = await collectStation(station, {
+      collection,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
+      }
+    });
+
+    assert.equal(requests.length, 1);
+    assert.equal(new URL(requests[0].url).pathname, "/api/pricing");
+    assert.equal(requests[0].init.method, "GET");
+    assert.equal(requests[0].init.credentials, "omit");
+    assert.equal(requests[0].init.headers.Authorization, undefined);
+    assert.equal(snapshot.status, "success");
+    assert.equal(snapshot.source, "tokenflux");
+    assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
+    assert.equal(snapshot.normalized.data.length, 104);
+    assert.equal(Object.keys(snapshot.normalized.group_ratio).length, 7);
+    assert.equal(snapshot.normalized.incomplete, undefined);
+    assert.equal(snapshot.normalized.unpricedModels, undefined);
+
+    // 走 model_ratio 的模型：归一出的价格与渲染后的模型广场页面逐字一致。
+    const glm = snapshot.normalized.data.find(row => row.model_name === "glm-5.3-flash");
+    assert.deepEqual([glm.input_price, glm.output_price, glm.cache_read_price], [0.24, 0.84, 0.069]);
+
+    // 带 billing_expr 的模型：表达式系数折算后落到 USD/百万。
+    const astra = snapshot.normalized.data.find(row => row.model_name === "gpt-6-astra" && row.proxy_group_name === "codex-plus");
+    assert.deepEqual(
+      [astra.input_price, astra.output_price, astra.cache_read_price, astra.cache_write_price],
+      [0.8, 4, 0.08, 1]
+    );
+
+    // 全站 quota_type=0、model_price=0：没有按次或按张报价，且每一行都是 USD。
+    assert.equal(snapshot.normalized.data.some(row => row.request_price !== null), false);
+    assert.equal(snapshot.normalized.data.every(row => row.price_currency === "USD"), true);
+  });
+});
+
 test("91Token 匿名采集保留计费条件与9个复杂计费缺口，充值报价已验证但渠道实付未验证", async () => {
   await withCleanRegistry(async () => {
     const providers = await loadSitePlugins(["91token"]);

@@ -33,5 +33,6 @@ export const SITE_PLUGIN_ORDER = [
   "spiderai",
   "poloai",
   "leaflow",
-  "juziai"
+  "juziai",
+  "ooioo"
 ];

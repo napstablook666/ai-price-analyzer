@@ -35,6 +35,7 @@ import { sitePlugin as spideraiPlugin } from "./providers/spiderai.js";
 import { sitePlugin as poloaiPlugin } from "./providers/poloai.js";
 import { sitePlugin as leaflowPlugin } from "./providers/leaflow.js";
 import { sitePlugin as juziaiPlugin } from "./providers/juziai.js";
+import { sitePlugin as ooiooPlugin } from "./providers/ooioo.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -87,7 +88,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("spiderai", "SpiderAI", "spiderai.fun", "direct", () => ({ sitePlugin: spideraiPlugin }), { paths: ["/"], description: "公开模型价格页内嵌目录匿名采集；登录核验充值比例与档位" }),
   entry("poloai", "PoloAPI", "poloai.top", "direct", () => ({ sitePlugin: poloaiPlugin }), { paths: ["/","/pricing","/wallet","/console/topup"], description: "匿名模型广场报价；支持分组、token/缓存、长度档与按次；登录已核实充值1:1和等额快捷金额" }),
   entry("leaflow", "Leaflow Canopy", "01a1fe61-12f8-7a6f-9b6f-8e6ffadd40aa.leaflow.net", "page", () => ({ sitePlugin: leaflowPlugin }), { paths: ["/products/canopy/models"], description: "项目模型目录与美元计费价格，复用浏览器登录态；含支付宝人民币收银台报价，手续费及条件赠额分开记录" }),
-  entry("juziai", "橘子API", "api.juziai.cc", "direct", () => ({ sitePlugin: juziaiPlugin }), { paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，173 个模型；充值档位与待支付金额已核验，未验证到账比例" })
+  entry("juziai", "橘子API", "api.juziai.cc", "direct", () => ({ sitePlugin: juziaiPlugin }), { paths: ["/","/pricing"], description: "公开 /api/pricing 直连采集，173 个模型；充值档位与待支付金额已核验，未验证到账比例" }),
+  entry("ooioo", "ooioo", "ooioo.work", "direct", () => ({ sitePlugin: ooiooPlugin }), { hosts: ["ooioo.work","oo1oo.work","00i00.work"], paths: ["/","/pricing","/console/topup"], description: "匿名 /api/pricing 直连采集，37 个模型、7 个分组；全按 token 计费，USD 报价；充值比例按公开文档记 1:1，档位未登录核验" })
 ];
 
 export function sitePluginById(id) {
