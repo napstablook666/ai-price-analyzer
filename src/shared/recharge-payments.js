@@ -1,7 +1,8 @@
-// 渠道实付：把「收银台看到的待支付金额」落成结构化证据。
+// 收银台报价：把「收银台看到的应付金额」落成结构化证据。
 // 只做清洗，不参与 rechargeTiers 的落档。折算率由计算层用 paidRmb / faceAmount 得出。
 const PAYMENT_CHANNELS = new Set(["wechat", "alipay", "card", "stripe", "crypto", "other"]);
 const PAYMENT_CURRENCIES = new Set(["CNY", "USD", "CREDITS"]);
+const PAYMENT_STATUSES = new Set(["pending", "paid", "expired", "cancelled", "failed"]);
 
 export function normalizeRechargePayments(input) {
   if (!Array.isArray(input)) return [];
@@ -16,12 +17,16 @@ export function normalizeRechargePayments(input) {
     const channelRaw = String(raw.channel || "").trim().toLowerCase();
     if (!PAYMENT_CHANNELS.has(channelRaw)) continue;
     const currencyRaw = String(raw.currency || "").trim().toUpperCase();
+    const statusRaw = String(raw.status || "").trim().toLowerCase();
+    if (statusRaw && !PAYMENT_STATUSES.has(statusRaw)) continue;
     if (!PAYMENT_CURRENCIES.has(currencyRaw)) continue;
     // CNY 收银台金额本身就是人民币；USD / CREDITS 只有显式给了 paidRmb 才认，不猜汇率。
     const explicit = Number(raw.paidRmb);
-    const paidRmb = Number.isFinite(explicit) && explicit > 0
-      ? explicit
-      : currencyRaw === "CNY" ? payAmount : null;
+    const paidRmb = statusRaw && statusRaw !== "paid"
+      ? null
+      : Number.isFinite(explicit) && explicit > 0
+        ? explicit
+        : currencyRaw === "CNY" ? payAmount : null;
     const key = `${channelRaw}:${faceAmount.toFixed(6)}:${currencyRaw}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -34,6 +39,7 @@ export function normalizeRechargePayments(input) {
       payAmount,
       currency: currencyRaw,
       paidRmb: paidRmb === null ? null : Math.round(paidRmb * 100) / 100,
+      ...(statusRaw ? { status: statusRaw } : {}),
       ...(Number.isFinite(feeRate) && feeRate >= 0 && feeRate < 1 ? { feeRate } : {}),
       ...(at ? { at } : {}),
       ...(note ? { note } : {})
@@ -45,6 +51,8 @@ export function normalizeRechargePayments(input) {
 // 每 1 额度实付多少人民币。拿不到 paidRmb 的条目（USD/CREDITS 且没显式折算）不参与。
 export function rechargePaymentRate(payment) {
   const faceAmount = Number(payment?.faceAmount);
+  const status = String(payment?.status || "").trim().toLowerCase();
+  if (status && status !== "paid") return null;
   const paidRmb = Number(payment?.paidRmb);
   if (!Number.isFinite(faceAmount) || faceAmount <= 0) return null;
   if (!Number.isFinite(paidRmb) || paidRmb <= 0) return null;

@@ -345,7 +345,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "juziai",
       "name": "橘子API",
       "version": "0.20.0",
-      "description": "公开 /api/pricing 直连采集，173 个模型；充值比例与方案未验证",
+      "description": "公开 /api/pricing 直连采集，173 个模型；充值档位与待支付金额已核验，未验证到账比例",
       "hosts": [
         "api.juziai.cc"
       ],

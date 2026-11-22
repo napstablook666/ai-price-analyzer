@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // 充值取证第二步：把 out/recharge/<host>.json 合进 plugins/<id>/plugin.js。
-// 只写 rechargePayments（收银台证据）；rechargeTiers 不动，避免和手写档位表打架。
+// 只写 rechargePayments（收银台报价证据）；rechargeTiers 不动，避免和手写档位表打架。
 // 生成段落带标记，重复跑不产生 diff；--check 只报告不写盘。
 
 import { readFile, readdir, writeFile } from "node:fs/promises";
@@ -37,8 +37,11 @@ export function renderBlock(record) {
   const usdRate = Number(record.status?.parsed?.exchangeRate);
   const lines = [BLOCK_START, "  rechargePayments: ["];
   for (const payment of payments) {
-    let paidRmb = Number.isFinite(payment.paidRmb) ? payment.paidRmb : null;
-    if (paidRmb === null && payment.currency === "USD" && usdRate > 0) {
+    const status = String(payment.status || "").trim().toLowerCase();
+    let paidRmb = status && status !== "paid"
+      ? null
+      : Number.isFinite(payment.paidRmb) ? payment.paidRmb : null;
+    if (paidRmb === null && (!status || status === "paid") && payment.currency === "USD" && usdRate > 0) {
       paidRmb = Math.round(payment.payAmount * usdRate * 100) / 100;
     }
     const fields = [
@@ -47,6 +50,7 @@ export function renderBlock(record) {
       `payAmount: ${payment.payAmount}`,
       `currency: ${JSON.stringify(payment.currency)}`
     ];
+    if (status) fields.push(`status: ${JSON.stringify(status)}`);
     if (Number.isFinite(paidRmb)) fields.push(`paidRmb: ${paidRmb}`);
     if (Number.isFinite(payment.feeRate)) fields.push(`feeRate: ${payment.feeRate}`);
     const at = payment.at || collectedDate;
@@ -122,7 +126,7 @@ async function main() {
     }
     if (!args.check) await writeFile(pluginPath, next, "utf8");
     written += 1;
-    console.log(`${args.check ? "会改" : "已写"} ${record.plugin}：${record.payments.length} 条渠道实付`);
+    console.log(`${args.check ? "会改" : "已写"} ${record.plugin}：${record.payments.length} 条收银台报价`);
   }
 
   if (args.check) console.log(`\n检查完成：${written} 个待更新，${unchanged} 个已一致，${skipped.length} 个跳过`);

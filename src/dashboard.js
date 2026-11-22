@@ -1156,7 +1156,11 @@ function rechargeTierMarkup(row) {
   if (!plan && !payment) return "";
   const parts = [];
   if (plan) parts.push(`充 ${formatPrice(plan.amount, "CNY", 2)} 档 ${plan.discount.toFixed(2)} 折`);
-  if (payment && Number.isFinite(payment.paidRmb)) {
+  const pendingPayment = Boolean(payment?.status) && payment.status !== "paid";
+  if (pendingPayment) {
+    const label = PAYMENT_CHANNEL_LABELS[payment.channel] || payment.channel;
+    parts.push(`${label}待支付报价 ${formatPaymentAmount(payment.payAmount, payment.currency)}`);
+  } else if (payment && Number.isFinite(payment.paidRmb)) {
     const label = PAYMENT_CHANNEL_LABELS[payment.channel] || payment.channel;
     parts.push(`${label}实付 ${formatPrice(payment.paidRmb, "CNY")}`);
   } else if (payment) {
@@ -1165,9 +1169,11 @@ function rechargeTierMarkup(row) {
   } else if (plan) {
     parts.push("（推算）");
   }
-  const title = payment
-    ? `收银台实付：充 ${formatPaymentAmount(payment.faceAmount, payment.currency)} 额度付款 ${formatPaymentAmount(payment.payAmount, payment.currency)}`
-    : "按估算月用量自动落档，实付为推算值";
+  const title = pendingPayment
+    ? `收银台待支付报价：充 ${formatPaymentAmount(payment.faceAmount, payment.currency)} 额度付款 ${formatPaymentAmount(payment.payAmount, payment.currency)}`
+    : payment
+      ? `收银台实付：充 ${formatPaymentAmount(payment.faceAmount, payment.currency)} 额度付款 ${formatPaymentAmount(payment.payAmount, payment.currency)}`
+      : "按估算月用量自动落档，实付为推算值";
   return `<span class="station-recharge-hint" title="${title}">${parts.join(" · ")}</span>`;
 }
 // 长条只做同模型月成本相对比较，放在单价单元格底部；名次和价差仍在月成本列。

@@ -5,7 +5,37 @@ import { DEFAULT_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-reg
 const PRICE_MAP = { base: "tokenflux" };
 const RECHARGE_NOTE =
   "匿名 /api/status 只返回 price=1、quota_per_unit=500000、quota_display_type=CNY、custom_currency_exchange_rate=1、usd_exchange_rate=1；" +
-  "没有登录后的到账金额、充值方案或第三方支付账单，因此不能把这些字段当成已验证的 1:1 充值比例。";
+  "钱包页已展示 11 档充值折扣，订单 108c9947 的支付宝收银台显示 1 额度应付 ¥0.75；" +
+  "订单未付款，未验证到账金额、余额变化或 CREDITS 与 CNY 的最终充值比例，因此不把待支付报价当成到账证明。";
+
+const RECHARGE_TIERS = [
+  { amount: 1, discount: 0.75 },
+  { amount: 5, discount: 0.73 },
+  { amount: 10, discount: 0.72 },
+  { amount: 30, discount: 0.70 },
+  { amount: 50, discount: 0.69 },
+  { amount: 100, discount: 0.68 },
+  { amount: 200, discount: 0.67 },
+  { amount: 300, discount: 0.66 },
+  { amount: 500, discount: 0.65 },
+  { amount: 1000, discount: 0.62 },
+  { amount: 2000, discount: 0.60 }
+];
+
+const RECHARGE_PLANS = RECHARGE_TIERS.map(({ amount, discount }) => ({
+  kind: "topup",
+  amount,
+  credits: amount,
+  discount,
+  currency: "CREDITS",
+  availability: "self_service",
+  verified: true,
+  note: amount === 1
+    ? "订单 108c9947 的支付宝待支付收银台报价：1 额度应付 ¥0.75；订单未付款，未证明到账。"
+    : "钱包快捷充值档位；discount 是收银台应付金额与额度面值之比。"
+}));
+
+
 
 const preset = {
   id: "juziai",
@@ -14,8 +44,20 @@ const preset = {
   rechargeAuto: false,
   rechargeRateVerified: false,
   rechargeRateNote: RECHARGE_NOTE,
-  rechargePlansVerified: false,
-  rechargePaymentsVerified: false,
+  rechargeTiers: RECHARGE_TIERS,
+  rechargePlansVerified: true,
+  rechargePlans: RECHARGE_PLANS,
+  rechargePayments: [{
+    channel: "alipay",
+    faceAmount: 1,
+    payAmount: 0.75,
+    currency: "CNY",
+    status: "pending",
+    paidRmb: null,
+    at: "2026-11-22",
+    note: "订单 108c9947 的待支付收银台报价；页面显示 TUC1、¥0.75。订单未付款，未证明到账。"
+  }],
+  rechargePaymentsVerified: true,
   priceCurrency: "CREDITS",
   priceCurrencyVerified: true,
   priceCurrencyNote:
@@ -55,7 +97,7 @@ const pluginSource = {
   mode: "direct",
   responseFormat: "price-map",
   authType: "none",
-  rationale: "橘子API 的 /api/pricing 与 /api/status 匿名可读，公开价格接口直连采集；充值口径未验证",
+  rationale: "橘子API 的 /api/pricing 与 /api/status 匿名可读，公开价格接口直连采集；充值档位与待支付金额已核验，到账比例未闭环",
   preset,
   request: requestPolicy(() => DEFAULT_PRICING_ENDPOINT, { credentials: "omit" })
 };

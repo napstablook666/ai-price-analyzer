@@ -87,7 +87,7 @@ test("adds multiple selected presets once and derives added state from stations"
   });
 });
 
-test("橘子API 安装预设后匿名采价，充值比例与方案保持未验证", async () => {
+test("橘子API 安装预设后匿名采价，充值档位与待支付金额已核验", async () => {
   await withCleanRegistry(async () => {
     const providers = await loadSitePlugins(["juziai"]);
     const [preset] = addProviderStationPresets([], providers);
@@ -101,8 +101,18 @@ test("橘子API 安装预设后匿名采价，充值比例与方案保持未验�
     assert.equal(station.priceCurrencyVerified, true);
     assert.equal(station.rechargeAuto, false);
     assert.equal(station.rechargeRateVerified, false);
-    assert.equal(station.rechargePlansVerified, false);
-    assert.equal(station.rechargePaymentsVerified, false);
+    assert.equal(station.rechargePlansVerified, true);
+    assert.equal(station.rechargePaymentsVerified, true);
+    assert.deepEqual(station.rechargeTiers.map(tier => [tier.amount, tier.discount]), [
+      [1, 0.75], [5, 0.73], [10, 0.72], [30, 0.7], [50, 0.69], [100, 0.68],
+      [200, 0.67], [300, 0.66], [500, 0.65], [1000, 0.62], [2000, 0.6]
+    ]);
+    assert.match(station.rechargePlans[0].note, /订单 108c9947/);
+    assert.equal(station.rechargePayments[0].faceAmount, 1);
+    assert.equal(station.rechargePayments[0].payAmount, 0.75);
+    assert.equal(station.rechargePayments[0].status, "pending");
+    assert.equal(station.rechargePayments[0].paidRmb, null);
+    assert.match(station.rechargePayments[0].note, /订单 108c9947/);
 
     const fixture = JSON.parse(readFileSync(new URL("./fixtures/juziai-pricing.json", import.meta.url), "utf8"));
     const requests = [];

@@ -17,6 +17,16 @@ test("derives the rmb amount for CNY payments and leaves foreign currency alone"
   assert.equal(rechargePaymentRate(card), null);
 });
 
+test("ignores a pending checkout quote when deriving the recharge rate", () => {
+  const [payment] = normalizeRechargePayments([
+    { channel: "alipay", faceAmount: 1, payAmount: 0.75, currency: "CNY", status: "pending", paidRmb: 0.75 }
+  ]);
+  assert.equal(payment.status, "pending");
+  assert.equal(payment.paidRmb, null);
+  assert.equal(rechargePaymentRate(payment), null);
+  assert.equal(cheapestRechargePayment([payment]), null);
+});
+
 test("keeps an explicit conversion for foreign currency payments", () => {
   const [payment] = normalizeRechargePayments([
     { channel: "card", faceAmount: 300, payAmount: 291, currency: "USD", paidRmb: 1946 }
