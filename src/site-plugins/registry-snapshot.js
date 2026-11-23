@@ -367,7 +367,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "eapi",
       "name": "E-API",
       "version": "0.21.0",
-      "description": "匿名模型广场报价；per_token 按折后美元/百万、fixed 按张计；充值档位未取到登录态报文",
+      "description": "匿名模型广场报价；per_token 按折后美元/百万、fixed 按张计；充值 ¥7 = $1 额度（登录态 offers 取证）",
       "hosts": [
         "eapi.site"
       ],
