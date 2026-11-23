@@ -10,6 +10,7 @@ export const SITE_LOGOS = {
   "cheaprouter": "icons/sites/cheaprouter.svg",
   "cun": "icons/sites/cun.png",
   "dddai": "icons/sites/dddai.png",
+  "eapi": "icons/sites/eapi.png",
   "fastaitoken": "icons/sites/fastaitoken.svg",
   "fuck-everyone": "icons/sites/fuck-everyone.png",
   "hepingan": "icons/sites/hepingan.png",

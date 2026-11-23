@@ -21,6 +21,7 @@ import { sitePlugin as spideraiPlugin } from "../src/site-plugins/providers/spid
 import { sitePlugin as poloaiPlugin } from "../src/site-plugins/providers/poloai.js";
 import { sitePlugin as leaflowPlugin } from "../src/site-plugins/providers/leaflow.js";
 import { stellaislePlazaRows } from "../src/core/price-maps/stellaisle.js";
+import { sitePlugin as eapiPlugin } from "../src/site-plugins/providers/eapi.js";
 
 const FIXTURES = new URL("../test/fixtures/", import.meta.url);
 const GOLDEN_DIR = new URL("../test/golden/", import.meta.url);
@@ -68,6 +69,11 @@ export const GOLDEN_CASES = Object.freeze([
       "cyber/deepseek-v4.1-flash", "cyber/wan3.0-video",
       "qwen-audio-3.1-asr-flash-message", "qwen-audio-3.1-asr-flash-streaming", "qwen-audio-3.1-realtime-flash", "speech-2.8-turbo"
     ]
+  },
+{
+    name: "eapi", base: "tokenflux", fixture: "eapi-pricing.json",
+    priceMap: eapiPlugin.preset.adapter.priceMap,
+    note: "2026-11-23 匿名 /api/pricing 全量 41 模型；per_token 33 走 token 规则、fixed 8 按张计；报文无 enable_groups，走 unlisted 基准分组；cache_*_price_micros 是坏字段不读"
   },
   { base: "allrouter", fixture: "allrouter-pricing.json" },
   { base: "relayrouter", fixture: "relayrouter-pricing.json" },

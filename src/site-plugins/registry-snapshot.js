@@ -362,6 +362,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "00i00.work"
       ],
       "needsCode": true
+    },
+    {
+      "id": "eapi",
+      "name": "E-API",
+      "version": "0.21.0",
+      "description": "匿名模型广场报价；per_token 按折后美元/百万、fixed 按张计；充值档位未取到登录态报文",
+      "hosts": [
+        "eapi.site"
+      ],
+      "needsCode": true
     }
   ]
 };
