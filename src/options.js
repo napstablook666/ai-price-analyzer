@@ -983,6 +983,8 @@ function readStations() {
       rechargeRmb,
       rechargeCurrency,
       rechargeCredits,
+      // 插件声明的汇率溢价（OpenRouter 加密支付 5%），后台保存时原样带回去，不然会被归一成 1。
+      rechargePremium: station.rechargePremium,
       rechargeRate: derivedRechargeRate(rechargeRmb, rechargeCredits),
       rechargeRateVerified: station.rechargeRateVerified !== false,
       rechargeRateNote: station.rechargeRateNote || "",

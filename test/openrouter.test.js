@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
-import { buildComparisonRows, currencyToRmb } from "../src/core/pricing.js";
+import { buildComparisonRows, flattenComparisonRows } from "../src/core/pricing.js";
+import { parseOpenRouterData } from "../src/core/openrouter.js";
 import { sitePlugin } from "../src/site-plugins/providers/openrouter.js";
 
 // 真实报文裁剪：一条长度档模型 + 它的 :batch 兄弟、无 cache 价的模型、路由占位（-1）、
@@ -83,18 +84,48 @@ test("openrouter：时段档（utc_*）跳过，只留基础价", () => {
   assert.equal(rows[0].min_tokens, 0);
 });
 
-test("openrouter：充值折算 = 加密 5% × 默认汇率，美元站按 7.665 折", () => {
-  const { rechargeRmb, rechargeCredits, rechargeCurrency, priceCurrency } = sitePlugin.preset;
+test("openrouter：充值折算 = 加密 5% × 实时汇率，自比只剩 5% 手续费", () => {
+  const { rechargeRmb, rechargeCredits, rechargeCurrency, rechargePremium, priceCurrency } = sitePlugin.preset;
   assert.equal(priceCurrency, "USD");
   assert.equal(rechargeCurrency, "CNY");
   assert.equal(rechargeCredits, 1);
-  assert.equal(rechargeRmb, 7.665);
-  // 实付口径：$10 面值加密支付 $10.5，取最低费率那条路
+  // 不写死元价：1 美元额度实付 1.05 美元，折元价交给计算层用实时汇率乘。
+  assert.equal(rechargeRmb, 1);
+  assert.equal(rechargePremium, 1.05);
   const crypto = sitePlugin.preset.rechargePayments.find(payment => payment.channel === "crypto");
   assert.equal(crypto.payAmount / crypto.faceAmount, 1.05);
-  assert.equal(currencyToRmb("USD", rechargeRmb / rechargeCredits), 7.665);
-  const [base] = rowsFor("openai/gpt-6.2-astra-pro");
-  assert.equal(currencyToRmb(base.price_currency, station.rechargeRate), 7.665);
+  const diffs = [6.68, 7.3].map(rate => selfDiffPercent(rate));
+  assert.equal(Number(diffs[0].toFixed(2)), 5);
+  // 汇率从 6.68 漂到 7.3，自比差额不该跟着动。旧配置写死 7.3，实时 6.68 时会多出 9 个点。
+  assert.equal(diffs[0].toFixed(6), diffs[1].toFixed(6));
   assert.ok(sitePlugin.preset.rechargeRateVerified);
   assert.ok(sitePlugin.preset.rechargePaymentsVerified);
 });
+
+function selfDiffPercent(exchangeRate) {
+  const selfStation = {
+    id: "openrouter",
+    name: "OpenRouter",
+    priceCurrency: sitePlugin.preset.priceCurrency,
+    priceCurrencyVerified: true,
+    rechargeCurrency: sitePlugin.preset.rechargeCurrency,
+    rechargeRmb: sitePlugin.preset.rechargeRmb,
+    rechargeCredits: sitePlugin.preset.rechargeCredits,
+    rechargePremium: sitePlugin.preset.rechargePremium,
+    rechargeRateVerified: true,
+    category: "relay"
+  };
+  const rows = buildComparisonRows({
+    stations: [selfStation],
+    snapshots: [{ stationId: selfStation.id, collectedAt: 1, status: "success", normalized }],
+    references: {
+      models: parseOpenRouterData(STRUCTURED_CLONE(SOURCE)),
+      exchangeRate,
+      openRouterRechargeRate: exchangeRate
+    },
+    usage: { input: 1_000_000, output: 1_000_000, requests: 0 }
+  });
+  const row = flattenComparisonRows(rows).find(item => item.modelName === "openai/gpt-6.2-astra-pro");
+  assert.ok(row, "自比应该出价");
+  return row.diffPercent;
+}

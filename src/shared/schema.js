@@ -176,6 +176,9 @@ export const DEFAULT_STATION = {
   rechargeCurrency: "CNY",
   rechargeCredits: 1,
   rechargeRate: 1,
+  // USD 计价站点的充值成本随汇率浮动：premium 是实时汇率之上的支付手续费倍率（1 = 不加）。
+  // 写成固定元价会随汇率漂移：OpenRouter 那份写死 7.3 的配置在实时 6.68 时凭空多出 9 个点的溢价。
+  rechargePremium: 1,
   rechargeRateVerified: true,
   // 普通采集使用随插件发布的静态数据，不自动请求充值状态。
   rechargeAuto: false,
@@ -311,6 +314,8 @@ export function normalizeStation(input = {}) {
   station.rechargeRmb = Number.isFinite(rechargeRmb) && rechargeRmb >= 0 ? rechargeRmb : rechargeRate;
   station.rechargeCredits = Number.isFinite(rechargeCredits) && rechargeCredits > 0 ? rechargeCredits : 1;
   station.rechargeRate = rechargeRate;
+  const rechargePremium = Number(input.rechargePremium);
+  station.rechargePremium = Number.isFinite(rechargePremium) && rechargePremium > 0 ? rechargePremium : 1;
   station.rechargeCurrency = input.rechargeCurrency === "USD" ? "USD" : "CNY";
   station.priceCurrency = ["CNY", "USD", "CREDITS", "UNKNOWN"].includes(input.priceCurrency) ? input.priceCurrency : "CREDITS";
   station.priceCurrencyVerified = station.priceCurrency !== "UNKNOWN" && input.priceCurrencyVerified !== false;

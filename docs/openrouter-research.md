@@ -63,18 +63,20 @@
 
 最便宜的路是加密 $10 档：$1 额度实付 $1.05。
 
-项目里 `priceCurrency: "USD"` 的站点，`pricing.currencyToRmb` 把 `rechargeRate` 当「1 美元的元价」，所以按扩展默认汇率 7.3 折：
+项目里 `priceCurrency: "USD"` 的站点，`pricing.currencyToRmb` 把 `rechargeRate` 当「1 美元的元价」。这个价不能写死：写死 7.3 的话，汇率跌到 6.68 时站点成本仍按 7.3 算，基准按 6.68 算，自比凭空多出 9 个点。
+
+所以插件声明 `rechargePremium: 1.05`（1 额度实付 1.05 美元的支付手续费倍率），`rechargeRmb: 1`、`rechargeCredits: 1` 只做占位，计算层 `pricing.rechargeForCurrency` 拿实时汇率乘 premium：
 
 ```
-1.05 × 7.3 = 7.665 元 / 美元额度
+1.05 × 实时汇率 = 元 / 美元额度（2026-11-23 的 6.6813 → 7.015）
 ```
 
-`rechargeRateVerified: true`，`rechargeRmb: 7.665`，`rechargeCredits: 1`；三笔实测记在 `rechargePayments`，`rechargePaymentsVerified: true`。汇率变了要跟着调，设置页的汇率只影响展示换算，不动这里存的常数。
+`rechargeRateVerified: true`，三笔实测记在 `rechargePayments`（`paidRmb` 留空，人民币金额按实时汇率折算，不留 7.3 的旧值），`rechargePaymentsVerified: true`。
 
-对表验算（435 条 offer）：
+对表验算（435 条 offer，基准价与站点价都走同一把尺子）：
 
-- 参照价按同一口径 7.665 折算 → 435/435 条 `diffPercent = 0`。
-- 参照价按面值 7.3 折算 → 435/435 条都是 `+5%`，即充值手续费，不是采集偏差。
+- 汇率 6.68 与 7.3 两档下，自比都是 `+5%`，即加密充值的支付手续费，不是采集偏差，也不再随汇率漂。
+- 参照价按面值折（不含 5%）→ 435/435 条 `diffPercent = 0`。
 
 ## 已知缺口
 
@@ -83,7 +85,7 @@
 | 时段折扣档（`utc_*`） | 3 个模型在特定时段更便宜，表里只显基础价 | 跳过，注释写在 `decodeModels` |
 | `image` / `audio` / `web_search` 按次计价 | 35 / 38 / 198 个模型还有额外计量价 | 不在 token 比价口径内，与其他站点一致 |
 | `:free` 变体 | 12 个免费档不在表里 | 与参照价口径一致（同一模型只留付费档） |
-| 汇率 | 7.665 是 2026-11-23 的 7.3 折算值 | 汇率明显变动时需要重算常数 |
+| 汇率 | 元价随实时汇率浮，5% 支付手续费是唯一固定溢价 | 已在计算层处理，不再有需要重算的常数 |
 
 ## 复现
 

@@ -107,13 +107,12 @@ const decodeModels = payload => {
 //   加密：$10 → 实付 $10.50；$100 → 实付 $105。固定 5%、无最低手续费，是更便宜的一条路。
 //   起充 $10（输 5/6/7 报 Invalid amount，输 10 正常）。
 //   余额币种就是美元（Total available 显示 $），1 额度 = $1，没有赠送档位。
-// 折算：最便宜路径是加密 $10 档，$1 额度实付 $1.05。
-// 项目里 priceCurrency 为 USD 的站点按 rechargeRate 当「1 美元的元价」（pricing.currencyToRmb），
-// 所以这里按扩展默认汇率 7.3 折成人民币：1.05 × 7.3 = 7.665 元 / 美元额度。
-// 汇率变了要跟着调（设置页汇率只影响展示换算，不动这里存的值）。
-const USD_CNY = 7.3;
+// 折算：最便宜路径是加密 $10 档，$1 额度实付 $1.05，即 5% 的支付溢价。
+// 这里只声明 premium（汇率之上的手续费倍率），不写死元价：
+// 项目里 priceCurrency 为 USD 的站点按 rechargeRate 当「1 美元的元价」，
+// 而汇率每天在动，写死 7.3 会让自比在实时 6.68 时凭空多出 9 个点。
+// 计算层会把 premium 乘上实时汇率（pricing.rechargeForCurrency）。
 const CRYPTO_FEE = 1.05;
-const CREDIT_RMB = Number((CRYPTO_FEE * USD_CNY).toFixed(3));
 
 const preset = {
   id: "openrouter",
@@ -124,20 +123,21 @@ const preset = {
   auth: { type: "none" },
   rechargeAuto: false,
   rechargeCurrency: "CNY",
-  rechargeRmb: CREDIT_RMB,
+  rechargeRmb: 1,
   rechargeCredits: 1,
+  rechargePremium: CRYPTO_FEE,
   rechargeRateVerified: true,
   rechargeRateNote:
     `2026-11-23 登录实测收银台：信用卡 $10 → 手续费 $0.80、实付 $10.80；$100 → 手续费 $5.50、实付 $105.50（页面自述 5.5%，最低 $0.80）。`
     + `加密支付固定 5% 无最低：$10 → $10.50、$100 → $105。起充 $10，无赠送档位，1 额度 = 1 美元。`
-    + `取最便宜路径 $1 额度实付 $1.05，按扩展默认汇率 7.3 折 ${CREDIT_RMB} 元 / 美元额度。`,
+    + `取最便宜路径，$1 额度实付 $1.05，折元价 = 实时汇率 × 1.05（不写死汇率）。`,
   rechargePayments: [
     {
       channel: "crypto",
       faceAmount: 10,
       payAmount: 10.5,
       currency: "USD",
-      paidRmb: Number((10.5 * USD_CNY).toFixed(2)),
+      paidRmb: null,
       feeRate: 0.05,
       at: "2026-11-23",
       note: "加密支付 $10 → Total due $10.5，固定 5%、无最低手续费。另有 $100 → $105 同比例档。",
@@ -147,7 +147,7 @@ const preset = {
       faceAmount: 10,
       payAmount: 10.8,
       currency: "USD",
-      paidRmb: Number((10.8 * USD_CNY).toFixed(2)),
+      paidRmb: null,
       feeRate: 0.08,
       at: "2026-11-23",
       note: "信用卡 $10 档：手续费 $0.80 触底（8%），实付 $10.80。",
@@ -157,7 +157,7 @@ const preset = {
       faceAmount: 100,
       payAmount: 105.5,
       currency: "USD",
-      paidRmb: Number((105.5 * USD_CNY).toFixed(2)),
+      paidRmb: null,
       feeRate: 0.055,
       at: "2026-11-23",
       note: "信用卡 $100 档：手续费 $5.50，实付 $105.50，等于页面自述的 5.5%。",

@@ -25,6 +25,7 @@
 | `rechargeCurrency` | 金额币种，`CNY` 或 `USD` |
 | `rechargeCredits` | 到账的中转币数量 |
 | `rechargeRate` | 推导出的单位成本，保存时自动算 |
+| `rechargePremium` | 美元计价站在实时汇率之上的支付手续费倍率（`1.05` = 5%），不填按 1 |
 | `rechargeRateVerified` | 是否人工确认过 |
 | `rechargeRateNote` | 备注，写来源和日期 |
 

@@ -118,6 +118,7 @@
 | --- | --- | --- |
 | 面值折扣 | `rechargeTiers[].discount` | 站点 `/api/status` 的 `bulk_topup_discounts`，或插件手写 |
 | 额度折人民币 | `rechargeRate` | 站点自报的 `price` / `usd_exchange_rate`，或手填 |
+| 汇率溢价 | `rechargePremium` | 美元计价站在实时汇率上再乘的支付手续费倍率，如 OpenRouter 加密充值的 `1.05` |
 | 收银台金额 | `rechargePayments[]` | 点开收银台看到的应付金额，人工取证；`status=paid` 才代表已支付 |
 
 `rechargePayments` 每项是一条付款证据：

@@ -125,13 +125,24 @@ export function resolveRechargeTier(tiers = [], spend = 0) {
   return { amount: tier.amount, discount: tier.discount, faceValue: amount, payRmb: amount * tier.discount };
 }
 
+// 站点的「1 单位原币 = 多少人民币」。USD 计价站点按实时汇率走：
+// rechargePremium 是站点在汇率之上收的支付手续费倍率（OpenRouter 加密支付 5%），
+// 这样汇率怎么动，站点成本和基准（官方美元价 × 实时汇率）都在同一把尺子上。
+function rechargeForCurrency(station, snapshot, exchangeRate) {
+  const recharge = effectiveRecharge(station, snapshot);
+  const premium = Number(station?.rechargePremium);
+  const rate = Number(exchangeRate);
+  if (!(premium > 0) || premium === 1 || !Number.isFinite(rate) || rate <= 0) return recharge;
+  return { ...recharge, rate: rate * premium, verified: true };
+}
+
 // costPrices 里已经乘过的充值汇率。档位折扣要从面值算，所以先按它还原。
 // CNY 站在 currencyToRmb 里固定返回 1，不受 rechargeRate 影响。
-function rechargeFactorOf(station, currency, snapshot) {
+function rechargeFactorOf(station, currency, snapshot, exchangeRate) {
   const code = String(currency ?? "").trim().toUpperCase();
   if (!["USD", "CREDITS", "POINTS"].includes(code)) return 1;
   // 倍率以站点自报的现价为准，手填值只在没有采集值时顶上。
-  const recharge = effectiveRecharge(station, snapshot);
+  const recharge = rechargeForCurrency(station, snapshot, exchangeRate);
   if (!recharge.verified) return 1;
   return recharge.rate > 0 ? recharge.rate : 1;
 }
@@ -274,6 +285,8 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
 export function buildComparisonRows({ stations = [], snapshots = [], references = {}, usage = {}, modelMatchOverrides = [], modelAliases = {}, llmMatches = {}, showUnmatched = true, evidenceThreshold = 60 } = {}) {
   const stationMap = new Map(stations.map(station => [station.id, station]));
   const referenceList = Array.isArray(references.models) ? references.models : [];
+  // 基准价用实时汇率折人民币，站点侧也要用同一把尺子，否则自比会漂成汇率差。
+  const referenceExchangeRate = Number(references.exchangeRate) > 0 ? Number(references.exchangeRate) : 1;
   const latestByStation = new Map();
   const matchingIndex = buildModelMatchIndex(referenceList, modelMatchOverrides, { modelAliases, llmMatches });
   for (const snapshot of snapshots) {
@@ -318,7 +331,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         const groupRatio = Number.isFinite(Number(rawGroupRatio)) ? Number(rawGroupRatio) : 1;
         const hasUnpricedPriceGap = unpricedModelKeys.some(value => value.startsWith(`${group}:${item.model_name}:`));
         const priceCurrencyVerified = station.priceCurrencyVerified ?? snapshot.priceCurrencyVerified;
-        const recharge = effectiveRecharge(station, snapshot);
+        const recharge = stationCategory === "public" ? effectiveRecharge(station, snapshot) : rechargeForCurrency(station, snapshot, referenceExchangeRate);
         const priceQuote = getProxyPriceQuote(item, groupRatio, stationCategory === "public" ? 1 : recharge.rate, station.basePricePerMillion, priceCurrencyVerified, stationCategory === "public" ? true : recharge.verified);
         const quotedPrices = priceQuote.quotedPrices;
         const baseCostPrices = priceQuote.costPrices;
@@ -474,7 +487,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
     // 实付 = 月消耗面值 × 落档折扣。额度永久有效，所以按实际消耗折，不按档位面值折。
     // costPrices 对 USD/CREDITS 站已经乘过 rechargeRate，档位折扣必须作用在面值上，否则重复打折。
     const rowStation = stationMap.get(row.stationId);
-    const rechargeFactor = rechargeFactorOf(rowStation, row.sourceCurrency, latestByStation.get(row.stationId));
+    const rechargeFactor = rechargeFactorOf(rowStation, row.sourceCurrency, latestByStation.get(row.stationId), referenceExchangeRate);
     const faceMonthlyCost = rechargeFactor > 0 ? row.monthlyCost / rechargeFactor : row.monthlyCost;
     const rechargePlan = row.stationCategory === "public" || row.pricingUnavailable
       ? null
