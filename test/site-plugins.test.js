@@ -834,7 +834,16 @@ test("man8out 匿名采集渠道目录，绝对单价按分组倍率只折算一
     assert.equal(station.auth.type, "none");
     assert.equal(station.priceCurrency, "USD");
     assert.equal(station.priceCurrencyVerified, true);
-    assert.equal(station.rechargeRateVerified, false);
+    // 收银台实测：充 10 元到账 ◈10.00，手续费 1% 实付 ¥10.10，1 美元额度 = ¥1.01。
+    assert.equal(station.rechargeRateVerified, true);
+    assert.equal(station.rechargeRate, 1.01);
+    assert.equal(station.rechargeRmb, 1.01);
+    assert.equal(station.rechargeCredits, 1);
+    assert.equal(station.rechargePlansVerified, true);
+    assert.equal(station.rechargePlans.length, 10);
+    assert.equal(station.rechargePaymentsVerified, true);
+    assert.equal(station.rechargePayments.length, 1);
+    assert.equal(station.rechargePayments[0].feeRate, 0.01);
 
     const fixture = JSON.parse(readFileSync(new URL("./fixtures/man8out-catalog.json", import.meta.url), "utf8"));
     const requests = [];
