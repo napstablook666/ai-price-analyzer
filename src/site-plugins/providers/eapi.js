@@ -27,7 +27,15 @@ import { tokenfluxPriceMap } from "../../core/price-maps/tokenflux.js";
 // 已是当前生效档的折后价（闲时 $0.09/百万 ↔ 页面 ¥0.63，忙时翻倍）。
 // 比价表报当前价；到忙时段站点自己把头部价格翻倍，无需本地处理。
 
-const RECHARGE_NOTE = "公开 /api/pricing 与 /api/status 匿名可读；站点文档自述人民币/美元两种充值、以美元等额换算，支付页显示参考汇率（/docs/eapi-codex-claude#recharge），但档位金额、折扣、最低充值只在登录后的 /api/user/topup/info，匿名 401/403。status 的 usd_exchange_rate=7、price=7 是展示换算系数，不构成充值比例证据。rechargeRateVerified=false，缺登录态的 amount_options、discount、min_topup 三证。";
+// 充值取证（2026-11-23，登录态）：
+//   /api/v1/web/wallet/offers：CNY 档 ¥20/50/100/200/300/500/1000/2000，USD 档 $5/20/50/100，
+//     每档 bonusUsdMicros=0、fxRateUsdCny=7；¥20 档 creditedUsdMicros=2857143（$2.857143），
+//     即 ¥7 = $1 额度，折算率 7。支付渠道 CNY=支付宝、USD=Stripe。
+//   旧接口 /api/user/topup/info 仍回 enable_online_topup=false / 「充值入口暂未开放」、min_topup=20，
+//     但钱包页 canTopUp=true、paymentEnabled=true，offers 才是收银台实际数据源，以 offers 与页面为准。
+//   页面自定义金额 CNY ¥10–¥50,000、USD $10–$7,000；无档位折扣。
+//   「用量冲刺」是消费返赠（付费消耗每满 ¥100/$14.29 领 ¥5/$0.71），不是充值折扣，不并入比例。
+const RECHARGE_NOTE = "登录态 /api/v1/web/wallet/offers 取证：CNY 档 ¥20–¥2000、USD 档 $5/20/50/100，每档 bonus=0、fxRateUsdCny=7，¥20 到账 $2.857143 额度，即 ¥7 = $1 额度；支付渠道 CNY=支付宝、USD=Stripe；自定义金额 ¥10–¥50,000 / $10–$7,000，无档位折扣。旧接口 /api/user/topup/info 写 enable_online_topup=false、min_topup=20，与钱包页 canTopUp=true 不一致，以 offers 与页面为准。用量冲刺是消费返赠（满 ¥100 领 ¥5），不计入充值比例。";
 
 const PRICE_MAP = {
   base: "tokenflux",
@@ -61,7 +69,9 @@ const preset = {
   priceCurrencyVerified: true,
   priceCurrencyNote: "报文 input_price_micros 是 micro-USD per 1M，页面 ¥ 展示价 = micros ÷ 1e6 × usd_exchange_rate(7)；币种为美元额度，与 tokenflux 族一致。",
   rechargeAuto: false,
-  rechargeRateVerified: false,
+  rechargeRmb: 7,
+  rechargeCredits: 1,
+  rechargeRateVerified: true,
   rechargeRateNote: RECHARGE_NOTE,
   adapter: { kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
@@ -84,7 +94,9 @@ const pluginSource = {
       priceCurrencyVerified: true,
       priceCurrencyNote: stationInput.priceCurrencyNote || preset.priceCurrencyNote,
       rechargeAuto: false,
-      rechargeRateVerified: stationInput.rechargeRateVerified ?? false,
+      rechargeRmb: stationInput.rechargeRmb ?? 7,
+      rechargeCredits: stationInput.rechargeCredits ?? 1,
+      rechargeRateVerified: stationInput.rechargeRateVerified ?? true,
       rechargeRateNote: stationInput.rechargeRateNote || RECHARGE_NOTE,
       adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
     };
@@ -92,7 +104,7 @@ const pluginSource = {
   mode: "direct",
   responseFormat: "price-map",
   authType: "none",
-  rationale: "公开报价匿名可读；41 个模型（per_token 33 + fixed 8）按折后价映射；充值档位未取到登录态报文，rechargeRateVerified=false",
+  rationale: "公开报价匿名可读；41 个模型（per_token 33 + fixed 8）按折后价映射；充值比例 ¥7 = $1 额度，登录态 offers 取证",
   request: requestPolicy(() => DEFAULT_PRICING_ENDPOINT, { credentials: "omit" })
 };
 
