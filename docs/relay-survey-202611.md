@@ -12,12 +12,12 @@
 
 | 类 | 家数 | 判据 | 能否本轮适配 |
 | --- | ---: | --- | --- |
-| A 匿名直连 | 9（11 个域名） | `/api/pricing` 匿名返回 JSON，new-api 新版形状 | 能，只要插件声明 |
+| A 匿名直连 | 10（12 个域名） | `/api/pricing` 匿名返回 JSON，new-api 新版形状 | 能，只要插件声明 |
 | B 接口在但要 Authorization | 9 | 端点存在，401 `Authorization header is required` | 要登录态才能验证 |
 | C 纯 SPA | 8 | 所有 `/api/*` 回落到 index.html | 要浏览器渲染，或另找接口 |
 | D 不可达 | 9 | 5xx / DNS 失败 / Cloudflare 挑战 / 站点暂停 | 不能 |
 
-A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构一致：`data[]` + `group_ratio` + `usable_group` + `vendors`，模型条目里 `billing_mode: "tiered_expr"` 加 `billing_expr` 表达式。这一形状扩展里已有 `price-map` 的 `tokenflux` 基座覆盖，**新增站点只写声明，不动核心代码**（见 `plugin-development.md` 的「新增一个同形状站点不再需要动扩展代码」）。
+A 类 10 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构一致：`data[]` + `group_ratio` + `usable_group` + `vendors`，模型条目里 `billing_mode: "tiered_expr"` 加 `billing_expr` 表达式。这一形状扩展里已有 `price-map` 的 `tokenflux` 基座覆盖，**新增站点只写声明，不动核心代码**（见 `plugin-development.md` 的「新增一个同形状站点不再需要动扩展代码」）。
 
 ## A 类：匿名直连
 
@@ -32,6 +32,7 @@ A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构�
 | CoreCode | `corecode.live` | 28 | 7 | 7 | 14 | USD / `¤` | 1 | 6.8 | 1 |
 | CodeRelay | `coderelay.cn` | 54 | 16 | 3 | 21 | USD / `¤` | 1 | 1 | 1 |
 | packycode | `packycode.com` + `packyapi.com` | 78 | 25 | 13 | 0 | USD / `¤` | 1 | 7 | 7 |
+| Undy API | `undyapi.com` | 88 | 75 | 4 | 54 | USD / `¤` | 1 | 7.3 | 1 |
 
 `quota_per_unit` 全部是 500000，即 1 美元额度 = 500000 quota，与扩展的既有假设一致。
 
@@ -53,6 +54,7 @@ A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构�
 | CoreCode | 0.5, 0.7, 1, 1.2, 1.9, 2.05 |
 | CodeRelay | 0.06, 0.1, 0.15, 0.3, 0.5, 0.6, 0.65, 1.5 |
 | packycode | 0.3, 0.5, 0.8, 0.95, 1, 2.5, 2.8, 5, 7 |
+| Undy API | 0.37 起，共 40 档（0.37–11） |
 
 ### 币种与 ratio 基准
 
@@ -64,8 +66,9 @@ A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构�
 - **CoreCode**：`quota_display_type = USD`、`price = 1`、`usd_exchange_rate = 6.8`。`price` 与 `usd_exchange_rate` 冲突，标 `probable`，待页面核对。
 - **CodeRelay**：`USD`、`price = 1`、`usd_exchange_rate = 1`。判定 **¥1 = $1 额度**。
 - **packycode**：`price = 1`、`usd_exchange_rate = 7`、`custom_currency_exchange_rate = 7`。判定 **¥7 = $1 额度**。
+- **Undy API**：`price = 1`、`usd_exchange_rate = 7.3`、`custom_currency_exchange_rate = 1`、`quota_display_type = USD`、`stripe_unit_price = 8`。`price` 与 `usd_exchange_rate` 冲突，与 4Z / CoreCode / packycode 同类，按 `usd_exchange_rate` 记 **¥7.3 = $1 额度** 并标 `rechargeRateVerified: false`。
 
-`price` 与 `usd_exchange_rate` 不同值的三家（4Z、CoreCode、packycode）需要页面三证补齐，代码里先按 `usd_exchange_rate` 写并标 `rechargeRateVerified: false`。
+`price` 与 `usd_exchange_rate` 不同值的四家（4Z、CoreCode、packycode、Undy）需要页面三证补齐，代码里先按 `usd_exchange_rate` 写并标 `rechargeRateVerified: false`。
 
 ### 需要特别处理的报文差异
 
@@ -114,7 +117,6 @@ A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构�
 
 | 站点 | 域名 | 现象 |
 | --- | --- | --- |
-| Undy / Undying API | `undyapi.com` | 全路径 500；`vip.undyingapi.com` DNS 解析失败 |
 | Cubence | `cubence.com` / `shareyour.cc` | `cubence.com` 连接失败（`fetch failed`）；`shareyour.cc` 403 `DNS points to prohibited IP` |
 | 破晓 API | `poxiao.vip` | 连接失败 |
 | AiCodeEditor | `aicodeditor.com` | 连接失败 |
@@ -126,8 +128,56 @@ A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构�
 
 `aihub.top`、`sharedchat.fun` 只是被 CF 挑战挡住，换浏览器会话可解；其余需要站点恢复后重测。
 
+## 剩余站点：卖不卖模型 API
+
+判定依据是页面文案、JS bundle 里的路由与字段（`base_url` / `sk-` / `倍率` / `/console/token`）、以及 `/api/*` 的实响应。只按 token 或按次卖模型调用的算「卖」，卖成品客户端、卖订阅席位、卖算力任务的不算。
+
+### 确认卖模型 API
+
+| 站点 | 域名 | 依据 |
+| --- | --- | --- |
+| YesCode | `co.yes.vg` | 站内文案「API Router with billing and user management」 |
+| Crab-ai | `crab-ai.net` | 「统一接入模型与线路」；`/api/v1/store/products` 匿名 200 返回充值商品 |
+| daNew | `danew.ai` | bundle 含 `base_url` / `sk-` / `/pricing`；服务条款点名「API 中转、模型调用转售、账号额度分发」 |
+| Cubence | `cubence.com` | 「Multi-model AI API Gateway，兼容 Claude Code / Codex」（连接间歇失败） |
+| Right Code | `right.codes` | 「企业级 AI Agent 分发平台，一个 API Key 接入所有编程 Agent，按量计费」 |
+| AbuAPI | `abuai.chat` | 「AI API 网关与管理平台，统一接入 OpenAI / Anthropic / Gemini，支持渠道管理与额度控制」 |
+| 星驰公益 | `xingchiapi.com` | 「AI API Gateway」，公益额度站 |
+| xyai | `new.xychatai.com` | bundle 含 `baseUrl` / `sk-` / `倍率` / `卡密` |
+| AIAPI | `aiapi.codes` | `/api/status` 返回 new-api 特征 JSON |
+| 遥星AI | `yaoxing.best` | 标准 new-api，只关掉了匿名定价 |
+| 元流Token | `axis.yoga` + `api.axis.fan` | 「企业级 AI token 分发，OpenAI 兼容接口、API Key 管理与余额计费」 |
+| InitAPI | `initapi.ai` | 「AI API Gateway」 |
+| 奥特曼AI | `altmancode.com` | 「AI API Gateway」 |
+| AIHUB | `aihub.dog` | 「AI Gateway」 |
+| NexAIX | `nexaix.net` | 「可靠的 AI API 中转站，自有算力部署 Kimi K3 / GLM-5.2 / DeepSeek」（`.com` 是停放页，不是它） |
+
+其中 Undy 已在上一节做成插件；其余 15 家要登录态才能验定价，属于 B 类候选。
+
+### 不卖模型 API
+
+| 站点 | 域名 | 实际业务 |
+| --- | --- | --- |
+| Chat01 | `chat01.ai` | 订阅制 ChatGPT 镜像：$9.99 / $19.99 / $39.99 每月加积分包，没有 API Key 形态 |
+| 微溪API | `wxiai.com` | 「WXIAI社区 - AI 开源模型内容社区」，资讯、导航、文章 |
+| Vomni | `vomni.ai` | 积分加订阅的成品客户端，后端 `api.modelorbit.ai` 全 404 |
+| ModelOrbit | `modelorbit.ai` | 「AI image, video and audio workspace」，图像视频音频工作台 |
+| OxWork | `oxwork.cn` | 「AI Agent 智能办公助手」 |
+| AI4S / Apevon | `apevonscience.com` | 「AI for Science 平台 - 自主科研智能体」，订阅制 10 任务/月 |
+| AgentOne | `agentin.one` | FastAPI 的 Agent 平台（`accountPool` / `agentConsole` / `relay`），`/api/service-info` 匿名 200 |
+
+### 判不了
+
+| 站点 | 域名 | 现象 |
+| --- | --- | --- |
+| 破晓API | `poxiao.vip` | 连接失败 |
+| 奇遇API | `superqiyu.org` | ECONNRESET；`superqiyu.com` NXDOMAIN |
+| 福星AI | `fuxingapi.com` | 525 SSL handshake failed |
+| AiCodeEditor | `aicodeditor.com` | NXDOMAIN |
+| RawChat | `sharedchat.top` / `sharedchat.fun` | 548B 空壳页，公益站，无定价接口 |
+
 ## 本轮未解决的疑点
 
-1. 4Z API、CoreCode、packycode 的 `price` 与 `usd_exchange_rate` 语义冲突，缺页面这一证。
+1. 4Z API、CoreCode、packycode、Undy 的 `price` 与 `usd_exchange_rate` 语义冲突，缺页面这一证。
 2. 4Z API 与 packycode 的 `model_ratio` 基准未经表达式交叉验证（这两家没有 `billing_expr` 可对照），需要拿页面标价反推。
 3. `peak_offpeak` / `tiers` / `hour("UTC")` 这几种时段与档位加价当前不入价，采集值是基础档。
