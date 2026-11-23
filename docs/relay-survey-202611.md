@@ -4,6 +4,8 @@
 
 探测方式统一：`fetch` 直连，UA 为 Chrome 131，`redirect: follow`，超时 12–15s。原始报文落在 `out/recon/raw/`，抽路径的结果在 `out/recon/third/paths.json`。
 
+表里的模型数、分组数是抓取那一刻的值，不是长期承诺：中转站每天都在加减模型，快跑AI 在同一小时内从 118 个模型 / 15 个分组长到 123 / 19。要拿今天的数，重抓一遍 `/api/pricing` 自己数，别拿本文当准。
+
 ## 结论
 
 35 家分四类：
@@ -21,7 +23,7 @@ A 类 9 家全部是 new-api（`v1.0.0-rc.*` 或定制版本），报文结构�
 
 | 站点 | 域名 | 模型 | 分组 | 按次/张 | 带 expr | `quota_display_type` / 符号 | `price` | `usd_exchange_rate` | `custom_currency_exchange_rate` |
 | --- | --- | ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: |
-| 快跑AI | `kuaipao.pro` + `kuaipao.ai` | 118 | 15 | 6 | 50 | CUSTOM / `$` | 0.4 | 1 | 0.4 |
+| 快跑AI | `kuaipao.pro` + `kuaipao.ai` | 123 | 19 | 6 | 51 | CUSTOM / `$` | 0.4 | 1 | 0.4 |
 | PQH | `pqh.ai` | 108 | 53 | 4 | 64 | USD / `¤` | 7.3 | 7.3 | 1 |
 | 0ait | `0ait.com` | 72 | 37 | 4 | 53 | USD / `¤` | 7.3 | 7.3 | 1 |
 | 4Z API | `4zapi.com` | 323 | 80 | 114 | 0 | — / 空 | 1 | 6.68752 | 1 |

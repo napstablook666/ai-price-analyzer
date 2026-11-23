@@ -1,7 +1,7 @@
 # base: tokenflux
 # case: kuaipao
 # fixture: kuaipao-pricing.json
-# rows: 292 · unresolved: 18
+# rows: 296 · unresolved: 18
 # 更新：node scripts/price-map-golden.mjs --update
 # 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
 
@@ -84,9 +84,15 @@ deepseek-v4.1-flash-1017|China|忙时（8-22点）|3.6|14.4|0.072|-|-|-|-|USD|1.
 deepseek-v4.1-flash-1017|China|错峰（22点-次日8点）|1.8|7.2|0.036|-|-|-|-|USD|1.8|4
 deepseek-v4.1-flash|China|忙时（8-22点）|3.6|14.4|0.72|-|-|-|-|USD|1.8|4
 deepseek-v4.1-flash|China|错峰（22点-次日8点）|1.8|7.2|0.36|-|-|-|-|USD|1.8|4
+gemini-2.5-flash-thinking|gemini|标准|0.3|2.502|-|-|-|-|-|USD|1|8.34
+gemini-2.5-flash|gemini|标准|0.23|1.8|0.00700000000007|-|-|-|-|USD|1|7.826086956522
+gemini-3-flash|gemini|base|0.5|3|0.05|-|-|-|-|USD|1|6
 gemini-3.1-pro-preview|gemini_满血|0_200k|18|108|1.8|-|-|-|-|USD|9|6
 gemini-3.1-pro-preview|gemini_满血|200k_plus|36|162|3.6|-|-|-|-|USD|9|4.5
+gemini-3.5-flash|gemini|标准|1|9|0.15|-|-|-|-|USD|1|9
+gemini-3.6-flash|gemini|标准|1.5|7.5|0.15|-|-|-|-|USD|1|5
 gemini-3.8-flash|gemini_满血|标准|13.5|67.5|1.35|-|-|-|-|USD|9|5
+gemini-3.8-flash|gemini|标准|1.5|7.5|0.15|-|-|-|-|USD|1|5
 gemini-4-argon|gemini_满血|标准|18|90|0.9|-|-|-|-|USD|9|5
 glm-5.1|China|标准|10.8|43.2|2.34|-|-|-|-|USD|1.8|4
 glm-5.2|China|标准|14.4|50.4|3.6|-|-|-|-|USD|1.8|3.5
@@ -96,8 +102,6 @@ glm-5|China|标准|7.2|32.4|0.72|-|-|-|-|USD|1.8|4.5
 gpt-5.4|gpt_官转|标准|38.25|229.5|3.825|-|-|-|-|USD|15.3|6
 gpt-5.5|gpt_官转|long_context|153|688.5|3.825|-|-|-|-|USD|15.3|4.5
 gpt-5.5|gpt_官转|standard|76.5|459|3.825|-|-|-|-|USD|15.3|6
-gpt-5.6-luna|codex_vip|logn_context|0.35|2.1|0.035|0.4375|-|-|-|USD|0.875|6
-gpt-5.6-luna|codex_vip|standard|0.175|1.05|0.0175|0.21875|-|-|-|USD|0.875|6
 gpt-5.6-luna|gpt_官转|logn_context|6.12|36.72|0.612|7.65|-|-|-|USD|15.3|6
 gpt-5.6-luna|gpt_官转|standard|3.06|18.36|0.306|3.825|-|-|-|USD|15.3|6
 gpt-5.6-sol-openai-compact|codex|base|2.5|15|0.25|3.125|-|-|-|USD|0.5|6

@@ -88,7 +88,7 @@ export const GOLDEN_CASES = Object.freeze([
   // 2026-11-23 批次：9 家 new-api 中文转站的匿名全量报文。
   {
     name: "kuaipao", base: "tokenflux", fixture: "kuaipao-pricing.json",
-    note: "kuaipao.pro/.ai 同后端，118 模型 15 分组；expr 50、按次 6；¥0.4 = $1 额度",
+    note: "kuaipao.pro/.ai 同后端，123 模型 19 分组；expr 51、按次 6；¥0.4 = $1 额度",
     expectedUnresolved: [
       "doubao-seedance-2.0", "doubao-seedance-2.0-fast", "doubao-seedance-2.0-fast-官转",
       "doubao-seedance-2.0-mini", "doubao-seedance-2.0-mini-官转", "doubao-seedance-2.0-官转",
@@ -113,7 +113,11 @@ export const GOLDEN_CASES = Object.freeze([
   { name: "corecode", base: "tokenflux", fixture: "corecode-pricing.json", note: "corecode.live 28 模型 7 分组；expr 14、按次 7" },
   { name: "coderelay", base: "tokenflux", fixture: "coderelay-pricing.json", note: "coderelay.cn 54 模型 16 分组；expr 21、按次 3" },
   { name: "packycode", base: "tokenflux", fixture: "packycode-pricing.json", note: "packycode.com/.com 同后端 78 模型 25 分组；无 expr、按次 13；tiers 长上下文档（15 个模型）基座不读" },
-  { name: "4zapi", base: "relayrouter", fixture: "4zapi-pricing.json", note: "4zapi.com 与 openlux 同部署；323 模型抽 65 条（token 165/step 44/按次 114 各留样本），80 个分组倍率全留；无 expr" }
+  {
+    name: "4zapi", base: "relayrouter", fixture: "4zapi-pricing.json",
+    note: "4zapi.com 与 openlux 同部署；323 模型抽 67 条覆盖 token/step/按次三形态与 80 个分组倍率；无 expr",
+    expectedUnresolved: ["mj_custom_zoom", "mj_inpaint"]
+  }
 ]);
 
 // 暂时拿不到 fixture 的 base，理由必须写清楚。

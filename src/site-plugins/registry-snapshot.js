@@ -451,7 +451,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "kuaipao",
       "name": "快跑AI",
       "version": "0.24.0",
-      "description": "公开定价接口直连采集，118 个模型 15 个分组（倍率 0.2 ~ 15.3）；充值 1 美元额度 = ¥0.4",
+      "description": "公开定价接口直连采集，123 个模型 19 个分组（倍率 0.2 ~ 15.3）；充值 1 美元额度 = ¥0.4",
       "hosts": [
         "kuaipao.ai",
         "kuaipao.pro",

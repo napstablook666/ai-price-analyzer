@@ -6,7 +6,7 @@ import { DEFAULT_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-reg
 //   kuaipao.ai 与 kuaipao.pro 是同一后端：两域名的 /api/pricing 响应字节数完全一致（55190），
 //   /api/status 的 server_address 自报 https://kuaipao.ai，所以两个域名都挂在同一个插件下。
 //   报文是 new-api 新版形状：data[] + group_ratio + usable_group + vendors，模型条目带
-//   billing_expr 的有 50 个（tier("标准", p*x + c*y ...) 这类，系数即美元/百万 token），
+//   billing_expr 的有 51 个（tier("标准", p*x + c*y ...) 这类，系数即美元/百万 token），
 //   另有 6 个 quota_type = 1 的按次/按秒模型（如 qwen-audio-3.0-asr-flash 的 tier("按秒", p*0.0022)）。
 //   model_ratio 的基准与 tokenflux 基座一致（1 单位 = 2 美元/百万），不需要 ratioBase 覆盖：
 //   claude-opus-5-5 = 2（$4/M）、claude-sonnet-5 = 1（$2/M）、claude-fable-5-2 = 4（$8/M），
@@ -52,7 +52,7 @@ const pluginSource = {
   mode: "direct",
   responseFormat: "price-map",
   authType: "none",
-  rationale: "快跑AI 的 /api/pricing 匿名可读，118 个模型 15 个分组，充值口径按站点自报字段核过",
+  rationale: "快跑AI 的 /api/pricing 匿名可读，123 个模型 19 个分组，充值口径按站点自报字段核过",
   request: requestPolicy(() => DEFAULT_PRICING_ENDPOINT, { credentials: "omit" })
 };
 

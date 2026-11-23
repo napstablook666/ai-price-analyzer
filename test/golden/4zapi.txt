@@ -1,7 +1,7 @@
 # base: relayrouter
 # case: 4zapi
 # fixture: 4zapi-pricing.json
-# rows: 406 · unresolved: 0
+# rows: 406 · unresolved: 2
 # 更新：node scripts/price-map-golden.mjs --update
 # 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
 
@@ -411,3 +411,7 @@ viduq3-turbo|Vidu-1|标准|-|-|-|-|0.000970596|-|video|USD|0.66|1
 viduq3-turbo|Vidu-2|标准|-|-|-|-|0.001294128|-|video|USD|0.8800000000000001|1
 wan3.0-video|Alibaba-video-1|标准|-|-|-|-|0.00715|-|video|USD|0.7150000000000001|1
 wan3.0-video|Alibaba-video-2|标准|-|-|-|-|0.0077|-|video|USD|0.77|1
+
+# unresolved
+mj_custom_zoom=站点按次报价为 0，尚未确认免费，不参与比价
+mj_inpaint=站点按次报价为 0，尚未确认免费，不参与比价

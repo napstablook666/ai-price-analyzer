@@ -2168,6 +2168,54 @@
    "usage_count": 0,
    "type": 1,
    "available": true
+  },
+  {
+   "model_name": "mj_custom_zoom",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a324c83c5ca3.png",
+   "show_image_upload": 1,
+   "tags": "绘画,异步",
+   "model_type": "图像",
+   "vendor_id": 112,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "MJ-3"
+   ],
+   "supported_endpoint_types": [
+    "MJ action"
+   ],
+   "sort_order": 450,
+   "created_time": 1761935980,
+   "usage_count": 0,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "mj_inpaint",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a324ff052363.png",
+   "show_image_upload": 1,
+   "tags": "绘画,异步",
+   "model_type": "图像",
+   "vendor_id": 112,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "MJ-3"
+   ],
+   "supported_endpoint_types": [
+    "MJ action"
+   ],
+   "sort_order": 450,
+   "created_time": 1761934850,
+   "usage_count": 0,
+   "type": 1,
+   "available": true
   }
  ],
  "group_ratio": {

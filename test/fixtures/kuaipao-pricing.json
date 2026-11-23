@@ -2,64 +2,80 @@
  "auto_groups": [],
  "data": [
   {
-   "model_name": "qwen-audio-3.0-asr-flash",
-   "vendor_id": 20,
+   "model_name": "gemini-3.5-flash",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 9,
+   "cache_ratio": 0.15,
+   "enable_groups": [
+    "gemini"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 0,
+   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+  },
+  {
+   "model_name": "nano-banana-pro",
+   "description": "【模型介绍】\nNano Banana Pro 是 Google 推出的专业级 AI 图片生成与编辑模型，主打高质量视觉创作、复杂指令理解及精细画面控制，适用于商业设计、影视概念图、广告素材及专业内容制作。\n\n【核心能力】\n图片生成：支持文生图、图生图及图片编辑\n参考图片：支持多图参考与融合创作\n图片分辨率：最高支持 4K\n文字生成：支持复杂文字排版与多语言文字生成\n角色一致性：支持人物、角色及场景风格统一\n生成特点：专业画质、细节丰富、复杂构图、精准指令理解",
+   "vendor_id": 14,
    "quota_type": 0,
    "model_ratio": 37.5,
    "model_price": 0,
    "owner_by": "",
    "completion_ratio": 1,
+   "enable_groups": [
+    "gemini_绘图"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 28,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.0))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.5))\n  : tier(\"2K\", fixed(0.75))\n) * image_count"
+  },
+  {
+   "model_name": "claude-sonnet-4-5-20250929",
+   "description": "Claude Sonnet 4.5 is an AI model provided by qihang-ai.",
+   "tags": "Reasoning,Tools,Files,Vision,200K",
+   "vendor_id": 22,
+   "quota_type": 0,
+   "model_ratio": 1.496,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "krio_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "mimo-v2.6-pro",
+   "quota_type": 0,
+   "model_ratio": 2.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2.024390243902,
+   "cache_ratio": 0.008463414634,
    "enable_groups": [
     "China"
    ],
    "supported_endpoint_types": [
     "openai"
    ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "tier(\"按秒\", p * 0.0022)",
-   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
-  },
-  {
-   "model_name": "gpt-6-sol",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex",
-    "codex_vip",
-    "default",
-    "default_特价",
-    "gpt_官转"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5) : tier(\"long_context\", p * 4 + c * 15 + cr * 0.4 + cc * 5)"
-  },
-  {
-   "model_name": "doubao-seedance-2.5",
-   "description": "【模型介绍】 Seedance 2.5 新一代 AI 视频生成模型，支持更丰富的多模态参考、视频编辑与长视频生成，适合高品质影视及创意内容制作。 【核心能力】 参考图片：最多 30 张 参考视频：最多 10 段 参考音频：最多 10 段 参考素材：合计最多 50 个 首尾帧：支持 生成时长：4-30 秒 分辨率：720P / 1080P 音频生成：支持音画同步 视频编辑：支持编辑与延长 生成特点：长视频、多模态参考、精准编辑",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 15,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\" || (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P/720P-含视频输入\", (c > 0 ? c : 250000) * 28.94)\n      : tier(\"480P/720P-不含视频输入\", (c > 0 ? c : 250000) * 48.23))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 31.69)\n      : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 53.05))"
+   "sort_order": 0
   },
   {
    "model_name": "qwen-audio-3.1-asr-flash-message",
@@ -69,6 +85,151 @@
    "model_price": 0,
    "owner_by": "",
    "completion_ratio": 0.75,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.6-plus",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.8-max",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-image-2",
+   "description": "主打稳定、均衡的图片生成体验，兼顾画面质量与日常创作需求，适合文生图、图片编辑、海报设计及各类常规视觉创作。",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "codex",
+    "default",
+    "gpt_绘图"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 23,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
+  },
+  {
+   "model_name": "grok-4.6",
+   "vendor_id": 15,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "default",
+    "grok"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "grok-image",
+   "vendor_id": 15,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.1,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "default",
+    "grok"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-haiku-5-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "ccmax_claude",
+    "claude_code",
+    "krio_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 100000 ? tier(\"base\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.2) : len > 100000 ? tier(\"long_context\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 1) : tier(\"第3档\", p * 0 + c * 0)"
+  },
+  {
+   "model_name": "kimi-k2.6",
+   "vendor_id": 19,
+   "quota_type": 0,
+   "model_ratio": 3.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4.153846153846,
+   "cache_ratio": 0.092307692308,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.6-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
    "enable_groups": [
     "China"
    ],
@@ -95,26 +256,27 @@
    "sort_order": 0
   },
   {
-   "model_name": "claude-haiku-4.5",
-   "vendor_id": 10,
+   "model_name": "gemini-3.1-pro-preview",
+   "vendor_id": 14,
    "quota_type": 0,
-   "model_ratio": 0.5,
+   "model_ratio": 37.5,
    "model_price": 0,
    "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.5,
+   "completion_ratio": 4,
    "enable_groups": [
-    "claude_code"
+    "gemini_满血"
    ],
    "supported_endpoint_types": [
-    "anthropic",
+    "gemini",
     "openai"
    ],
-   "sort_order": 0
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + c * 12 + cr * 0.2) : tier(\"200k_plus\", p * 4 + c * 18 + cr * 0.4)"
   },
   {
-   "model_name": "doubao-seedance-2.0-mini",
-   "description": "【模型介绍】 Seedance 2.0 Mini 轻量级 AI 视频生成模型，支持多模态参考与音画同步，主打低成本、高效率的视频创作。 【核心能力】 参考图片：最多 9 张 参考视频：最多 3 段 参考音频：最多 3 段 首尾帧：支持 生成时长：4–15 秒 分辨率：480P / 720P 音频生成：支持音画同步 生成特点：低成本、多模态创作",
+   "model_name": "doubao-seedance-2.5",
+   "description": "【模型介绍】 Seedance 2.5 新一代 AI 视频生成模型，支持更丰富的多模态参考、视频编辑与长视频生成，适合高品质影视及创意内容制作。 【核心能力】 参考图片：最多 30 张 参考视频：最多 10 段 参考音频：最多 10 段 参考素材：合计最多 50 个 首尾帧：支持 生成时长：4-30 秒 分辨率：720P / 1080P 音频生成：支持音画同步 视频编辑：支持编辑与延长 生成特点：长视频、多模态参考、精准编辑",
    "vendor_id": 12,
    "quota_type": 0,
    "model_ratio": 37.5,
@@ -127,9 +289,126 @@
    "supported_endpoint_types": [
     "openai"
    ],
-   "sort_order": 1,
+   "sort_order": 15,
    "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 14.0)\n        : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 23.0)\n    )\n  : (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 14.0)\n        : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 23.0)\n    )"
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\" || (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P/720P-含视频输入\", (c > 0 ? c : 250000) * 28.94)\n      : tier(\"480P/720P-不含视频输入\", (c > 0 ? c : 250000) * 48.23))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 31.69)\n      : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 53.05))"
+  },
+  {
+   "model_name": "doubao-seedance-2.5-特价",
+   "description": "【模型介绍】 Seedance 2.5 新一代 AI 视频生成模型，支持更丰富的多模态参考、视频编辑与长视频生成，适合高品质影视及创意内容制作。 【核心能力】 参考图片：最多 30 张 参考视频：最多 10 段 参考音频：最多 10 段 参考素材：合计最多 50 个 首尾帧：支持 生成时长：4-30 秒 分辨率：720P / 1080P 音频生成：支持音画同步 视频编辑：支持编辑与延长 生成特点：长视频、多模态参考、精准编辑\n\n",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 30,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"480P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.5)\n      : tier(\"480P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.5))\n  : (param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"720P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.8)\n      : tier(\"720P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.8))\n  : ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"1080P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 1.3)\n      : tier(\"1080P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 1.3))"
+  },
+  {
+   "model_name": "wan3.0-video",
+   "description": "阿里云百炼万相 3.0。支持文生、首帧、首尾帧，以及参考图、参考视频、参考音频、文件和网页。输出 480P、720P、1080P，时长 2 到 30 秒。计费时长（参考视频时长+生成视频时长）\n\n\n",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 26,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"1080\")\n  ? tier(\"1080P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.6)\n  : has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"480\")\n    ? tier(\"480P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.15)\n    : tier(\"720P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.3)"
+  },
+  {
+   "model_name": "grok-imagine-video-1.5-preview",
+   "description": "【模型介绍】\nGrok Imagine Video 1.5 Preview 是 xAI 推出的 AI 视频生成模型，支持文本与图片驱动的视频创作，适用于创意短视频、广告宣传及动态视觉内容制作。\n\n【核心能力】\n文生视频：支持通过文字描述生成视频\n图生视频：支持参考图片生成动态视频\n参考图片：支持图片输入\n视频生成：支持自定义视频内容与动态效果\n生成时长：以实际接口支持为准\n分辨率：以实际接口支持为准\n音频生成：以实际接口支持为准\n生成特点：创意生成、动态表现、智能视频创作",
+   "vendor_id": 15,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 18,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"视频生成-按秒计费\",\n  max(\n    5,\n    float(\n      param(\"metadata.duration\") ??\n      param(\"duration\") ??\n      param(\"seconds\") ??\n      5\n    )\n  ) * 0.09\n)"
+  },
+  {
+   "model_name": "claude-opus-4-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "krio_claude",
+    "ccmax_claude",
+    "claude_code"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "deepseek-v4-flash-vision-exp",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "hour(\"Asia/Shanghai\") >= 9 && hour(\"Asia/Shanghai\") < 18\n  ? tier(\"忙时（9-18点）\",        p * 7.5  + c * 22.5  + cr * 0.25)\n  : tier(\"错峰（18点-次日9点）\",  p * 3.75  + c * 11.25 + cr * 0.125)"
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "default",
+    "default_特价",
+    "gpt_官转",
+    "codex",
+    "codex_vip"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000\n? tier(\"standard\", p * 8 + c * 40 + cr * 0.4 + cc * 10)\n: tier(\"long_context\", p * 16 + c * 60 + cr * 0.8 + cc * 20)"
   },
   {
    "model_name": "gpt-5.5",
@@ -148,6 +427,310 @@
    "sort_order": 0,
    "billing_mode": "tiered_expr",
    "billing_expr": "len <= 272000\n  ? tier(\"standard\", p * 5 + c * 30 + cr * 0.25)\n  : tier(\"long_context\", p * 10 + c * 45 + cr * 0.25)"
+  },
+  {
+   "model_name": "qwen-audio-3.1-asr-flash-filetrans",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.375,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.8-omni-flash-realtime",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "image_ratio": 1,
+   "audio_ratio": 4,
+   "audio_completion_ratio": 2,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gemini-2.5-flash",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 0.115,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 7.826086956522,
+   "cache_ratio": 0.030434782609,
+   "enable_groups": [
+    "gemini"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "doubao-seedance-2.0",
+   "description": "【模型介绍】 Seedance 2.0 高品质 AI 视频生成模型，支持多模态参考、视频编辑与音画同步，适合专业级视频创作。 【核心能力】 参考图片：最多 9 张 参考视频：最多 3 段 参考音频：最多 3 段 首尾帧：支持 生成时长：4–15 秒 分辨率：480P / 720P / 1080P 音频生成：支持音画同步 生成特点：高清画质、多模态创作",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 9,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 18.67)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 30.67))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 18.67)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 30.67))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"1080p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 20.67)\n      : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 34.00))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"4K-含视频输入\", (c > 0 ? c : 250000) * 10.67)\n      : tier(\"4K-不含视频输入\", (c > 0 ? c : 250000) * 17.34))"
+  },
+  {
+   "model_name": "doubao-seedance-2.5-flash-官转",
+   "description": "【模型介绍】\nSeedance 2.5 Flash 是字节跳动推出的新一代高速 AI 视频生成模型，主打高效创作与多模态素材融合，支持复杂镜头设计、视频编辑及音画同步，适用于 AI 短剧、影视分镜、广告及短视频制作。\n\n【核心能力】\n参考图片：最多 10 张\n参考视频：最多 5 段\n参考音频：最多 5 段\n首尾帧：支持\n生成时长：4–30 秒\n分辨率：支持 480P、720P\n视频生成：支持文生视频、图生视频、全模态参考生视频\n视频编辑：支持视频编辑及视频延长\n音频生成：支持有声视频及音画同步\n\n【生成特点】\n高速生成、多素材融合、智能镜头控制、高效视频创作。",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 29,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 23.4)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 38.4))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 23.4)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 38.4))"
+  },
+  {
+   "model_name": "glm-5.2",
+   "vendor_id": 9,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "hy3",
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt_官转",
+    "codex",
+    "codex_vip",
+    "default",
+    "default_特价"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000\n? tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5)\n: tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 5)"
+  },
+  {
+   "model_name": "muse-video",
+   "description": "【模型介绍】\n\nMuse Video AI 长视频生成模型，支持最长 3 分钟视频生成及多图参考，适用于长视频创作、剧情内容、短剧及创意视频制作。\n\n【核心能力】\n\n参考图片：最多 4 张\n\n生成时长：最长 180 秒（3 分钟）\n\n视频分辨率：720P（仅支持）\n\n计费方式：按秒计费\n\n生成价格：0.62 元/秒\n\n生成特点：长视频生成、多图参考、剧情内容创作、多场景视频制作",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 24,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"720p按秒\", min(max(float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? 4), 4), 180) * 0.2)"
+  },
+  {
+   "model_name": "wan3.0-video-prime",
+   "description": "阿里云百炼万相 3.0 高速版。请求参数与 wan3.0-video 相同，输出 480P、720P、1080P，时长 2 到 30 秒。计费时长（参考视频时长+生成视频时长）\n\n\n",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 25,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"1080\")\n  ? tier(\"1080P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 1.2)\n  : has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"480\")\n    ? tier(\"480P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.3)\n    : tier(\"720P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.6)"
+  },
+  {
+   "model_name": "qwen-audio-3.0-realtime-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 30,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.7-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "tongyi-xiaomi-analysis-pro",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2.7,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-5.6-luna",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt_官转"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 272000 ? tier(\"standard\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25) : tier(\"logn_context\", p * 0.4 + c * 2.4 + cr * 0.04 + cc * 0.5)"
+  },
+  {
+   "model_name": "claude-haiku-4-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 0.545,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "ccmax_claude",
+    "claude_code",
+    "krio_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen-audio-3.1-realtime-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.7-max-preview",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
   },
   {
    "model_name": "doubao-seedance-2.0-mini-官转",
@@ -170,6 +753,83 @@
    "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 9.34)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 15.34))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 9.34)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 15.34))"
   },
   {
+   "model_name": "claude-fable-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "claude_官转",
+    "krio_claude",
+    "ccmax_claude",
+    "claude_code"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-opus-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "krio_claude",
+    "ccmax_claude",
+    "claude_code",
+    "claude_官转"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.7-max",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "deepseek-v4-flash-0731",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 3.33  + c * 9.99  + cr * 0.33)\n  : tier(\"错峰（22点-次日8点）\",  p * 1.66 + c * 14.99 + cr * 0.166)"
+  },
+  {
    "model_name": "deepseek-v4.1-flash-1017-特价",
    "vendor_id": 4,
    "quota_type": 0,
@@ -188,43 +848,29 @@
    "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 0.34 + c * 1.34 + cr * 0.0067)\n  : tier(\"错峰（22点-次日8点）\",  p * 0.17 + c * 0.37 + cr * 0.0034)"
   },
   {
-   "model_name": "qwen-audio-3.1-tts-next",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 3,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "grok-4.7",
-   "vendor_id": 15,
+   "model_name": "gpt-image-2.6-sunburst",
+   "description": "主打高画质与精细创作，更注重画面细节、复杂场景表现及图片编辑效果，适合商业设计、专业修图和高品质视觉创作。",
+   "vendor_id": 1,
    "quota_type": 0,
    "model_ratio": 37.5,
    "model_price": 0,
    "owner_by": "",
-   "completion_ratio": 1,
+   "completion_ratio": 2,
    "enable_groups": [
-    "default",
-    "grok"
+    "gpt_绘图",
+    "codex",
+    "default"
    ],
    "supported_endpoint_types": [
     "openai"
    ],
-   "sort_order": 0,
+   "sort_order": 22,
    "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + cr * 0.5 + c * 6) : tier(\"200k_plus\", p * 4 + cr * 1 + c * 12)"
+   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
   },
   {
-   "model_name": "nano-banana-pro",
-   "description": "【模型介绍】\nNano Banana Pro 是 Google 推出的专业级 AI 图片生成与编辑模型，主打高质量视觉创作、复杂指令理解及精细画面控制，适用于商业设计、影视概念图、广告素材及专业内容制作。\n\n【核心能力】\n图片生成：支持文生图、图生图及图片编辑\n参考图片：支持多图参考与融合创作\n图片分辨率：最高支持 4K\n文字生成：支持复杂文字排版与多语言文字生成\n角色一致性：支持人物、角色及场景风格统一\n生成特点：专业画质、细节丰富、复杂构图、精准指令理解",
+   "model_name": "nano-banana-2",
+   "description": "【模型介绍】\nNano Banana 2 是 Google 推出的新一代 AI 图片生成与编辑模型，兼顾生成速度、画面质量与创作效率，适用于日常出图、角色设计、场景生成及商业视觉创作。\n\n【核心能力】\n图片生成：支持文生图、图生图及图片编辑\n参考图片：支持多图参考与融合创作\n图片分辨率：最高支持 4K\n文字生成：支持图片内文字生成与排版\n角色一致性：支持保持人物及主体特征\n生成特点：快速出图、高性价比、高清画质、多场景创作",
    "vendor_id": 14,
    "quota_type": 0,
    "model_ratio": 37.5,
@@ -238,23 +884,227 @@
     "gemini",
     "openai"
    ],
-   "sort_order": 28,
+   "sort_order": 27,
    "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.0))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.5))\n  : tier(\"2K\", fixed(0.75))\n) * image_count"
+   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(0.9))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.4))\n  : tier(\"2K\", fixed(0.6))\n) * image_count"
   },
   {
-   "model_name": "claude-fable-5-2",
-   "vendor_id": 10,
+   "model_name": "gpt-5.4",
+   "vendor_id": 1,
    "quota_type": 0,
-   "model_ratio": 4,
+   "model_ratio": 1.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "gpt_官转"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "seedance-2.5-按次",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 32,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"按次\", 3.34)"
+  },
+  {
+   "model_name": "mimo-v2.6-flash",
+   "quota_type": 0,
+   "model_ratio": 0.69,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2.007246376812,
+   "cache_ratio": 0.020072463768,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen-audio-3.0-tts-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"按秒\", p *100)"
+  },
+  {
+   "model_name": "gpt-image-2.5-flare",
+   "description": "主打快速出图与高效创作，生成速度更快，适合批量出图、日常设计、社交媒体素材及快速创意测试。",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "codex",
+    "default",
+    "gpt_绘图"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 19,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
+  },
+  {
+   "model_name": "gemini-3.8-flash",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 0.75,
    "model_price": 0,
    "owner_by": "",
    "completion_ratio": 5,
-   "cache_ratio": 0.025,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "gemini_满血",
+    "gemini"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
    "enable_groups": [
     "claude_code",
     "claude_官转",
+    "krio_claude",
     "ccmax_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "kimi-k2.5",
+   "vendor_id": 19,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5.25,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "tongyi-xiaomi-analysis-flash",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gemini-4-argon",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "gemini_满血"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude_code",
+    "krio_claude",
+    "ccmax_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-opus-5-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "ccmax_claude",
+    "claude_code",
+    "claude_官转",
+    "krio_claude"
    ],
    "supported_endpoint_types": [
     "anthropic",
@@ -286,22 +1136,6 @@
    "sort_order": 0
   },
   {
-   "model_name": "qwen3.7-text-embedding",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.35,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
    "model_name": "qwen3.8-27b",
    "vendor_id": 20,
    "quota_type": 0,
@@ -319,6 +1153,317 @@
    "sort_order": 0
   },
   {
+   "model_name": "MiniMax/MiniMax-M3",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 2.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "default_特价",
+    "gpt_官转",
+    "codex",
+    "codex_vip",
+    "default"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5) : tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 5)"
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "description": "主打高画质与精细创作，更注重画面细节、复杂场景表现及图片编辑效果，适合商业设计、专业修图和高品质视觉创作。",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "codex",
+    "default",
+    "gpt_绘图"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 21,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
+  },
+  {
+   "model_name": "doubao-seedance-2.5-官转",
+   "description": "【模型介绍】\nSeedance 2.5 新一代 AI 视频生成模型，支持更丰富的多模态参考、视频编辑与长视频生成，适合高品质影视及创意内容制作。\n\n【核心能力】\n参考图片：最多 30 张\n参考视频：最多 10 段\n参考音频：最多 10 段\n参考素材：合计最多 50 个\n首尾帧：支持\n生成时长：4-30 秒\n分辨率：480P / 720P\n音频生成：支持音画同步\n视频编辑：支持编辑与延长\n生成特点：长视频、多模态参考、精准编辑",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 16,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(\n  param(\"metadata.resolution\") ??\n  param(\"size\") ??\n  \"720p\"\n) == \"480p\"\n  ? (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 37.34)\n        : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 62.23)\n    )\n  : (\n      param(\"metadata.resolution\") ??\n      param(\"size\") ??\n      \"720p\"\n    ) == \"720p\"\n  ? (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 37.34)\n        : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 62.23)\n    )\n  : (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 40.89)\n        : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 68.45)\n    )"
+  },
+  {
+   "model_name": "mimo-v2.5",
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "minimax-h3",
+   "description": "【模型介绍】\nMiniMax H3 高品质 AI 视频生成模型，支持多模态参考、视频编辑与原生音画同步，适用于专业影视、广告及创意短视频制作。\n\n【核心能力】\n参考图片：最多 9 张\n参考视频：最多 3 段\n参考音频：最多 3 段\n参考素材：合计最多 12 个\n首尾帧：支持\n生成时长：4–15 秒\n分辨率：768P / 2K\n音频生成：支持原生音画同步\n视频编辑：支持视频编辑与动作迁移\n生成特点：高清画质、多模态参考、精准控制",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 17,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"768p按秒\", min(max(float(param(\"duration\") ?? param(\"seconds\") ?? param(\"metadata.duration\") ?? 4), 4), 15) * 0.15)"
+  },
+  {
+   "model_name": "gemini-3-flash",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gemini"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.5 + c * 3 + cr * 0.05)"
+  },
+  {
+   "model_name": "qwen-audio-3.1-tts-next",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 3,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-5.6-sol-openai-compact",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "default_特价",
+    "codex",
+    "default"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"tier_2\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "codex",
+    "codex_vip",
+    "default",
+    "default_特价",
+    "gpt_官转"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5) : tier(\"long_context\", p * 4 + c * 15 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "doubao-seedance-2.0-特价",
+   "description": "【模型介绍】 Seedance 2.0 高品质 AI 视频生成模型，支持多模态参考、视频编辑与音画同步，适合专业级视频创作。 【核心能力】 参考图片：最多 9 张 参考视频：最多 3 段 参考音频：最多 3 段 首尾帧：支持 生成时长：4–15 秒 分辨率：480P / 720P / 1080P 音频生成：支持音画同步 生成特点：高清画质、多模态创作",
+   "tags": "价格参考,【480p0.35/秒】,【720p0.6/秒】,【1080p1.0/秒】",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 8,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"480P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.35)\n      : tier(\"480P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.35))\n  : (param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"720P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.6)\n      : tier(\"720P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.6))\n  : ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"1080P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 1)\n      : tier(\"1080P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 1))"
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "ccmax_claude",
+    "claude_code",
+    "claude_官转",
+    "krio_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen-audio-3.0-asr-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"按秒\", p * 0.0022)"
+  },
+  {
+   "model_name": "gpt-5.6-terra",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt_官转",
+    "codex",
+    "codex_vip",
+    "default",
+    "default_特价"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 272000 ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5) : tier(\"logn_context\", p * 4 + c * 18 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "gemini-3.6-flash",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "gemini"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "enable_groups": [
+    "ccmax_claude",
+    "claude_code",
+    "claude_官转"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
    "model_name": "claude-haiku-4-5-20251001",
    "description": "Claude Haiku 4.5 is an AI model provided by qihang-ai.",
    "tags": "Reasoning,Tools,Files,Vision,200K",
@@ -331,29 +1476,8 @@
    "cache_ratio": 0.1,
    "create_cache_ratio": 1.25,
    "enable_groups": [
-    "ccmax_claude",
-    "claude_code"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-opus-4-6",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 2.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "create_cache_ratio": 1.25,
-   "enable_groups": [
-    "ccmax_claude",
     "claude_code",
-    "krio_claude"
+    "ccmax_claude"
    ],
    "supported_endpoint_types": [
     "anthropic",
@@ -362,30 +1486,13 @@
    "sort_order": 0
   },
   {
-   "model_name": "glm-5.3-flash",
+   "model_name": "glm-5",
    "vendor_id": 9,
    "quota_type": 0,
-   "model_ratio": 0.4,
+   "model_ratio": 2,
    "model_price": 0,
    "owner_by": "",
-   "completion_ratio": 3.5,
-   "cache_ratio": 0.2875,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "kimi-k3",
-   "vendor_id": 19,
-   "quota_type": 0,
-   "model_ratio": 10,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
+   "completion_ratio": 4.5,
    "cache_ratio": 0.1,
    "enable_groups": [
     "China"
@@ -396,18 +1503,50 @@
    "sort_order": 0
   },
   {
-   "model_name": "qwen3.8-max",
+   "model_name": "MiniMax-M2.5",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 1.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen-image-2.0-pro",
    "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 6,
-   "model_price": 0,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.5,
    "owner_by": "",
-   "completion_ratio": 3,
-   "cache_ratio": 0.1,
+   "completion_ratio": 0,
    "enable_groups": [
     "China"
    ],
    "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gemini-2.5-flash-thinking",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.34,
+   "enable_groups": [
+    "gemini"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
     "openai"
    ],
    "sort_order": 0
@@ -434,6 +1573,333 @@
    "sort_order": 0
   },
   {
+   "model_name": "kimi/kimi-k3",
+   "vendor_id": 19,
+   "quota_type": 0,
+   "model_ratio": 10,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.8-2.4t-a95b",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-haiku-4.5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.5,
+   "enable_groups": [
+    "claude_code"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "codex_vip",
+    "default",
+    "default_特价",
+    "gpt_官转",
+    "codex"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"tier_2\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
+  },
+  {
+   "model_name": "claude-opus-4.7",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "ccmax_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "gpt-6.1-terra",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt_官转",
+    "codex",
+    "codex_vip",
+    "default",
+    "default_特价"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 5 + cr * 0.05 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 7.5 + cr * 0.1 + cc * 2.5)"
+  },
+  {
+   "model_name": "doubao-seedance-2.0-官转",
+   "description": "【模型介绍】\nSeedance 2.0 高品质 AI 视频生成模型，支持多模态参考、视频编辑与音画同步，适合专业级视频创作。\n\n【核心能力】\n参考图片：最多 9 张\n参考视频：最多 3 段\n参考音频：最多 3 段\n首尾帧：支持\n生成时长：4–15 秒\n分辨率：480P / 720P / 1080P\n音频生成：支持音画同步\n生成特点：高清画质、多模态创作",
+   "tags": "价格参考,【480p约0.34/秒】,【720p约0.75/秒】,【1080p约1.5/秒】,官方url",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 10,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 24.3)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 39.9))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 24.3)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 39.9))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"1080p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 26.9)\n      : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 44.2))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"4K-含视频输入\", (c > 0 ? c : 250000) * 13.9)\n      : tier(\"4K-不含视频输入\", (c > 0 ? c : 250000) * 22.6))"
+  },
+  {
+   "model_name": "qwen3.7-text-embedding",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.35,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "grok-4.7",
+   "vendor_id": 15,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "default",
+    "grok"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + cr * 0.5 + c * 6) : tier(\"200k_plus\", p * 4 + cr * 1 + c * 12)"
+  },
+  {
+   "model_name": "glm-5.3-flash",
+   "vendor_id": 9,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.2875,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3.7-text-embedding-flash",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 0.0625,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "wan2.7-image",
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.2,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "claude-sonnet-4-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "claude_code",
+    "krio_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "doubao-seedance-2.0-fast-官转",
+   "description": "【模型介绍】\nSeedance 2.0 Fast 高速 AI 视频生成模型，兼顾生成速度、画质与成本，适合短视频及创意内容制作。\n\n【核心能力】\n参考图片：最多 9 张\n参考视频：最多 3 段\n参考音频：最多 3 段\n首尾帧：支持\n生成时长：4–15 秒\n分辨率：480P / 720P\n音频生成：支持音画同步\n生成特点：高速生成、高效创作",
+   "tags": "价格参考,【480p约0.22/秒】,【720p约0.48/秒】,官方url",
+   "vendor_id": 12,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 7,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 14.7)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 24.7))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 14.7)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 24.7))"
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 1,
+   "enable_groups": [
+    "ccmax_claude",
+    "claude_code",
+    "claude_官转",
+    "krio_claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "kimi-k3",
+   "vendor_id": 19,
+   "quota_type": 0,
+   "model_ratio": 10,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3-tts-flash-realtime",
+   "vendor_id": 20,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 1,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
+   "model_name": "qwen3-vl-plus",
+   "vendor_id": 20,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 10,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0
+  },
+  {
    "model_name": "claude-opus-4-7",
    "vendor_id": 10,
    "quota_type": 0,
@@ -443,10 +1909,10 @@
    "completion_ratio": 5,
    "cache_ratio": 0.1,
    "enable_groups": [
-    "krio_claude",
-    "ccmax_claude",
     "claude_code",
-    "claude_官转"
+    "claude_官转",
+    "krio_claude",
+    "ccmax_claude"
    ],
    "supported_endpoint_types": [
     "anthropic",
@@ -455,13 +1921,32 @@
    "sort_order": 0
   },
   {
-   "model_name": "qwen-audio-3.0-realtime-flash",
-   "vendor_id": 20,
+   "model_name": "deepseek-v4-pro-0813",
+   "vendor_id": 4,
    "quota_type": 0,
-   "model_ratio": 2.5,
+   "model_ratio": 37.5,
    "model_price": 0,
    "owner_by": "",
-   "completion_ratio": 30,
+   "completion_ratio": 1,
+   "enable_groups": [
+    "China"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 0,
+   "billing_mode": "tiered_expr",
+   "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 10  + c * 30 + cr * 1)\n  : tier(\"错峰（22点-次日8点）\",  p * 5 + c * 15 + cr * 0.5)"
+  },
+  {
+   "model_name": "glm-5.3",
+   "vendor_id": 9,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
    "enable_groups": [
     "China"
    ],
@@ -491,90 +1976,6 @@
    "sort_order": 2
   },
   {
-   "model_name": "MiniMax-M2.5",
-   "vendor_id": 8,
-   "quota_type": 0,
-   "model_ratio": 1.05,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 4,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-5.6-terra-openai-compact",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 6,
-   "enable_groups": [
-    "codex",
-    "default"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2.5 + c * 15 + cr * 0.25 + cc * 3.13) : tier(\"tier_2\", p * 5 + c * 22.5 + cr * 0.5 + cc * 6.25)"
-  },
-  {
-   "model_name": "deepseek-v4-flash-0731",
-   "vendor_id": 4,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 3.33  + c * 9.99  + cr * 0.33)\n  : tier(\"错峰（22点-次日8点）\",  p * 1.66 + c * 14.99 + cr * 0.166)"
-  },
-  {
-   "model_name": "mimo-v2.6-flash",
-   "quota_type": 0,
-   "model_ratio": 0.69,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2.007246376812,
-   "cache_ratio": 0.020072463768,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "wan2.7-image",
-   "quota_type": 1,
-   "model_ratio": 0,
-   "model_price": 0.2,
-   "owner_by": "",
-   "completion_ratio": 0,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
    "model_name": "gpt-6-astra",
    "vendor_id": 1,
    "quota_type": 0,
@@ -595,27 +1996,6 @@
    "sort_order": 0,
    "billing_mode": "tiered_expr",
    "billing_expr": "len <= 272000\n  ? tier(\"standard\", p * 10 + c * 50 + cr * 1 + cc * 12.5)\n  : tier(\"long_context\", p * 20 + c * 75 + cr * 2 + cc * 25)"
-  },
-  {
-   "model_name": "gpt-image-2.5-sunburst",
-   "description": "主打高画质与精细创作，更注重画面细节、复杂场景表现及图片编辑效果，适合商业设计、专业修图和高品质视觉创作。",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex",
-    "default",
-    "gpt_绘图"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 21,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
   },
   {
    "model_name": "gpt-image-2.6-flare",
@@ -656,277 +2036,7 @@
    "sort_order": 0
   },
   {
-   "model_name": "glm-5.1",
-   "vendor_id": 9,
-   "quota_type": 0,
-   "model_ratio": 3,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 4,
-   "cache_ratio": 0.216666666667,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen-audio-3.0-tts-flash",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "tier(\"按秒\", p *100)"
-  },
-  {
-   "model_name": "tongyi-xiaomi-analysis-flash",
-   "vendor_id": 2,
-   "quota_type": 0,
-   "model_ratio": 0.1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-image-2",
-   "description": "主打稳定、均衡的图片生成体验，兼顾画面质量与日常创作需求，适合文生图、图片编辑、海报设计及各类常规视觉创作。",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex",
-    "default",
-    "gpt_绘图"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 23,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
-  },
-  {
-   "model_name": "muse-video",
-   "description": "【模型介绍】\n\nMuse Video AI 长视频生成模型，支持最长 3 分钟视频生成及多图参考，适用于长视频创作、剧情内容、短剧及创意视频制作。\n\n【核心能力】\n\n参考图片：最多 4 张\n\n生成时长：最长 180 秒（3 分钟）\n\n视频分辨率：720P（仅支持）\n\n计费方式：按秒计费\n\n生成价格：0.62 元/秒\n\n生成特点：长视频生成、多图参考、剧情内容创作、多场景视频制作",
-   "vendor_id": 6,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 24,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "tier(\"720p按秒\", min(max(float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? 4), 4), 180) * 0.2)"
-  },
-  {
-   "model_name": "qwen3.6-flash",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.6,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 6,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3.6-plus",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 6,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gemini-3.8-flash",
-   "vendor_id": 14,
-   "quota_type": 0,
-   "model_ratio": 0.75,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "gemini_满血"
-   ],
-   "supported_endpoint_types": [
-    "gemini",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-opus-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 2.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "claude_code",
-    "claude_官转",
-    "krio_claude",
-    "ccmax_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "glm-5.3",
-   "vendor_id": 9,
-   "quota_type": 0,
-   "model_ratio": 4,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3.5,
-   "cache_ratio": 0.25,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "MiniMax/MiniMax-M3",
-   "vendor_id": 8,
-   "quota_type": 0,
-   "model_ratio": 2.1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 4,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "wan2.7-image-pro",
-   "quota_type": 1,
-   "model_ratio": 0,
-   "model_price": 0.5,
-   "owner_by": "",
-   "completion_ratio": 0,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "doubao-seedance-2.0-特价",
-   "description": "【模型介绍】 Seedance 2.0 高品质 AI 视频生成模型，支持多模态参考、视频编辑与音画同步，适合专业级视频创作。 【核心能力】 参考图片：最多 9 张 参考视频：最多 3 段 参考音频：最多 3 段 首尾帧：支持 生成时长：4–15 秒 分辨率：480P / 720P / 1080P 音频生成：支持音画同步 生成特点：高清画质、多模态创作",
-   "tags": "价格参考,【480p0.35/秒】,【720p0.6/秒】,【1080p1.0/秒】",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 8,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"480P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.35)\n      : tier(\"480P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.35))\n  : (param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"720P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.6)\n      : tier(\"720P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 0.6))\n  : ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"1080P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 1)\n      : tier(\"1080P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 15) * 1))"
-  },
-  {
-   "model_name": "grok-imagine-video-1.5-preview",
-   "description": "【模型介绍】\nGrok Imagine Video 1.5 Preview 是 xAI 推出的 AI 视频生成模型，支持文本与图片驱动的视频创作，适用于创意短视频、广告宣传及动态视觉内容制作。\n\n【核心能力】\n文生视频：支持通过文字描述生成视频\n图生视频：支持参考图片生成动态视频\n参考图片：支持图片输入\n视频生成：支持自定义视频内容与动态效果\n生成时长：以实际接口支持为准\n分辨率：以实际接口支持为准\n音频生成：以实际接口支持为准\n生成特点：创意生成、动态表现、智能视频创作",
-   "vendor_id": 15,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 18,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "tier(\"视频生成-按秒计费\",\n  max(\n    5,\n    float(\n      param(\"metadata.duration\") ??\n      param(\"duration\") ??\n      param(\"seconds\") ??\n      5\n    )\n  ) * 0.09\n)"
-  },
-  {
-   "model_name": "seedance-2.5-按次",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 32,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "tier(\"按次\", 3.34)"
-  },
-  {
-   "model_name": "deepseek-v4-flash-vision-exp",
+   "model_name": "deepseek-v4.1-flash-1017",
    "vendor_id": 4,
    "quota_type": 0,
    "model_ratio": 37.5,
@@ -941,106 +2051,20 @@
    ],
    "sort_order": 0,
    "billing_mode": "tiered_expr",
-   "billing_expr": "hour(\"Asia/Shanghai\") >= 9 && hour(\"Asia/Shanghai\") < 18\n  ? tier(\"忙时（9-18点）\",        p * 7.5  + c * 22.5  + cr * 0.25)\n  : tier(\"错峰（18点-次日9点）\",  p * 3.75  + c * 11.25 + cr * 0.125)"
+   "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 2  + c * 8  + cr * 0.04)\n  : tier(\"错峰（22点-次日8点）\",  p * 1 + c * 4 + cr * 0.02)"
   },
   {
-   "model_name": "glm-5.2",
-   "vendor_id": 9,
-   "quota_type": 0,
-   "model_ratio": 4,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3.5,
-   "cache_ratio": 0.25,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3-tts-flash-realtime",
-   "vendor_id": 20,
-   "quota_type": 1,
-   "model_ratio": 0,
-   "model_price": 1,
-   "owner_by": "",
-   "completion_ratio": 0,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3.7-text-embedding-flash",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.0625,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3.8-omni-flash-realtime",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.75,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3,
-   "image_ratio": 1,
-   "audio_ratio": 4,
-   "audio_completion_ratio": 2,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-5.6-sol-openai-compact",
+   "model_name": "gpt-6-luna",
    "vendor_id": 1,
    "quota_type": 0,
    "model_ratio": 37.5,
    "model_price": 0,
    "owner_by": "",
-   "completion_ratio": 6,
+   "completion_ratio": 2,
    "enable_groups": [
     "codex",
-    "default",
-    "default_特价"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000 ? tier(\"base\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"tier_2\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
-  },
-  {
-   "model_name": "gpt-5.6-luna",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 6,
-   "enable_groups": [
     "codex_vip",
+    "default",
     "gpt_官转"
    ],
    "supported_endpoint_types": [
@@ -1048,42 +2072,22 @@
    ],
    "sort_order": 0,
    "billing_mode": "tiered_expr",
-   "billing_expr": "len < 272000 ? tier(\"standard\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25) : tier(\"logn_context\", p * 0.4 + c * 2.4 + cr * 0.04 + cc * 0.5)"
+   "billing_expr": "len <= 272000\n  ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125)\n  : tier(\"long_context\", p * 0.2 + c * 0.75 + cr * 0.02 + cc * 0.25)"
   },
   {
-   "model_name": "doubao-seedance-2.0-fast-官转",
-   "description": "【模型介绍】\nSeedance 2.0 Fast 高速 AI 视频生成模型，兼顾生成速度、画质与成本，适合短视频及创意内容制作。\n\n【核心能力】\n参考图片：最多 9 张\n参考视频：最多 3 段\n参考音频：最多 3 段\n首尾帧：支持\n生成时长：4–15 秒\n分辨率：480P / 720P\n音频生成：支持音画同步\n生成特点：高速生成、高效创作",
-   "tags": "价格参考,【480p约0.22/秒】,【720p约0.48/秒】,官方url",
-   "vendor_id": 12,
+   "model_name": "grok-4.5",
+   "vendor_id": 15,
    "quota_type": 0,
-   "model_ratio": 37.5,
+   "model_ratio": 1,
    "model_price": 0,
    "owner_by": "",
-   "completion_ratio": 1,
+   "completion_ratio": 3,
+   "cache_ratio": 0.05,
    "enable_groups": [
-    "视频"
+    "default",
+    "grok"
    ],
    "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 7,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 14.7)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 24.7))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 14.7)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 24.7))"
-  },
-  {
-   "model_name": "claude-opus-4.7",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 2.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "ccmax_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
     "openai"
    ],
    "sort_order": 0
@@ -1107,130 +2111,13 @@
    "billing_expr": "tier(\"按秒\", p *140)"
   },
   {
-   "model_name": "qwen3.7-flash",
+   "model_name": "qwen3-tts-flash",
    "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.6,
-   "model_price": 0,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.8,
    "owner_by": "",
-   "completion_ratio": 6,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "deepseek-v4-pro-0813",
-   "vendor_id": 4,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 10  + c * 30 + cr * 1)\n  : tier(\"错峰（22点-次日8点）\",  p * 5 + c * 15 + cr * 0.5)"
-  },
-  {
-   "model_name": "claude-sonnet-4-5-20250929",
-   "description": "Claude Sonnet 4.5 is an AI model provided by qihang-ai.",
-   "tags": "Reasoning,Tools,Files,Vision,200K",
-   "vendor_id": 22,
-   "quota_type": 0,
-   "model_ratio": 1.496,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "create_cache_ratio": 1.25,
-   "enable_groups": [
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "doubao-seedance-2.0-官转",
-   "description": "【模型介绍】\nSeedance 2.0 高品质 AI 视频生成模型，支持多模态参考、视频编辑与音画同步，适合专业级视频创作。\n\n【核心能力】\n参考图片：最多 9 张\n参考视频：最多 3 段\n参考音频：最多 3 段\n首尾帧：支持\n生成时长：4–15 秒\n分辨率：480P / 720P / 1080P\n音频生成：支持音画同步\n生成特点：高清画质、多模态创作",
-   "tags": "价格参考,【480p约0.34/秒】,【720p约0.75/秒】,【1080p约1.5/秒】,官方url",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 10,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 24.3)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 39.9))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 24.3)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 39.9))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"1080p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 26.9)\n      : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 44.2))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"4K-含视频输入\", (c > 0 ? c : 250000) * 13.9)\n      : tier(\"4K-不含视频输入\", (c > 0 ? c : 250000) * 22.6))"
-  },
-  {
-   "model_name": "wan3.0-video",
-   "description": "阿里云百炼万相 3.0。支持文生、首帧、首尾帧，以及参考图、参考视频、参考音频、文件和网页。输出 480P、720P、1080P，时长 2 到 30 秒。计费时长（参考视频时长+生成视频时长）\n\n\n",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 26,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"1080\")\n  ? tier(\"1080P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.6)\n  : has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"480\")\n    ? tier(\"480P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.15)\n    : tier(\"720P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.3)"
-  },
-  {
-   "model_name": "claude-fable-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "ccmax_claude",
-    "claude_code",
-    "claude_官转",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "kimi-k2.5",
-   "vendor_id": 19,
-   "quota_type": 0,
-   "model_ratio": 2,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5.25,
-   "cache_ratio": 0.1,
+   "completion_ratio": 0,
    "enable_groups": [
     "China"
    ],
@@ -1257,284 +2144,7 @@
    "sort_order": 0
   },
   {
-   "model_name": "mimo-v2.5",
-   "quota_type": 0,
-   "model_ratio": 0.05,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "cache_ratio": 0.2,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "mimo-v2.6-pro",
-   "quota_type": 0,
-   "model_ratio": 2.05,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2.024390243902,
-   "cache_ratio": 0.008463414634,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "grok-image",
-   "vendor_id": 15,
-   "quota_type": 1,
-   "model_ratio": 0,
-   "model_price": 0.1,
-   "owner_by": "",
-   "completion_ratio": 0,
-   "enable_groups": [
-    "default",
-    "grok"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-haiku-4-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 0.545,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "ccmax_claude",
-    "claude_code",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-opus-4-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 2.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "ccmax_claude",
-    "claude_code",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-sonnet-5-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.05,
-   "create_cache_ratio": 1.25,
-   "enable_groups": [
-    "ccmax_claude",
-    "claude_code",
-    "claude_官转",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gemini-4-argon",
-   "vendor_id": 14,
-   "quota_type": 0,
-   "model_ratio": 1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.05,
-   "enable_groups": [
-    "gemini_满血"
-   ],
-   "supported_endpoint_types": [
-    "gemini",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "doubao-seedance-2.5-特价",
-   "description": "【模型介绍】 Seedance 2.5 新一代 AI 视频生成模型，支持更丰富的多模态参考、视频编辑与长视频生成，适合高品质影视及创意内容制作。 【核心能力】 参考图片：最多 30 张 参考视频：最多 10 段 参考音频：最多 10 段 参考素材：合计最多 50 个 首尾帧：支持 生成时长：4-30 秒 分辨率：720P / 1080P 音频生成：支持音画同步 视频编辑：支持编辑与延长 生成特点：长视频、多模态参考、精准编辑\n\n",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 30,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"480P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.5)\n      : tier(\"480P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.5))\n  : (param(\"metadata.resolution\") ?? param(\"resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"720P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.8)\n      : tier(\"720P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 0.8))\n  : ((has(param(\"metadata.content\"), \"video_url\") || has(param(\"referenceVideos\"), \"http\"))\n      ? tier(\"1080P-含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 1.3)\n      : tier(\"1080P-不含视频输入\", min(max(float(param(\"metadata.duration\") ?? param(\"seconds\") ?? param(\"duration\") ?? 5), 5), 30) * 1.3))"
-  },
-  {
-   "model_name": "qwen-audio-3.1-asr-flash-filetrans",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.4,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3.375,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-6.1-terra",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "default_特价",
-    "gpt_官转",
-    "codex",
-    "codex_vip",
-    "default"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000\n  ? tier(\"standard\", p * 1 + c * 5 + cr * 0.05 + cc * 1.25)\n  : tier(\"long_context\", p * 2 + c * 7.5 + cr * 0.1 + cc * 2.5)"
-  },
-  {
-   "model_name": "nano-banana-2",
-   "description": "【模型介绍】\nNano Banana 2 是 Google 推出的新一代 AI 图片生成与编辑模型，兼顾生成速度、画面质量与创作效率，适用于日常出图、角色设计、场景生成及商业视觉创作。\n\n【核心能力】\n图片生成：支持文生图、图生图及图片编辑\n参考图片：支持多图参考与融合创作\n图片分辨率：最高支持 4K\n文字生成：支持图片内文字生成与排版\n角色一致性：支持保持人物及主体特征\n生成特点：快速出图、高性价比、高清画质、多场景创作",
-   "vendor_id": 14,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "gemini_绘图"
-   ],
-   "supported_endpoint_types": [
-    "gemini",
-    "openai"
-   ],
-   "sort_order": 27,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(0.9))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.4))\n  : tier(\"2K\", fixed(0.6))\n) * image_count"
-  },
-  {
-   "model_name": "doubao-seedance-2.0",
-   "description": "【模型介绍】 Seedance 2.0 高品质 AI 视频生成模型，支持多模态参考、视频编辑与音画同步，适合专业级视频创作。 【核心能力】 参考图片：最多 9 张 参考视频：最多 3 段 参考音频：最多 3 段 首尾帧：支持 生成时长：4–15 秒 分辨率：480P / 720P / 1080P 音频生成：支持音画同步 生成特点：高清画质、多模态创作",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 9,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 18.67)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 30.67))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"720p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 18.67)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 30.67))\n  : (param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"1080p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 20.67)\n      : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 34.00))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"4K-含视频输入\", (c > 0 ? c : 250000) * 10.67)\n      : tier(\"4K-不含视频输入\", (c > 0 ? c : 250000) * 17.34))"
-  },
-  {
-   "model_name": "qwen-audio-3.1-realtime-flash",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 0.75,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 8,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "grok-4.5",
-   "vendor_id": 15,
-   "quota_type": 0,
-   "model_ratio": 1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3,
-   "cache_ratio": 0.05,
-   "enable_groups": [
-    "default",
-    "grok"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "deepseek-v4.1-flash-1017",
-   "vendor_id": 4,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 2  + c * 8  + cr * 0.04)\n  : tier(\"错峰（22点-次日8点）\",  p * 1 + c * 4 + cr * 0.02)"
-  },
-  {
-   "model_name": "gpt-5.6-terra",
+   "model_name": "gpt-5.6-terra-openai-compact",
    "vendor_id": 1,
    "quota_type": 0,
    "model_ratio": 37.5,
@@ -1543,159 +2153,14 @@
    "completion_ratio": 6,
    "enable_groups": [
     "default",
-    "default_特价",
-    "gpt_官转",
-    "codex",
-    "codex_vip"
+    "codex"
    ],
    "supported_endpoint_types": [
     "openai"
    ],
    "sort_order": 0,
    "billing_mode": "tiered_expr",
-   "billing_expr": "len < 272000 ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5) : tier(\"logn_context\", p * 4 + c * 18 + cr * 0.4 + cc * 5)"
-  },
-  {
-   "model_name": "gpt-6-luna",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex",
-    "codex_vip",
-    "default",
-    "gpt_官转"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000\n  ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125)\n  : tier(\"long_context\", p * 0.2 + c * 0.75 + cr * 0.02 + cc * 0.25)"
-  },
-  {
-   "model_name": "gpt-image-2.5-flare",
-   "description": "主打快速出图与高效创作，生成速度更快，适合批量出图、日常设计、社交媒体素材及快速创意测试。",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex",
-    "default",
-    "gpt_绘图"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 19,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
-  },
-  {
-   "model_name": "tongyi-xiaomi-analysis-pro",
-   "vendor_id": 2,
-   "quota_type": 0,
-   "model_ratio": 0.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2.7,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-5.6-sol",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 6,
-   "enable_groups": [
-    "default_特价",
-    "gpt_官转",
-    "codex",
-    "codex_vip",
-    "default"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000 ? tier(\"base\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"tier_2\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
-  },
-  {
-   "model_name": "gpt-6.2-sol",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "default_特价",
-    "gpt_官转",
-    "codex",
-    "codex_vip",
-    "default"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000\n? tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5)\n: tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 5)"
-  },
-  {
-   "model_name": "claude-sonnet-4-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 1.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "claude_code",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-sonnet-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 1,
-   "enable_groups": [
-    "ccmax_claude",
-    "claude_code",
-    "claude_官转",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2.5 + c * 15 + cr * 0.25 + cc * 3.13) : tier(\"tier_2\", p * 5 + c * 22.5 + cr * 0.5 + cc * 6.25)"
   },
   {
    "model_name": "deepseek-v4.1-flash",
@@ -1716,65 +2181,14 @@
    "billing_expr": "hour(\"Asia/Shanghai\") >= 8 && hour(\"Asia/Shanghai\") < 22\n  ? tier(\"忙时（8-22点）\",        p * 2  + c * 8 + cr * 0.4)\n  : tier(\"错峰（22点-次日8点）\",  p * 1 + c * 4 + cr * 0.2)"
   },
   {
-   "model_name": "qwen-image-2.0-pro",
-   "vendor_id": 20,
-   "quota_type": 1,
-   "model_ratio": 0,
-   "model_price": 0.5,
-   "owner_by": "",
-   "completion_ratio": 0,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "wan3.0-video-prime",
-   "description": "阿里云百炼万相 3.0 高速版。请求参数与 wan3.0-video 相同，输出 480P、720P、1080P，时长 2 到 30 秒。计费时长（参考视频时长+生成视频时长）\n\n\n",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 25,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"1080\")\n  ? tier(\"1080P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 1.2)\n  : has(param(\"resolution\") ?? param(\"metadata.resolution\") ?? param(\"metadata.parameters.resolution\") ?? param(\"size\") ?? \"1080p\", \"480\")\n    ? tier(\"480P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.3)\n    : tier(\"720P\", float(param(\"seconds\") ?? param(\"duration\") ?? param(\"metadata.duration\") ?? param(\"metadata.parameters.duration\") ?? 15) * 0.6)"
-  },
-  {
-   "model_name": "glm-5",
+   "model_name": "glm-5.1",
    "vendor_id": 9,
    "quota_type": 0,
-   "model_ratio": 2,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 4.5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "hy3",
-   "quota_type": 0,
-   "model_ratio": 0.05,
+   "model_ratio": 3,
    "model_price": 0,
    "owner_by": "",
    "completion_ratio": 4,
-   "cache_ratio": 0.25,
+   "cache_ratio": 0.216666666667,
    "enable_groups": [
     "China"
    ],
@@ -1782,27 +2196,6 @@
     "openai"
    ],
    "sort_order": 0
-  },
-  {
-   "model_name": "gpt-image-2.6-sunburst",
-   "description": "主打高画质与精细创作，更注重画面细节、复杂场景表现及图片编辑效果，适合商业设计、专业修图和高品质视觉创作。",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "default",
-    "gpt_绘图",
-    "codex"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 22,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1]) > 4194304\n  ? tier(\"4K\", fixed(1.5))\n  : has(param(\"size\"), \"x\") && int(split(param(\"size\"), \"x\")[0]) > 0 && int(split(param(\"size\"), \"x\")[1]) > 0 && 1048577 > int(split(param(\"size\"), \"x\")[0]) * int(split(param(\"size\"), \"x\")[1])\n  ? tier(\"1K\", fixed(0.25))\n  : tier(\"2K\", fixed(0.4))\n) * image_count"
   },
   {
    "model_name": "kimi-k2.7-code",
@@ -1812,78 +2205,6 @@
    "model_price": 0,
    "owner_by": "",
    "completion_ratio": 4.153846153846,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3-tts-flash",
-   "vendor_id": 20,
-   "quota_type": 1,
-   "model_ratio": 0,
-   "model_price": 0.8,
-   "owner_by": "",
-   "completion_ratio": 0,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-6.1-sol",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex",
-    "codex_vip",
-    "default",
-    "default_特价",
-    "gpt_官转"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5) : tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 5)"
-  },
-  {
-   "model_name": "gpt-5.4",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 1.25,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 6,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "gpt_官转"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3.7-max-preview",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 6,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3,
    "cache_ratio": 0.1,
    "enable_groups": [
     "China"
@@ -1913,8 +2234,8 @@
    "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 26.4)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 44.4))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 33.0)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 55.5))"
   },
   {
-   "model_name": "doubao-seedance-2.5-flash-官转",
-   "description": "【模型介绍】\nSeedance 2.5 Flash 是字节跳动推出的新一代高速 AI 视频生成模型，主打高效创作与多模态素材融合，支持复杂镜头设计、视频编辑及音画同步，适用于 AI 短剧、影视分镜、广告及短视频制作。\n\n【核心能力】\n参考图片：最多 10 张\n参考视频：最多 5 段\n参考音频：最多 5 段\n首尾帧：支持\n生成时长：4–30 秒\n分辨率：支持 480P、720P\n视频生成：支持文生视频、图生视频、全模态参考生视频\n视频编辑：支持视频编辑及视频延长\n音频生成：支持有声视频及音画同步\n\n【生成特点】\n高速生成、多素材融合、智能镜头控制、高效视频创作。",
+   "model_name": "doubao-seedance-2.0-mini",
+   "description": "【模型介绍】 Seedance 2.0 Mini 轻量级 AI 视频生成模型，支持多模态参考与音画同步，主打低成本、高效率的视频创作。 【核心能力】 参考图片：最多 9 张 参考视频：最多 3 段 参考音频：最多 3 段 首尾帧：支持 生成时长：4–15 秒 分辨率：480P / 720P 音频生成：支持音画同步 生成特点：低成本、多模态创作",
    "vendor_id": 12,
    "quota_type": 0,
    "model_ratio": 37.5,
@@ -1927,195 +2248,19 @@
    "supported_endpoint_types": [
     "openai"
    ],
-   "sort_order": 29,
+   "sort_order": 1,
    "billing_mode": "tiered_expr",
-   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 23.4)\n      : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 38.4))\n  : (has(param(\"metadata.content\"), \"video_url\")\n      ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 23.4)\n      : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 38.4))"
+   "billing_expr": "(param(\"metadata.resolution\") ?? param(\"size\") ?? \"720p\") == \"480p\"\n  ? (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 14.0)\n        : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 23.0)\n    )\n  : (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 14.0)\n        : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 23.0)\n    )"
   },
   {
-   "model_name": "claude-haiku-5-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
+   "model_name": "wan2.7-image-pro",
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.5,
    "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "claude_code",
-    "krio_claude",
-    "ccmax_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len < 100000 ? tier(\"base\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.2) : len > 100000 ? tier(\"long_context\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 1) : tier(\"第3档\", p * 0 + c * 0)"
-  },
-  {
-   "model_name": "kimi-k2.6",
-   "vendor_id": 19,
-   "quota_type": 0,
-   "model_ratio": 3.25,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 4.153846153846,
-   "cache_ratio": 0.092307692308,
+   "completion_ratio": 0,
    "enable_groups": [
     "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "kimi/kimi-k3",
-   "vendor_id": 19,
-   "quota_type": 0,
-   "model_ratio": 10,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3.7-max",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 6,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "minimax-h3",
-   "description": "【模型介绍】\nMiniMax H3 高品质 AI 视频生成模型，支持多模态参考、视频编辑与原生音画同步，适用于专业影视、广告及创意短视频制作。\n\n【核心能力】\n参考图片：最多 9 张\n参考视频：最多 3 段\n参考音频：最多 3 段\n参考素材：合计最多 12 个\n首尾帧：支持\n生成时长：4–15 秒\n分辨率：768P / 2K\n音频生成：支持原生音画同步\n视频编辑：支持视频编辑与动作迁移\n生成特点：高清画质、多模态参考、精准控制",
-   "vendor_id": 8,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 17,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "tier(\"768p按秒\", min(max(float(param(\"duration\") ?? param(\"seconds\") ?? param(\"metadata.duration\") ?? 4), 4), 15) * 0.15)"
-  },
-  {
-   "model_name": "claude-opus-4-8",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 2.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "krio_claude",
-    "ccmax_claude",
-    "claude_code",
-    "claude_官转"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "claude-opus-5-5",
-   "vendor_id": 10,
-   "quota_type": 0,
-   "model_ratio": 2,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 5,
-   "cache_ratio": 0.05,
-   "create_cache_ratio": 1.25,
-   "enable_groups": [
-    "ccmax_claude",
-    "claude_code",
-    "claude_官转",
-    "krio_claude"
-   ],
-   "supported_endpoint_types": [
-    "anthropic",
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "qwen3.8-2.4t-a95b",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 6,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3,
-   "cache_ratio": 0.1,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gpt-6.2-astra",
-   "vendor_id": 1,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 2,
-   "enable_groups": [
-    "codex_vip",
-    "default",
-    "default_特价",
-    "gpt_官转",
-    "codex"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 272000\n? tier(\"standard\", p * 8 + c * 40 + cr * 0.4 + cc * 10)\n: tier(\"long_context\", p * 16 + c * 60 + cr * 0.8 + cc * 20)"
-  },
-  {
-   "model_name": "grok-4.6",
-   "vendor_id": 15,
-   "quota_type": 0,
-   "model_ratio": 1,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 3,
-   "cache_ratio": 0.05,
-   "enable_groups": [
-    "default",
-    "grok"
    ],
    "supported_endpoint_types": [
     "openai"
@@ -2139,61 +2284,6 @@
    "sort_order": 31,
    "billing_mode": "tiered_expr",
    "billing_expr": "tier(\"按次\", 2.23)"
-  },
-  {
-   "model_name": "qwen3-vl-plus",
-   "vendor_id": 20,
-   "quota_type": 0,
-   "model_ratio": 1.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 10,
-   "cache_ratio": 0.2,
-   "enable_groups": [
-    "China"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 0
-  },
-  {
-   "model_name": "gemini-3.1-pro-preview",
-   "vendor_id": 14,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 4,
-   "enable_groups": [
-    "gemini_满血"
-   ],
-   "supported_endpoint_types": [
-    "gemini",
-    "openai"
-   ],
-   "sort_order": 0,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + c * 12 + cr * 0.2) : tier(\"200k_plus\", p * 4 + c * 18 + cr * 0.4)"
-  },
-  {
-   "model_name": "doubao-seedance-2.5-官转",
-   "description": "【模型介绍】\nSeedance 2.5 新一代 AI 视频生成模型，支持更丰富的多模态参考、视频编辑与长视频生成，适合高品质影视及创意内容制作。\n\n【核心能力】\n参考图片：最多 30 张\n参考视频：最多 10 段\n参考音频：最多 10 段\n参考素材：合计最多 50 个\n首尾帧：支持\n生成时长：4-30 秒\n分辨率：480P / 720P\n音频生成：支持音画同步\n视频编辑：支持编辑与延长\n生成特点：长视频、多模态参考、精准编辑",
-   "vendor_id": 12,
-   "quota_type": 0,
-   "model_ratio": 37.5,
-   "model_price": 0,
-   "owner_by": "",
-   "completion_ratio": 1,
-   "enable_groups": [
-    "视频"
-   ],
-   "supported_endpoint_types": [
-    "openai"
-   ],
-   "sort_order": 16,
-   "billing_mode": "tiered_expr",
-   "billing_expr": "(\n  param(\"metadata.resolution\") ??\n  param(\"size\") ??\n  \"720p\"\n) == \"480p\"\n  ? (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"480P-含视频输入\", (c > 0 ? c : 250000) * 37.34)\n        : tier(\"480P-不含视频输入\", (c > 0 ? c : 250000) * 62.23)\n    )\n  : (\n      param(\"metadata.resolution\") ??\n      param(\"size\") ??\n      \"720p\"\n    ) == \"720p\"\n  ? (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"720P-含视频输入\", (c > 0 ? c : 250000) * 37.34)\n        : tier(\"720P-不含视频输入\", (c > 0 ? c : 250000) * 62.23)\n    )\n  : (\n      has(param(\"metadata.content\"), \"video_url\")\n        ? tier(\"1080P-含视频输入\", (c > 0 ? c : 250000) * 40.89)\n        : tier(\"1080P-不含视频输入\", (c > 0 ? c : 250000) * 68.45)\n    )"
   }
  ],
  "group_ratio": {
