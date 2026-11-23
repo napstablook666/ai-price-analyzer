@@ -195,6 +195,12 @@ function stationFor(row) {
   return state.stationById.get(row.stationId) || {};
 }
 
+// 名字太多会把一行撑爆，三个封顶，剩下的用「等 N 个」。
+function pluginNameList(names, limit = 3) {
+  const list = names.filter(Boolean);
+  if (!list.length) return "";
+  return list.length > limit ? `${list.slice(0, limit).join("、")} 等 ${list.length} 个` : list.join("、");
+}
 function renderSummary(rows) {
   const isPublic = state.comparisonMode === "public";
   const matched = rows.filter(row => row.officialName);
@@ -221,7 +227,7 @@ function renderSummary(rows) {
   ];
   // 插件库里有、站点列表里没有的插件不会自己变成站点，这里显式点出来，否则只会表现为「这个站怎么没数据」。
   const pending = isPublic ? [] : state.pendingPlugins || [];
-  if (pending.length) cards.push(["未添加站点", String(pending.length), `${pending.map(plugin => plugin.name).join("、")} 在插件库里，添加到站点后才会参与采集与比价`]);
+  if (pending.length) cards.push(["未添加站点", String(pending.length), `${pluginNameList(pending.map(plugin => plugin.name))} 在插件库里还没添加站点，添加后才会参与采集与比价`]);
   $("#summary").innerHTML = cards.map(([label, value, note], index) => `<span class="summary-item${index === 0 ? " is-primary" : ""}" title="${escapeHtml(note)}"><span class="summary-label">${escapeHtml(label)}</span><strong class="summary-value">${escapeHtml(value)}</strong></span>`).join("");
 }
 function renderStationFilter(rows) {
@@ -954,9 +960,11 @@ function renderRows() {
     heading.setAttribute("aria-sort", keys.includes(state.filters.sortBy) ? (state.filters.sortDirection === "asc" ? "ascending" : "descending") : "none");
   }
   // 三态分开：没站点 / 采不到 / 被筛光，文案不同，别把「筛光」说成「没采集」。
+  // 用站点名册而不是刷新范围计数：没刷过的会话 refreshScope.stationCount 是 0，
+  // 会把「有站点没采集」错报成「还没有站点」。
   const emptyCopy = emptyStateCopy({
     comparisonMode: state.comparisonMode,
-    stationCount: Number(state.data?.refreshScope?.stationCount) || 0,
+    stationCount: (state.data?.stations || []).filter(station => (state.comparisonMode === "public") === (station.category === "public")).length,
     rowCount: state.rows.length,
     pendingNames: (state.pendingPlugins || []).map(plugin => plugin.name)
   });

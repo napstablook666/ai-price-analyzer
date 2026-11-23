@@ -6403,3 +6403,9 @@ test("插件库里没添加的插件单独列出来，addable=false 的不算", 
   assert.deepEqual(pendingSitePlugins(null), []);
   assert.deepEqual(pendingSitePlugins([]), []);
 });
+
+test("没添加的插件超过三个只报前三个加总数，别把空态撑爆", () => {
+  const copy = emptyStateCopy({ stationCount: 2, rowCount: 100, pendingNames: ["A站", "B站", "C站", "D站", "E站"] });
+  assert.match(copy.note, /A站、B站、C站 等 5 个/);
+  assert.doesNotMatch(copy.note, /D站/);
+});

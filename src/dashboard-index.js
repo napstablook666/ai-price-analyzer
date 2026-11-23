@@ -127,7 +127,8 @@ export function pendingSitePlugins(sitePlugins = []) {
 // 空态文案按「有没有站点 / 采没采到 / 被筛没」三态分开，之前把「有报价但被筛光」说成尚未采集，会骗人。
 export function emptyStateCopy({ comparisonMode = "paid", stationCount = 0, rowCount = 0, pendingNames = [] } = {}) {
   const publicMode = comparisonMode === "public";
-  const pendingNote = pendingNames.length ? `插件库里还有 ${pendingNames.join("、")} 没添加，添加后才会参与采集。` : "";
+  const pendingLabel = pendingNames.length > 3 ? `${pendingNames.slice(0, 3).join("、")} 等 ${pendingNames.length} 个` : pendingNames.join("、");
+  const pendingNote = pendingNames.length ? `插件库里还有 ${pendingLabel} 没添加站点，添加后才会参与采集。` : "";
   if (!(Number(stationCount) > 0)) {
     return {
       title: publicMode ? "还没有公益站" : "还没有可比较的报价",
