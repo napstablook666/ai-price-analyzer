@@ -50,6 +50,13 @@ import { sitePlugin as pqhPlugin } from "./providers/pqh.js";
 import { sitePlugin as undyingPlugin } from "./providers/undying.js";
 import { sitePlugin as xkrelayPlugin } from "./providers/xkrelay.js";
 import { sitePlugin as zerocatPlugin } from "./providers/zerocat.js";
+import { sitePlugin as axisPlugin } from "./providers/axis.js";
+import { sitePlugin as crabPlugin } from "./providers/crab.js";
+import { sitePlugin as initapiPlugin } from "./providers/initapi.js";
+import { sitePlugin as abuapiPlugin } from "./providers/abuapi.js";
+import { sitePlugin as nexaixPlugin } from "./providers/nexaix.js";
+import { sitePlugin as yescodePlugin } from "./providers/yescode.js";
+import { sitePlugin as rightcodePlugin } from "./providers/rightcode.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -117,7 +124,14 @@ export const SITE_PLUGIN_CATALOG = [
   entry("pqh", "PQH 中转站", "pqh.ai", "direct", () => ({ sitePlugin: pqhPlugin }), { hosts: ["pqh.ai","www.pqh.ai"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，108 个模型 53 个分组（倍率 0.12 ~ 2.6（25 档））；充值 1 美元额度 = ¥7.3" }),
   entry("undying", "Undy API", "undyapi.com", "direct", () => ({ sitePlugin: undyingPlugin }), { hosts: ["undyapi.com","www.undyapi.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，88 个模型 75 个分组（倍率 0.37 ~ 11（40 档））；充值 1 美元额度 = ¥7.3" }),
   entry("xkrelay", "深空API", "xkrelay.com", "direct", () => ({ sitePlugin: xkrelayPlugin }), { hosts: ["xkrelay.com","www.xkrelay.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，71 个模型 26 个分组（倍率 0.08 ~ 1.5（16 档））；充值 1 元 = 1 美元额度" }),
-  entry("zerocat", "ZeroCat", "zero.cat", "direct", () => ({ sitePlugin: zerocatPlugin }), { hosts: ["zero.cat","www.zero.cat"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，67 个模型 11 个分组（倍率 0.04 ~ 1.5）；充值 1 元 = 1 美元额度" })
+  entry("zerocat", "ZeroCat", "zero.cat", "direct", () => ({ sitePlugin: zerocatPlugin }), { hosts: ["zero.cat","www.zero.cat"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，67 个模型 11 个分组（倍率 0.04 ~ 1.5）；充值 1 元 = 1 美元额度" }),
+  entry("axis", "元流 API", "api.axis.fan", "direct", () => ({ sitePlugin: axisPlugin }), { paths: ["/model-plaza"], description: "公开模型广场直连采集，按分组倍率折算美元单价，长上下文分档保留" }),
+  entry("crab", "Crab-AI", "crab-ai.net", "direct", () => ({ sitePlugin: crabPlugin }), { paths: ["/model-plaza"], description: "公开模型广场直连采集，两个分组按倍率计价，含长上下文档" }),
+  entry("initapi", "初元 API", "initapi.ai", "page", () => ({ sitePlugin: initapiPlugin }), { paths: ["/model-plaza"], description: "模型广场要求登录，复用浏览器登录态，13 个分组按倍率计价，充值带阶梯赠送" }),
+  entry("abuapi", "AbuAPI", "www.abuai.chat", "direct", () => ({ sitePlugin: abuapiPlugin }), { paths: ["/pricing","/console/topup"], description: "new-api 魔改站，245 个模型 24 个分组，含按次与表达式计费" }),
+  entry("nexaix", "NexAIX", "nexaix.ai", "direct", () => ({ sitePlugin: nexaixPlugin }), { paths: ["/pricing"], description: "new-api 站点，7 个模型两个分组，匿名直连采集倍率" }),
+  entry("yescode", "YesCode", "co.yes.vg", "direct", () => ({ sitePlugin: yescodePlugin }), { paths: ["/model-plaza","/subscription"], description: "sub2api 变体，公开模型目录 61 个模型，自带倍率，另有按次出图" }),
+  entry("rightcode", "Right Code", "rightapi.io", "direct", () => ({ sitePlugin: rightcodePlugin }), { paths: ["/pricing","/console"], description: "Spring Boot 站，13 个上游渠道 111 个模型，含上下文分档与按次出图" })
 ];
 
 export function sitePluginById(id) {

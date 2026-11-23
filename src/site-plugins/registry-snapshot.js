@@ -516,6 +516,76 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "www.zero.cat"
       ],
       "needsCode": true
+    },
+    {
+      "id": "axis",
+      "name": "元流 API",
+      "version": "0.1.0",
+      "description": "公开模型广场直连采集，按分组倍率折算美元单价，长上下文分档保留",
+      "hosts": [
+        "api.axis.fan"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "crab",
+      "name": "Crab-AI",
+      "version": "0.1.0",
+      "description": "公开模型广场直连采集，两个分组按倍率计价，含长上下文档",
+      "hosts": [
+        "crab-ai.net"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "initapi",
+      "name": "初元 API",
+      "version": "0.1.0",
+      "description": "模型广场要求登录，复用浏览器登录态，13 个分组按倍率计价，充值带阶梯赠送",
+      "hosts": [
+        "initapi.ai"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "abuapi",
+      "name": "AbuAPI",
+      "version": "0.1.0",
+      "description": "new-api 魔改站，245 个模型 24 个分组，含按次与表达式计费",
+      "hosts": [
+        "www.abuai.chat"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "nexaix",
+      "name": "NexAIX",
+      "version": "0.1.0",
+      "description": "new-api 站点，7 个模型两个分组，匿名直连采集倍率",
+      "hosts": [
+        "nexaix.ai"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "yescode",
+      "name": "YesCode",
+      "version": "0.1.0",
+      "description": "sub2api 变体，公开模型目录 61 个模型，自带倍率，另有按次出图",
+      "hosts": [
+        "co.yes.vg"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "rightcode",
+      "name": "Right Code",
+      "version": "0.1.0",
+      "description": "Spring Boot 站，13 个上游渠道 111 个模型，含上下文分档与按次出图",
+      "hosts": [
+        "rightapi.io"
+      ],
+      "needsCode": true
     }
   ]
 };

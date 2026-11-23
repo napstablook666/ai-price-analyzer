@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">InitAPI</title>
+  <desc id="desc">An ink initialization mark inside code brackets, with a small orange cursor dot.</desc>
+  <path fill="#0b1020" d="M4 4h56v56H4z"/>
+  <path fill="none" stroke="#fffdf8" stroke-width="3" d="M24 20h-6v24h6m16-24h6v24h-6"/>
+  <path fill="#fffdf8" d="M30 30h4v14h-4z"/>
+  <path fill="#ff6b35" d="M30 20h4v4h-4z"/>
+</svg>

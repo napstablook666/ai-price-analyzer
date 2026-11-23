@@ -1392,6 +1392,31 @@ const MODEL_PLAZA_PROFILES = Object.freeze({
       return groupMultiplier;
     },
     nonTokenBilling: Object.freeze({ image: "image", per_request: "request", video: "request" })
+  },
+
+  // sub2api 面板的模型广场（初元API、元流、Crab-ai）。
+  // 报文里 pricing.input_price 是官方基价——实测同一模型跨组不变（deepseek-flash 在 5 个组
+  // 都是 3e-7，与 official_pricing 相等），所以实付 = 基价 × 分组倍率，
+  // 倍率取 user_rate_multiplier ?? rate_multiplier。
+  // 长上下文档落在 pricing.intervals（≤272K / >272K、≤100K / >100K 等），站点按它真实计费，
+  // 所以保留全部档位，不能只取首档。
+  sub2api: {
+    sourceFormat: "sub2api-model-plaza",
+    label: "模型广场",
+    currency: "USD",
+    preserveImageTokenPrices: true,
+    intervalMode: "all",
+    groupMultiplier: group => {
+      const value = group?.user_rate_multiplier ?? group?.rate_multiplier;
+      return value === null || value === undefined || value === "" ? 1 : finitePrice(value);
+    },
+    nonTokenMultiplier: (group, billingMode, groupMultiplier) => {
+      const independentField = billingMode === "image" ? "image_rate_independent" : billingMode === "per_request" ? "video_rate_independent" : "";
+      const multiplierField = billingMode === "image" ? "image_rate_multiplier" : billingMode === "per_request" ? "video_rate_multiplier" : "";
+      if (independentField && group?.[independentField] === true) return finitePrice(group?.[multiplierField]);
+      return groupMultiplier;
+    },
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request", video: "request" })
   }
 });
 

@@ -48,5 +48,12 @@ export const SITE_PLUGIN_ORDER = [
   "pqh",
   "undying",
   "xkrelay",
-  "zerocat"
+  "zerocat",
+  "axis",
+  "crab",
+  "initapi",
+  "abuapi",
+  "nexaix",
+  "yescode",
+  "rightcode"
 ];

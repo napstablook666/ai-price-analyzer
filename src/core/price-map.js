@@ -493,11 +493,29 @@ function withSiteRatioBase(map) {
   return { ...map, rules: (map.rules || []).map(rule => rule?.kind === "token" ? { ...rule, ratioBase: base } : rule) };
 }
 
+// 有的站把模型按上游/厂商分桶，价格在桶里，桶名才是分组名。
+// `expand` 把桶拍平：子项照常当一条模型，父对象整个挂在 parentKey 上，
+// 于是 `nameField: "name"` 仍取模型名，`groups.listPath: "$parent.name"` 取桶名。
+function expandItems(list, spec) {
+  if (!spec || !spec.itemsPath) return list;
+  const parentKey = spec.parentKey || "$parent";
+  const flat = [];
+  for (const parent of list) {
+    const children = readPath(parent, spec.itemsPath);
+    if (!Array.isArray(children)) continue;
+    for (const child of children) {
+      if (!child || typeof child !== "object") continue;
+      flat.push({ ...child, [parentKey]: parent });
+    }
+  }
+  return flat;
+}
+
 export function applyPriceMap(map, raw, { parseTiers } = {}) {
   // 站点级倍率先下发到 token 规则，后面照常按 map 求值。
   map = withSiteRatioBase(map);
   const items = readPath(raw, map.rootPath || "/data");
-  const list = Array.isArray(items) ? items : [];
+  const list = expandItems(Array.isArray(items) ? items : [], map.expand);
   const rows = [];
   const unresolved = [];
 

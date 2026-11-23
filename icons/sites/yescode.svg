@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">YesCode</title>
+  <desc id="desc">A payment check mark inside code brackets.</desc>
+  <rect width="64" height="64" rx="14" fill="#0d1a14"/>
+  <path fill="none" stroke="#6ee7b7" stroke-width="3" stroke-linecap="round" d="M20 17h-5v30h5m24-30h5v30h-5"/>
+  <path fill="none" stroke="#34d399" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" d="m23 33 6.5 6.5L41 26"/>
+</svg>

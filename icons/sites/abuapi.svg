@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">AbuAPI</title>
+  <desc id="desc">A stacked mountain-and-bar mark for the Abu API gateway.</desc>
+  <rect width="64" height="64" rx="14" fill="#101423"/>
+  <path fill="#f97316" d="M32 13 47 45h-8.4L32 30.2 25.4 45H17z"/>
+  <rect x="24" y="48" width="16" height="4" rx="2" fill="#fbbf24"/>
+</svg>
