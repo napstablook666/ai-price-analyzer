@@ -2,7 +2,7 @@
 
 7 家能在线充值的中转站，全部用真实登录态抓了全量。遥星与奥特曼只有兑换码、不能在线充值，已剔除。原始报文在 `out/recon/live/`，提取脚本 `out/recon/unify2.mjs`。
 
-口径按 [`pricing-evidence`](../.agents/skills/pricing-evidence/SKILL.md) 写：报文、页面、站点自述三样各能证明什么，凑不齐就标 `probable`。
+口径按 `pricing-evidence` 技能写：报文、页面、站点自述三样各能证明什么，凑不齐就标 `probable`。
 
 ## 一句话口径
 
