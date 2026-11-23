@@ -179,10 +179,11 @@ test("强制重算忽略已有缓存", () => {
   assert.equal(pending.length, 1);
 });
 
-test("没被应答的条目记失败，次数累加", () => {
+test("模型漏答判为不是，次数照样累加", () => {
   const entry = entriesFor(["gpt5.5-turbo"])[0];
   const first = applyAssistResults({}, [], { notAsked: [entry] });
-  assert.equal(first[entry.key].status, "failed");
+  assert.equal(first[entry.key].status, "none");
+  assert.equal(first[entry.key].reason, "unanswered");
   assert.equal(first[entry.key].attempts, 1);
   const second = applyAssistResults(first, [], { notAsked: [entry] });
   assert.equal(second[entry.key].attempts, 2);
@@ -260,7 +261,7 @@ test("输出上限随批大小放大，空值退回默认批大小", () => {
   assert.deepEqual(spreadAssistResults([{ key: "a" }], new Map()), [{ key: "a" }]);
 });
 
-test("失败原因写进缓存，超时和漏答分得开", () => {
+test("超时记失败，模型漏答判为不是", () => {
   const entry = entriesFor(["gpt5.5-turbo"])[0];
   const timedOut = applyAssistResults({}, [], { notAsked: [{ ...entry, reason: "timeout", error: "模型请求超时（180 秒）" }] });
   assert.equal(timedOut[entry.key].reason, "timeout");
@@ -268,7 +269,8 @@ test("失败原因写进缓存，超时和漏答分得开", () => {
 
   const missing = applyAssistResults({}, [], { notAsked: [entry] });
   assert.equal(missing[entry.key].reason, "unanswered");
-  assert.equal(assistFailureLabel(missing[entry.key]), "模型没答这条");
+  assert.equal(missing[entry.key].status, "none");
+  assert.equal(assistFailureLabel(missing[entry.key]), "");
   assert.equal(assistFailureLabel({ status: "accepted" }), "");
 });
 
@@ -298,7 +300,7 @@ test("已生效的判定留在池里，不会因为匹配成功就从列表里�
   assert.deepEqual(summarizePool(pool).counts, { matched: 1, unmatched: 1, confirm: 2 });
 });
 
-test("失败按原因进待确认：超时和漏答分开计数，重试到顶单独标出来", () => {
+test("失败按原因进待确认：只统计超时和接口报错，漏答按判为不是处理", () => {
   const key = name => cacheKey("s1", name);
   const cache = {
     [key("超时的")]: { stationId: "s1", modelName: "超时的", status: "failed", reason: "timeout", attempts: 9 },
@@ -314,8 +316,9 @@ test("失败按原因进待确认：超时和漏答分开计数，重试到顶�
   assert.equal(byName["漏答一次"], "confirm");
   assert.equal(byName["漏答到顶"], "confirm");
   const summary = summarizePool(pool);
-  assert.deepEqual(summary.failures, { timeout: 1, error: 0, unanswered: 2 });
-  assert.equal(summary.settled.exhausted, 1);
+  // 漏答归「判为不是」，失败只剩超时和接口报错两种
+  assert.deepEqual(summary.failures, { timeout: 1, error: 0, unanswered: 0 });
+  assert.equal(summary.settled.exhausted, 0);
   assert.match(poolSummaryLabel(summary), /待确认 3/);
 });
 
@@ -359,7 +362,8 @@ test("报价里消失的待判条目出池，定过论的不出", () => {
   const key = name => cacheKey("s1", name);
   const cache = {
     [key("下架的")]: { stationId: "s1", modelName: "下架的", status: "none", targetId: "" },
-    [key("放弃的")]: { stationId: "s1", modelName: "放弃的", status: "failed", reason: "unanswered", attempts: 9 },
+    // 旧记录里漏答记成 failed，读的时候已归一成 none，所以这里只有超时能算「放弃的」
+    [key("放弃的")]: { stationId: "s1", modelName: "放弃的", status: "failed", reason: "timeout", attempts: 9 },
     [key("接受过的")]: { stationId: "s1", modelName: "接受过的", status: "accepted", targetId: "gpt-5-5" }
   };
   const { pool, orphans } = buildAssistPool({ cache });

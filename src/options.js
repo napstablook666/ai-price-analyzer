@@ -2183,7 +2183,7 @@ onRefreshProgress(progress => {
 });
 void load();
 
-// 徽章写结论本身，具体原因放在第二列：整批超时和模型漏答要能一眼分开。
+// 徽章写结论本身，具体原因放在第二列：超时和接口报错是两种故障，要能一眼分开。
 const ASSIST_STATUS_LABELS = { manual: "人工指定", pending: "待识别", accepted: "AI 已匹配", none: "判为不是", invalid: "不存在的 id", failed: "失败", ignored: "已忽略" };
 // 分区说明：每一区该做什么都不一样，写在这里免得用户对着列表发呆。
 const ASSIST_POOL_HINTS = {
@@ -2192,6 +2192,7 @@ const ASSIST_POOL_HINTS = {
   unmatched: "未匹配：还没问过模型。点「识别当前未匹配」把它们发出去，也可以直接点「指定」自己挑。",
   confirm: "待确认：试过但没成，模型判「不是」、请求报错、或者你忽略过的都在这儿。可以点「立即重试」，也可以人工指定一个基准模型。"
 };
+// unanswered 只出现在旧缓存里，新记录一律按 none 处理（见 llm-matching.js 的 notAsked 段）。
 const ASSIST_REASON_LABELS = { timeout: "超时", error: "报错", unanswered: "漏答", "no-candidates": "规则层没有相似候选" };
 
 function setAssistantStatus(message, error = false) {

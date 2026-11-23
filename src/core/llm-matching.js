@@ -273,7 +273,8 @@ export function applyAssistResults(cache = {}, results = [], { fingerprintByKey 
       previous: previous.status ? { status: previous.status, targetId: previous.targetId || "", at: previous.at || 0 } : null
     };
   }
-  // 没被问到的条目（响应里缺该序号）记一次失败，避免同一批反复重问。
+  // 没被问到的条目（响应里缺该序号）：接口报错和超时记失败，模型漏答判为不是。
+  // 漏答多半是官方库里确实没有这个模型，当成故障会让用户以为链路坏了；判为不是还能在待确认里手动重试。
   // 失败原因写进缓存：超时、接口报错、模型漏答要能分开看，否则界面上只剩一个 failed。
   for (const entry of notAsked) {
     const key = entry.key || cacheKey(entry.stationId, entry.modelName);
@@ -282,7 +283,7 @@ export function applyAssistResults(cache = {}, results = [], { fingerprintByKey 
       stationId: entry.stationId,
       modelName: entry.modelName,
       targetId: "",
-      status: "failed",
+      status: entry.reason === "timeout" || entry.reason === "error" ? "failed" : "none",
       confidence: 0,
       attempts: Number(previous.attempts || 0) + 1,
       fingerprint: entry.fingerprint || "",
@@ -298,11 +299,12 @@ export function applyAssistResults(cache = {}, results = [], { fingerprintByKey 
   return next;
 }
 
-// 失败原因分得开才修得动：超时和漏答是两回事，前者要加时或缩批，后者要改提示词。
+// 失败原因分得开才修得动：超时和接口报错是两种故障，前者加时或缩批，后者查链路。
 export const ASSIST_FAILURE_LABELS = {
   timeout: "请求超时",
   error: "接口报错",
-  unanswered: "模型没答这条"
+  // 只有旧缓存里还留着这一条，新记录不再产生；读的时候已归一成 none。
+  unanswered: "模型没答这条（旧记录，按判为不是处理）"
 };
 
 export function assistFailureLabel(entry) {
@@ -349,7 +351,8 @@ export function buildAssistPool({ cache = {}, rows = [], stationNameById = new M
     if (!entry?.status) continue;
     const row = rowByKey.get(key);
     const count = row?.count || 0;
-    const status = entry.status;
+    // 旧缓存里「模型漏答」记的是 failed，按新口径当判为不是读，避免老数据继续显示成报错。
+    const status = entry.status === "failed" && entry.reason === "unanswered" ? "none" : entry.status;
     const manualTarget = overrideByKey.get(key) || "";
     // 只有还等着判的条目会变成死账；定了论的、人工指定过的都留着，删掉要重新问模型或重设覆盖。
     if (!count && !manualTarget && (status === "pending" || status === "failed")) {
