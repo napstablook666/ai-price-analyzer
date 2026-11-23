@@ -1,0 +1,57 @@
+# base: tokenflux
+# case: corecode
+# fixture: corecode-pricing.json
+# rows: 50 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+claude-fable-5-1|Claude 满血（仅限CC）|标准|28.5|142.5|0.7125|35.625|-|-|-|USD|1.9|5
+claude-fable-5-1|Claude 满血（可外接）|标准|30.75|153.75|0.76875|38.4375|-|-|-|USD|2.05|5
+claude-fable-5-2|Claude 满血（仅限CC）|标准|22.8|114|0.57|28.5|-|-|-|USD|1.9|5
+claude-fable-5-2|Claude 满血（可外接）|标准|24.6|123|0.615|30.75|-|-|-|USD|2.05|5
+claude-haiku-5-5|Claude 满血（仅限CC）|long_context|0.95|4.75|0.095|1.1875|-|-|-|USD|1.9|5
+claude-haiku-5-5|Claude 满血（仅限CC）|standard|0.19|0.95|0.019|0.2375|-|-|-|USD|1.9|5
+claude-haiku-5-5|Claude 满血（可外接）|long_context|1.025|5.125|0.1025|1.28125|-|-|-|USD|2.05|5
+claude-haiku-5-5|Claude 满血（可外接）|standard|0.205|1.025|0.0205|0.25625|-|-|-|USD|2.05|5
+claude-opus-4-8|Claude 满血（仅限CC）|标准|9.5|47.5|0.95|11.875|-|-|-|USD|1.9|5
+claude-opus-4-8|Claude 满血（可外接）|标准|10.25|51.25|1.025|12.8125|-|-|-|USD|2.05|5
+claude-opus-5-5|Claude 满血（仅限CC）|标准|7.6|38|0.38|9.5|-|-|-|USD|1.9|5
+claude-opus-5-5|Claude 满血（可外接）|标准|8.2|41|0.41|10.25|-|-|-|USD|2.05|5
+claude-opus-5|Claude 满血（仅限CC）|标准|9.5|47.5|0.95|11.875|-|-|-|USD|1.9|5
+claude-opus-5|Claude 满血（可外接）|标准|10.25|51.25|1.025|12.8125|-|-|-|USD|2.05|5
+claude-sonnet-5-5|Claude 满血（仅限CC）|标准|3.8|19|0.19|4.75|-|-|-|USD|1.9|5
+claude-sonnet-5-5|Claude 满血（可外接）|标准|4.1|20.5|0.205|5.125|-|-|-|USD|2.05|5
+claude-sonnet-5|Claude 满血（仅限CC）|标准|3.8|19|0.38|4.75|-|-|-|USD|1.9|5
+claude-sonnet-5|Claude 满血（可外接）|标准|4.1|20.5|0.41|5.125|-|-|-|USD|2.05|5
+codex-auto-review|GPT|标准|3.5|21|0.35|-|-|-|-|USD|0.7|5.999999999999999
+gpt-5.6-sol|GPT 福利|标准|2.5|15|0.25|3.125|-|-|-|USD|0.5|6
+gpt-5.6-terra|GPT 福利|标准|1|6|0.1|1.25|-|-|-|USD|0.5|6
+gpt-6-astra|GPT 福利|0_272k|5|25|0.5|6.25|-|-|-|USD|0.5|5
+gpt-6-astra|GPT 福利|272k_plus|10|37.5|1|12.5|-|-|-|USD|0.5|3.75
+gpt-6-astra|GPT|0_272k|7|35|0.7|8.75|-|-|-|USD|0.7|5
+gpt-6-astra|GPT|272k_plus|14|52.5|1.4|17.5|-|-|-|USD|0.7|3.75
+gpt-6-sol|GPT 福利|0_272k|1|5|0.1|1.25|-|-|-|USD|0.5|5
+gpt-6-sol|GPT 福利|272k_plus|2|7.5|0.2|2.5|-|-|-|USD|0.5|3.75
+gpt-6.1-sol|GPT 福利|base|1|5|0.05|-|-|-|-|USD|0.5|5
+gpt-6.1-sol|GPT|base|1.4|7|0.07|-|-|-|-|USD|0.7|5
+gpt-6.1-terra|GPT|0_272k|0.7|3.5|0.035|0.875|-|-|-|USD|0.7|5
+gpt-6.1-terra|GPT|272k_plus|1.4|5.25|0.07|1.75|-|-|-|USD|0.7|3.75
+gpt-6.2-astra|GPT 福利|0_272k|4|20|0.2|5|-|-|-|USD|0.5|5
+gpt-6.2-astra|GPT 福利|272k_plus|8|30|0.4|10|-|-|-|USD|0.5|3.75
+gpt-6.2-astra|GPT|0_272k|5.6|28|0.28|7|-|-|-|USD|0.7|5
+gpt-6.2-astra|GPT|272k_plus|11.2|42|0.56|14|-|-|-|USD|0.7|3.75
+gpt-6.2-sol|GPT 福利|0_272k|1|5|0.05|1.25|-|-|-|USD|0.5|5
+gpt-6.2-sol|GPT 福利|272k_plus|2|7.5|0.1|2.5|-|-|-|USD|0.5|3.75
+gpt-6.2-sol|GPT|0_272k|1.4|7|0.07|1.75|-|-|-|USD|0.7|5
+gpt-6.2-sol|GPT|272k_plus|2.8|10.5|0.14|3.5|-|-|-|USD|0.7|3.75
+gpt-image-2.5-flare|GPT生图1-4K|image|-|-|-|-|-|0.32|image|USD|1|1
+gpt-image-2.5-sunburst|GPT生图1-4K|image|-|-|-|-|-|0.32|image|USD|1|1
+gpt-image-2.6-flare|GPT生图1-4K|image|-|-|-|-|-|0.32|image|USD|1|1
+gpt-image-2.6-sunburst|GPT生图1-4K|image|-|-|-|-|-|0.32|image|USD|1|1
+gpt-image-2|GPT生图1-4K|image|-|-|-|-|-|0.32|image|USD|1|1
+grok-4.6|Grok|标准|2.4|7.2|0.6|-|-|-|-|USD|1.2|3
+grok-4.7|Grok|标准|2.4|7.2|0.6|-|-|-|-|USD|1.2|3
+grok-imagine-image|Grok|-|-|-|-|-|-|0.06|image|USD|1.2|1
+seedance-2.5-480p|Seedance视频|base|-|-|-|-|0.48|-|video|USD|1|1
+seedance-2.5-720p-fixed|Seedance视频|-|-|-|-|-|8.8|-|video|USD|1|1
+seedance-2.5-720p|Seedance视频|base|-|-|-|-|0.64|-|video|USD|1|1

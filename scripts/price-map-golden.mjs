@@ -84,7 +84,36 @@ export const GOLDEN_CASES = Object.freeze([
   // 这层解包以前住在策略类里，快照摸不到，漏解一层只能等线上退回基准价才发现。
   { base: "stellaisle-plaza", fixture: "stellaisle-plaza.json", expand: stellaislePlazaRows, note: "分组广场 3 个分组 + 1 个不可用分组，覆盖 tiered / token / per_call / unconfigured" },
   { base: "stellaisle", fixture: "stellaisle-pricing.json", note: "站内基准价 26 行样本（按次 8 + 表达式 + token），站点当日共 154 行；model_pricing_source 只留样本内的键" },
-  { base: "sidrune", fixture: "sidrune-pricing.json", note: "20 行：6 个按张（带 1K/2K/4K 档）+ 14 个按 token" }
+  { base: "sidrune", fixture: "sidrune-pricing.json", note: "20 行：6 个按张（带 1K/2K/4K 档）+ 14 个按 token" },
+  // 2026-11-23 批次：9 家 new-api 中文转站的匿名全量报文。
+  {
+    name: "kuaipao", base: "tokenflux", fixture: "kuaipao-pricing.json",
+    note: "kuaipao.pro/.ai 同后端，118 模型 15 分组；expr 50、按次 6；¥0.4 = $1 额度",
+    expectedUnresolved: [
+      "doubao-seedance-2.0", "doubao-seedance-2.0-fast", "doubao-seedance-2.0-fast-官转",
+      "doubao-seedance-2.0-mini", "doubao-seedance-2.0-mini-官转", "doubao-seedance-2.0-官转",
+      "doubao-seedance-2.0-特价", "doubao-seedance-2.5", "doubao-seedance-2.5-flash-官转",
+      "doubao-seedance-2.5-官转", "doubao-seedance-2.5-特价",
+      "grok-imagine-video-1.5-preview", "minimax-h3", "muse-video",
+      "seedance-2.0-按次", "seedance-2.5-按次", "wan3.0-video", "wan3.0-video-prime"
+    ]
+  },
+  {
+    name: "pqh", base: "tokenflux", fixture: "pqh-pricing.json",
+    note: "pqh.ai 108 模型 53 分组；expr 64、按次 4，带 billing_usage_schema；$1 额度 = ¥7.3",
+    expectedUnresolved: ["doubao-seedance-2-0-260128", "doubao-seedance-2-5-260628"]
+  },
+  {
+    name: "0ait", base: "tokenflux", fixture: "0ait-pricing.json",
+    note: "0ait.com 72 模型 37 分组，与 pqh 同运营不同部署；expr 53、按次 4",
+    expectedUnresolved: ["grok-imagine-video-1.5"]
+  },
+  { name: "xkrelay", base: "tokenflux", fixture: "xkrelay-pricing.json", note: "xkrelay.com 71 模型 26 分组；expr 52、按次 7；peak_offpeak 峰谷字段基座不消费，采基础档" },
+  { name: "zerocat", base: "tokenflux", fixture: "zerocat-pricing.json", note: "zero.cat 67 模型 11 分组、无按次；expr 47 含 hour(\"UTC\") 时段加价，采基础档" },
+  { name: "corecode", base: "tokenflux", fixture: "corecode-pricing.json", note: "corecode.live 28 模型 7 分组；expr 14、按次 7" },
+  { name: "coderelay", base: "tokenflux", fixture: "coderelay-pricing.json", note: "coderelay.cn 54 模型 16 分组；expr 21、按次 3" },
+  { name: "packycode", base: "tokenflux", fixture: "packycode-pricing.json", note: "packycode.com/.com 同后端 78 模型 25 分组；无 expr、按次 13；tiers 长上下文档（15 个模型）基座不读" },
+  { name: "4zapi", base: "relayrouter", fixture: "4zapi-pricing.json", note: "4zapi.com 与 openlux 同部署；323 模型抽 65 条（token 165/step 44/按次 114 各留样本），80 个分组倍率全留；无 expr" }
 ]);
 
 // 暂时拿不到 fixture 的 base，理由必须写清楚。

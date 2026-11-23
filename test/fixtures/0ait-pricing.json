@@ -1,0 +1,2157 @@
+{
+ "auto_groups": [],
+ "data": [
+  {
+   "model_name": "gpt-6.1-terra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "GPTPro",
+    "Openai官方",
+    "CodexPro-蒸馏-1",
+    "AZGPT",
+    "AZGPT带生图-2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 1 + c * 5 + cr * 0.05 + cc * 1.25) : tier(\"long_context\", p * 2 + c * 7.5 + cr * 0.1 + cc * 2.5)",
+   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+  },
+  {
+   "model_name": "gpt-5.5",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1,
+   "enable_groups": [
+    "AZGPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"short_context\", p * 5 + c * 30 + cr * 0.5) : tier(\"long_context\", p * 10 + c * 45 + cr * 1)"
+  },
+  {
+   "model_name": "gemini-4-hydrogen",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.5 + c * 7.5 + cr * 0.075)"
+  },
+  {
+   "model_name": "kimi-k3.1-pro",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "KIMI官转"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 13 + c * 68 + cr * 1.3 + cc * 13)"
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX稳定",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入coding-2",
+    "AZ-Claude",
+    "CCMAX-微注入可蒸馏-2",
+    "AWS-BEDROCK-1",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-专属用户分组",
+    "Claude Kiro 90缓",
+    "CCMAX1",
+    "CCMAX-0注入coding-1",
+    "ccmax（客户专线）",
+    "AWSBedrock 专线",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-微注入coding-1",
+    "CCMAX-微注入可蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-6",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZ-Claude",
+    "CCMAX稳定",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-微注入可蒸馏-1",
+    "CCMAX-0注入coding-1",
+    "CCMAX1",
+    "AWS-BEDROCK-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-微注入可蒸馏-2",
+    "ccmax（客户专线）",
+    "CCMAX-高品质-专属用户分组",
+    "AWSBedrock 专线",
+    "CCMAX-0注入coding-2",
+    "Claude Kiro 90缓",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-微注入coding-1",
+    "CCMAX-专属用户分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5-1",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AWSBedrock 专线 F系列",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX1",
+    "CCMAX-微注入可蒸馏-2",
+    "AWS-BEDROCK-1",
+    "CCMAX企业",
+    "CCMAX稳定",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX-0注入coding-1",
+    "CCMAX-微注入coding-1",
+    "CCMAX-专属用户分组",
+    "ccmax（客户专线）",
+    "AWSBedrock 专线",
+    "CCMAX-微注入可蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "MiniMax-M3.1-Flash",
+   "vendor_id": 19,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "MINMAX官转"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.15 + c * 0.6 + cr * 0.015)"
+  },
+  {
+   "model_name": "claude-opus-4-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-微注入可蒸馏-1",
+    "CCMAX-0注入coding-1",
+    "AZ-Claude",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX稳定",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入coding-2",
+    "ccmax（客户专线）",
+    "CCMAX企业",
+    "CCMAX-专属用户分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.7",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 200000 ? tier(\"short_context\", p * 2 + c * 6 + cr * 0.5) : tier(\"long_context\", p * 4 + c * 12 + cr * 1)"
+  },
+  {
+   "model_name": "grok-imagine-image",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.04,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.02))"
+  },
+  {
+   "model_name": "claude-haiku-4-5-20251001",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX稳定",
+    "CCMAX企业",
+    "CCMAX-微注入coding-1",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-专属用户分组",
+    "CCMAX-0注入coding-2",
+    "CCMAX1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-微注入可蒸馏-1",
+    "ccmax（客户专线）",
+    "CCMAX-0注入可蒸馏-2",
+    "AWSBedrock 专线",
+    "CCMAX-0注入coding-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5.6-terra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZGPT",
+    "AZGPT带生图-2",
+    "CodexPro-蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5) : tier(\"第2档\", p * 4 + c * 18 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "gemini-nano-banana-2.1",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "image_ratio": 1,
+   "enable_groups": [
+    "banana2",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 1.5 + c * 7.5 + cr * 0.15 + img_o * 30)"
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "ccmax（客户专线）",
+    "CCMAX-微注入coding-1",
+    "CCMAX-专属用户分组",
+    "CCMAX-微注入可蒸馏-2",
+    "AWS-BEDROCK-1",
+    "Claude Kiro 90缓",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入coding-1",
+    "CCMAX1",
+    "AWSBedrock 专线",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-0注入coding-2",
+    "CCMAX稳定",
+    "CCMAX企业",
+    "CCMAX-微注入可蒸馏-1",
+    "AZ-Claude",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX-0注入可蒸馏-专属用户分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "MiniMax-M3",
+   "vendor_id": 19,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "MINMAX官转"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "((((len <= 512000)))) ? (tier(\"base\", p * 0.3 + c * 1.2 + cr * 0.06)) : (((p > 512000)) ? (tier(\"base\", p * 0.6 + c * 2.4 + cr * 0.12)) : (tier(\"base\", p * 0 + c * 0)))"
+  },
+  {
+   "model_name": "grok-4.7-build-fast",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 200000 ? tier(\"short_context\", p * 4 + c * 12 + cr * 1) : tier(\"long_context\", p * 6 + c * 18 + cr * 1.5)"
+  },
+  {
+   "model_name": "gemini-4-neon",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.15)"
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.4,
+   "image_ratio": 1.6,
+   "enable_groups": [
+    "AZGPT带生图-3",
+    "openai-生图",
+    "AZGPT带生图-2",
+    "AZGPT带生图",
+    "AZGPT带生图-客户专属分组",
+    "生图（gpt-image-超分）",
+    "GPT生图"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 5 + cr * 1.25 + img * 8 + img_cr * 2 + img_o * 30 + c * 30)"
+  },
+  {
+   "model_name": "gpt-6-luna",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZGPT",
+    "AZGPT带生图-2",
+    "GPTPro",
+    "Openai官方",
+    "CodexPro-蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"short\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125) : tier(\"long\", p * 0.2 + c * 0.75 + cr * 0.02 + cc * 0.25)"
+  },
+  {
+   "model_name": "gpt-image-2.6-flare",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "AZGPT带生图",
+    "AZGPT带生图-2",
+    "openai-生图"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 30 + cr * 1.25 + img * 8 + img_cr * 2 + img_o * 30)"
+  },
+  {
+   "model_name": "gemini-3-flash-preview",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 0.5 + c * 3 + cr * 0.05 + ai * 1)"
+  },
+  {
+   "model_name": "grok-imagine",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-7",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-微注入可蒸馏-2",
+    "AWS-BEDROCK-1",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-专属用户分组",
+    "CCMAX-0注入coding-1",
+    "CCMAX-微注入coding-1",
+    "CCMAX-微注入可蒸馏-1",
+    "Claude Kiro 90缓",
+    "AZ-Claude",
+    "CCMAX稳定",
+    "AWSBedrock 专线",
+    "CCMAX1",
+    "ccmax（客户专线）",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入coding-2"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "kimi-k3.1-pro-highspeed",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "KIMI官转"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 26 + c * 136 + cr * 1.3 + cc * 26)"
+  },
+  {
+   "model_name": "gpt-5.4",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1,
+   "enable_groups": [
+    "AZGPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"short_context\", p * 2.5 + c * 15 + cr * 0.25) : tier(\"long_context\", p * 5 + c * 22.5 + cr * 0.5)"
+  },
+  {
+   "model_name": "gemini-3.1-pro-preview",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini-as",
+    "Gemini-vertex"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"<=200k\", p * 2 + c * 12 + cr * 0.2) : tier(\">200k\", p * 4 + c * 18 + cr * 0.4)"
+  },
+  {
+   "model_name": "gemini-2.5-flash-image",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.333333333333334,
+   "enable_groups": [
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 0.3 + c * 2.5 + img_o * 30)"
+  },
+  {
+   "model_name": "gemini-4-argon",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.6-flash",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"intro_2026\", p * 0.75 + c * 3.75 + cr * 0.075)"
+  },
+  {
+   "model_name": "claude-opus-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-微注入coding-1",
+    "CCMAX-0注入coding-1",
+    "CCMAX1",
+    "AWSBedrock 专线",
+    "CCMAX-微注入可蒸馏-1",
+    "CCMAX-0注入coding-2",
+    "CCMAX-高品质-专属用户分组",
+    "ccmax（客户专线）",
+    "CCMAX-专属用户分组",
+    "AZ-Claude",
+    "CCMAX-微注入可蒸馏-2",
+    "AWS-BEDROCK-1",
+    "CCMAX稳定",
+    "Claude Kiro 90缓",
+    "CCMAX-0注入可蒸馏-2",
+    "AWSBedrock 专线 F系列",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "grok-build-0.1",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 200000 ? tier(\"short_context\", p * 1 + c * 2 + cr * 0.2) : tier(\"long_context\", p * 2 + c * 4 + cr * 0.4)"
+  },
+  {
+   "model_name": "gemini-3.1-flash-lite-image",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.125,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 120,
+   "enable_groups": [
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 0.25 + c * 1.5 + cr * 0.025 + img_o * 30)"
+  },
+  {
+   "model_name": "gemini-3.5-flash-lite",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.333333333333,
+   "cache_ratio": 0.1,
+   "image_ratio": 1,
+   "enable_groups": [
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 0.3 + c * 2.5 + cr * 0.03)"
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "CCMAX-高品质-专属用户分组",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX稳定",
+    "ccmax（客户专线）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 8 + c * 40 + cr * 0.2 + cc * 10 + cc1h * 16)"
+  },
+  {
+   "model_name": "gemini-3-pro-image",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 60,
+   "enable_groups": [
+    "banana2",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"standard\", p * 2 + c * 12 + cr * 0.2 + img_o * 120) : tier(\"long_context\", p * 4 + c * 18 + cr * 0.4 + img_o * 120)"
+  },
+  {
+   "model_name": "kimi-k3",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.09999999999999999,
+   "create_cache_ratio": 1,
+   "enable_groups": [
+    "KIMI官转"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.3 + cc * 3 + cc1h * 6)"
+  },
+  {
+   "model_name": "claude-haiku-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-0注入coding-1",
+    "AWS-BEDROCK-1",
+    "CCMAX-微注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-1",
+    "AZ-Claude",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "AWSBedrock 专线",
+    "CCMAX-0注入coding-2",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX稳定",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-微注入coding-1",
+    "CCMAX-专属用户分组",
+    "CCMAX1",
+    "ccmax（客户专线）",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX企业"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 100000 ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125 + cc1h * 0.2) : tier(\"long_context\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 0.625 + cc1h * 1)"
+  },
+  {
+   "model_name": "gpt-image-2",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.4,
+   "image_ratio": 1.6,
+   "enable_groups": [
+    "AZGPT带生图-3",
+    "openai-生图",
+    "生图（gpt-image-超分）",
+    "AZGPT带生图",
+    "AZGPT带生图-2",
+    "GPT生图"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 5 + c * 30 + cr * 1.25 + img * 8)"
+  },
+  {
+   "model_name": "gpt-6-astra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZGPT",
+    "AZGPT带生图-2",
+    "GPTPro",
+    "Openai官方",
+    "CodexPro-蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 10 + c * 50 + cr * 1 + cc * 12.5) : tier(\"第2档\", p * 20 + c * 75 + cr * 2 + cc * 25)"
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "CodexPro-蒸馏-1",
+    "AZGPT",
+    "AZGPT带生图-2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2 + c * 10 + cr * 0.1 + cc * 5) : tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 10)"
+  },
+  {
+   "model_name": "gemini-3.7-flash",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"intro_2026\", p * 0.75 + c * 3.75 + cr * 0.075)"
+  },
+  {
+   "model_name": "claude-sonnet-4-5-20250929",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX1",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-flash-image",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 120,
+   "enable_groups": [
+    "banana2",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 0.5 + c * 3 + cr * 0.05 + img_o * 60)"
+  },
+  {
+   "model_name": "claude-opus-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-专属用户分组",
+    "AZ-Claude",
+    "AWS-BEDROCK-1",
+    "CCMAX-高品质-专属用户分组",
+    "Claude Kiro 90缓",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入coding-1",
+    "AWSBedrock 专线",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-微注入coding-1",
+    "CCMAX1",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX稳定",
+    "CCMAX-0注入coding-2",
+    "CCMAX-微注入可蒸馏-1",
+    "ccmax（客户专线）",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 4 + c * 20 + cr * 0.2 + cc * 5 + cc1h * 8)"
+  },
+  {
+   "model_name": "grok-imagine-image-2.0",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.08,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.08))"
+  },
+  {
+   "model_name": "gemini-3.1-flash-image-preview",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-flash-lite",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.125,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "audio_ratio": 2,
+   "enable_groups": [
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 0.25 + c * 1.5 + cr * 0.025 + ai * 0.5)"
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX1",
+    "ccmax（客户专线）",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-专属用户分组",
+    "AWSBedrock 专线",
+    "AWSBedrock 专线 F系列",
+    "AZ-Claude",
+    "AWS-BEDROCK-1",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-微注入coding-1",
+    "CCMAX-0注入coding-2",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX稳定",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入coding-1",
+    "CCMAX-微注入可蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5 + cc1h * 4)"
+  },
+  {
+   "model_name": "gpt-image-2.5-flare",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.4,
+   "image_ratio": 1.6,
+   "enable_groups": [
+    "AZGPT带生图",
+    "AZGPT带生图-客户专属分组",
+    "生图（gpt-image-超分）",
+    "GPT生图",
+    "AZGPT带生图-3",
+    "openai-生图",
+    "AZGPT带生图-2"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 30 + cr * 1.25 + img * 8 + img_cr * 2 + img_o * 30)"
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZGPT带生图-2",
+    "CodexPro-蒸馏-1",
+    "AZGPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 4 + c * 20 + cr * 0.4 + cc * 5) : tier(\"第2档\", p * 8 + c * 30 + cr * 0.8 + cc * 10)"
+  },
+  {
+   "model_name": "grok-imagine-video",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.005,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "image_ratio": 0.2,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_usage_schema": {
+    "input_images": {
+     "type": "number",
+     "unit": "count",
+     "unitLabel": {
+      "en": "image",
+      "zh": "张",
+      "zh-TW": "張"
+     },
+     "description": {
+      "en": "Input image unit price",
+      "zh": "输入图片单价"
+     }
+    },
+    "input_video_seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Input video unit price",
+      "zh": "输入视频单价"
+     }
+    },
+    "moderated": {
+     "type": "boolean",
+     "description": {
+      "en": "Blocked by content moderation",
+      "zh": "被内容审核拦截"
+     }
+    },
+    "resolution": {
+     "enum": [
+      "480p",
+      "720p"
+     ],
+     "description": {
+      "en": "Output video resolution",
+      "zh": "输出视频分辨率"
+     }
+    },
+    "seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Video generation unit price",
+      "zh": "视频生成单价"
+     }
+    }
+   },
+   "billing_usage_examples": [
+    {
+     "label": "480p 8s",
+     "facts": {
+      "input_images": 0,
+      "input_video_seconds": 0,
+      "moderated": false,
+      "resolution": "480p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "720p 8s · image",
+     "facts": {
+      "input_images": 1,
+      "input_video_seconds": 0,
+      "moderated": false,
+      "resolution": "720p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "edit 8s · 720p",
+     "facts": {
+      "input_images": 0,
+      "input_video_seconds": 8,
+      "moderated": false,
+      "resolution": "720p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "extend 8s + 6s · 480p",
+     "facts": {
+      "input_images": 0,
+      "input_video_seconds": 8,
+      "moderated": false,
+      "resolution": "480p",
+      "seconds": 6
+     }
+    },
+    {
+     "label": "480p 8s · blocked",
+     "facts": {
+      "input_images": 0,
+      "input_video_seconds": 0,
+      "moderated": true,
+      "resolution": "480p",
+      "seconds": 8
+     }
+    }
+   ]
+  },
+  {
+   "model_name": "grok-imagine-video-1.5",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "u(\"resolution\") == \"480p\" ? tier(\"480p\", u(\"input_images\") * 0 + u(\"seconds\") * 0.08) : u(\"resolution\") == \"720p\" ? tier(\"720p\", u(\"input_images\") * 0 + u(\"seconds\") * 0.14) : tier(\"1080p\", u(\"input_images\") * 0 + u(\"seconds\") * 0.25)",
+   "billing_usage_schema": {
+    "input_images": {
+     "type": "number",
+     "unit": "count",
+     "unitLabel": {
+      "en": "image",
+      "zh": "张",
+      "zh-TW": "張"
+     },
+     "description": {
+      "en": "Input image unit price",
+      "zh": "输入图片单价"
+     }
+    },
+    "moderated": {
+     "type": "boolean",
+     "description": {
+      "en": "Blocked by content moderation",
+      "zh": "被内容审核拦截"
+     }
+    },
+    "resolution": {
+     "enum": [
+      "480p",
+      "720p",
+      "1080p"
+     ],
+     "description": {
+      "en": "Output video resolution",
+      "zh": "输出视频分辨率"
+     }
+    },
+    "seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Video generation unit price",
+      "zh": "视频生成单价"
+     }
+    }
+   },
+   "billing_usage_examples": [
+    {
+     "label": "480p 8s",
+     "facts": {
+      "input_images": 0,
+      "moderated": false,
+      "resolution": "480p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "720p 8s · image",
+     "facts": {
+      "input_images": 1,
+      "moderated": false,
+      "resolution": "720p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "1080p 15s",
+     "facts": {
+      "input_images": 0,
+      "moderated": false,
+      "resolution": "1080p",
+      "seconds": 15
+     }
+    },
+    {
+     "label": "480p 8s · blocked",
+     "facts": {
+      "input_images": 0,
+      "moderated": true,
+      "resolution": "480p",
+      "seconds": 8
+     }
+    }
+   ]
+  },
+  {
+   "model_name": "grok-imagine-video-1.5-lite",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_usage_schema": {
+    "input_images": {
+     "type": "number",
+     "unit": "count",
+     "unitLabel": {
+      "en": "image",
+      "zh": "张",
+      "zh-TW": "張"
+     },
+     "description": {
+      "en": "Input image unit price",
+      "zh": "输入图片单价"
+     }
+    },
+    "moderated": {
+     "type": "boolean",
+     "description": {
+      "en": "Blocked by content moderation",
+      "zh": "被内容审核拦截"
+     }
+    },
+    "resolution": {
+     "enum": [
+      "480p",
+      "720p",
+      "1080p"
+     ],
+     "description": {
+      "en": "Output video resolution",
+      "zh": "输出视频分辨率"
+     }
+    },
+    "seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Video generation unit price",
+      "zh": "视频生成单价"
+     }
+    }
+   },
+   "billing_usage_examples": [
+    {
+     "label": "480p 8s",
+     "facts": {
+      "input_images": 0,
+      "moderated": false,
+      "resolution": "480p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "720p 8s · image",
+     "facts": {
+      "input_images": 1,
+      "moderated": false,
+      "resolution": "720p",
+      "seconds": 8
+     }
+    },
+    {
+     "label": "1080p 15s",
+     "facts": {
+      "input_images": 0,
+      "moderated": false,
+      "resolution": "1080p",
+      "seconds": 15
+     }
+    },
+    {
+     "label": "480p 8s · blocked",
+     "facts": {
+      "input_images": 0,
+      "moderated": true,
+      "resolution": "480p",
+      "seconds": 8
+     }
+    }
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "Claude Kiro 90缓",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX-微注入可蒸馏-1",
+    "AZ-Claude",
+    "CCMAX-0注入coding-1",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX稳定",
+    "AWSBedrock 专线",
+    "CCMAX-微注入coding-1",
+    "CCMAX-专属用户分组",
+    "CCMAX1",
+    "CCMAX-微注入可蒸馏-2",
+    "AWS-BEDROCK-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-0注入coding-2",
+    "ccmax（客户专线）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-微注入coding-1",
+    "CCMAX-微注入可蒸馏-1",
+    "ccmax（客户专线）",
+    "AZ-Claude",
+    "AWS-BEDROCK-1",
+    "CCMAX-0注入coding-1",
+    "CCMAX企业",
+    "CCMAX-专属用户分组",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX-高品质-专属用户分组",
+    "AWSBedrock 专线 F系列",
+    "AWSBedrock 专线",
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX1",
+    "CCMAX稳定"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.5",
+   "vendor_id": 2,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.02,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图（gpt-image-超分）",
+    "GPT生图",
+    "AZGPT带生图-3"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5.6-luna",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZGPT",
+    "AZGPT带生图-2",
+    "CodexPro-蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25) : tier(\"第2档\", p * 0.4 + c * 1.8 + cr * 0.04 + cc * 0.5)"
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "AZGPT带生图-2",
+    "CodexPro-蒸馏-1",
+    "AZGPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 8 + c * 40 + cr * 0.4 + cc * 20) : tier(\"long_context\", p * 16 + c * 60 + cr * 0.8 + cc * 40)"
+  },
+  {
+   "model_name": "gpt-image-2.6-sunburst",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "openai-生图",
+    "AZGPT带生图",
+    "AZGPT带生图-2"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + cr * 1.25 + img * 8 + img_cr * 2 + img_o * 30 + c * 30)"
+  },
+  {
+   "model_name": "grok-4.5",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.15,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 200000 ? tier(\"short_context\", p * 2 + c * 6 + cr * 0.3) : tier(\"long_context\", p * 4 + c * 12 + cr * 0.6)"
+  },
+  {
+   "model_name": "gemini-4-carbon",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.1)"
+  },
+  {
+   "model_name": "grok-4.6",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "Grok",
+    "Grok-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 200000 ? tier(\"short_context\", p * 2 + c * 6 + cr * 0.5) : tier(\"long_context\", p * 4 + c * 12 + cr * 1)"
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "GPTPro",
+    "Openai官方",
+    "CodexPro-蒸馏-1",
+    "AZGPT",
+    "AZGPT带生图-2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"short\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5) : tier(\"long\", p * 4 + c * 15 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "gemini-3.8-flash",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"intro_2026\", p * 0.75 + c * 3.75 + cr * 0.075)"
+  },
+  {
+   "model_name": "claude-haiku-4-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-微注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-1",
+    "AWSBedrock 专线",
+    "CCMAX企业",
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "AZ-Claude",
+    "CCMAX稳定",
+    "ccmax（客户专线）",
+    "CCMAX-高品质-专属用户分组",
+    "AWSBedrock 专线 F系列",
+    "CCMAX-0注入coding-1",
+    "CCMAX-0注入coding-2",
+    "CCMAX-微注入可蒸馏-2",
+    "CCMAX-专属用户分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-5-20251101",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-0注入可蒸馏-2",
+    "CCMAX-0注入coding-1",
+    "CCMAX1",
+    "CCMAX-微注入可蒸馏-2",
+    "ccmax（客户专线）",
+    "CCMAX-高品质-专属用户分组",
+    "CCMAX企业",
+    "CCMAX-专属用户分组",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入coding-2",
+    "CCMAX稳定",
+    "CCMAX-微注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "CCMAX-0注入可蒸馏-1",
+    "CCMAX-0注入可蒸馏-专属用户分组",
+    "CCMAX-0注入可蒸馏-2",
+    "AZ-Claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.5-flash",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "image_ratio": 1,
+   "enable_groups": [
+    "Gemini-vertex",
+    "Gemini-as"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 1.5 + c * 9 + cr * 0.15)"
+  },
+  {
+   "model_name": "gemini-3.1-pro-preview-customtools",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini-vertex"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"<=200k\", p * 2 + c * 12 + cr * 0.2) : tier(\">200k\", p * 4 + c * 18 + cr * 0.4)"
+  },
+  {
+   "model_name": "grok-imagine-image-quality",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.08,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.08))"
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "AZGPT",
+    "AZGPT带生图-2",
+    "GPTPro",
+    "Openai官方",
+    "CodexPro-蒸馏-1"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5) : tier(\"tier_2\", p * 4 + c * 15 + cr * 0.2 + cc * 5)"
+  }
+ ],
+ "group_ratio": {
+  "AWS-BEDROCK-1": 3.8,
+  "AWS-BEDROCK-3": 4.2,
+  "AWS-BEDROCK2": 3.6,
+  "AWSBedrock 专线": 3.6,
+  "AWSBedrock 专线 F系列": 4.2,
+  "AZ-Claude": 3.9,
+  "AZGPT": 2.2,
+  "AZGPT-2": 2.5,
+  "AZGPT带生图": 2.8,
+  "AZGPT带生图-2": 4,
+  "AZGPT带生图-3": 2.6,
+  "AZGPT带生图-客户专属分组": 4,
+  "Anthropic官转": 3.4,
+  "CCMAX-0注入coding-1": 1.8,
+  "CCMAX-0注入可蒸馏-1": 2,
+  "CCMAX-0注入可蒸馏-2": 2.1,
+  "CCMAX-0注入可蒸馏-3": 2.5,
+  "CCMAX-0注入可蒸馏-专属用户分组": 2.5,
+  "CCMAX-专属用户分组": 1.9,
+  "CCMAX-微注入coding-1": 1.4,
+  "CCMAX-微注入可蒸馏-1": 1.4,
+  "CCMAX-微注入可蒸馏-2": 1.4,
+  "CCMAX-高品质-专属用户分组": 2.25,
+  "CCMAX1": 1,
+  "CCMAX企业": 1.5,
+  "CCMAX稳定": 1.2,
+  "Claude Kiro 90缓": 0.15,
+  "CodexPro-蒸馏-1": 0.4,
+  "GPTPro": 0.5,
+  "GPT生图": 1,
+  "Gemini-as": 1.9,
+  "Gemini-vertex": 2.5,
+  "Grok": 0.6,
+  "Grok-2": 0.45,
+  "KIMI官转": 0.6,
+  "Kiro企业分组": 0.5,
+  "MINMAX官转": 0.5,
+  "Openai官方": 3.6,
+  "banana2": 2.5,
+  "openai-生图": 3.8,
+  "专属分组1": 1,
+  "测试分组2，不要选": 20,
+  "测试分组，不要选": 20,
+  "测试号池分组": 1,
+  "生图（gpt-image-超分）": 1
+ },
+ "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+ "success": true,
+ "supported_endpoint": {
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "gemini": {
+   "path": "/v1beta/models/{model}:generateContent",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  },
+  "openai-alpha-search": {
+   "path": "/v1/alpha/search",
+   "method": "POST"
+  },
+  "openai-response": {
+   "path": "/v1/responses",
+   "method": "POST"
+  },
+  "openai-response-compact": {
+   "path": "/v1/responses/compact",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "AWS-BEDROCK-1": "包含o55，s55，h55，不包含f5.1",
+  "AWS-BEDROCK-3": "【Claude / CCMAX】高质量｜高稳定｜支持o5-5、haiku-5-5及s5-5",
+  "AWS-BEDROCK2": "",
+  "AWSBedrock 专线": "【客户专线】AWS Bedrock 专线",
+  "AWSBedrock 专线 F系列": "awsb专打f系列，包含f5.2",
+  "AZ-Claude": "",
+  "AZGPT": "",
+  "AZGPT-2": "Az全模型",
+  "AZGPT带生图": "",
+  "AZGPT带生图-2": "稳定，特定客户专属，不要选",
+  "AZGPT带生图-3": "",
+  "AZGPT带生图-客户专属分组": "客户专属",
+  "Anthropic官转": "专属用户分组勿接，特殊倍率结算",
+  "CCMAX-0注入coding-1": "【Claude / CCMAX】0注入｜禁止蒸馏",
+  "CCMAX-0注入可蒸馏-1": "【Claude / CCMAX】0注入 / 可蒸馏 / 稳定｜稳定分组｜支持全模型",
+  "CCMAX-0注入可蒸馏-2": "【Claude / CCMAX】0注入 / 可蒸馏 / 稳定｜稳定分组",
+  "CCMAX-0注入可蒸馏-3": "【Claude / CCMAX】0注入 ｜可蒸馏",
+  "CCMAX-0注入可蒸馏-专属用户分组": "专属用户分组勿接",
+  "CCMAX-专属用户分组": "专属用户分组勿接",
+  "CCMAX-微注入coding-1": "【Claude / CCMAX】微注入｜不可蒸馏",
+  "CCMAX-微注入可蒸馏-1": "【Claude / CCMAX】微注入｜可蒸馏｜透传",
+  "CCMAX-微注入可蒸馏-2": "【Claude / CCMAX】微注入｜可蒸馏｜无透传",
+  "CCMAX-高品质-专属用户分组": "专属用户分组勿接",
+  "CCMAX1": "【Claude / CCMAX】CT满分｜",
+  "CCMAX企业": "【Claude / CCMAX】企业分组｜禁止蒸馏｜非常稳定｜高rpm联系客服做定制",
+  "CCMAX稳定": "【Claude / CCMAX】稳定分组｜禁止蒸馏，非常稳定，高rpm联系客服做定制",
+  "Claude Kiro 90缓": "【Claude / 其他】Kiro 90缓",
+  "CodexPro-蒸馏-1": "【OpenAI / GPT】Codex Pro 蒸馏｜可蒸馏",
+  "GPTPro": "",
+  "GPT生图": "GPT反代生图，不限制分辨率，按照请求记录计费",
+  "Gemini-as": "gemini官转aistudio渠道",
+  "Gemini-vertex": "纯vertex",
+  "Grok": "支持生图 生视频",
+  "Grok-2": "",
+  "KIMI官转": "",
+  "Kiro企业分组": "",
+  "MINMAX官转": "",
+  "Openai官方": "",
+  "banana2": "",
+  "openai-生图": "",
+  "专属分组1": "专属分组没有模型不要选",
+  "测试分组2，不要选": "测试分组，不要选",
+  "测试分组，不要选": "",
+  "测试号池分组": "",
+  "生图（gpt-image-超分）": "image2.5生图 按次0.1"
+ },
+ "vendors": [
+  {
+   "id": 19,
+   "name": "MiniMax",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 2,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": 6,
+   "name": "百度",
+   "icon": "Wenxin.Color"
+  },
+  {
+   "id": 8,
+   "name": "阿里巴巴",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 10,
+   "name": "腾讯",
+   "icon": "Hunyuan.Color"
+  },
+  {
+   "id": 18,
+   "name": "字节跳动",
+   "icon": "Doubao.Color"
+  },
+  {
+   "id": 1,
+   "name": "Anthropic",
+   "icon": "Claude.Color"
+  },
+  {
+   "id": 5,
+   "name": "Moonshot",
+   "icon": "Moonshot"
+  },
+  {
+   "id": 12,
+   "name": "Cohere",
+   "icon": "Cohere.Color"
+  },
+  {
+   "id": 13,
+   "name": "Jina",
+   "icon": "Jina"
+  },
+  {
+   "id": 14,
+   "name": "Cloudflare",
+   "icon": "Cloudflare.Color"
+  },
+  {
+   "id": 15,
+   "name": "Mistral",
+   "icon": "Mistral.Color"
+  },
+  {
+   "id": 3,
+   "name": "Google",
+   "icon": "Gemini.Color"
+  },
+  {
+   "id": 4,
+   "name": "xAI",
+   "icon": "XAI"
+  },
+  {
+   "id": 17,
+   "name": "零一万物",
+   "icon": "Yi.Color"
+  },
+  {
+   "id": 20,
+   "name": "即梦",
+   "icon": "Jimeng.Color"
+  },
+  {
+   "id": 7,
+   "name": "智谱",
+   "icon": "Zhipu.Color"
+  },
+  {
+   "id": 9,
+   "name": "讯飞",
+   "icon": "Spark.Color"
+  },
+  {
+   "id": 11,
+   "name": "Meta",
+   "icon": "Ollama"
+  },
+  {
+   "id": 16,
+   "name": "DeepSeek",
+   "icon": "DeepSeek.Color"
+  }
+ ]
+}

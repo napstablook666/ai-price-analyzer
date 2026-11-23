@@ -1,0 +1,243 @@
+# base: tokenflux
+# case: xkrelay
+# fixture: xkrelay-pricing.json
+# rows: 236 · unresolved: 0
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+XK-gemini-3.8-flash|Gemini 酒馆按次 ant分组|-|-|-|-|-|0.05|-|-|USD|1|1
+XK-gemini-4-argon|Gemini 酒馆按次 ant分组|-|-|-|-|-|0.15|-|-|USD|1|1
+XK-gemini-4-carbon|Gemini 酒馆按次 ant分组|-|-|-|-|-|0.15|-|-|USD|1|1
+XK-gemini-4-hydrogen|Gemini 酒馆按次 ant分组|-|-|-|-|-|0.08|-|-|USD|1|1
+claude-fable-5-1|【Claude】 coding专属不可蒸馏 x1.3|base|13|65|0.325|16.25|-|-|-|USD|1.3|5
+claude-fable-5-1|【Claude】Kiro随机智商和缓存   x0.2|base|2|10|0.05|2.5|-|-|-|USD|0.2|5
+claude-fable-5-1|【Claude】kiro正价高智高缓  x0.45|base|4.5|22.5|0.1125|5.625|-|-|-|USD|0.45|5
+claude-fable-5-1|【Claude】max外接分组可蒸馏 x 1.5|base|15|75|0.375|18.75|-|-|-|USD|1.5|5
+claude-fable-5-2|【Claude】 coding专属不可蒸馏 x1.3|base|10.4|52|0.26|13|-|-|-|USD|1.3|5
+claude-fable-5-2|【Claude】Kiro随机智商和缓存   x0.2|base|1.6|8|0.04|2|-|-|-|USD|0.2|5
+claude-fable-5-2|【Claude】kiro正价高智高缓  x0.45|base|3.6|18|0.09|4.5|-|-|-|USD|0.45|5
+claude-fable-5-2|【Claude】max外接分组可蒸馏 x 1.5|base|12|60|0.3|15|-|-|-|USD|1.5|5
+claude-fable-5|【Claude】 coding专属不可蒸馏 x1.3|base|13|65|1.3|16.25|-|-|-|USD|1.3|5
+claude-fable-5|【Claude】Kiro随机智商和缓存   x0.2|base|2|10|0.2|2.5|-|-|-|USD|0.2|5
+claude-fable-5|【Claude】kiro正价高智高缓  x0.45|base|4.5|22.5|0.45|5.625|-|-|-|USD|0.45|5
+claude-fable-5|【Claude】max外接分组可蒸馏 x 1.5|base|15|75|1.5|18.75|-|-|-|USD|1.5|5
+claude-haiku-4-5-20251001|【Claude】 coding专属不可蒸馏 x1.3|base|1.3|6.5|0.13|1.625|-|-|-|USD|1.3|5
+claude-haiku-4-5-20251001|【Claude】Kiro随机智商和缓存   x0.2|base|0.2|1|0.02|0.25|-|-|-|USD|0.2|5
+claude-haiku-4-5-20251001|【Claude】max外接分组可蒸馏 x 1.5|base|1.5|7.5|0.15|1.875|-|-|-|USD|1.5|5
+claude-haiku-4-5|【Claude】 coding专属不可蒸馏 x1.3|base|1.3|6.5|0.13|1.625|-|-|-|USD|1.3|5
+claude-haiku-4-5|【Claude】Kiro随机智商和缓存   x0.2|base|0.2|1|0.02|0.25|-|-|-|USD|0.2|5
+claude-haiku-4-5|【Claude】max外接分组可蒸馏 x 1.5|base|1.5|7.5|0.15|1.875|-|-|-|USD|1.5|5
+claude-haiku-5-5|【Claude】 coding专属不可蒸馏 x1.3|gt100k|0.65|3.25|0.065|0.8125|-|-|-|USD|1.3|5
+claude-haiku-5-5|【Claude】 coding专属不可蒸馏 x1.3|le100k|0.13|0.65|0.013|0.1625|-|-|-|USD|1.3|5
+claude-haiku-5-5|【Claude】kiro正价高智高缓  x0.45|gt100k|0.225|1.125|0.0225|0.28125|-|-|-|USD|0.45|5
+claude-haiku-5-5|【Claude】kiro正价高智高缓  x0.45|le100k|0.045|0.225|0.0045|0.05625|-|-|-|USD|0.45|5
+claude-haiku-5-5|【Claude】max外接分组可蒸馏 x 1.5|gt100k|0.75|3.75|0.075|0.9375|-|-|-|USD|1.5|5
+claude-haiku-5-5|【Claude】max外接分组可蒸馏 x 1.5|le100k|0.15|0.75|0.015|0.1875|-|-|-|USD|1.5|5
+claude-opus-4-5-20251101|【Claude】 coding专属不可蒸馏 x1.3|base|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-5-20251101|【Claude】max外接分组可蒸馏 x 1.5|base|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-5|【Claude】 coding专属不可蒸馏 x1.3|base|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-5|【Claude】kiro正价高智高缓  x0.45|base|2.25|11.25|0.225|2.8125|-|-|-|USD|0.45|5
+claude-opus-4-5|【Claude】max外接分组可蒸馏 x 1.5|base|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-6|【Claude】 coding专属不可蒸馏 x1.3|base|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-6|【Claude】Kiro随机智商和缓存   x0.2|base|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-4-6|【Claude】kiro正价高智高缓  x0.45|base|2.25|11.25|0.225|2.8125|-|-|-|USD|0.45|5
+claude-opus-4-6|【Claude】max外接分组可蒸馏 x 1.5|base|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-7|【Claude】 coding专属不可蒸馏 x1.3|base|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-7|【Claude】Kiro随机智商和缓存   x0.2|base|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-4-7|【Claude】kiro正价高智高缓  x0.45|base|2.25|11.25|0.225|2.8125|-|-|-|USD|0.45|5
+claude-opus-4-7|【Claude】max外接分组可蒸馏 x 1.5|base|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-8|【Claude】 coding专属不可蒸馏 x1.3|base|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-8|【Claude】Kiro随机智商和缓存   x0.2|base|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-4-8|【Claude】kiro正价高智高缓  x0.45|base|2.25|11.25|0.225|2.8125|-|-|-|USD|0.45|5
+claude-opus-4-8|【Claude】max外接分组可蒸馏 x 1.5|base|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-5-5|【Claude】 coding专属不可蒸馏 x1.3|base|5.2|26|0.26|6.5|-|-|-|USD|1.3|5
+claude-opus-5-5|【Claude】Kiro随机智商和缓存   x0.2|base|0.8|4|0.04|1|-|-|-|USD|0.2|5
+claude-opus-5-5|【Claude】kiro正价高智高缓  x0.45|base|1.8|9|0.09|2.25|-|-|-|USD|0.45|5
+claude-opus-5-5|【Claude】max外接分组可蒸馏 x 1.5|base|6|30|0.3|7.5|-|-|-|USD|1.5|5
+claude-opus-5|【Claude】 coding专属不可蒸馏 x1.3|base|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-5|【Claude】Kiro随机智商和缓存   x0.2|base|1|5|0.1|1.25|-|-|-|USD|0.2|5
+claude-opus-5|【Claude】kiro正价高智高缓  x0.45|base|2.25|11.25|0.225|2.8125|-|-|-|USD|0.45|5
+claude-opus-5|【Claude】max外接分组可蒸馏 x 1.5|base|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-sonnet-4-5-20250929|【Claude】 coding专属不可蒸馏 x1.3|base|3.9|19.5|0.39|4.875|-|-|-|USD|1.3|5
+claude-sonnet-4-5-20250929|【Claude】max外接分组可蒸馏 x 1.5|base|4.5|22.5|0.45|5.625|-|-|-|USD|1.5|5
+claude-sonnet-4-5|【Claude】Kiro随机智商和缓存   x0.2|base|0.6|3|0.06|0.75|-|-|-|USD|0.2|5
+claude-sonnet-4-5|【Claude】kiro正价高智高缓  x0.45|base|1.35|6.75|0.135|1.6875|-|-|-|USD|0.45|5
+claude-sonnet-4-6|【Claude】 coding专属不可蒸馏 x1.3|base|3.9|19.5|0.39|4.875|-|-|-|USD|1.3|5
+claude-sonnet-4-6|【Claude】Kiro随机智商和缓存   x0.2|base|0.6|3|0.06|0.75|-|-|-|USD|0.2|5
+claude-sonnet-4-6|【Claude】kiro正价高智高缓  x0.45|base|1.35|6.75|0.135|1.6875|-|-|-|USD|0.45|5
+claude-sonnet-4-6|【Claude】max外接分组可蒸馏 x 1.5|base|4.5|22.5|0.45|5.625|-|-|-|USD|1.5|5
+claude-sonnet-5-5|【Claude】 coding专属不可蒸馏 x1.3|base|2.6|13|0.13|3.25|-|-|-|USD|1.3|5
+claude-sonnet-5-5|【Claude】Kiro随机智商和缓存   x0.2|base|0.4|2|0.02|0.5|-|-|-|USD|0.2|5
+claude-sonnet-5-5|【Claude】kiro正价高智高缓  x0.45|base|0.9|4.5|0.045|1.125|-|-|-|USD|0.45|5
+claude-sonnet-5-5|【Claude】max外接分组可蒸馏 x 1.5|base|3|15|0.15|3.75|-|-|-|USD|1.5|5
+claude-sonnet-5|【Claude】 coding专属不可蒸馏 x1.3|base|2.6|13|0.26|3.25|-|-|-|USD|1.3|5
+claude-sonnet-5|【Claude】Kiro随机智商和缓存   x0.2|base|0.4|2|0.04|0.5|-|-|-|USD|0.2|5
+claude-sonnet-5|【Claude】kiro正价高智高缓  x0.45|base|0.9|4.5|0.09|1.125|-|-|-|USD|0.45|5
+claude-sonnet-5|【Claude】max外接分组可蒸馏 x 1.5|base|3|15|0.3|3.75|-|-|-|USD|1.5|5
+codex-auto-review|【GPT】    pro加plus混池      x0.23|标准|0.1725|1.035|0.01725|-|-|-|-|USD|0.23|6
+codex-auto-review|【GPT】    官key    x 0.6|标准|0.45|2.7|0.045|-|-|-|-|USD|0.6|6
+codex-auto-review|【GPT】   plus     x0.13|标准|0.0975|0.585|0.00975|-|-|-|-|USD|0.13|6
+codex-auto-review|【GPT】   pro      x0.3|标准|0.225|1.35|0.0225|-|-|-|-|USD|0.3|6
+deepseek-asr|国模官key   x 0.5|标准|37.5|37.5|-|-|-|-|-|USD|0.5|1
+deepseek-fetch|国模官key   x 0.5|request|-|-|-|-|0.000375|-|-|USD|0.5|1
+deepseek-ocr|国模官key   x 0.5|标准|37.5|37.5|-|-|-|-|-|USD|0.5|1
+deepseek-search|国模官key   x 0.5|request|-|-|-|-|0.000375|-|-|USD|0.5|1
+deepseek-tts|国模官key   x 0.5|标准|37.5|37.5|-|-|-|-|-|USD|0.5|1
+deepseek-v4-flash|国模官key   x 0.5|off_peak|0.75|2.25|0.025|-|-|-|-|USD|0.5|3
+deepseek-v4-flash|国模官key   x 0.5|peak|1.5|4.5|0.05|-|-|-|-|USD|0.5|3
+deepseek-v4-pro|国模优惠渠道   x 0.15|off_peak|1.35|4.05|0.045|-|-|-|-|USD|0.15|3
+deepseek-v4-pro|国模优惠渠道   x 0.15|peak|2.7|8.1|0.09|-|-|-|-|USD|0.15|3
+deepseek-v4-pro|国模官key   x 0.5|off_peak|4.5|13.5|0.15|-|-|-|-|USD|0.5|3
+deepseek-v4-pro|国模官key   x 0.5|peak|9|27|0.3|-|-|-|-|USD|0.5|3
+deepseek-v4.1-flash-1017|国模优惠渠道   x 0.15|off_peak|0.15|0.6|0.003|-|-|-|-|USD|0.15|4
+deepseek-v4.1-flash-1017|国模优惠渠道   x 0.15|peak|0.3|1.2|0.006|-|-|-|-|USD|0.15|4
+deepseek-v4.1-flash-1017|国模官key   x 0.5|off_peak|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash-1017|国模官key   x 0.5|peak|1|4|0.02|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash|国模优惠渠道   x 0.15|off_peak|0.15|0.6|0.003|-|-|-|-|USD|0.15|4
+deepseek-v4.1-flash|国模优惠渠道   x 0.15|peak|0.3|1.2|0.006|-|-|-|-|USD|0.15|4
+deepseek-v4.1-flash|国模官key   x 0.5|off_peak|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash|国模官key   x 0.5|peak|1|4|0.02|-|-|-|-|USD|0.5|4
+gemini-3.5-flash-lite|Gemini  x0.4|标准|0.12|1|0.012|-|-|-|-|USD|0.4|8.333333333333334
+gemini-3.6-flash|Gemini  x0.4|标准|0.3|1.5|0.03|-|-|-|-|USD|0.4|5
+gemini-3.8-flash|Gemini  x0.4|标准|0.3|1.5|0.03|-|-|-|-|USD|0.4|5
+gemini-3.8-flash|Gemini 神秘渠道   x 1.2|标准|0.9|4.5|0.09|-|-|-|-|USD|1.2|5
+gemini-4-argon|Gemini  x0.4|标准|0.8|4|0.04|0.8|-|-|-|USD|0.4|5
+gemini-4-argon|Gemini 神秘渠道   x 1.2|标准|2.4|12|0.12|2.4|-|-|-|USD|1.2|5
+gemini-4-carbon|Gemini  x0.4|标准|0.8|4|0.04|0.8|-|-|-|USD|0.4|5
+gemini-4-carbon|Gemini 神秘渠道   x 1.2|标准|2.4|12|0.12|2.4|-|-|-|USD|1.2|5
+gemini-4-hydrogen|Gemini  x0.4|base|0.6|3|0.03|0.6|-|-|-|USD|0.4|5
+gemini-4-hydrogen|Gemini 神秘渠道   x 1.2|base|1.8|9|0.09|1.8|-|-|-|USD|1.2|5
+gemini-4-neon-high|Gemini  x0.4|base|1.2|6|0.06|-|-|-|-|USD|0.4|5
+gemini-4-neon-low|Gemini  x0.4|base|1.2|6|0.06|-|-|-|-|USD|0.4|5
+gemini-4-neon-medium|Gemini  x0.4|base|1.2|6|0.06|-|-|-|-|USD|0.4|5
+gemini-4-neon-xhigh|Gemini  x0.4|base|1.2|6|0.06|-|-|-|-|USD|0.4|5
+gemini-4-neon|Gemini  x0.4|base|1.2|6|0.06|-|-|-|-|USD|0.4|5
+gemini-4-neon|Gemini 神秘渠道   x 1.2|base|3.6|18|0.18|-|-|-|-|USD|1.2|5
+glm-5.2|国模优惠渠道   x 0.15|base|1.2|4.2|0.3|0.3|-|-|-|USD|0.15|3.5
+glm-5.2|国模官key   x 0.5|base|4|14|1|1|-|-|-|USD|0.5|3.5
+glm-5.3-flashx|国模官key   x 0.5|base|1|3.5|0.25|-|-|-|-|USD|0.5|3.5
+glm-5.3-flash|国模优惠渠道   x 0.15|base|0.12|0.42|0.0345|0.0345|-|-|-|USD|0.15|3.5
+glm-5.3-flash|国模官key   x 0.5|base|0.4|1.4|0.115|0.115|-|-|-|USD|0.5|3.5
+glm-5.3-prime|国模官key   x 0.5|base|8|28|2|-|-|-|-|USD|0.5|3.5
+glm-5.3|国模优惠渠道   x 0.15|base|1.2|4.2|0.3|0.3|-|-|-|USD|0.15|3.5
+glm-5.3|国模官key   x 0.5|base|4|14|1|1|-|-|-|USD|0.5|3.5
+gpt-5.6-luna|【GPT】    pro加plus混池      x0.23|0_272k|0.046|0.276|0.0046|0.0575|-|-|-|USD|0.23|6
+gpt-5.6-luna|【GPT】    pro加plus混池      x0.23|272k_plus|0.092|0.414|0.0092|0.115|-|-|-|USD|0.23|4.5
+gpt-5.6-luna|【GPT】    官key    x 0.6|0_272k|0.12|0.72|0.012|0.15|-|-|-|USD|0.6|6
+gpt-5.6-luna|【GPT】    官key    x 0.6|272k_plus|0.24|1.08|0.024|0.3|-|-|-|USD|0.6|4.5
+gpt-5.6-luna|【GPT】   pro      x0.3|0_272k|0.06|0.36|0.006|0.075|-|-|-|USD|0.3|6
+gpt-5.6-luna|【GPT】   pro      x0.3|272k_plus|0.12|0.54|0.012|0.15|-|-|-|USD|0.3|4.5
+gpt-5.6-sol|【GPT】    pro加plus混池      x0.23|0_272k|1.15|6.9|0.115|1.4375|-|-|-|USD|0.23|6
+gpt-5.6-sol|【GPT】    pro加plus混池      x0.23|272k_plus|2.3|10.35|0.23|2.875|-|-|-|USD|0.23|4.5
+gpt-5.6-sol|【GPT】    低价高智科技分组  x0.08|0_272k|0.4|2.4|0.04|0.5|-|-|-|USD|0.08|6
+gpt-5.6-sol|【GPT】    低价高智科技分组  x0.08|272k_plus|0.8|3.6|0.08|1|-|-|-|USD|0.08|4.5
+gpt-5.6-sol|【GPT】    官key    x 0.6|0_272k|3|18|0.3|3.75|-|-|-|USD|0.6|6
+gpt-5.6-sol|【GPT】    官key    x 0.6|272k_plus|6|27|0.6|7.5|-|-|-|USD|0.6|4.5
+gpt-5.6-sol|【GPT】   plus     x0.13|0_272k|0.65|3.9|0.065|0.8125|-|-|-|USD|0.13|6
+gpt-5.6-sol|【GPT】   plus     x0.13|272k_plus|1.3|5.85|0.13|1.625|-|-|-|USD|0.13|4.5
+gpt-5.6-sol|【GPT】   pro      x0.3|0_272k|1.5|9|0.15|1.875|-|-|-|USD|0.3|6
+gpt-5.6-sol|【GPT】   pro      x0.3|272k_plus|3|13.5|0.3|3.75|-|-|-|USD|0.3|4.5
+gpt-5.6-terra|【GPT】    pro加plus混池      x0.23|0_272k|0.46|2.76|0.046|0.575|-|-|-|USD|0.23|6
+gpt-5.6-terra|【GPT】    pro加plus混池      x0.23|272k_plus|0.92|4.14|0.092|1.15|-|-|-|USD|0.23|4.5
+gpt-5.6-terra|【GPT】    低价高智科技分组  x0.08|0_272k|0.16|0.96|0.016|0.2|-|-|-|USD|0.08|6
+gpt-5.6-terra|【GPT】    低价高智科技分组  x0.08|272k_plus|0.32|1.44|0.032|0.4|-|-|-|USD|0.08|4.5
+gpt-5.6-terra|【GPT】    官key    x 0.6|0_272k|1.2|7.2|0.12|1.5|-|-|-|USD|0.6|6
+gpt-5.6-terra|【GPT】    官key    x 0.6|272k_plus|2.4|10.8|0.24|3|-|-|-|USD|0.6|4.5
+gpt-5.6-terra|【GPT】   plus     x0.13|0_272k|0.26|1.56|0.026|0.325|-|-|-|USD|0.13|6
+gpt-5.6-terra|【GPT】   plus     x0.13|272k_plus|0.52|2.34|0.052|0.65|-|-|-|USD|0.13|4.5
+gpt-5.6-terra|【GPT】   pro      x0.3|0_272k|0.6|3.6|0.06|0.75|-|-|-|USD|0.3|6
+gpt-5.6-terra|【GPT】   pro      x0.3|272k_plus|1.2|5.4|0.12|1.5|-|-|-|USD|0.3|4.5
+gpt-6-astra|【GPT】    pro加plus混池      x0.23|0_272k|2.3|11.5|0.23|2.875|-|-|-|USD|0.23|5
+gpt-6-astra|【GPT】    pro加plus混池      x0.23|272k_plus|4.6|17.25|0.46|5.75|-|-|-|USD|0.23|3.75
+gpt-6-astra|【GPT】    低价高智科技分组  x0.08|0_272k|0.8|4|0.08|1|-|-|-|USD|0.08|5
+gpt-6-astra|【GPT】    低价高智科技分组  x0.08|272k_plus|1.6|6|0.16|2|-|-|-|USD|0.08|3.75
+gpt-6-astra|【GPT】    官key    x 0.6|0_272k|6|30|0.6|7.5|-|-|-|USD|0.6|5
+gpt-6-astra|【GPT】    官key    x 0.6|272k_plus|12|45|1.2|15|-|-|-|USD|0.6|3.75
+gpt-6-astra|【GPT】   plus     x0.13|0_272k|1.3|6.5|0.13|1.625|-|-|-|USD|0.13|5
+gpt-6-astra|【GPT】   plus     x0.13|272k_plus|2.6|9.75|0.26|3.25|-|-|-|USD|0.13|3.75
+gpt-6-astra|【GPT】   pro      x0.3|0_272k|3|15|0.3|3.75|-|-|-|USD|0.3|5
+gpt-6-astra|【GPT】   pro      x0.3|272k_plus|6|22.5|0.6|7.5|-|-|-|USD|0.3|3.75
+gpt-6-astra|【GPT】强制fast不额外计费分组  x0.25|0_272k|2.5|12.5|0.25|3.125|-|-|-|USD|0.25|5
+gpt-6-astra|【GPT】强制fast不额外计费分组  x0.25|272k_plus|5|18.75|0.5|6.25|-|-|-|USD|0.25|3.75
+gpt-6-luna|【GPT】    pro加plus混池      x0.23|base|0.023|0.115|0.0023|0.02875|-|-|-|USD|0.23|5
+gpt-6-luna|【GPT】    pro加plus混池      x0.23|tier_2|0.046|0.23|0.0046|0.0575|-|-|-|USD|0.23|5
+gpt-6-luna|【GPT】    官key    x 0.6|base|0.06|0.3|0.006|0.075|-|-|-|USD|0.6|5
+gpt-6-luna|【GPT】    官key    x 0.6|tier_2|0.12|0.6|0.012|0.15|-|-|-|USD|0.6|5
+gpt-6-luna|【GPT】   pro      x0.3|base|0.03|0.15|0.003|0.0375|-|-|-|USD|0.3|5
+gpt-6-luna|【GPT】   pro      x0.3|tier_2|0.06|0.3|0.006|0.075|-|-|-|USD|0.3|5
+gpt-6-sol|【GPT】    pro加plus混池      x0.23|base|0.46|2.3|0.046|0.575|-|-|-|USD|0.23|5
+gpt-6-sol|【GPT】    pro加plus混池      x0.23|tier_2|0.92|4.6|0.092|1.15|-|-|-|USD|0.23|5
+gpt-6-sol|【GPT】    低价高智科技分组  x0.08|base|0.16|0.8|0.016|0.2|-|-|-|USD|0.08|5
+gpt-6-sol|【GPT】    低价高智科技分组  x0.08|tier_2|0.32|1.6|0.032|0.4|-|-|-|USD|0.08|5
+gpt-6-sol|【GPT】    官key    x 0.6|base|1.2|6|0.12|1.5|-|-|-|USD|0.6|5
+gpt-6-sol|【GPT】    官key    x 0.6|tier_2|2.4|12|0.24|3|-|-|-|USD|0.6|5
+gpt-6-sol|【GPT】   plus     x0.13|base|0.26|1.3|0.026|0.325|-|-|-|USD|0.13|5
+gpt-6-sol|【GPT】   plus     x0.13|tier_2|0.52|2.6|0.052|0.65|-|-|-|USD|0.13|5
+gpt-6-sol|【GPT】   pro      x0.3|base|0.6|3|0.06|0.75|-|-|-|USD|0.3|5
+gpt-6-sol|【GPT】   pro      x0.3|tier_2|1.2|6|0.12|1.5|-|-|-|USD|0.3|5
+gpt-6.1-sol|【GPT】    pro加plus混池      x0.23|base|0.46|2.3|0.023|0.575|-|-|-|USD|0.23|5
+gpt-6.1-sol|【GPT】    pro加plus混池      x0.23|长上下文|0.92|4.6|0.046|1.15|-|-|-|USD|0.23|5
+gpt-6.1-sol|【GPT】    低价高智科技分组  x0.08|base|0.16|0.8|0.008|0.2|-|-|-|USD|0.08|5
+gpt-6.1-sol|【GPT】    低价高智科技分组  x0.08|长上下文|0.32|1.6|0.016|0.4|-|-|-|USD|0.08|5
+gpt-6.1-sol|【GPT】    官key    x 0.6|base|1.2|6|0.06|1.5|-|-|-|USD|0.6|5
+gpt-6.1-sol|【GPT】    官key    x 0.6|长上下文|2.4|12|0.12|3|-|-|-|USD|0.6|5
+gpt-6.1-sol|【GPT】   plus     x0.13|base|0.26|1.3|0.013|0.325|-|-|-|USD|0.13|5
+gpt-6.1-sol|【GPT】   plus     x0.13|长上下文|0.52|2.6|0.026|0.65|-|-|-|USD|0.13|5
+gpt-6.1-sol|【GPT】   pro      x0.3|base|0.6|3|0.03|0.75|-|-|-|USD|0.3|5
+gpt-6.1-sol|【GPT】   pro      x0.3|长上下文|1.2|6|0.06|1.5|-|-|-|USD|0.3|5
+gpt-6.1-sol|【GPT】强制fast不额外计费分组  x0.25|base|0.5|2.5|0.025|0.625|-|-|-|USD|0.25|5
+gpt-6.1-sol|【GPT】强制fast不额外计费分组  x0.25|长上下文|1|5|0.05|1.25|-|-|-|USD|0.25|5
+gpt-6.1-terra|【GPT】    pro加plus混池      x0.23|base|0.23|1.15|0.0115|0.2875|-|-|-|USD|0.23|5
+gpt-6.1-terra|【GPT】    pro加plus混池      x0.23|长上下文|0.46|1.725|0.023|0.575|-|-|-|USD|0.23|3.75
+gpt-6.1-terra|【GPT】    低价高智科技分组  x0.08|base|0.08|0.4|0.004|0.1|-|-|-|USD|0.08|5
+gpt-6.1-terra|【GPT】    低价高智科技分组  x0.08|长上下文|0.16|0.6|0.008|0.2|-|-|-|USD|0.08|3.75
+gpt-6.1-terra|【GPT】    官key    x 0.6|base|0.6|3|0.03|0.75|-|-|-|USD|0.6|5
+gpt-6.1-terra|【GPT】    官key    x 0.6|长上下文|1.2|4.5|0.06|1.5|-|-|-|USD|0.6|3.75
+gpt-6.1-terra|【GPT】   plus     x0.13|base|0.13|0.65|0.0065|0.1625|-|-|-|USD|0.13|5
+gpt-6.1-terra|【GPT】   plus     x0.13|长上下文|0.26|0.975|0.013|0.325|-|-|-|USD|0.13|3.75
+gpt-6.1-terra|【GPT】   pro      x0.3|base|0.3|1.5|0.015|0.375|-|-|-|USD|0.3|5
+gpt-6.1-terra|【GPT】   pro      x0.3|长上下文|0.6|2.25|0.03|0.75|-|-|-|USD|0.3|3.75
+gpt-6.2-astra|【GPT】    pro加plus混池      x0.23|long_context|3.68|13.8|0.184|4.6|-|-|-|USD|0.23|3.75
+gpt-6.2-astra|【GPT】    pro加plus混池      x0.23|standard|1.84|9.2|0.092|2.3|-|-|-|USD|0.23|5
+gpt-6.2-astra|【GPT】    低价高智科技分组  x0.08|long_context|1.28|4.8|0.064|1.6|-|-|-|USD|0.08|3.75
+gpt-6.2-astra|【GPT】    低价高智科技分组  x0.08|standard|0.64|3.2|0.032|0.8|-|-|-|USD|0.08|5
+gpt-6.2-astra|【GPT】    官key    x 0.6|long_context|9.6|36|0.48|12|-|-|-|USD|0.6|3.75
+gpt-6.2-astra|【GPT】    官key    x 0.6|standard|4.8|24|0.24|6|-|-|-|USD|0.6|5
+gpt-6.2-astra|【GPT】   plus     x0.13|long_context|2.08|7.8|0.104|2.6|-|-|-|USD|0.13|3.75
+gpt-6.2-astra|【GPT】   plus     x0.13|standard|1.04|5.2|0.052|1.3|-|-|-|USD|0.13|5
+gpt-6.2-astra|【GPT】   pro      x0.3|long_context|4.8|18|0.24|6|-|-|-|USD|0.3|3.75
+gpt-6.2-astra|【GPT】   pro      x0.3|standard|2.4|12|0.12|3|-|-|-|USD|0.3|5
+gpt-6.2-astra|【GPT】强制fast不额外计费分组  x0.25|long_context|4|15|0.2|5|-|-|-|USD|0.25|3.75
+gpt-6.2-astra|【GPT】强制fast不额外计费分组  x0.25|standard|2|10|0.1|2.5|-|-|-|USD|0.25|5
+gpt-6.2-sol|【GPT】    pro加plus混池      x0.23|long_context|0.92|3.45|0.046|1.15|-|-|-|USD|0.23|3.75
+gpt-6.2-sol|【GPT】    pro加plus混池      x0.23|standard|0.46|2.3|0.023|0.575|-|-|-|USD|0.23|5
+gpt-6.2-sol|【GPT】    低价高智科技分组  x0.08|long_context|0.32|1.2|0.016|0.4|-|-|-|USD|0.08|3.75
+gpt-6.2-sol|【GPT】    低价高智科技分组  x0.08|standard|0.16|0.8|0.008|0.2|-|-|-|USD|0.08|5
+gpt-6.2-sol|【GPT】    官key    x 0.6|long_context|2.4|9|0.12|3|-|-|-|USD|0.6|3.75
+gpt-6.2-sol|【GPT】    官key    x 0.6|standard|1.2|6|0.06|1.5|-|-|-|USD|0.6|5
+gpt-6.2-sol|【GPT】   plus     x0.13|long_context|0.52|1.95|0.026|0.65|-|-|-|USD|0.13|3.75
+gpt-6.2-sol|【GPT】   plus     x0.13|standard|0.26|1.3|0.013|0.325|-|-|-|USD|0.13|5
+gpt-6.2-sol|【GPT】   pro      x0.3|long_context|1.2|4.5|0.06|1.5|-|-|-|USD|0.3|3.75
+gpt-6.2-sol|【GPT】   pro      x0.3|standard|0.6|3|0.03|0.75|-|-|-|USD|0.3|5
+gpt-6.2-sol|【GPT】强制fast不额外计费分组  x0.25|long_context|1|3.75|0.05|1.25|-|-|-|USD|0.25|3.75
+gpt-6.2-sol|【GPT】强制fast不额外计费分组  x0.25|standard|0.5|2.5|0.025|0.625|-|-|-|USD|0.25|5
+gpt-image-2.5-flare|生图   最大1.5k     x1|-|-|-|-|-|-|0.05|image|USD|1|1
+gpt-image-2.5-sunburst|生图   最大1.5k     x1|-|-|-|-|-|-|0.05|image|USD|1|1
+gpt-image-2.6-flare|生图   最大1.5k     x1|image|-|-|-|-|-|0.05|image|USD|1|1
+gpt-image-2.6-flare|生图超分2k4k     0.1/张|image|-|-|-|-|-|0.1|image|USD|2|1
+gpt-image-2.6-sunburst|生图   最大1.5k     x1|image|-|-|-|-|-|0.05|image|USD|1|1
+gpt-image-2.6-sunburst|生图超分2k4k     0.1/张|image|-|-|-|-|-|0.1|image|USD|2|1
+gpt-image-2.6|生图   最大1.5k     x1|image|-|-|-|-|-|0.05|image|USD|1|1
+gpt-image-2|生图   最大1.5k     x1|-|-|-|-|-|-|0.05|image|USD|1|1
+grok-4.5|grok高智分组  x0.2|标准|0.4|1.2|0.06|-|-|-|-|USD|0.2|3
+grok-4.5|grok高智分组  x0.2|长上下文|0.8|2.4|0.12|-|-|-|-|USD|0.2|3
+grok-4.6|grok高智分组  x0.2|标准|0.4|1.2|0.1|-|-|-|-|USD|0.2|3
+grok-4.6|grok高智分组  x0.2|长上下文|0.8|2.4|0.2|-|-|-|-|USD|0.2|3
+grok-4.7|grok高智分组  x0.2|标准|0.4|1.2|0.1|-|-|-|-|USD|0.2|3
+grok-4.7|grok高智分组  x0.2|长上下文|0.8|2.4|0.2|-|-|-|-|USD|0.2|3
+kimi-k2.6|国模官key   x 0.5|标准|3.25|13.5|0.550000000001|-|-|-|-|USD|0.5|4.153846153846
+kimi-k2.7-code|国模官key   x 0.5|标准|3.25|13.5|0.65|-|-|-|-|USD|0.5|4.153846153846
+kimi-k3.1-pro|国模优惠渠道   x 0.15|base|1.95|10.2|0.195|1.95|-|-|-|USD|0.15|5.23076923077
+kimi-k3.1-pro|国模官key   x 0.5|base|6.5|34|0.65|6.5|-|-|-|USD|0.5|5.23076923077
+kimi-k3|国模优惠渠道   x 0.15|标准|3|15|0.3|-|-|-|-|USD|0.15|5
+kimi-k3|国模官key   x 0.5|标准|10|50|1|-|-|-|-|USD|0.5|5

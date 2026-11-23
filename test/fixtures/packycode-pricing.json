@@ -1,0 +1,2038 @@
+{
+ "auto_groups": [
+  "cc"
+ ],
+ "catalog_version": 5809,
+ "data": [
+  {
+   "model_name": "mimo-v2.6-flash",
+   "vendor_id": 44,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.02,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "mimo-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.5-plus",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5.999999999999999,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 128000,
+     "ratio": 2.5
+    },
+    {
+     "threshold": 256000,
+     "ratio": 5
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "kimi-k3.1-pro",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 6.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5.230769,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "kimi-sale",
+    "test",
+    "kimi-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai-response",
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.6-sunburst",
+   "vendor_id": 2,
+   "quota_type": 1,
+   "model_ratio": 2.5,
+   "model_price": 0.02469,
+   "model_price_min": 0.02469,
+   "model_price_max": 0.71157,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "image_billing": "token",
+   "price_currency": "USD",
+   "enable_groups": [
+    "image-sale",
+    "image"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.6-flare",
+   "vendor_id": 2,
+   "quota_type": 1,
+   "model_ratio": 2.5,
+   "model_price": 0.02469,
+   "model_price_min": 0.02469,
+   "model_price_max": 0.71157,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "image_billing": "token",
+   "price_currency": "USD",
+   "enable_groups": [
+    "image",
+    "image-sale"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "qwen3.7-plus",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.2,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 256000,
+     "ratio": 3
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-haiku-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 100000,
+     "ratio": 5
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "claude-officially",
+    "cc",
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "glm-5.3-flash",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.2875,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "zai-officially",
+    "glm-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "MiniMax-H3-Max",
+   "vendor_id": 43,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.5,
+   "model_price_min": 1.6500000000000001,
+   "model_price_max": 25.55,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "video"
+   ],
+   "supported_endpoint_types": [
+    "minimax-video"
+   ]
+  },
+  {
+   "model_name": "kimi-k2.6",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 3.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4.153846153846154,
+   "cache_ratio": 0.169,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "kimi-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.5-flare",
+   "vendor_id": 2,
+   "quota_type": 1,
+   "model_ratio": 2.5,
+   "model_price": 0.00588,
+   "model_price_min": 0.00588,
+   "model_price_max": 0.71157,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "image_billing": "token",
+   "price_currency": "USD",
+   "enable_groups": [
+    "image",
+    "image-sale"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 272000,
+     "ratio": 2,
+     "output_ratio": 1.5
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially",
+    "codex",
+    "codex-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "v6",
+   "vendor_id": 48,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.004444,
+   "model_price_min": 0.02222,
+   "model_price_max": 1.53318,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "USD",
+   "enable_groups": [
+    "video"
+   ],
+   "supported_endpoint_types": [
+    "pixverse-video",
+    "pixverse-video-transition"
+   ]
+  },
+  {
+   "model_name": "deepseek-flash",
+   "vendor_id": 42,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.02,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "deepseek-officially",
+    "deepseek-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "gpt-5.5",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "kimi-k2.7-code",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 3.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4.15384615,
+   "cache_ratio": 0.2,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "kimi-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-5-20250929",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-7",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "claude-officially",
+    "cc",
+    "cc-sale",
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "MiniMax-M3",
+   "vendor_id": 43,
+   "quota_type": 0,
+   "model_ratio": 2.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.2,
+   "tiers": [
+    {
+     "threshold": 512000,
+     "ratio": 2
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "minimax-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "glm-5.2",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "glm-sale",
+    "zai-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "v6-max",
+   "vendor_id": 48,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.004444,
+   "model_price_min": 0.026664,
+   "model_price_max": 1.86648,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "USD",
+   "enable_groups": [
+    "video"
+   ],
+   "supported_endpoint_types": [
+    "pixverse-video"
+   ]
+  },
+  {
+   "model_name": "kimi-k3",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 10,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "kimi-sale",
+    "test",
+    "kimi-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai-response",
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "qwen3.8-flash",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.375,
+   "cache_ratio": 0.125,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-opus-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "claude-officially",
+    "cc-expensive",
+    "cc-sale",
+    "cc"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "jev-1.13.0",
+   "vendor_id": 47,
+   "quota_type": 0,
+   "model_ratio": 0.021,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "USD",
+   "enable_groups": [
+    "typesafe-officially"
+   ],
+   "supported_endpoint_types": [
+    "systemone"
+   ]
+  },
+  {
+   "model_name": "gpt-5.4",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "tiers": [
+    {
+     "threshold": 272000,
+     "ratio": 2,
+     "output_ratio": 1.5
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "codex",
+    "codex-sale",
+    "azure-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai-response",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6.1-terra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially",
+    "codex-sale",
+    "codex"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "qwen4-max",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "qwen",
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "codex",
+    "codex-sale",
+    "azure-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai-response",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "codex-auto-review",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "price_currency": "USD",
+   "enable_groups": [
+    "codex",
+    "codex-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "glm-4.7",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.2,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "zai-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc",
+    "cc-sale",
+    "cc-expensive",
+    "claude-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-haiku-4-5-20251001",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc-expensive",
+    "cc",
+    "cc-sale"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "minimax-m2.5",
+   "vendor_id": 43,
+   "quota_type": 0,
+   "model_ratio": 1.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.1,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.7-flash",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 0.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.2,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 32000,
+     "ratio": 3
+    },
+    {
+     "threshold": 256000,
+     "ratio": 6
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "vendor_id": 2,
+   "quota_type": 1,
+   "model_ratio": 2.5,
+   "model_price": 0.00588,
+   "model_price_min": 0.00588,
+   "model_price_max": 0.71157,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "image_billing": "token",
+   "price_currency": "USD",
+   "enable_groups": [
+    "image",
+    "image-sale"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "kimi-k3.1-pro-highspeed",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 13,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5.230769,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "kimi-officially",
+    "test"
+   ],
+   "supported_endpoint_types": [
+    "openai-response",
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 272000,
+     "ratio": 2,
+     "output_ratio": 1.5
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially",
+    "codex",
+    "codex-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "MiniMax-H3-Image",
+   "vendor_id": 43,
+   "quota_type": 1,
+   "model_ratio": 7.5,
+   "model_price": 0.1024,
+   "model_price_min": 0.1024,
+   "model_price_max": 0.4096,
+   "owner_by": "",
+   "completion_ratio": 1.6666666666666667,
+   "image_ratio": 0.6666666666666666,
+   "image_billing": "token",
+   "price_currency": "CNY",
+   "enable_groups": [
+    "image"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "grok-imagine-image-2.0",
+   "vendor_id": 46,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.04,
+   "model_price_min": 0.04,
+   "model_price_max": 0.08,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "USD",
+   "enable_groups": [
+    "grok-officially"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "claude-officially",
+    "cc",
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "deepseek-v4-pro",
+   "vendor_id": 42,
+   "quota_type": 0,
+   "model_ratio": 2.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.0333,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "deepseek-officially",
+    "deepseek-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "gpt-5.6-terra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 272000,
+     "ratio": 2,
+     "output_ratio": 1.5
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "mimo-v2.5",
+   "vendor_id": 44,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.02,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "mimo-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "glm-5",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4.5,
+   "cache_ratio": 0.2,
+   "tiers": [
+    {
+     "threshold": 32000,
+     "ratio": 1.5
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian",
+    "zai-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.8-max-0902",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.125,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-6",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "claude-officially",
+    "cc",
+    "cc-sale",
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc-expensive",
+    "cc",
+    "claude-officially",
+    "cc-sale"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "deepseek-v4-flash",
+   "vendor_id": 42,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.02,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "deepseek-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "grok-4.7",
+   "vendor_id": 46,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "tiers": [
+    {
+     "threshold": 200000,
+     "ratio": 2
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "grok-officially",
+    "grok-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "MiniMax-H3-Image-Highspeed",
+   "vendor_id": 43,
+   "quota_type": 1,
+   "model_ratio": 7.5,
+   "model_price": 0.2048,
+   "model_price_min": 0.2048,
+   "model_price_max": 0.8192,
+   "owner_by": "",
+   "completion_ratio": 3.3333333333333335,
+   "image_ratio": 1.3333333333333333,
+   "image_billing": "token",
+   "price_currency": "CNY",
+   "enable_groups": [
+    "image"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "claude-opus-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc",
+    "claude-officially",
+    "cc-sale",
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "grok-4.6",
+   "vendor_id": 46,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "tiers": [
+    {
+     "threshold": 200000,
+     "ratio": 2
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "grok-officially",
+    "grok-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "c1",
+   "vendor_id": 48,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.004444,
+   "model_price_min": 0.026664,
+   "model_price_max": 1.59984,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "USD",
+   "enable_groups": [
+    "video"
+   ],
+   "supported_endpoint_types": [
+    "pixverse-video",
+    "pixverse-video-transition"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5-1",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc-expensive",
+    "claude-officially",
+    "cc"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.5-flash",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 0.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 10,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 128000,
+     "ratio": 4
+    },
+    {
+     "threshold": 256000,
+     "ratio": 6
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "MiniMax-M2.7",
+   "vendor_id": 43,
+   "quota_type": 0,
+   "model_ratio": 1.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.2,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.6-plus",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "tiers": [
+    {
+     "threshold": 256000,
+     "ratio": 4
+    }
+   ],
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "glm-5.3-flashx",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.285,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "glm-sale",
+    "zai-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc-expensive",
+    "claude-officially",
+    "cc",
+    "cc-sale"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "MiniMax-H3",
+   "vendor_id": 43,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.5,
+   "model_price_min": 2,
+   "model_price_max": 24.8,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "video"
+   ],
+   "supported_endpoint_types": [
+    "minimax-video",
+    "minimax-video-regeneration"
+   ]
+  },
+  {
+   "model_name": "mimo-v2.6-pro-ultraspeed",
+   "vendor_id": 44,
+   "quota_type": 0,
+   "model_ratio": 15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.00833,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "mimo-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.8-max",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.125,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc",
+    "cc-expensive",
+    "cc-sale",
+    "claude-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "hy4",
+   "vendor_id": 45,
+   "quota_type": 0,
+   "model_ratio": 3,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.05,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "hunyuan-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc",
+    "cc-sale",
+    "cc-expensive",
+    "claude-officially"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.5",
+   "vendor_id": 46,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "tiers": [
+    {
+     "threshold": 200000,
+     "ratio": 2
+    }
+   ],
+   "price_currency": "USD",
+   "enable_groups": [
+    "grok-officially",
+    "grok-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "mimo-v2.5-pro",
+   "vendor_id": 44,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.0083,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "mimo-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "jev-1.14.0",
+   "vendor_id": 47,
+   "quota_type": 0,
+   "model_ratio": 0.021,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "price_currency": "USD",
+   "enable_groups": [
+    "typesafe-officially"
+   ],
+   "supported_endpoint_types": [
+    "systemone"
+   ]
+  },
+  {
+   "model_name": "mimo-v2.6-pro",
+   "vendor_id": 44,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.00833,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "mimo-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "glm-5.3",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "glm-sale",
+    "zai-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2",
+   "vendor_id": 2,
+   "quota_type": 1,
+   "model_ratio": 2.5,
+   "model_price": 0.1,
+   "model_price_min": 0.00588,
+   "model_price_max": 0.71157,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "price_currency": "USD",
+   "enable_groups": [
+    "image",
+    "image-sale"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ]
+  },
+  {
+   "model_name": "kimi-k2.5",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5.25,
+   "cache_ratio": 0.175,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "qwen3.7-max",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.2,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "CNY",
+   "enable_groups": [
+    "bailian"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-5-20251101",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "cc-expensive"
+   ],
+   "supported_endpoint_types": [
+    "anthropic"
+   ]
+  },
+  {
+   "model_name": "gpt-6-astra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "azure-officially",
+    "codex",
+    "codex-sale"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ]
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio_5m": 1.25,
+   "price_currency": "USD",
+   "enable_groups": [
+    "codex",
+    "codex-sale",
+    "azure-officially"
+   ],
+   "supported_endpoint_types": [
+    "openai-response",
+    "openai"
+   ]
+  }
+ ],
+ "group_ratio": {
+  "azure-officially": 5,
+  "bailian": 0.5,
+  "cc": 2.5,
+  "cc-expensive": 2.8,
+  "cc-sale": 0.8,
+  "claude-officially": 7,
+  "codex": 0.5,
+  "codex-sale": 0.3,
+  "deepseek-officially": 1,
+  "deepseek-sale": 1,
+  "glm-sale": 1,
+  "grok-officially": 2.5,
+  "grok-sale": 0.3,
+  "hunyuan-officially": 0.5,
+  "image": 1,
+  "image-sale": 1,
+  "kimi-officially": 0.95,
+  "kimi-sale": 0.5,
+  "mimo-officially": 0.8,
+  "minimax-officially": 0.5,
+  "qwen": 0.5,
+  "typesafe-officially": 7,
+  "video": 1,
+  "zai-officially": 1
+ },
+ "inactive_groups": [],
+ "model_group_endpoints": {
+  "cc": {
+   "claude-opus-4-6": [
+    "anthropic"
+   ],
+   "claude-opus-4-7": [
+    "anthropic"
+   ],
+   "claude-opus-4-8": [
+    "anthropic"
+   ],
+   "claude-sonnet-4-6": [
+    "anthropic"
+   ],
+   "claude-sonnet-5": [
+    "anthropic"
+   ]
+  },
+  "cc-expensive": {
+   "claude-opus-4-6": [
+    "anthropic"
+   ],
+   "claude-opus-4-7": [
+    "anthropic"
+   ],
+   "claude-opus-4-8": [
+    "anthropic"
+   ],
+   "claude-sonnet-4-6": [
+    "anthropic"
+   ],
+   "claude-sonnet-5": [
+    "anthropic"
+   ]
+  },
+  "cc-sale": {
+   "claude-opus-4-6": [
+    "anthropic"
+   ],
+   "claude-opus-4-7": [
+    "anthropic"
+   ],
+   "claude-opus-4-8": [
+    "anthropic"
+   ],
+   "claude-sonnet-4-6": [
+    "anthropic"
+   ],
+   "claude-sonnet-5": [
+    "anthropic"
+   ]
+  },
+  "codex": {
+   "gpt-5.6-sol": [
+    "openai-response"
+   ],
+   "gpt-6-astra": [
+    "openai-response"
+   ],
+   "gpt-6-sol": [
+    "openai-response"
+   ],
+   "gpt-6.1-sol": [
+    "openai-response"
+   ],
+   "gpt-6.1-terra": [
+    "openai-response"
+   ],
+   "gpt-6.2-astra": [
+    "openai-response"
+   ],
+   "gpt-6.2-sol": [
+    "openai-response"
+   ]
+  },
+  "codex-sale": {
+   "gpt-5.6-sol": [
+    "openai-response"
+   ],
+   "gpt-6-astra": [
+    "openai-response"
+   ],
+   "gpt-6-sol": [
+    "openai-response"
+   ],
+   "gpt-6.1-sol": [
+    "openai-response"
+   ],
+   "gpt-6.1-terra": [
+    "openai-response"
+   ],
+   "gpt-6.2-astra": [
+    "openai-response"
+   ],
+   "gpt-6.2-sol": [
+    "openai-response"
+   ]
+  },
+  "grok-sale": {
+   "grok-4.5": [
+    "openai-response"
+   ],
+   "grok-4.6": [
+    "openai-response"
+   ],
+   "grok-4.7": [
+    "openai-response"
+   ]
+  },
+  "kimi-officially": {
+   "kimi-k3": [
+    "anthropic",
+    "openai-response"
+   ],
+   "kimi-k3.1-pro": [
+    "anthropic",
+    "openai-response"
+   ],
+   "kimi-k3.1-pro-highspeed": [
+    "openai-response",
+    "anthropic"
+   ]
+  },
+  "kimi-sale": {
+   "kimi-k3": [
+    "openai-response",
+    "anthropic"
+   ],
+   "kimi-k3.1-pro": [
+    "openai-response",
+    "anthropic"
+   ]
+  }
+ },
+ "model_group_ratio": {
+  "deepseek-officially": {
+   "deepseek-flash": 0.8,
+   "deepseek-v4-pro": 0.8
+  },
+  "deepseek-sale": {
+   "deepseek-flash": 0.4,
+   "deepseek-v4-flash": 0.5,
+   "deepseek-v4-pro": 0.5
+  },
+  "glm-sale": {
+   "glm-5.2": 0.5,
+   "glm-5.3": 0.5,
+   "glm-5.3-flash": 0.5,
+   "glm-5.3-flashx": 0.75
+  },
+  "image": {
+   "MiniMax-H3-Image": 0.4,
+   "MiniMax-H3-Image-Highspeed": 0.4,
+   "gpt-image-2": 5,
+   "gpt-image-2.5-flare": 5,
+   "gpt-image-2.5-sunburst": 5,
+   "gpt-image-2.6-flare": 5,
+   "gpt-image-2.6-sunburst": 5
+  },
+  "video": {
+   "MiniMax-H3": 0.9,
+   "MiniMax-H3-Max": 0.9,
+   "c1": 6.21,
+   "v6": 6.21,
+   "v6-max": 6.21
+  },
+  "zai-officially": {
+   "glm-4.7": 0.9,
+   "glm-5": 0.9,
+   "glm-5.2": 0.9,
+   "glm-5.3": 0.9,
+   "glm-5.3-flash": 0.9,
+   "glm-5.3-flashx": 0.9
+  }
+ },
+ "peak_active": {},
+ "peak_pricing": {
+  "enabled": true,
+  "rules": [
+   {
+    "enabled": true,
+    "timezone": "Asia/Shanghai",
+    "windows": [
+     "09:00-12:00",
+     "14:00-18:00"
+    ],
+    "weekdays": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ],
+    "models": [
+     "deepseek-v4-flash",
+     "deepseek-v4-pro",
+     "deepseek-v4-flash-vision-exp",
+     "deepseek-v4.1-flash-expires-on-0910",
+     "deepseek-flash"
+    ],
+    "factor": 2
+   }
+  ]
+ },
+ "success": true,
+ "supported_endpoint": {
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST",
+   "extra_paths": [
+    "/v1/images/edits"
+   ]
+  },
+  "minimax-video": {
+   "path": "/v2/video_generation",
+   "method": "POST"
+  },
+  "minimax-video-regeneration": {
+   "path": "/v2/video_regeneration",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  },
+  "openai-response": {
+   "path": "/v1/responses",
+   "method": "POST"
+  },
+  "pixverse-video": {
+   "path": "/v2/video/text/generate",
+   "method": "POST",
+   "extra_paths": [
+    "/v2/video/img/generate"
+   ]
+  },
+  "pixverse-video-transition": {
+   "path": "/v2/video/transition/generate",
+   "method": "POST"
+  },
+  "systemone": {
+   "path": "/v1/systemone",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "azure-officially": "azure官方渠道",
+  "bailian": "阿里百炼官方版本",
+  "cc": "claude code专用",
+  "cc-expensive": "昂贵的 claude code 分组，可用于第三方",
+  "cc-sale": " 便宜的 claude code 分组，可以养龙虾，缓存可能会有异常",
+  "claude-officially": "claude官方版本",
+  "codex": "codex专用",
+  "codex-sale": "codex优惠版本",
+  "deepseek-officially": "deepseek官方渠道",
+  "deepseek-sale": "deepseek优惠渠道",
+  "glm-sale": " 便宜的glm分组，非逆向",
+  "grok-officially": "grok官方渠道",
+  "grok-sale": "grok 优惠渠道",
+  "hunyuan-officially": "腾讯混元官方渠道",
+  "image": "官方稳定image 聚合",
+  "image-sale": "image优惠渠道",
+  "kimi-officially": "kimi官方渠道",
+  "kimi-sale": " 便宜的kimi分组，非逆向",
+  "mimo-officially": "mimo官方版本",
+  "minimax-officially": "minimax官方渠道",
+  "qwen": "qwen测试分组",
+  "typesafe-officially": "jev官方渠道",
+  "video": "视频生成专用渠道",
+  "zai-officially": " 智谱 API官方版本"
+ },
+ "vendors": [
+  {
+   "id": 48,
+   "name": "PixVerse",
+   "icon": "PixVerse.Color"
+  },
+  {
+   "id": 9,
+   "name": "字节跳动",
+   "icon": "Doubao.Color"
+  },
+  {
+   "id": 47,
+   "name": "TypeSafe",
+   "icon": "TypeSafe"
+  },
+  {
+   "id": 2,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": 42,
+   "name": "DeepSeek",
+   "icon": "DeepSeek.Color"
+  },
+  {
+   "id": 45,
+   "name": "Hunyuan",
+   "icon": "Hunyuan"
+  },
+  {
+   "id": 44,
+   "name": "Xiaomi MiMo",
+   "icon": "XiaomiMiMo.Icons"
+  },
+  {
+   "id": 5,
+   "name": "Meta",
+   "icon": "Meta.Color"
+  },
+  {
+   "id": 4,
+   "name": "Google",
+   "icon": "Gemini.Color"
+  },
+  {
+   "id": 43,
+   "name": "MiniMax",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 1,
+   "name": "Anthropic",
+   "icon": "Claude.Color"
+  },
+  {
+   "id": 8,
+   "name": "阿里巴巴",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 6,
+   "name": "智谱",
+   "icon": "Zhipu.Color"
+  },
+  {
+   "id": 7,
+   "name": "Moonshot",
+   "icon": "Moonshot"
+  },
+  {
+   "id": 46,
+   "name": "xAI",
+   "icon": "XAI"
+  }
+ ]
+}

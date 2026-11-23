@@ -40,6 +40,15 @@ import { sitePlugin as eapiPlugin } from "./providers/eapi.js";
 import { sitePlugin as moonupPlugin } from "./providers/moonup.js";
 import { sitePlugin as velamostPlugin } from "./providers/velamost.js";
 import { sitePlugin as kelaodePlugin } from "./providers/kelaode.js";
+import { sitePlugin as _0aitPlugin } from "./providers/0ait.js";
+import { sitePlugin as _4zapiPlugin } from "./providers/4zapi.js";
+import { sitePlugin as coderelayPlugin } from "./providers/coderelay.js";
+import { sitePlugin as corecodePlugin } from "./providers/corecode.js";
+import { sitePlugin as kuaipaoPlugin } from "./providers/kuaipao.js";
+import { sitePlugin as packycodePlugin } from "./providers/packycode.js";
+import { sitePlugin as pqhPlugin } from "./providers/pqh.js";
+import { sitePlugin as xkrelayPlugin } from "./providers/xkrelay.js";
+import { sitePlugin as zerocatPlugin } from "./providers/zerocat.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -97,7 +106,16 @@ export const SITE_PLUGIN_CATALOG = [
   entry("eapi", "E-API", "eapi.site", "direct", () => ({ sitePlugin: eapiPlugin }), { paths: ["/pricing"], description: "匿名模型广场报价；per_token 按折后美元/百万、fixed 按张计；充值 ¥7 = $1 额度（登录态 offers 取证）" }),
   entry("moonup", "MoonUp", "moonup.dev", "direct", () => ({ sitePlugin: moonupPlugin }), { paths: ["/","/models"], description: "订阅制 API 转换平台，公开模型广场直连采集" }),
   entry("velamost", "VelaMost", "velamost.com", "direct", () => ({ sitePlugin: velamostPlugin }), { paths: ["/pricing"], description: "公开 /api/pricing 直连采集，92 个模型；分组倍率报文内自带，美元计价；充值比例需登录未验证" }),
-  entry("kelaode", "克劳德 APi", "api.kelaode.si", "page", () => ({ sitePlugin: kelaodePlugin }), { paths: ["/model-plaza"], description: "模型广场要求登录，复用浏览器登录态，token 过期自动续期" })
+  entry("kelaode", "克劳德 APi", "api.kelaode.si", "page", () => ({ sitePlugin: kelaodePlugin }), { paths: ["/model-plaza"], description: "模型广场要求登录，复用浏览器登录态，token 过期自动续期" }),
+  entry("0ait", "0AIT 中转站", "0ait.com", "direct", () => ({ sitePlugin: _0aitPlugin }), { hosts: ["0ait.com","www.0ait.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，72 个模型 37 个分组（倍率 0.15 ~ 2.0 以上（25 档））；充值 1 美元额度 = ¥7.3" }),
+  entry("4zapi", "4Z API", "4zapi.com", "direct", () => ({ sitePlugin: _4zapiPlugin }), { hosts: ["4zapi.com","www.4zapi.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，323 个模型 80 个分组（倍率 0.040447 ~ 1.1（41 档））；充值 1 美元额度 = ¥6.68752" }),
+  entry("coderelay", "CodeRelay", "coderelay.cn", "direct", () => ({ sitePlugin: coderelayPlugin }), { hosts: ["coderelay.cn","www.coderelay.cn"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，54 个模型 16 个分组（倍率 0.06 ~ 1.5）；充值 1 元 = 1 美元额度" }),
+  entry("corecode", "CoreCode", "corecode.live", "direct", () => ({ sitePlugin: corecodePlugin }), { hosts: ["corecode.live","www.corecode.live"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，28 个模型 7 个分组（倍率 0.5 ~ 2.05）；充值 1 美元额度 = ¥6.8" }),
+  entry("kuaipao", "快跑AI", "kuaipao.ai", "direct", () => ({ sitePlugin: kuaipaoPlugin }), { hosts: ["kuaipao.ai","kuaipao.pro","www.kuaipao.ai","www.kuaipao.pro"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，118 个模型 15 个分组（倍率 0.2 ~ 15.3）；充值 1 美元额度 = ¥0.4" }),
+  entry("packycode", "packycode", "packycode.com", "direct", () => ({ sitePlugin: packycodePlugin }), { hosts: ["packycode.com","packyapi.com","www.packycode.com","www.packyapi.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，78 个模型 25 个分组（倍率 0.3 ~ 7）；充值 1 美元额度 = ¥7" }),
+  entry("pqh", "PQH 中转站", "pqh.ai", "direct", () => ({ sitePlugin: pqhPlugin }), { hosts: ["pqh.ai","www.pqh.ai"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，108 个模型 53 个分组（倍率 0.12 ~ 2.6（25 档））；充值 1 美元额度 = ¥7.3" }),
+  entry("xkrelay", "深空API", "xkrelay.com", "direct", () => ({ sitePlugin: xkrelayPlugin }), { hosts: ["xkrelay.com","www.xkrelay.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，71 个模型 26 个分组（倍率 0.08 ~ 1.5（16 档））；充值 1 元 = 1 美元额度" }),
+  entry("zerocat", "ZeroCat", "zero.cat", "direct", () => ({ sitePlugin: zerocatPlugin }), { hosts: ["zero.cat","www.zero.cat"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，67 个模型 11 个分组（倍率 0.04 ~ 1.5）；充值 1 元 = 1 美元额度" })
 ];
 
 export function sitePluginById(id) {

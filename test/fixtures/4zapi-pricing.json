@@ -1,0 +1,3392 @@
+{
+ "data": [
+  {
+   "model_name": "claude-opus-5-5",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 55,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_5m_ratio": 1.25,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "AWS-Bedrock-2",
+    "AWS-Claude-2",
+    "AWS-Claude-3",
+    "Anthropic-Claude-1",
+    "Claude-Code-1",
+    "Claude-Code-2",
+    "Claude-Code-3",
+    "Kiro-Claude-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "created_time": 1790133533,
+   "usage_count": 36491648086,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1790739472,
+   "usage_count": 28501485878,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-6-astra",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1788584566,
+   "usage_count": 19837001624,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "show_image_upload": 0,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1794990394,
+   "usage_count": 11720390801,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 55,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "cache_creation_5m_ratio": 1.25,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "AWS-Bedrock-2",
+    "AWS-Claude-2",
+    "AWS-Claude-3",
+    "Anthropic-Claude-1",
+    "Claude-Code-1",
+    "Claude-Code-2",
+    "Claude-Code-3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "created_time": 1794284907,
+   "usage_count": 11348264233,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.8-flash",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 67,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Anti-Gemini-2"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 600,
+   "created_time": 1788376963,
+   "usage_count": 10661388272,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3-flash-preview",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a30c88f78c7c.png",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 67,
+   "quota_type": 0,
+   "model_ratio": 0.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Anti-Gemini-1",
+    "Anti-Gemini-2",
+    "Cli-Gemini-1",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 509,
+   "created_time": 1766025012,
+   "usage_count": 10445784925,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.1-pro-preview",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/2be2df9d-dd5a-41fb-89b8-a5f9079b85d5",
+   "show_image_upload": 1,
+   "tags": "对话,思考,多模态",
+   "model_type": "对话",
+   "vendor_id": 67,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Anti-Gemini-2",
+    "Vertex-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 200000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "sort_order": 520,
+   "created_time": 1771524129,
+   "usage_count": 10181412099,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.5-flash-lite",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 67,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.33333333333,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Anti-Gemini-1",
+    "Anti-Gemini-2",
+    "Cli-Gemini-1",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 602,
+   "created_time": 1787710128,
+   "usage_count": 9517762863,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.5-flash",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/9244ce98-5b76-4489-b9d3-c0c296bd1bbc",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 67,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Anti-Gemini-1",
+    "Anti-Gemini-2",
+    "Cli-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 525,
+   "created_time": 1779240745,
+   "usage_count": 9232967671,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-image-2-c",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 93,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.12,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gpt-Image-1",
+    "Gpt-Image-2",
+    "Gpt-Image-3"
+   ],
+   "supported_endpoint_types": [
+    "openai-绘图",
+    "openai-编辑"
+   ],
+   "sort_order": 258,
+   "created_time": 1785206173,
+   "usage_count": 8878120978,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "sort_order": 525,
+   "created_time": 1787707762,
+   "usage_count": 8161746038,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "deepseek-v4.1-flash",
+   "show_image_upload": 1,
+   "tags": "对话,工具,思考,识图",
+   "model_type": "对话",
+   "vendor_id": 54,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.02,
+   "enable_groups": [
+    "Alibaba-2",
+    "Alibaba-3",
+    "Self-Deployed-1",
+    "Self-Deployed-2",
+    "Self-Deployed-3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "created_time": 1789093116,
+   "usage_count": 7382439358,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.7-flash",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 67,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 600,
+   "created_time": 1787709226,
+   "usage_count": 7343371833,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-image-2",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/72f77c13-8dad-4706-a614-1e88cb7c8299",
+   "show_image_upload": 1,
+   "tags": "绘画,dall-e-3格式",
+   "model_type": "图像",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "image_cache_ratio": 0.6400000000000001,
+   "cache_ratio": 0.4,
+   "enable_groups": [
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "OpenAI image edit"
+   ],
+   "sort_order": 525,
+   "created_time": 1776844213,
+   "usage_count": 6929429408,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 55,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_5m_ratio": 1.25,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "AWS-Bedrock-2",
+    "AWS-Claude-2",
+    "AWS-Claude-3",
+    "Anthropic-Claude-1",
+    "Claude-Code-1",
+    "Claude-Code-2",
+    "Claude-Code-3",
+    "Kiro-Claude-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 526,
+   "created_time": 1787709522,
+   "usage_count": 6452422262,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 55,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_5m_ratio": 1.25,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "AWS-Bedrock-2",
+    "AWS-Claude-2",
+    "AWS-Claude-3",
+    "Anthropic-Claude-1",
+    "Claude-Code-1",
+    "Claude-Code-2",
+    "Claude-Code-3",
+    "Kiro-Claude-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "created_time": 1790665281,
+   "usage_count": 6403409284,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "show_image_upload": 1,
+   "tags": "绘画,dall-e-3格式",
+   "model_type": "图像",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "image_ratio": 1.6,
+   "image_cache_ratio": 0.6400000000000001,
+   "cache_ratio": 0.4,
+   "enable_groups": [
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "OpenAI image edit",
+    "image-generation"
+   ],
+   "created_time": 1788930073,
+   "usage_count": 5507240783,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-5.5",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/19011beb-6b4d-412e-b178-a55deb269c13",
+   "show_image_upload": 1,
+   "tags": "对话,识图",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "sort_order": 522,
+   "created_time": 1776996565,
+   "usage_count": 5071641388,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.1-flash-image-preview",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a30a624ae356.png",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 67,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.1655,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Aistudio-Gemini-1",
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Discounted-Banana-1",
+    "Discounted-Banana-2",
+    "Vertex-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 518,
+   "created_time": 1772161533,
+   "usage_count": 4985358240,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3-pro-image-preview",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a30b7d666115.png",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 67,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.33,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Aistudio-Gemini-1",
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Discounted-Banana-1",
+    "Discounted-Banana-2",
+    "Vertex-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 511,
+   "created_time": 1763690229,
+   "usage_count": 4926445878,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gpt-6-luna",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1790133926,
+   "usage_count": 4856242771,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "show_image_upload": 0,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1794990562,
+   "usage_count": 4003093153,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "claude-haiku-5-5",
+   "show_image_upload": 1,
+   "tags": "对话,识图,思考,工具",
+   "model_type": "对话",
+   "vendor_id": 55,
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_5m_ratio": 1.25,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "AWS-Bedrock-2",
+    "AWS-Claude-2",
+    "AWS-Claude-3",
+    "Anthropic-Claude-1",
+    "Claude-Code-1",
+    "Claude-Code-2",
+    "Claude-Code-3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 100000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 5,
+     "completion_step_ratio": 5,
+     "cache_step_ratio": 5,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1791445020,
+   "usage_count": 3316221861,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Codex-Gpt-1",
+    "Codex-Gpt-2",
+    "Codex-Gpt-3",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1790133829,
+   "usage_count": 3183059066,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a30b0dd013f6.png",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 55,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_5m_ratio": 1.25,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "AWS-Bedrock-1",
+    "AWS-Bedrock-2",
+    "AWS-Claude-1",
+    "AWS-Claude-2",
+    "AWS-Claude-3",
+    "Anthropic-Claude-1",
+    "Claude-Code-1",
+    "Claude-Code-2",
+    "Claude-Code-3",
+    "Kiro-Claude-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "sort_order": 514,
+   "created_time": 1770342057,
+   "usage_count": 3170000786,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3-pro-image",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/0496af6f-bdcf-4b95-855c-8931475c95ba",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 67,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.33,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Aistudio-Gemini-1",
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Discounted-Banana-1",
+    "Discounted-Banana-2",
+    "Vertex-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 524,
+   "created_time": 1781094317,
+   "usage_count": 2829103546,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gpt-5.6-luna",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 0.1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1.25,
+   "cache_creation_12h_ratio": 2.5,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "sort_order": 526,
+   "created_time": 1787707587,
+   "usage_count": 2753245531,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gemini-3.1-flash-image",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/af82c8e7-e2db-4ade-84ba-29910a6e7827",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 67,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.1655,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Discounted-Banana-1",
+    "Discounted-Banana-2",
+    "Vertex-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 524,
+   "created_time": 1781094445,
+   "usage_count": 2293991651,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gpt-5.4",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/12701c69-1c6d-4dd0-a543-45d924bd6d86",
+   "show_image_upload": 1,
+   "tags": "对话,识图,工具",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 1.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai-response"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 272000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 1.5,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "sort_order": 520,
+   "created_time": 1772763177,
+   "usage_count": 2073333515,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst-c",
+   "show_image_upload": 1,
+   "tags": "绘画,dall-e-3格式",
+   "model_type": "图像",
+   "vendor_id": 52,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.16,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gpt-Image-1",
+    "Gpt-Image-2",
+    "Gpt-Image-3"
+   ],
+   "supported_endpoint_types": [
+    "OpenAI image edit",
+    "image-generation"
+   ],
+   "sort_order": 780,
+   "created_time": 1788953960,
+   "usage_count": 1956040711,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gemini-nano-banana-2.1",
+   "show_image_upload": 1,
+   "tags": "绘图",
+   "model_type": "图像",
+   "vendor_id": 67,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.12923,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Aistudio-Gemini-2",
+    "Aistudio-Gemini-3",
+    "Aistudio-Gemini-4",
+    "Discounted-Banana-1",
+    "Discounted-Banana-2",
+    "Vertex-Gemini-1",
+    "Vertex-Gemini-2",
+    "Vertex-Gemini-3"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "sort_order": 526,
+   "created_time": 1791347222,
+   "usage_count": 1755089661,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "kling-video",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a326f18890bc.png",
+   "show_image_upload": 1,
+   "tags": "异步,视频,参考生视频",
+   "model_type": "音视频",
+   "vendor_id": 88,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.0014706,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Kling-2"
+   ],
+   "supported_endpoint_types": [
+    "Image to video",
+    "Multi-image reference to video",
+    "Text to video"
+   ],
+   "created_time": 1761934883,
+   "usage_count": 1684046766,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gpt-4o-mini",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a325325d1d90.png",
+   "show_image_upload": 1,
+   "tags": "对话,识图",
+   "model_type": "对话",
+   "vendor_id": 52,
+   "quota_type": 0,
+   "model_ratio": 0.075,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.5,
+   "enable_groups": [
+    "Azure-Gpt-1",
+    "Azure-Gpt-2",
+    "Azure-Gpt-3",
+    "Azure-Gpt-4",
+    "Azure-Gpt-5",
+    "Azure-Gpt-6",
+    "Openai-Gpt-1",
+    "Openai-Gpt-2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "created_time": 1761935430,
+   "usage_count": 1490945751,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "glm-5.3-flash",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 109,
+   "quota_type": 0,
+   "model_ratio": 0.075,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.33333333333,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "Self-Deployed-1",
+    "Self-Deployed-2",
+    "Self-Deployed-3",
+    "glm-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "created_time": 1787824167,
+   "usage_count": 1475553426,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "doubao-seedream-5-0-pro-260628",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 91,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.001471,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "doubao-image-1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ],
+   "created_time": 1785497637,
+   "usage_count": 1208439939,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "gpt-image-2.5-flare-c",
+   "show_image_upload": 1,
+   "tags": "绘画,dall-e-3格式",
+   "model_type": "图像",
+   "vendor_id": 52,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.16,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gpt-Image-1",
+    "Gpt-Image-2",
+    "Gpt-Image-3"
+   ],
+   "supported_endpoint_types": [
+    "OpenAI image edit",
+    "image-generation"
+   ],
+   "sort_order": 780,
+   "created_time": 1788953589,
+   "usage_count": 909406061,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "doubao-seedance-2-5-260628",
+   "show_image_upload": 1,
+   "tags": "视频,异步",
+   "model_type": "音视频",
+   "vendor_id": 91,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Seedance-2"
+   ],
+   "supported_endpoint_types": [
+    "Doubao video"
+   ],
+   "sort_order": 760,
+   "created_time": 1788529378,
+   "usage_count": 829851228,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "suno_music_open",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/b322c54c-d906-47fe-9e09-e1c933f96b24",
+   "show_image_upload": 1,
+   "tags": "音乐,异步",
+   "model_type": "音视频",
+   "vendor_id": 120,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.026667,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Suno-1",
+    "Suno-2"
+   ],
+   "supported_endpoint_types": [
+    "Suno music generation"
+   ],
+   "sort_order": 524,
+   "created_time": 1780284091,
+   "usage_count": 802890510,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "kimi-k3",
+   "show_image_upload": 1,
+   "tags": "对话,思考,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 63,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1,
+   "cache_creation_5m_ratio": 1,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "Kimi-1",
+    "Self-Deployed-1",
+    "Self-Deployed-2",
+    "Self-Deployed-3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 607,
+   "created_time": 1787710823,
+   "usage_count": 735720223,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "grok-4.7",
+   "show_image_upload": 0,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 113,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "Cli-Grok-1",
+    "Cli-Grok-2",
+    "Xai-Grok-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 200000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 500000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 2,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1790043264,
+   "usage_count": 709849655,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "muse-video",
+   "show_image_upload": 0,
+   "tags": "视频",
+   "model_type": "音视频",
+   "vendor_id": 874900,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Special-Muse-Video-1"
+   ],
+   "supported_endpoint_types": [
+    "OpenAI video format"
+   ],
+   "sort_order": 750,
+   "created_time": 1793711399,
+   "usage_count": 629638901,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "wan3.0-video",
+   "show_image_upload": 1,
+   "tags": "异步,视频,首尾帧",
+   "model_type": "音视频",
+   "vendor_id": 96,
+   "quota_type": 1,
+   "model_ratio": 5,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Alibaba-video-1",
+    "Alibaba-video-2"
+   ],
+   "supported_endpoint_types": [
+    "Wan video generation"
+   ],
+   "sort_order": 760,
+   "created_time": 1788440018,
+   "usage_count": 546938357,
+   "video_resolution_ratios": {
+    "1080p": 20,
+    "480p": 5,
+    "720p": 10
+   },
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "mj_imagine",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a3248a235231.png",
+   "show_image_upload": 1,
+   "tags": "绘画,异步",
+   "model_type": "图像",
+   "vendor_id": 112,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.3,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "MJ-3"
+   ],
+   "supported_endpoint_types": [
+    "MJ imagine"
+   ],
+   "sort_order": 460,
+   "created_time": 1761935890,
+   "usage_count": 470172925,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "doubao-seedream-5-0-260128",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a30b5fec1f66.png",
+   "show_image_upload": 1,
+   "tags": "绘画,dall-e-3格式",
+   "model_type": "图像",
+   "vendor_id": 91,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.033,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Doubao-1",
+    "Doubao-2"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ],
+   "sort_order": 511,
+   "created_time": 1772072454,
+   "usage_count": 406937992,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "kling-video-v4",
+   "show_image_upload": 1,
+   "tags": "异步,视频,参考生视频",
+   "model_type": "音视频",
+   "vendor_id": 88,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.0014,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Kling-3"
+   ],
+   "supported_endpoint_types": [
+    "Image to video",
+    "Text to video",
+    "video to video"
+   ],
+   "created_time": 1793354036,
+   "usage_count": 304719892,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "veo_3_1-fast",
+   "show_image_upload": 1,
+   "tags": "异步,视频,首尾帧",
+   "model_type": "音视频",
+   "vendor_id": 67,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.576,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Discounted-Gemini-2"
+   ],
+   "supported_endpoint_types": [
+    "OpenAI video format"
+   ],
+   "sort_order": 500,
+   "created_time": 1762059105,
+   "usage_count": 266516751,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "doubao-seedream-5-5-261028",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 91,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "doubao-image-2"
+   ],
+   "supported_endpoint_types": [
+    "image-generation"
+   ],
+   "created_time": 1794992761,
+   "usage_count": 244668897,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "kimi-k3.1-pro",
+   "show_image_upload": 1,
+   "tags": "对话,思考,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 63,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "cache_creation_ratio": 1,
+   "cache_creation_5m_ratio": 1,
+   "cache_creation_1h_ratio": 2,
+   "enable_groups": [
+    "Kimi-1",
+    "Kimi-2",
+    "Self-Deployed-1",
+    "Self-Deployed-2",
+    "Self-Deployed-3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 710,
+   "created_time": 1793107571,
+   "usage_count": 168516287,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "qwen3.5-27b",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a3111c212808.png",
+   "show_image_upload": 1,
+   "tags": "对话,识图",
+   "model_type": "对话",
+   "vendor_id": 96,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "Alibaba-1",
+    "Alibaba-2",
+    "Alibaba-3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "sort_order": 490,
+   "created_time": 1773719460,
+   "usage_count": 149820344,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "doubao-seed-2-1-pro-260915",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图,思考",
+   "model_type": "对话",
+   "vendor_id": 91,
+   "quota_type": 0,
+   "model_ratio": 0.45,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "Doubao-2",
+    "Doubao-3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "created_time": 1789883645,
+   "usage_count": 117017082,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "MiniMax-H3",
+   "show_image_upload": 0,
+   "tags": "视频,异步",
+   "model_type": "视频",
+   "vendor_id": 95,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Hailuo-2"
+   ],
+   "supported_endpoint_types": [
+    "hailuo-video"
+   ],
+   "sort_order": 780,
+   "created_time": 1791538161,
+   "usage_count": 109303223,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "qwen-image-3.0",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 96,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.0014706,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Alibaba-image-2"
+   ],
+   "supported_endpoint_types": [
+    "images-generations"
+   ],
+   "sort_order": 627,
+   "created_time": 1786348636,
+   "usage_count": 93175090,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "doubao-seedance-2-0-fast-260128",
+   "show_image_upload": 1,
+   "tags": "异步,视频",
+   "model_type": "音视频",
+   "vendor_id": 91,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Seedance-1",
+    "Seedance-2"
+   ],
+   "supported_endpoint_types": [
+    "Doubao video"
+   ],
+   "sort_order": 550,
+   "created_time": 1785312875,
+   "usage_count": 68156662,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "eleven_v4_turbo",
+   "show_image_upload": 0,
+   "tags": "音频",
+   "model_type": "音视频",
+   "vendor_id": 874899,
+   "quota_type": 0,
+   "model_ratio": 20,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "Eleven-1"
+   ],
+   "supported_endpoint_types": [
+    "Text to speech"
+   ],
+   "created_time": 1793682107,
+   "usage_count": 55984840,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "speech-2.8-hd",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/5fbc16e8-40bd-4fe1-8656-fc2d7ad524e7",
+   "show_image_upload": 1,
+   "tags": "音频",
+   "model_type": "音视频",
+   "vendor_id": 95,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.0014706,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Hailuo-1"
+   ],
+   "supported_endpoint_types": [
+    "Async speech",
+    "Sync speech"
+   ],
+   "sort_order": 519,
+   "created_time": 1774491508,
+   "usage_count": 47309218,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "mimo-v2.6-pro",
+   "show_image_upload": 1,
+   "tags": "对话,工具,识图",
+   "model_type": "对话",
+   "vendor_id": 270,
+   "quota_type": 0,
+   "model_ratio": 0.2175,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.0083,
+   "enable_groups": [
+    "Self-Deployed-1",
+    "Self-Deployed-2",
+    "Self-Deployed-3",
+    "Xiaomi-1",
+    "Xiaomi-2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "created_time": 1790153704,
+   "usage_count": 47149593,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "MiniMax-M3",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/9abf6841-6288-4ae2-81fe-b335895749b6",
+   "show_image_upload": 1,
+   "tags": "对话,工具",
+   "model_type": "对话",
+   "vendor_id": 95,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "Hailuo-3",
+    "Self-Deployed-2",
+    "Self-Deployed-3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 512000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 1000000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 2,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "sort_order": 523,
+   "created_time": 1780296926,
+   "usage_count": 46195798,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "grok-4.3",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/17/6a3253287b349.png",
+   "show_image_upload": 1,
+   "tags": "对话,工具,思考",
+   "model_type": "对话",
+   "vendor_id": 113,
+   "quota_type": 0,
+   "model_ratio": 0.625,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.16,
+   "enable_groups": [
+    "Azure-Grok-1",
+    "Cli-Grok-1",
+    "Cli-Grok-2",
+    "Xai-Grok-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "step_ratios": [
+    {
+     "step_size": 200000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 1,
+     "completion_step_ratio": 1,
+     "cache_step_ratio": 1,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    },
+    {
+     "step_size": 500000,
+     "completion_step_size": -1,
+     "prompt_step_ratio": 2,
+     "completion_step_ratio": 2,
+     "cache_step_ratio": 2,
+     "prompt_thinking_step_ratio": 0,
+     "completion_thinking_step_ratio": 0
+    }
+   ],
+   "created_time": 1778649055,
+   "usage_count": 41802893,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "hy4",
+   "show_image_upload": 0,
+   "tags": "对话,工具",
+   "model_type": "chat",
+   "vendor_id": 874878,
+   "quota_type": 0,
+   "model_ratio": 0.417,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2.99880095923,
+   "cache_ratio": 0.0503597122302,
+   "enable_groups": [
+    "Self-Deployed-1",
+    "Self-Deployed-2",
+    "Self-Deployed-3",
+    "hunyuan-1"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "created_time": 1793859594,
+   "usage_count": 35531935,
+   "type": 0,
+   "available": true
+  },
+  {
+   "model_name": "pixverse-video",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/fe789077-f932-41b1-a75c-a1fbec9b6b56",
+   "show_image_upload": 1,
+   "tags": "视频,首尾帧,参考生视频,延长",
+   "model_type": "音视频",
+   "vendor_id": 874847,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.001471,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Pix-CN-1",
+    "Pix-GL-1"
+   ],
+   "supported_endpoint_types": [
+    "Pix extend video",
+    "Pix first & last frame",
+    "Pix image to video / video template",
+    "Pix multi-subject (multi-reference)",
+    "Pix text to video"
+   ],
+   "sort_order": 524,
+   "created_time": 1779953575,
+   "usage_count": 20250700,
+   "pixverse_v6_ref_silent": {
+    "1080p": 105.6,
+    "360p": 29.333333333333332,
+    "540p": 41.06666666666667,
+    "720p": 52.8
+   },
+   "pixverse_v6_ref_audio": {
+    "1080p": 134.93333333333334,
+    "360p": 41.06666666666667,
+    "540p": 52.8,
+    "720p": 70.4
+   },
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "viduq3-turbo",
+   "cover_image": "https://lsky.zhongzhuan.chat/i/2026/06/16/6a310aec17046.png",
+   "show_image_upload": 1,
+   "tags": "视频,首尾帧,参考生视频",
+   "model_type": "音视频",
+   "vendor_id": 68,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.0014706,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Vidu-1",
+    "Vidu-2"
+   ],
+   "supported_endpoint_types": [
+    "Vidu first & last frame",
+    "Vidu image to video",
+    "Vidu text to video"
+   ],
+   "sort_order": 495,
+   "created_time": 1773376217,
+   "usage_count": 13420352,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "muse-image",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 874900,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Special-Muse-1"
+   ],
+   "supported_endpoint_types": [
+    "image edit",
+    "image-generation"
+   ],
+   "created_time": 1793684076,
+   "usage_count": 1114135,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "qwen-image-2.0-2026-03-03",
+   "cover_image": "https://soruxgpt-saas-yimeng-api.soruxgpt.com/file_download/729a9b81-f536-40e6-a607-c203272d7405",
+   "show_image_upload": 1,
+   "tags": "绘画",
+   "model_type": "图像",
+   "vendor_id": 96,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.029412,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Alibaba-image-1"
+   ],
+   "supported_endpoint_types": [
+    "images-generations"
+   ],
+   "sort_order": 525,
+   "created_time": 1779249933,
+   "usage_count": 566030,
+   "type": 1,
+   "available": true
+  },
+  {
+   "model_name": "aigc-video-hailuo",
+   "show_image_upload": 1,
+   "tags": "视频,异步",
+   "model_type": "音视频",
+   "vendor_id": 61,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.01,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Aigc-Video-1"
+   ],
+   "supported_endpoint_types": [
+    "aigc-video"
+   ],
+   "sort_order": 480,
+   "created_time": 1768309746,
+   "usage_count": 0,
+   "type": 1,
+   "available": true
+  }
+ ],
+ "group_ratio": {
+  "AWS-Bedrock-1": 0.48529800000000006,
+  "AWS-Bedrock-2": 0.6470640000000001,
+  "AWS-Claude-1": 0.48529800000000006,
+  "AWS-Claude-2": 0.9705960000000001,
+  "AWS-Claude-3": 1.2100000000000002,
+  "AWS-Gpt-1": 0.32353200000000004,
+  "Aigc-Video-1": 0.9900000000000001,
+  "Aistudio-Gemini-1": 0.194117,
+  "Aistudio-Gemini-2": 0.291181,
+  "Aistudio-Gemini-3": 0.48529800000000006,
+  "Aistudio-Gemini-4": 1.051479,
+  "Alibaba-1": 0.55,
+  "Alibaba-2": 0.8250000000000001,
+  "Alibaba-3": 1.2100000000000002,
+  "Alibaba-image-1": 0.7150000000000001,
+  "Alibaba-image-2": 0.8800000000000001,
+  "Alibaba-video-1": 0.7150000000000001,
+  "Alibaba-video-2": 0.77,
+  "Anthropic-Claude-1": 1.2100000000000002,
+  "Anti-Gemini-1": 0.08088300000000001,
+  "Anti-Gemini-2": 0.165,
+  "Azure-Claude-1": 0.48529800000000006,
+  "Azure-Gpt-1": 0.0484,
+  "Azure-Gpt-2": 0.11000000000000001,
+  "Azure-Gpt-3": 0.24200000000000002,
+  "Azure-Gpt-4": 0.48400000000000004,
+  "Azure-Gpt-5": 0.66,
+  "Azure-Gpt-6": 0.9900000000000001,
+  "Azure-Grok-1": 0.08088300000000001,
+  "Azure-Grok-2": 0.12133000000000001,
+  "Claude-Code-1": 0.194117,
+  "Claude-Code-2": 0.32353200000000004,
+  "Claude-Code-3": 0.49500000000000005,
+  "Cli-Gemini-1": 0.08088300000000001,
+  "Cli-Grok-1": 0.08088300000000001,
+  "Cli-Grok-2": 0.11324500000000001,
+  "Codex-Gpt-1": 0.040447,
+  "Codex-Gpt-2": 0.064713,
+  "Codex-Gpt-3": 0.08088300000000001,
+  "Discounted-Banana-1": 0.08088300000000001,
+  "Discounted-Banana-2": 0.11324500000000001,
+  "Discounted-Gemini-1": 0.08088300000000001,
+  "Discounted-Gemini-2": 0.157971,
+  "Discounted-Seedance-1": 0.7150000000000001,
+  "Doubao-1": 0.55,
+  "Doubao-2": 0.8250000000000001,
+  "Doubao-3": 1.2100000000000002,
+  "Eleven-1": 0.66,
+  "Gpt-Image-1": 0.08088300000000001,
+  "Gpt-Image-2": 0.10111200000000001,
+  "Gpt-Image-3": 0.15165700000000001,
+  "Hailuo-1": 0.8800000000000001,
+  "Hailuo-2": 0.8250000000000001,
+  "Hailuo-3": 1.2100000000000002,
+  "Kimi-1": 0.8250000000000001,
+  "Kimi-2": 1.2100000000000002,
+  "Kiro-Claude-1": 0.09706400000000001,
+  "Kling-1": 0.66,
+  "Kling-2": 0.935,
+  "Kling-3": 1.045,
+  "MJ-1": 0.048532000000000006,
+  "MJ-2": 0.08088300000000001,
+  "MJ-3": 0.1617,
+  "Openai-Gpt-1": 0.6470640000000001,
+  "Openai-Gpt-2": 0.80883,
+  "Pix-CN-1": 0.77,
+  "Pix-GL-1": 0.77,
+  "Seedance-1": 0.7150000000000001,
+  "Seedance-2": 0.9900000000000001,
+  "Self-Deployed-1": 0.33,
+  "Self-Deployed-2": 0.55,
+  "Self-Deployed-3": 0.8250000000000001,
+  "SiliconFlow-1": 0.8250000000000001,
+  "Spark-1": 1.2100000000000002,
+  "Special-Muse-1": 0.48532000000000003,
+  "Special-Muse-Video-1": 0.64702,
+  "Suno-1": 0.08088300000000001,
+  "Suno-2": 0.12133000000000001,
+  "Vertex-Claude-1": 0.48529800000000006,
+  "Vertex-Gemini-1": 0.22000000000000003,
+  "Vertex-Gemini-2": 0.33,
+  "Vertex-Gemini-3": 0.9900000000000001,
+  "Vidu-1": 0.66,
+  "Vidu-2": 0.8800000000000001,
+  "Wenxin-1": 1.2100000000000002,
+  "Xai-Grok-1": 0.48529800000000006,
+  "Xiaomi-1": 0.8250000000000001,
+  "Xiaomi-2": 1.2100000000000002,
+  "aigc-image-1": 0.77,
+  "deepseek-1": 1.2100000000000002,
+  "doubao-image-1": 0.8140000000000001,
+  "doubao-image-2": 0.935,
+  "glm-1": 1.2100000000000002,
+  "hunyuan-1": 1.045,
+  "jev-1": 0.44000000000000006
+ },
+ "pixverse_v6max_promo": {
+  "active": false,
+  "end_at": 1791043200,
+  "server_time": 1795413090,
+  "start_at": 0
+ },
+ "success": true,
+ "supported_endpoint": {
+  "3.0turbo-图生视频": {
+   "path": "/kling/image-to-video/{model}",
+   "method": "POST"
+  },
+  "3.0turbo-文生视频": {
+   "path": "/kling/text-to-video/{model}",
+   "method": "POST"
+  },
+  "Async": {
+   "path": "/mj/submit/action",
+   "method": "POST"
+  },
+  "Async speech": {
+   "path": "/minimax/v1/t2a_async_v2",
+   "method": "POST"
+  },
+  "Create character": {
+   "path": "/sora/v1/characters",
+   "method": "POST"
+  },
+  "Custom voice": {
+   "path": "kling/v1/general/custom-voices",
+   "method": "POST"
+  },
+  "Digital human": {
+   "path": "/kling/v1/videos/avatar/image2video",
+   "method": "POST"
+  },
+  "Doubao video": {
+   "path": "/api/v3/contents/generations/tasks",
+   "method": "POST"
+  },
+  "Doubao video (Async)": {
+   "path": "/volc/v1/contents/generations/tasks",
+   "method": "POST"
+  },
+  "Embedding": {
+   "path": "/v1/embeddings",
+   "method": "POST"
+  },
+  "Embedding (chat format)": {
+   "path": "/v1/embeddings",
+   "method": "POST"
+  },
+  "Embedding (compatible format)": {
+   "path": "/v1/embeddings",
+   "method": "POST"
+  },
+  "Embedding (format 1)": {
+   "path": "/v1beta/models/gemini-embedding-001:embedContent",
+   "method": "POST"
+  },
+  "Embedding (native format)": {
+   "path": "/v1beta/models/{model}:embedContent",
+   "method": "POST"
+  },
+  "Grok video": {
+   "path": "/v1/video/create",
+   "method": "POST"
+  },
+  "Grok video (OpenAI format)": {
+   "path": "/v1/videos",
+   "method": "POST"
+  },
+  "Grok videos": {
+   "path": "/v1/videos",
+   "method": "POST"
+  },
+  "Hailuo video generation": {
+   "path": "/minimax/v1/video_generation",
+   "method": "POST"
+  },
+  "Happyhorse video": {
+   "path": "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+   "method": "POST"
+  },
+  "Image edit": {
+   "path": "/ideogram/v1/ideogram-v3/edit",
+   "method": "POST"
+  },
+  "Image recognition": {
+   "path": "/kling/v1/videos/image-recognize",
+   "method": "POST"
+  },
+  "Image remix": {
+   "path": "/ideogram/v1/ideogram-v3/remix",
+   "method": "POST"
+  },
+  "Image template": {
+   "path": "/openapi/v2/image/template/generate",
+   "method": "POST"
+  },
+  "Image to text": {
+   "path": "/ideogram/describe",
+   "method": "POST"
+  },
+  "Image to video": {
+   "path": "/kling/v1/videos/image2video",
+   "method": "POST"
+  },
+  "Kling image expand": {
+   "path": "/kling/v1/images/editing/expand",
+   "method": "POST"
+  },
+  "Kling image generation": {
+   "path": "/kling/v1/images/generations",
+   "method": "POST"
+  },
+  "Kling multi-image to image": {
+   "path": "/kling/v1/images/multi-image2image",
+   "method": "POST"
+  },
+  "Lip-sync": {
+   "path": "/kling/v1/videos/lip-sync",
+   "method": "POST"
+  },
+  "Luma video extend": {
+   "path": "/luma/generations/{task_id}/extend",
+   "method": "POST"
+  },
+  "Luma video generation": {
+   "path": "/luma/generations",
+   "method": "POST"
+  },
+  "MJ action": {
+   "path": "/mj/submit/action",
+   "method": "POST"
+  },
+  "MJ blend": {
+   "path": "/mj/submit/blend",
+   "method": "POST"
+  },
+  "MJ describe": {
+   "path": "/mj/submit/describe",
+   "method": "POST"
+  },
+  "MJ face swap": {
+   "path": "/mj/insight-face/swap",
+   "method": "POST"
+  },
+  "MJ image upload": {
+   "path": "/mj/submit/upload-discord-images",
+   "method": "POST"
+  },
+  "MJ imagine": {
+   "path": "/mj/submit/imagine",
+   "method": "POST"
+  },
+  "MJ modal": {
+   "path": "/mj/submit/modal",
+   "method": "POST"
+  },
+  "MJ shorten": {
+   "path": "/mj/submit/shorten",
+   "method": "POST"
+  },
+  "Motion control": {
+   "path": "kling/v1/videos/motion-control",
+   "method": "POST"
+  },
+  "Motion imitation": {
+   "path": "/openapi/v2/video/mimic/generate",
+   "method": "POST"
+  },
+  "Multi-element video editing": {
+   "path": "/kling/v1/videos/multi-elements",
+   "method": "POST"
+  },
+  "Multi-image reference to video": {
+   "path": "/kling/v1/videos/multi-image2video",
+   "method": "POST"
+  },
+  "Multi-transition": {
+   "path": "/openapi/v2/video/multi_transition/generate",
+   "method": "POST"
+  },
+  "OpenAI image edit": {
+   "path": "/v1/images/edits",
+   "method": "POST"
+  },
+  "OpenAI official video format": {
+   "path": "/v1/videos",
+   "method": "POST"
+  },
+  "OpenAI realtime voice": {
+   "path": "/v1/realtime",
+   "method": "POST"
+  },
+  "OpenAI video format": {
+   "path": "/v1/videos",
+   "method": "POST"
+  },
+  "Pix extend video": {
+   "path": "/openapi/v2/video/extend/generate",
+   "method": "POST"
+  },
+  "Pix first & last frame": {
+   "path": "/openapi/v2/video/transition/generate",
+   "method": "POST"
+  },
+  "Pix image to video / video template": {
+   "path": "/openapi/v2/video/img/generate",
+   "method": "POST"
+  },
+  "Pix lip-sync": {
+   "path": "/openapi/v2/video/lip_sync/generate",
+   "method": "POST"
+  },
+  "Pix multi-subject (multi-reference)": {
+   "path": "/openapi/v2/video/fusion/generate",
+   "method": "POST"
+  },
+  "Pix text to video": {
+   "path": "/openapi/v2/video/text/generate",
+   "method": "POST"
+  },
+  "Reframe": {
+   "path": "/ideogram/v1/ideogram-v3/reframe",
+   "method": "POST"
+  },
+  "Replace background": {
+   "path": "/ideogram/v1/ideogram-v3/replace-background",
+   "method": "POST"
+  },
+  "Restyle video": {
+   "path": "/openapi/v2/video/restyle/generate",
+   "method": "POST"
+  },
+  "Runway image to video": {
+   "path": "/runwayml/v1/image_to_video",
+   "method": "POST"
+  },
+  "Sound effect": {
+   "path": "/openapi/v2/video/sound_effect/generate",
+   "method": "POST"
+  },
+  "Speech synthesis": {
+   "path": "/kling/v1/audio/tts",
+   "method": "POST"
+  },
+  "Speech to text": {
+   "path": "/v1/audio/transcriptions",
+   "method": "POST"
+  },
+  "Subject swap": {
+   "path": "/openapi/v2/video/swap/generate",
+   "method": "POST"
+  },
+  "Subject swap mask": {
+   "path": "/openapi/v2/video/mask/selection",
+   "method": "POST"
+  },
+  "Suno music generation": {
+   "path": "/suno/submit/music",
+   "method": "POST"
+  },
+  "Sync speech": {
+   "path": "/minimax/v1/t2a_v2",
+   "method": "POST"
+  },
+  "Text to image": {
+   "path": "/ideogram/v1/ideogram-v3/generate",
+   "method": "POST"
+  },
+  "Text to sound effect": {
+   "path": "/kling/v1/audio/text-to-audio",
+   "method": "POST"
+  },
+  "Text to speech": {
+   "path": "/v1/audio/speech",
+   "method": "POST"
+  },
+  "Text to video": {
+   "path": "/kling/v1/videos/text2video",
+   "method": "POST"
+  },
+  "Unified video format": {
+   "path": "/v1/video/create",
+   "method": "POST"
+  },
+  "Upscale": {
+   "path": "/ideogram/upscale",
+   "method": "POST"
+  },
+  "Video effects": {
+   "path": "/kling/v1/videos/effects",
+   "method": "POST"
+  },
+  "Video extend": {
+   "path": "/kling/v1/videos/video-extend",
+   "method": "POST"
+  },
+  "Video modify": {
+   "path": "/openapi/v2/video/modify/generate",
+   "method": "POST"
+  },
+  "Video to sound effect": {
+   "path": "/kling/v1/audio/video-to-audio",
+   "method": "POST"
+  },
+  "Vidu first & last frame": {
+   "path": "/ent/v2/start-end2video",
+   "method": "POST"
+  },
+  "Vidu image generation": {
+   "path": "/ent/v2/reference2image",
+   "method": "POST"
+  },
+  "Vidu image to video": {
+   "path": "/ent/v2/img2video",
+   "method": "POST"
+  },
+  "Vidu reference to video": {
+   "path": "/ent/v2/reference2video",
+   "method": "POST"
+  },
+  "Vidu speech synthesis": {
+   "path": "/ent/v2/audio-tts",
+   "method": "POST"
+  },
+  "Vidu text to sound effect": {
+   "path": "/ent/v2/text2audio",
+   "method": "POST"
+  },
+  "Vidu text to video": {
+   "path": "/ent/v2/text2video",
+   "method": "POST"
+  },
+  "Virtual try-on": {
+   "path": "kling/v1/images/kolors-virtual-try-on",
+   "method": "POST"
+  },
+  "Wan video generation": {
+   "path": "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+   "method": "POST"
+  },
+  "aigc-image": {
+   "path": "/tencent-vod/v1/aigc-image",
+   "method": "POST"
+  },
+  "aigc-video": {
+   "path": "/tencent-vod/v1/aigc-video",
+   "method": "POST"
+  },
+  "andreasjansson/stable-diffusion-animation (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-1.1-pro (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-1.1-pro-ultra/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-1.1-pro-ultra (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-1.1-pro-ultra/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-dev (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-dev/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-fill-dev (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-fill-dev/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-fill-pro (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-fill-pro/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-kontext-dev (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-kontext-dev/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-kontext-max (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-kontext-max/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-kontext-pro (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-kontext-pro/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-krea-dev (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-krea-dev/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-pro (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-pro/predictions",
+   "method": "POST"
+  },
+  "black-forest-labs/flux-schnell (Async)": {
+   "path": "/replicate/v1/models/black-forest-labs/flux-schnell/predictions",
+   "method": "POST"
+  },
+  "bytedance/seedream-4 (Async)": {
+   "path": "/replicate/v1/models/bytedance/seedream-4/predictions",
+   "method": "POST"
+  },
+  "cjwbw/rembg (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "custom-elements": {
+   "path": "kling/v1/general/custom-elements",
+   "method": "POST"
+  },
+  "dall-e-3": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "edit": {
+   "path": "/v1/videos/edits",
+   "method": "POST"
+  },
+  "embedding": {
+   "path": "/v1/embeddings",
+   "method": "POST"
+  },
+  "fal-ai/bytedance/seedream/v4/edit (Async)": {
+   "path": "/fal-ai/bytedance/seedream/v4/edit",
+   "method": "POST"
+  },
+  "fal-ai/bytedance/seedream/v4/text-to-image (Async)": {
+   "path": "/fal-ai/bytedance/seedream/v4/text-to-image",
+   "method": "POST"
+  },
+  "fal-ai/flux-1/dev (Async)": {
+   "path": "/fal-ai/flux-1/dev",
+   "method": "POST"
+  },
+  "fal-ai/flux-1/dev/image-to-image (Async)": {
+   "path": "/fal-ai/flux-1/dev/image-to-image",
+   "method": "POST"
+  },
+  "fal-ai/flux-1/dev/redux (Async)": {
+   "path": "/fal-ai/flux-1/dev/redux",
+   "method": "POST"
+  },
+  "fal-ai/flux-1/schnell (Async)": {
+   "path": "/fal-ai/flux-1/schnell",
+   "method": "POST"
+  },
+  "fal-ai/flux-1/schnell/redux (Async)": {
+   "path": "/fal-ai/flux-1/schnell/redux",
+   "method": "POST"
+  },
+  "fal-ai/flux-krea-lora/stream (Async)": {
+   "path": "/fal-ai/flux-krea-lora/stream",
+   "method": "POST"
+  },
+  "fal-ai/flux-lora (Async)": {
+   "path": "/fal-ai/flux-lora",
+   "method": "POST"
+  },
+  "fal-ai/flux-lora/image-to-image (Async)": {
+   "path": "/fal-ai/flux-lora/image-to-image",
+   "method": "POST"
+  },
+  "fal-ai/flux-lora/inpainting (Async)": {
+   "path": "/fal-ai/flux-lora/inpainting",
+   "method": "POST"
+  },
+  "fal-ai/flux-pro/kontext (Async)": {
+   "path": "/fal-ai/flux-pro/kontext",
+   "method": "POST"
+  },
+  "fal-ai/flux-pro/kontext/max (Async)": {
+   "path": "/fal-ai/flux-pro/kontext/max",
+   "method": "POST"
+  },
+  "fal-ai/flux-pro/kontext/max/multi (Async)": {
+   "path": "/fal-ai/flux-pro/kontext/max/multi",
+   "method": "POST"
+  },
+  "fal-ai/flux-pro/kontext/max/text-to-image (Async)": {
+   "path": "/fal-ai/flux-pro/kontext/max/text-to-image",
+   "method": "POST"
+  },
+  "fal-ai/flux-pro/kontext/multi (Async)": {
+   "path": "/fal-ai/flux-pro/kontext/multi",
+   "method": "POST"
+  },
+  "fal-ai/flux-pro/kontext/text-to-image (Async)": {
+   "path": "/fal-ai/flux-pro/kontext/text-to-image",
+   "method": "POST"
+  },
+  "fal-ai/imagen4/preview (Async)": {
+   "path": "/fal-ai/imagen4/preview",
+   "method": "POST"
+  },
+  "fal-ai/kling-video/v2.5-turbo/pro/image-to-video (Async)": {
+   "path": "/fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
+   "method": "POST"
+  },
+  "fal-ai/kling-video/v2.5-turbo/pro/text-to-video (Async)": {
+   "path": "/fal-ai/kling-video/v2.5-turbo/pro/text-to-video",
+   "method": "POST"
+  },
+  "fal-ai/nano-banana (Async)": {
+   "path": "/fal-ai/nano-banana",
+   "method": "POST"
+  },
+  "fal-ai/nano-banana/edit (Async)": {
+   "path": "/fal-ai/nano-banana/edit",
+   "method": "POST"
+  },
+  "fal-ai/qwen-image (Async)": {
+   "path": "/fal-ai/qwen-image",
+   "method": "POST"
+  },
+  "fal-ai/qwen-image-edit (Async)": {
+   "path": "/fal-ai/qwen-image-edit",
+   "method": "POST"
+  },
+  "fal-ai/qwen-image-edit-lora (Async)": {
+   "path": "/fal-ai/qwen-image-edit-lora",
+   "method": "POST"
+  },
+  "fal-ai/qwen-image-edit-plus (Async)": {
+   "path": "/fal-ai/qwen-image-edit-plus",
+   "method": "POST"
+  },
+  "fal-ai/recraft/v3/text-to-image (Async)": {
+   "path": "/fal-ai/recraft/v3/text-to-image",
+   "method": "POST"
+  },
+  "fal-ai/recraft/vectorize (Async)": {
+   "path": "/fal-ai/recraft/vectorize",
+   "method": "POST"
+  },
+  "fal-ai/veo3 (Async)": {
+   "path": "/fal-ai/veo3",
+   "method": "POST"
+  },
+  "fal-ai/veo3/fast (Async)": {
+   "path": "/fal-ai/veo3/fast",
+   "method": "POST"
+  },
+  "fal-ai/veo3/fast/image-to-video (Async)": {
+   "path": "/fal-ai/veo3/fast/image-to-video",
+   "method": "POST"
+  },
+  "fal-ai/veo3/image-to-video (Async)": {
+   "path": "/fal-ai/veo3/image-to-video",
+   "method": "POST"
+  },
+  "fal-ai/vidu/reference-to-image (Async)": {
+   "path": "/fal-ai/vidu/reference-to-image",
+   "method": "POST"
+  },
+  "fal-ai/wan/v2.2-a14b/image-to-image (Async)": {
+   "path": "/fal-ai/wan/v2.2-a14b/image-to-image",
+   "method": "POST"
+  },
+  "flux-kontext-apps/multi-image-kontext-max (Async)": {
+   "path": "/replicate/v1/models/flux-kontext-apps/multi-image-kontext-max/predictions",
+   "method": "POST"
+  },
+  "flux-kontext-apps/multi-image-kontext-pro (Async)": {
+   "path": "/replicate/v1/models/flux-kontext-apps/multi-image-kontext-pro/predictions",
+   "method": "POST"
+  },
+  "gemini": {
+   "path": "/v1beta/models/{model}:generateContent",
+   "method": "POST"
+  },
+  "gemini-flash-tts": {
+   "path": "/v1beta/models/{model}:generateContent",
+   "method": "POST"
+  },
+  "geminitts": {
+   "path": "/v1beta/models/gemini-3.1-flash-tts-preview:generateContent",
+   "method": "POST"
+  },
+  "google/imagen-4 (Async)": {
+   "path": "/replicate/v1/models/google/imagen-4/predictions",
+   "method": "POST"
+  },
+  "google/imagen-4-fast (Async)": {
+   "path": "/replicate/v1/models/google/imagen-4-fast/predictions",
+   "method": "POST"
+  },
+  "google/imagen-4-ultra (Async)": {
+   "path": "/replicate/v1/models/google/imagen-4-ultra/predictions",
+   "method": "POST"
+  },
+  "google/nano-banana (Async)": {
+   "path": "/replicate/v1/models/google/nano-banana/predictions",
+   "method": "POST"
+  },
+  "hailuo-video": {
+   "path": "/minimax/v2/video_generation",
+   "method": "POST"
+  },
+  "happyhorse视频": {
+   "path": "/alibailian/api/v1/services/aigc/video-generation/video-synthesis",
+   "method": "POST"
+  },
+  "ideogram-ai/ideogram-v2-turbo (Async)": {
+   "path": "/replicate/v1/models/ideogram-ai/ideogram-v2-turbo/predictions",
+   "method": "POST"
+  },
+  "image edit": {
+   "path": "/v1/images/edits",
+   "method": "POST"
+  },
+  "image-edit": {
+   "path": "/v1/images/edits",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "images-edits": {
+   "path": "/v1/images/edits",
+   "method": "POST"
+  },
+  "images-generations": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "jev": {
+   "path": "/v1/systemone",
+   "method": "POST"
+  },
+  "jimeng (Async)": {
+   "path": "/jimeng/submit/videos",
+   "method": "POST"
+  },
+  "lucataco/animate-diff (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "lucataco/flux-dev-lora (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "lucataco/flux-schnell-lora (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "lucataco/remove-bg (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "minimax/video-01 (Async)": {
+   "path": "/replicate/v1/models/minimax/video-01/predictions",
+   "method": "POST"
+  },
+  "minimax/video-01-live (Async)": {
+   "path": "/replicate/v1/models/minimax/video-01-live/predictions",
+   "method": "POST"
+  },
+  "moderation": {
+   "path": "v1/moderations",
+   "method": "POST"
+  },
+  "omni-image": {
+   "path": "/kling/v1/images/omni-image",
+   "method": "POST"
+  },
+  "omni-video": {
+   "path": "kling/v1/videos/omni-video",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  },
+  "openai-response": {
+   "path": "/v1/responses",
+   "method": "POST"
+  },
+  "openai-绘图": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "openai-编辑": {
+   "path": "/v1/images/edits",
+   "method": "POST"
+  },
+  "prunaai/vace-14b (Async)": {
+   "path": "/replicate/v1/models/prunaai/vace-14b/predictions",
+   "method": "POST"
+  },
+  "realtime": {
+   "path": "/v1/realtime",
+   "method": "WS"
+  },
+  "recraft-ai/recraft-v3 (Async)": {
+   "path": "/replicate/v1/models/recraft-ai/recraft-v3/predictions",
+   "method": "POST"
+  },
+  "recraft-ai/recraft-v3-svg (Async)": {
+   "path": "/replicate/v1/models/recraft-ai/recraft-v3-svg/predictions",
+   "method": "POST"
+  },
+  "rerank": {
+   "path": "/v1/rerank",
+   "method": "POST"
+  },
+  "riffusion/riffusion (Async)": {
+   "path": "/replicate/v1/models/riffusion/riffusion/predictions",
+   "method": "POST"
+  },
+  "stability-ai/sdxl (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "stability-ai/stable-diffusion (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "stability-ai/stable-diffusion-img2img (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "stability-ai/stable-diffusion-inpainting (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "sujaykhandekar/object-removal (Async)": {
+   "path": "/replicate/v1/predictions",
+   "method": "POST"
+  },
+  "video to video": {
+   "path": "/kling/v1/videos/text2video",
+   "method": "POST"
+  },
+  "官方格式": {
+   "path": "/v1/videos/generations",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "AWS-Bedrock-1": "AWS-Bedrock-1",
+  "AWS-Bedrock-2": "AWS-Bedrock-2",
+  "AWS-Claude-1": "AWS-Claude-1",
+  "AWS-Claude-2": "AWS-Claude-2",
+  "AWS-Claude-3": "AWS-Claude-3",
+  "AWS-Gpt-1": "AWS-Gpt-1",
+  "Aigc-Video-1": "Aigc-Video-1",
+  "Aistudio-Gemini-1": "Aistudio-Gemini-1",
+  "Aistudio-Gemini-2": "Aistudio-Gemini-2",
+  "Aistudio-Gemini-3": "Aistudio-Gemini-3",
+  "Aistudio-Gemini-4": "Aistudio-Gemini-4",
+  "Alibaba-1": "Alibaba-1",
+  "Alibaba-2": "Alibaba-2",
+  "Alibaba-3": "Alibaba-3",
+  "Alibaba-image-1": "Alibaba-image-1",
+  "Alibaba-image-2": "Alibaba-image-2",
+  "Alibaba-video-1": "Alibaba-video-1",
+  "Alibaba-video-2": "Alibaba-video-2",
+  "Anthropic-Claude-1": "Anthropic-Claude-1",
+  "Anti-Gemini-1": "Anti-Gemini-1",
+  "Anti-Gemini-2": "Anti-Gemini-2",
+  "Azure-Claude-1": "Azure-Claude-1",
+  "Azure-Gpt-1": "Azure-Gpt-1",
+  "Azure-Gpt-2": "Azure-Gpt-2",
+  "Azure-Gpt-3": "Azure-Gpt-3",
+  "Azure-Gpt-4": "Azure-Gpt-4",
+  "Azure-Gpt-5": "Azure-Gpt-5",
+  "Azure-Gpt-6": "Azure-Gpt-6",
+  "Azure-Grok-1": "Azure-Grok-1",
+  "Azure-Grok-2": "Azure-Grok-2",
+  "Claude-Code-1": "Claude-Code-1",
+  "Claude-Code-2": "Claude-Code-2",
+  "Claude-Code-3": "Claude-Code-3",
+  "Cli-Gemini-1": "Cli-Gemini-1",
+  "Cli-Grok-1": "Cli-Grok-1",
+  "Cli-Grok-2": "Cli-Grok-2",
+  "Codex-Gpt-1": "Codex-Gpt-1",
+  "Codex-Gpt-2": "Codex-Gpt-2",
+  "Codex-Gpt-3": "Codex-Gpt-3",
+  "Discounted-Banana-1": "Discounted-Banana-1",
+  "Discounted-Banana-2": "Discounted-Banana-2",
+  "Discounted-Gemini-1": "Discounted-Gemini-1",
+  "Discounted-Gemini-2": "Discounted-Gemini-2",
+  "Discounted-Seedance-1": "Discounted-Seedance-1",
+  "Doubao-1": "Doubao-1",
+  "Doubao-2": "Doubao-2",
+  "Doubao-3": "Doubao-3",
+  "Eleven-1": "Eleven-1",
+  "Gpt-Image-1": "Gpt-Image-1",
+  "Gpt-Image-2": "Gpt-Image-2",
+  "Gpt-Image-3": "Gpt-Image-3",
+  "Hailuo-1": "Hailuo-1",
+  "Hailuo-2": "Hailuo-2",
+  "Hailuo-3": "Hailuo-3",
+  "Kimi-1": "Kimi-1",
+  "Kimi-2": "Kimi-2",
+  "Kiro-Claude-1": "Kiro-Claude-1",
+  "Kling-1": "Kling-1",
+  "Kling-2": "Kling-2",
+  "Kling-3": "Kling-3",
+  "MJ-1": "MJ-1",
+  "MJ-2": "MJ-2",
+  "MJ-3": "MJ-3",
+  "Openai-Gpt-1": "Openai-Gpt-1",
+  "Openai-Gpt-2": "Openai-Gpt-2",
+  "Pix-CN-1": "Pix-CN-1",
+  "Pix-GL-1": "Pix-GL-1",
+  "Seedance-1": "Seedance-1",
+  "Seedance-2": "Seedance-2",
+  "Self-Deployed-1": "Self-Deployed-1",
+  "Self-Deployed-2": "Self-Deployed-2",
+  "Self-Deployed-3": "Self-Deployed-3",
+  "SiliconFlow-1": "SiliconFlow-1",
+  "Spark-1": "Spark-1",
+  "Special-Muse-1": "Special-Muse-1",
+  "Special-Muse-Video-1": "Special-Muse-Video-1",
+  "Suno-1": "Suno-1",
+  "Suno-2": "Suno-2",
+  "Vertex-Claude-1": "Vertex-Claude-1",
+  "Vertex-Gemini-1": "Vertex-Gemini-1",
+  "Vertex-Gemini-2": "Vertex-Gemini-2",
+  "Vertex-Gemini-3": "Vertex-Gemini-3",
+  "Vidu-1": "Vidu-1",
+  "Vidu-2": "Vidu-2",
+  "Wenxin-1": "Wenxin-1",
+  "Xai-Grok-1": "Xai-Grok-1",
+  "Xiaomi-1": "Xiaomi-1",
+  "Xiaomi-2": "Xiaomi-2",
+  "aigc-image-1": "aigc-image-1",
+  "deepseek-1": "deepseek-1",
+  "doubao-image-1": "doubao-image-1",
+  "doubao-image-2": "doubao-image-2",
+  "glm-1": "glm-1",
+  "hunyuan-1": "hunyuan-1",
+  "jev-1": "jev-1"
+ },
+ "vendors": [
+  {
+   "id": 52,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": 55,
+   "name": "Anthropic",
+   "description": "最强大的模型! 模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!",
+   "icon": "Claude.Color",
+   "translations": {
+    "es": {
+     "description": "¡El modelo más poderoso! Agregar el prefijo \"new-\" al nombre del modelo puede resolver ciertos problemas de compatibilidad con modelos de cliente."
+    },
+    "ru": {
+     "description": "Самая мощная модель! Добавление префикса \"new-\" к имени модели может решить некоторые проблемы совместимости моделей на стороне клиента!"
+    },
+    "de": {
+     "description": "Das leistungsstärkste Modell! Das Hinzufügen des Präfixes \"new-\" zum Modellnamen kann einige Kompatibilitätsprobleme mit Client-Modellen lösen!"
+    },
+    "ko": {
+     "description": "가장 강력한 모델! 모델 이름에 \"new-\" 접두사를 추가하면 일부 클라이언트 모델 호환성 문제를 해결할 수 있습니다!!"
+    },
+    "ja": {
+     "description": "最強のモデルです！モデル名に\"new-\"プレフィックスを追加することで、特定のクライアントモデルの互換性の問題を解決できます！！"
+    },
+    "en": {
+     "description": "The most powerful model! Adding the \"new-\" prefix to the model name can solve certain client model compatibility issues!"
+    },
+    "zh": {
+     "description": "最强大的模型! 模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!"
+    }
+   }
+  },
+  {
+   "id": 67,
+   "name": "Google",
+   "description": "模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!部分模型支持区分思考和不思考,结尾带上-thinking或-nothinking,支持自定义-thinking-*思考程度(156-24576)",
+   "icon": "Gemini.Color",
+   "translations": {
+    "ru": {
+     "description": "Добавление префикса \"new-\" к имени модели может решить некоторые проблемы совместимости моделей клиента!! Некоторые модели поддерживают различение между размышлением и неразмышлением, добавляя в конце -thinking или -nothinking, поддерживается пользовательская степень размышления -thinking-* (156-24576)"
+    },
+    "ja": {
+     "description": "モデル名に\"new-\"プレフィックスを追加することで、一部のクライアントモデルの互換性の問題を解決できます!! 一部のモデルは思考と非思考を区別でき、末尾に-thinkingまたは-nothinkingを付けることができ、カスタム-thinking-*思考レベル(156-24576)をサポートします。"
+    },
+    "zh": {
+     "description": "模型名添加\"new-\"前缀可解决某些客户端模型兼容问题!!部分模型支持区分思考和不思考,结尾带上-thinking或-nothinking,支持自定义-thinking-*思考程度(156-24576)"
+    },
+    "es": {
+     "description": "Agregar el prefijo \"new-\" al nombre del modelo puede resolver ciertos problemas de compatibilidad del modelo del cliente. Algunos modelos admiten la diferenciación entre pensar y no pensar, terminando con -thinking o -nothinking, y admiten la personalización del grado de pensamiento -thinking-* (156-24576)"
+    },
+    "de": {
+     "description": "Das Hinzufügen des Präfixes \"new-\" zum Modellnamen kann bestimmte Kompatibilitätsprobleme mit Client-Modellen lösen!! Einige Modelle unterstützen die Unterscheidung zwischen Denken und Nicht-Denken, wobei am Ende -thinking oder -nothinking hinzugefügt wird. Es unterstützt benutzerdefinierte -thinking-* Denkgrade (156-24576)"
+    },
+    "ko": {
+     "description": "모델 이름에 \"new-\" 접두사를 추가하면 일부 클라이언트 모델 호환성 문제를 해결할 수 있습니다!! 일부 모델은 사고와 비사고를 구분할 수 있으며, 끝에 -thinking 또는 -nothinking을 추가할 수 있으며, 사용자 정의 -thinking-* 사고 정도(156-24576)를 지원합니다."
+    },
+    "en": {
+     "description": "Adding the prefix \"new-\" to the model name can resolve certain client model compatibility issues!! Some models support distinguishing between thinking and not thinking, ending with -thinking or -nothinking, and support custom -thinking-* levels of thinking (156-24576)"
+    }
+   }
+  },
+  {
+   "id": 93,
+   "name": "OpenAI Plus",
+   "icon": "OpenAI.Color"
+  },
+  {
+   "id": 113,
+   "name": "Grok (xAI)",
+   "description": " ",
+   "icon": "XAI.Color"
+  },
+  {
+   "id": 54,
+   "name": "DeepSeek",
+   "icon": "DeepSeek.Color"
+  },
+  {
+   "id": 96,
+   "name": "Qwen",
+   "icon": "Qwen"
+  },
+  {
+   "id": 95,
+   "name": "Minimax",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 63,
+   "name": "Moonshot",
+   "icon": "Moonshot"
+  },
+  {
+   "id": 91,
+   "name": "Doubao",
+   "icon": "Doubao"
+  },
+  {
+   "id": 270,
+   "name": "XiaomiMiMo",
+   "icon": "XiaomiMiMo"
+  },
+  {
+   "id": 109,
+   "name": "ChatGLM",
+   "icon": "ChatGLM"
+  },
+  {
+   "id": 112,
+   "name": "Midjourney",
+   "description": "支持 Chat 模式及 Midjourney 常用能力（含 V6、局部重绘、换脸等），可切换 fast / turbo / relax；兼容主流图像生成 API 接入协议，并提供中文翻译与高并发调度。",
+   "icon": "Midjourney.Color",
+   "translations": {
+    "es": {
+     "description": "Soporte para el modo Chat y capacidades comunes de Midjourney (incluyendo V6, redibujo local, intercambio de rostros, etc.), se puede cambiar entre rápido / turbo / relajado; compatible con los protocolos de acceso a API de generación de imágenes más utilizados y ofrece traducción al chino y programación de alta concurrencia."
+    },
+    "ja": {
+     "description": "Chat モードと Midjourney の一般的な機能（V6、部分再描画、顔交換など）をサポートし、fast / turbo / relax に切り替え可能です。主流の画像生成 API 接続プロトコルと互換性があり、中国語翻訳と高い同時処理を提供します。"
+    },
+    "zh": {
+     "description": "支持 Chat 模式及 Midjourney 常用能力（含 V6、局部重绘、换脸等），可切换 fast / turbo / relax；兼容主流图像生成 API 接入协议，并提供中文翻译与高并发调度。"
+    },
+    "en": {
+     "description": "Supports Chat mode and commonly used capabilities of Midjourney (including V6, inpainting, face swapping, etc.), with options to switch between fast / turbo / relax; compatible with mainstream image generation API access protocols, and provides Chinese translation and high concurrency scheduling."
+    },
+    "ko": {
+     "description": "Chat 모드 및 Midjourney에서 자주 사용하는 기능(예: V6, 부분 재구성, 얼굴 교체 등)을 지원하며, fast / turbo / relax로 전환할 수 있습니다. 주요 이미지 생성 API 접속 프로토콜과 호환되며, 중국어 번역 및 고병렬 스케줄링을 제공합니다."
+    },
+    "ru": {
+     "description": "Поддержка режима Chat и основных возможностей Midjourney (включая V6, локальную перерисовку, замену лиц и т.д.), возможность переключения между fast / turbo / relax; совместимость с основными протоколами подключения API для генерации изображений и предоставление китайского перевода и высокопараллельного распределения."
+    },
+    "de": {
+     "description": "Unterstützt den Chat-Modus und gängige Funktionen von Midjourney (einschließlich V6, lokale Neuzeichnung, Gesichtswechsel usw.), kann zwischen schnell / turbo / entspannt umschalten; kompatibel mit gängigen API-Anschlussprotokollen zur Bilderzeugung und bietet chinesische Übersetzungen sowie hochgradige Parallelverarbeitung."
+    }
+   }
+  },
+  {
+   "id": 105,
+   "name": "Ollama",
+   "description": " ",
+   "icon": "Ollama.Color"
+  },
+  {
+   "id": 61,
+   "name": "AIGC",
+   "icon": "TencentCloud"
+  },
+  {
+   "id": 68,
+   "name": "Vidu",
+   "icon": "Vidu.Color"
+  },
+  {
+   "id": 88,
+   "name": "Kling",
+   "description": "可调用 Kling 视频生成 API，稳定高并发接入。",
+   "icon": "Kling",
+   "translations": {
+    "ko": {
+     "description": "호출 가능한 Kling 비디오 생성 API, 안정적인 고병렬 접속."
+    },
+    "de": {
+     "description": "Aufrufbare Kling Video-Generierungs-API, stabile Hochlastanbindung."
+    },
+    "en": {
+     "description": "Callable Kling video generation API, stable high concurrency access."
+    },
+    "zh": {
+     "description": "可调用 Kling 视频生成 API，稳定高并发接入。"
+    },
+    "ja": {
+     "description": "呼び出し可能なKling動画生成API、安定した高い同時接続を提供します。"
+    },
+    "es": {
+     "description": "API de generación de video Kling que se puede llamar, con acceso estable y de alta concurrencia."
+    },
+    "ru": {
+     "description": "Доступ к API генерации видео Kling, стабильный и высокопроизводительный."
+    }
+   }
+  },
+  {
+   "id": 120,
+   "name": "Suno",
+   "icon": "Suno.Color"
+  },
+  {
+   "id": 874847,
+   "name": "PixVerse",
+   "description": "PixVerse（简称 PixVerse 或 Pixverse Video）是一个由中国中国公司 Aishi Technology 开发的全球领先 AI 视频生成平台和全栈 AI 媒体服务",
+   "icon": "PixVerse.Color",
+   "translations": {
+    "es": {
+     "description": "PixVerse（简称 PixVerse 或 Pixverse Video）es una plataforma global líder en generación de videos AI y servicios de medios AI de pila completa desarrollada por la empresa china Aishi Technology."
+    },
+    "de": {
+     "description": "PixVerse (kurz PixVerse oder Pixverse Video) ist eine weltweit führende AI-Video-Generierungsplattform und ein Full-Stack-AI-Medienservice, entwickelt von dem chinesischen Unternehmen Aishi Technology."
+    },
+    "ja": {
+     "description": "PixVerse（略称 PixVerse または Pixverse Video）は、中国の Aishi Technology によって開発された、世界をリードする AI ビデオ生成プラットフォームおよびフルスタック AI メディアサービスです。"
+    },
+    "ko": {
+     "description": "PixVerse(약칭 PixVerse 또는 Pixverse Video)는 중국 회사 Aishi Technology가 개발한 세계적인 AI 비디오 생성 플랫폼이자 전방위 AI 미디어 서비스입니다."
+    },
+    "en": {
+     "description": "PixVerse (abbreviated as PixVerse or Pixverse Video) is a globally leading AI video generation platform and full-stack AI media service developed by the Chinese company Aishi Technology."
+    },
+    "zh": {
+     "description": "PixVerse（简称 PixVerse 或 Pixverse Video）是一个由中国公司 Aishi Technology 开发的全球领先 AI 视频生成平台和全栈 AI 媒体服务"
+    },
+    "ru": {
+     "description": "PixVerse（简称 PixVerse 或 Pixverse Video）— это ведущая в мире платформа генерации AI-видео и полный стек AI-медийных услуг, разработанная китайской компанией Aishi Technology."
+    }
+   }
+  },
+  {
+   "id": 874878,
+   "name": "腾讯",
+   "icon": "Hunyuan.Color"
+  },
+  {
+   "id": 874899,
+   "name": "ElevenLabs",
+   "description": "ElevenLabs",
+   "translations": {
+    "zh": {
+     "description": "十一实验室"
+    },
+    "en": {
+     "description": "ElevenLabs"
+    },
+    "ru": {
+     "description": "ЭлевенЛабс"
+    },
+    "ja": {
+     "description": "エレベンラボ"
+    },
+    "de": {
+     "description": "ElevenLabs"
+    },
+    "es": {
+     "description": "ElevenLabs"
+    },
+    "ko": {
+     "description": "일레븐랩스"
+    }
+   }
+  },
+  {
+   "id": 874900,
+   "name": "Muse",
+   "description": "Muse Image\n is served through Model API too. It generates and edits images from a text prompt and refines them across turns.",
+   "translations": {
+    "ru": {
+     "description": "Muse Image\n также доступен через Model API. Он генерирует и редактирует изображения по текстовому запросу и уточняет их на протяжении взаимодействий."
+    },
+    "zh": {
+     "description": "Muse Image\n 也通过模型 API 提供服务。它根据文本提示生成和编辑图像，并在多个回合中对其进行优化。"
+    },
+    "ko": {
+     "description": "뮤즈 이미지\n는 모델 API를 통해 제공됩니다. 텍스트 프롬프트에서 이미지를 생성하고 편집하며, 여러 차례에 걸쳐 이미지를 개선합니다."
+    },
+    "de": {
+     "description": "Muse Image\n wird auch über die Model API bereitgestellt. Es generiert und bearbeitet Bilder aus einem Textprompt und verfeinert sie über mehrere Durchgänge."
+    },
+    "ja": {
+     "description": "Muse Image\nはModel APIを通じて提供されます。テキストプロンプトから画像を生成・編集し、ターンを重ねてそれらを洗練させます。"
+    },
+    "es": {
+     "description": "Muse Image\n también se ofrece a través de la API del Modelo. Genera y edita imágenes a partir de un aviso de texto y las refina a lo largo de las interacciones."
+    },
+    "en": {
+     "description": "Muse Image\n is served through Model API too. It generates and edits images from a text prompt and refines them across turns."
+    }
+   }
+  }
+ ]
+}

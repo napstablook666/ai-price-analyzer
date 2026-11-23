@@ -38,5 +38,14 @@ export const SITE_PLUGIN_ORDER = [
   "eapi",
   "moonup",
   "velamost",
-  "kelaode"
+  "kelaode",
+  "0ait",
+  "4zapi",
+  "coderelay",
+  "corecode",
+  "kuaipao",
+  "packycode",
+  "pqh",
+  "xkrelay",
+  "zerocat"
 ];

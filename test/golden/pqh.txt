@@ -1,0 +1,567 @@
+# base: tokenflux
+# case: pqh
+# fixture: pqh-pricing.json
+# rows: 556 · unresolved: 2
+# 更新：node scripts/price-map-golden.mjs --update
+# 字段：model_name|proxy_group_name|tier_name|input_price|output_price|cache_read_price|cache_write_price|request_price|image_price|media_type|price_currency|group_ratio|completion_ratio
+
+MiniMax-M3.1-Flash|MINIMAX官转|标准|0.5|2|0.05|-|-|-|-|USD|0.5|4
+MiniMax-M3|MINIMAX官转|base|1.05|4.2|0.21|-|-|-|-|USD|0.5|4
+MiniMax-M3|MINIMAX官转|tier_2|2.1|8.4|0.42|-|-|-|-|USD|0.5|4
+claude-fable-5-1|AWSB企业专供|标准|36|180|0.9|45|-|-|-|USD|3.6|5
+claude-fable-5-1|CCMAX-0注入coding-1|标准|18|90|0.45|22.5|-|-|-|USD|1.8|5
+claude-fable-5-1|CCMAX-0注入可蒸馏-1|标准|20|100|0.5|25|-|-|-|USD|2|5
+claude-fable-5-1|CCMAX-0注入可蒸馏-2|标准|20|100|0.5|25|-|-|-|USD|2|5
+claude-fable-5-1|CCMAX-有注入可蒸馏|标准|14|70|0.35|17.5|-|-|-|USD|1.4|5
+claude-fable-5-1|CCMAXcode无限制|标准|12|60|0.3|15|-|-|-|USD|1.2|5
+claude-fable-5-1|CCMAX企业分组2|标准|12.5|62.5|0.3125|15.625|-|-|-|USD|1.25|5
+claude-fable-5-1|CCMAX企业分组3|标准|12.5|62.5|0.3125|15.625|-|-|-|USD|1.25|5
+claude-fable-5-1|CCMAX企业分组4|标准|14.5|72.5|0.3625|18.125|-|-|-|USD|1.45|5
+claude-fable-5-1|CCMAX企业分组5|标准|15|75|0.375|18.75|-|-|-|USD|1.5|5
+claude-fable-5-1|CCMAX企业分组|标准|12.5|62.5|0.3125|15.625|-|-|-|USD|1.25|5
+claude-fable-5-1|CCMAX微注入coding（星河号池）|标准|13|65|0.325|16.25|-|-|-|USD|1.3|5
+claude-fable-5-1|CCMAX微注入可蒸馏（星河号池）|标准|15|75|0.375|18.75|-|-|-|USD|1.5|5
+claude-fable-5-1|ccmax(ct满分)|标准|6|30|0.15|7.5|-|-|-|USD|0.6|5
+claude-fable-5-1|claude kiro 90缓存|标准|1.5|7.5|0.0375|1.875|-|-|-|USD|0.15|5
+claude-fable-5-1|kiro企业分组|标准|2.8|14|0.07|3.5|-|-|-|USD|0.28|5
+claude-fable-5-2|AWSB企业专供|base|28.8|144|0.72|36|-|-|-|USD|3.6|5
+claude-fable-5-2|CCMAX-0注入可蒸馏-1|base|16|80|0.4|20|-|-|-|USD|2|5
+claude-fable-5-2|CCMAX-0注入可蒸馏-2|base|16|80|0.4|20|-|-|-|USD|2|5
+claude-fable-5-2|CCMAX-有注入可蒸馏|base|11.2|56|0.28|14|-|-|-|USD|1.4|5
+claude-fable-5-2|CCMAXcode无限制|base|9.6|48|0.24|12|-|-|-|USD|1.2|5
+claude-fable-5-2|CCMAX企业分组2|base|10|50|0.25|12.5|-|-|-|USD|1.25|5
+claude-fable-5-2|CCMAX企业分组3|base|10|50|0.25|12.5|-|-|-|USD|1.25|5
+claude-fable-5-2|CCMAX企业分组|base|10|50|0.25|12.5|-|-|-|USD|1.25|5
+claude-fable-5-2|claude kiro 90缓存|base|1.2|6|0.03|1.5|-|-|-|USD|0.15|5
+claude-fable-5-2|kiro企业分组|base|2.24|11.2|0.056|2.8|-|-|-|USD|0.28|5
+claude-fable-5|AWSB企业专供|标准|36|180|3.6|45|-|-|-|USD|3.6|5
+claude-fable-5|CCMAX-0注入coding-1|标准|18|90|1.8|22.5|-|-|-|USD|1.8|5
+claude-fable-5|CCMAX-0注入可蒸馏-1|标准|20|100|2|25|-|-|-|USD|2|5
+claude-fable-5|CCMAX-0注入可蒸馏-2|标准|20|100|2|25|-|-|-|USD|2|5
+claude-fable-5|CCMAX-有注入可蒸馏|标准|14|70|1.4|17.5|-|-|-|USD|1.4|5
+claude-fable-5|CCMAXcode无限制|标准|12|60|1.2|15|-|-|-|USD|1.2|5
+claude-fable-5|CCMAX企业分组2|标准|12.5|62.5|1.25|15.625|-|-|-|USD|1.25|5
+claude-fable-5|CCMAX企业分组3|标准|12.5|62.5|1.25|15.625|-|-|-|USD|1.25|5
+claude-fable-5|CCMAX企业分组4|标准|14.5|72.5|1.45|18.125|-|-|-|USD|1.45|5
+claude-fable-5|CCMAX企业分组5|标准|15|75|1.5|18.75|-|-|-|USD|1.5|5
+claude-fable-5|CCMAX企业分组|标准|12.5|62.5|1.25|15.625|-|-|-|USD|1.25|5
+claude-fable-5|CCMAX微注入coding（星河号池）|标准|13|65|1.3|16.25|-|-|-|USD|1.3|5
+claude-fable-5|CCMAX微注入可蒸馏（星河号池）|标准|15|75|1.5|18.75|-|-|-|USD|1.5|5
+claude-fable-5|ccmax(ct满分)|标准|6|30|0.6|7.5|-|-|-|USD|0.6|5
+claude-fable-5|claude kiro 90缓存|标准|1.5|7.5|0.15|1.875|-|-|-|USD|0.15|5
+claude-fable-5|kiro企业分组|标准|2.8|14|0.28|3.5|-|-|-|USD|0.28|5
+claude-haiku-4-5-20251001|AWSB企业专供|标准|3.6|18|0.36|4.5|-|-|-|USD|3.6|5
+claude-haiku-4-5-20251001|CCMAX-0注入coding-1|标准|1.8|9|0.18|2.25|-|-|-|USD|1.8|5
+claude-haiku-4-5-20251001|CCMAX-0注入可蒸馏-1|标准|2|10|0.2|2.5|-|-|-|USD|2|5
+claude-haiku-4-5-20251001|CCMAX-0注入可蒸馏-2|标准|2|10|0.2|2.5|-|-|-|USD|2|5
+claude-haiku-4-5-20251001|CCMAX-有注入可蒸馏|标准|1.4|7|0.14|1.75|-|-|-|USD|1.4|5
+claude-haiku-4-5-20251001|CCMAXcode无限制|标准|1.2|6|0.12|1.5|-|-|-|USD|1.2|5
+claude-haiku-4-5-20251001|CCMAXcode（限制claude code）|标准|1|5|0.1|1.25|-|-|-|USD|1|5
+claude-haiku-4-5-20251001|CCMAX企业分组2|标准|1.25|6.25|0.125|1.5625|-|-|-|USD|1.25|5
+claude-haiku-4-5-20251001|CCMAX企业分组3|标准|1.25|6.25|0.125|1.5625|-|-|-|USD|1.25|5
+claude-haiku-4-5-20251001|CCMAX企业分组4|标准|1.45|7.25|0.145|1.8125|-|-|-|USD|1.45|5
+claude-haiku-4-5-20251001|CCMAX企业分组5|标准|1.5|7.5|0.15|1.875|-|-|-|USD|1.5|5
+claude-haiku-4-5-20251001|CCMAX企业分组|标准|1.25|6.25|0.125|1.5625|-|-|-|USD|1.25|5
+claude-haiku-4-5-20251001|CCMAX微注入coding（星河号池）|标准|1.3|6.5|0.13|1.625|-|-|-|USD|1.3|5
+claude-haiku-4-5-20251001|CCMAX微注入可蒸馏（星河号池）|标准|1.5|7.5|0.15|1.875|-|-|-|USD|1.5|5
+claude-haiku-4-5-20251001|claude kiro 90缓存|标准|0.15|0.75|0.015|0.1875|-|-|-|USD|0.15|5
+claude-haiku-4-5-20251001|kiro企业分组-2|标准|0.28|1.4|0.028|0.35|-|-|-|USD|0.28|5
+claude-haiku-4-5-20251001|kiro企业分组-3|标准|0.28|1.4|0.028|0.35|-|-|-|USD|0.28|5
+claude-haiku-4-5-20251001|kiro企业分组|标准|0.28|1.4|0.028|0.35|-|-|-|USD|0.28|5
+claude-haiku-4-5-20251001|测试2|标准|1|5|0.1|1.25|-|-|-|USD|1|5
+claude-haiku-4-5|AWSB企业专供|base|3.6|18|0.36|4.5|-|-|-|USD|3.6|5
+claude-haiku-4-5|CCMAX-0注入coding-1|base|1.8|9|0.18|2.25|-|-|-|USD|1.8|5
+claude-haiku-4-5|CCMAX-0注入可蒸馏-1|base|2|10|0.2|2.5|-|-|-|USD|2|5
+claude-haiku-4-5|CCMAX-0注入可蒸馏-2|base|2|10|0.2|2.5|-|-|-|USD|2|5
+claude-haiku-4-5|CCMAX-有注入可蒸馏|base|1.4|7|0.14|1.75|-|-|-|USD|1.4|5
+claude-haiku-4-5|CCMAXcode无限制|base|1.2|6|0.12|1.5|-|-|-|USD|1.2|5
+claude-haiku-4-5|CCMAX企业分组2|base|1.25|6.25|0.125|1.5625|-|-|-|USD|1.25|5
+claude-haiku-4-5|CCMAX企业分组4|base|1.45|7.25|0.145|1.8125|-|-|-|USD|1.45|5
+claude-haiku-4-5|CCMAX企业分组5|base|1.5|7.5|0.15|1.875|-|-|-|USD|1.5|5
+claude-haiku-4-5|CCMAX企业分组|base|1.25|6.25|0.125|1.5625|-|-|-|USD|1.25|5
+claude-haiku-4-5|CCMAX微注入coding（星河号池）|base|1.3|6.5|0.13|1.625|-|-|-|USD|1.3|5
+claude-haiku-4-5|CCMAX微注入可蒸馏（星河号池）|base|1.5|7.5|0.15|1.875|-|-|-|USD|1.5|5
+claude-haiku-4-5|测试2|base|1|5|0.1|1.25|-|-|-|USD|1|5
+claude-haiku-5-5|AWSB企业专供|base|0.36|1.8|0.036|0.45|-|-|-|USD|3.6|5
+claude-haiku-5-5|AWSB企业专供|tier_2|1.8|9|0.18|2.25|-|-|-|USD|3.6|5
+claude-haiku-5-5|CCMAX-0注入coding-1|base|0.18|0.9|0.018|0.225|-|-|-|USD|1.8|5
+claude-haiku-5-5|CCMAX-0注入coding-1|tier_2|0.9|4.5|0.09|1.125|-|-|-|USD|1.8|5
+claude-haiku-5-5|CCMAX-0注入可蒸馏-1|base|0.2|1|0.02|0.25|-|-|-|USD|2|5
+claude-haiku-5-5|CCMAX-0注入可蒸馏-1|tier_2|1|5|0.1|1.25|-|-|-|USD|2|5
+claude-haiku-5-5|CCMAX-0注入可蒸馏-2|base|0.2|1|0.02|0.25|-|-|-|USD|2|5
+claude-haiku-5-5|CCMAX-0注入可蒸馏-2|tier_2|1|5|0.1|1.25|-|-|-|USD|2|5
+claude-haiku-5-5|CCMAX-有注入可蒸馏|base|0.14|0.7|0.014|0.175|-|-|-|USD|1.4|5
+claude-haiku-5-5|CCMAX-有注入可蒸馏|tier_2|0.7|3.5|0.07|0.875|-|-|-|USD|1.4|5
+claude-haiku-5-5|CCMAXcode无限制|base|0.12|0.6|0.012|0.15|-|-|-|USD|1.2|5
+claude-haiku-5-5|CCMAXcode无限制|tier_2|0.6|3|0.06|0.75|-|-|-|USD|1.2|5
+claude-haiku-5-5|CCMAXcode（限制claude code）|base|0.1|0.5|0.01|0.125|-|-|-|USD|1|5
+claude-haiku-5-5|CCMAXcode（限制claude code）|tier_2|0.5|2.5|0.05|0.625|-|-|-|USD|1|5
+claude-haiku-5-5|CCMAX企业分组2|base|0.125|0.625|0.0125|0.15625|-|-|-|USD|1.25|5
+claude-haiku-5-5|CCMAX企业分组2|tier_2|0.625|3.125|0.0625|0.78125|-|-|-|USD|1.25|5
+claude-haiku-5-5|CCMAX企业分组3|base|0.125|0.625|0.0125|0.15625|-|-|-|USD|1.25|5
+claude-haiku-5-5|CCMAX企业分组3|tier_2|0.625|3.125|0.0625|0.78125|-|-|-|USD|1.25|5
+claude-haiku-5-5|CCMAX企业分组4|base|0.145|0.725|0.0145|0.18125|-|-|-|USD|1.45|5
+claude-haiku-5-5|CCMAX企业分组4|tier_2|0.725|3.625|0.0725|0.90625|-|-|-|USD|1.45|5
+claude-haiku-5-5|CCMAX企业分组5|base|0.15|0.75|0.015|0.1875|-|-|-|USD|1.5|5
+claude-haiku-5-5|CCMAX企业分组5|tier_2|0.75|3.75|0.075|0.9375|-|-|-|USD|1.5|5
+claude-haiku-5-5|CCMAX企业分组|base|0.125|0.625|0.0125|0.15625|-|-|-|USD|1.25|5
+claude-haiku-5-5|CCMAX企业分组|tier_2|0.625|3.125|0.0625|0.78125|-|-|-|USD|1.25|5
+claude-haiku-5-5|CCMAX微注入coding（星河号池）|base|0.13|0.65|0.013|0.1625|-|-|-|USD|1.3|5
+claude-haiku-5-5|CCMAX微注入coding（星河号池）|tier_2|0.65|3.25|0.065|0.8125|-|-|-|USD|1.3|5
+claude-haiku-5-5|CCMAX微注入可蒸馏（星河号池）|base|0.15|0.75|0.015|0.1875|-|-|-|USD|1.5|5
+claude-haiku-5-5|CCMAX微注入可蒸馏（星河号池）|tier_2|0.75|3.75|0.075|0.9375|-|-|-|USD|1.5|5
+claude-haiku-5-5|claude kiro 90缓存|base|0.015|0.075|0.0015|0.01875|-|-|-|USD|0.15|5
+claude-haiku-5-5|claude kiro 90缓存|tier_2|0.075|0.375|0.0075|0.09375|-|-|-|USD|0.15|5
+claude-haiku-5-5|kiro企业分组-2|base|0.028|0.14|0.0028|0.035|-|-|-|USD|0.28|5
+claude-haiku-5-5|kiro企业分组-2|tier_2|0.14|0.7|0.014|0.175|-|-|-|USD|0.28|5
+claude-haiku-5-5|kiro企业分组-3|base|0.028|0.14|0.0028|0.035|-|-|-|USD|0.28|5
+claude-haiku-5-5|kiro企业分组-3|tier_2|0.14|0.7|0.014|0.175|-|-|-|USD|0.28|5
+claude-haiku-5-5|kiro企业分组|base|0.028|0.14|0.0028|0.035|-|-|-|USD|0.28|5
+claude-haiku-5-5|kiro企业分组|tier_2|0.14|0.7|0.014|0.175|-|-|-|USD|0.28|5
+claude-haiku-5-5|测试2|base|0.1|0.5|0.01|0.125|-|-|-|USD|1|5
+claude-haiku-5-5|测试2|tier_2|0.5|2.5|0.05|0.625|-|-|-|USD|1|5
+claude-opus-4-5-20251101|CCMAX-0注入coding-1|标准|9|45|0.9|11.25|-|-|-|USD|1.8|5
+claude-opus-4-5-20251101|CCMAX-0注入可蒸馏-1|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-5-20251101|CCMAX-0注入可蒸馏-2|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-5-20251101|CCMAX-有注入可蒸馏|标准|7|35|0.7|8.75|-|-|-|USD|1.4|5
+claude-opus-4-5-20251101|CCMAXcode无限制|标准|6|30|0.6|7.5|-|-|-|USD|1.2|5
+claude-opus-4-5-20251101|CCMAX企业分组2|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-5-20251101|CCMAX企业分组4|标准|7.25|36.25|0.725|9.0625|-|-|-|USD|1.45|5
+claude-opus-4-5-20251101|CCMAX企业分组5|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-5-20251101|CCMAX企业分组|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-5-20251101|CCMAX微注入coding（星河号池）|标准|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-5-20251101|CCMAX微注入可蒸馏（星河号池）|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-5-20251101|claude kiro 90缓存|标准|0.75|3.75|0.075|0.9375|-|-|-|USD|0.15|5
+claude-opus-4-5-20251101|kiro企业分组-2|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-5-20251101|kiro企业分组-3|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-5-20251101|kiro企业分组|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-5-20251101|测试2|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-5|CCMAX-0注入coding-1|标准|9|45|0.9|11.25|-|-|-|USD|1.8|5
+claude-opus-4-5|CCMAX-0注入可蒸馏-1|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-5|CCMAX-0注入可蒸馏-2|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-5|CCMAX-有注入可蒸馏|标准|7|35|0.7|8.75|-|-|-|USD|1.4|5
+claude-opus-4-5|CCMAXcode无限制|标准|6|30|0.6|7.5|-|-|-|USD|1.2|5
+claude-opus-4-5|CCMAX企业分组2|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-5|CCMAX企业分组4|标准|7.25|36.25|0.725|9.0625|-|-|-|USD|1.45|5
+claude-opus-4-5|CCMAX企业分组5|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-5|CCMAX企业分组|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-5|CCMAX微注入coding（星河号池）|标准|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-5|CCMAX微注入可蒸馏（星河号池）|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-5|claude kiro 90缓存|标准|0.75|3.75|0.075|0.9375|-|-|-|USD|0.15|5
+claude-opus-4-5|kiro企业分组-2|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-5|kiro企业分组|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-5|测试2|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-6|AWSB企业专供|标准|18|90|1.8|22.5|-|-|-|USD|3.6|5
+claude-opus-4-6|CCMAX-0注入coding-1|标准|9|45|0.9|11.25|-|-|-|USD|1.8|5
+claude-opus-4-6|CCMAX-0注入可蒸馏-1|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-6|CCMAX-0注入可蒸馏-2|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-6|CCMAX-有注入可蒸馏|标准|7|35|0.7|8.75|-|-|-|USD|1.4|5
+claude-opus-4-6|CCMAXcode无限制|标准|6|30|0.6|7.5|-|-|-|USD|1.2|5
+claude-opus-4-6|CCMAXcode（限制claude code）|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-6|CCMAX企业分组2|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-6|CCMAX企业分组3|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-6|CCMAX企业分组4|标准|7.25|36.25|0.725|9.0625|-|-|-|USD|1.45|5
+claude-opus-4-6|CCMAX企业分组5|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-6|CCMAX企业分组|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-6|CCMAX微注入coding（星河号池）|标准|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-6|CCMAX微注入可蒸馏（星河号池）|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-6|ccmax(ct满分)|标准|3|15|0.3|3.75|-|-|-|USD|0.6|5
+claude-opus-4-6|claude kiro 90缓存|标准|0.75|3.75|0.075|0.9375|-|-|-|USD|0.15|5
+claude-opus-4-6|kiro企业分组-2|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-6|kiro企业分组-3|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-6|kiro企业分组|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-6|测试2|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-7-thinking|测试2|标准|75|375|7.5|93.75|-|-|-|USD|1|5
+claude-opus-4-7|AWSB企业专供|标准|18|90|1.8|22.5|-|-|-|USD|3.6|5
+claude-opus-4-7|CCMAX-0注入coding-1|标准|9|45|0.9|11.25|-|-|-|USD|1.8|5
+claude-opus-4-7|CCMAX-0注入可蒸馏-1|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-7|CCMAX-0注入可蒸馏-2|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-7|CCMAX-有注入可蒸馏|标准|7|35|0.7|8.75|-|-|-|USD|1.4|5
+claude-opus-4-7|CCMAXcode无限制|标准|6|30|0.6|7.5|-|-|-|USD|1.2|5
+claude-opus-4-7|CCMAXcode（限制claude code）|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-7|CCMAX企业分组2|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-7|CCMAX企业分组3|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-7|CCMAX企业分组4|标准|7.25|36.25|0.725|9.0625|-|-|-|USD|1.45|5
+claude-opus-4-7|CCMAX企业分组5|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-7|CCMAX企业分组|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-7|CCMAX微注入coding（星河号池）|标准|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-7|CCMAX微注入可蒸馏（星河号池）|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-7|ccmax(ct满分)|标准|3|15|0.3|3.75|-|-|-|USD|0.6|5
+claude-opus-4-7|claude kiro 90缓存|标准|0.75|3.75|0.075|0.9375|-|-|-|USD|0.15|5
+claude-opus-4-7|kiro企业分组-2|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-7|kiro企业分组-3|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-7|kiro企业分组|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-7|测试2|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-8|AWSB企业专供|标准|18|90|1.8|22.5|-|-|-|USD|3.6|5
+claude-opus-4-8|CCMAX-0注入coding-1|标准|9|45|0.9|11.25|-|-|-|USD|1.8|5
+claude-opus-4-8|CCMAX-0注入可蒸馏-1|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-8|CCMAX-0注入可蒸馏-2|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-4-8|CCMAX-有注入可蒸馏|标准|7|35|0.7|8.75|-|-|-|USD|1.4|5
+claude-opus-4-8|CCMAXcode无限制|标准|6|30|0.6|7.5|-|-|-|USD|1.2|5
+claude-opus-4-8|CCMAXcode（限制claude code）|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-4-8|CCMAX企业分组2|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-8|CCMAX企业分组3|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-8|CCMAX企业分组4|标准|7.25|36.25|0.725|9.0625|-|-|-|USD|1.45|5
+claude-opus-4-8|CCMAX企业分组5|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-8|CCMAX企业分组|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-4-8|CCMAX微注入coding（星河号池）|标准|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-4-8|CCMAX微注入可蒸馏（星河号池）|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-4-8|ccmax(ct满分)|标准|3|15|0.3|3.75|-|-|-|USD|0.6|5
+claude-opus-4-8|claude kiro 90缓存|标准|0.75|3.75|0.075|0.9375|-|-|-|USD|0.15|5
+claude-opus-4-8|kiro企业分组-2|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-8|kiro企业分组-3|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-8|kiro企业分组|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-4-8|测试2|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-5-5|AWSB企业专供|base|14.4|72|0.72|18|-|-|-|USD|3.6|5
+claude-opus-5-5|CCMAX-0注入coding-1|base|7.2|36|0.36|9|-|-|-|USD|1.8|5
+claude-opus-5-5|CCMAX-0注入可蒸馏-1|base|8|40|0.4|10|-|-|-|USD|2|5
+claude-opus-5-5|CCMAX-0注入可蒸馏-2|base|8|40|0.4|10|-|-|-|USD|2|5
+claude-opus-5-5|CCMAX-有注入可蒸馏|base|5.6|28|0.28|7|-|-|-|USD|1.4|5
+claude-opus-5-5|CCMAXcode无限制|base|4.8|24|0.24|6|-|-|-|USD|1.2|5
+claude-opus-5-5|CCMAXcode（限制claude code）|base|4|20|0.2|5|-|-|-|USD|1|5
+claude-opus-5-5|CCMAX企业分组2|base|5|25|0.25|6.25|-|-|-|USD|1.25|5
+claude-opus-5-5|CCMAX企业分组3|base|5|25|0.25|6.25|-|-|-|USD|1.25|5
+claude-opus-5-5|CCMAX企业分组4|base|5.8|29|0.29|7.25|-|-|-|USD|1.45|5
+claude-opus-5-5|CCMAX企业分组5|base|6|30|0.3|7.5|-|-|-|USD|1.5|5
+claude-opus-5-5|CCMAX企业分组|base|5|25|0.25|6.25|-|-|-|USD|1.25|5
+claude-opus-5-5|CCMAX微注入coding（星河号池）|base|5.2|26|0.26|6.5|-|-|-|USD|1.3|5
+claude-opus-5-5|CCMAX微注入可蒸馏（星河号池）|base|6|30|0.3|7.5|-|-|-|USD|1.5|5
+claude-opus-5-5|ccmax(ct满分)|base|2.4|12|0.12|3|-|-|-|USD|0.6|5
+claude-opus-5-5|claude kiro 90缓存|base|0.6|3|0.03|0.75|-|-|-|USD|0.15|5
+claude-opus-5-5|kiro企业分组-2|base|1.12|5.6|0.056|1.4|-|-|-|USD|0.28|5
+claude-opus-5-5|kiro企业分组-3|base|1.12|5.6|0.056|1.4|-|-|-|USD|0.28|5
+claude-opus-5-5|kiro企业分组|base|1.12|5.6|0.056|1.4|-|-|-|USD|0.28|5
+claude-opus-5-5|测试2|base|4|20|0.2|5|-|-|-|USD|1|5
+claude-opus-5-thinking|测试2|标准|75|75|-|-|-|-|-|USD|1|1
+claude-opus-5|AWSB企业专供|标准|18|90|1.8|22.5|-|-|-|USD|3.6|5
+claude-opus-5|CCMAX-0注入coding-1|标准|9|45|0.9|11.25|-|-|-|USD|1.8|5
+claude-opus-5|CCMAX-0注入可蒸馏-1|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-5|CCMAX-0注入可蒸馏-2|标准|10|50|1|12.5|-|-|-|USD|2|5
+claude-opus-5|CCMAX-有注入可蒸馏|标准|7|35|0.7|8.75|-|-|-|USD|1.4|5
+claude-opus-5|CCMAXcode无限制|标准|6|30|0.6|7.5|-|-|-|USD|1.2|5
+claude-opus-5|CCMAXcode（限制claude code）|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-opus-5|CCMAX企业分组2|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-5|CCMAX企业分组3|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-5|CCMAX企业分组4|标准|7.25|36.25|0.725|9.0625|-|-|-|USD|1.45|5
+claude-opus-5|CCMAX企业分组5|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-5|CCMAX企业分组|标准|6.25|31.25|0.625|7.8125|-|-|-|USD|1.25|5
+claude-opus-5|CCMAX微注入coding（星河号池）|标准|6.5|32.5|0.65|8.125|-|-|-|USD|1.3|5
+claude-opus-5|CCMAX微注入可蒸馏（星河号池）|标准|7.5|37.5|0.75|9.375|-|-|-|USD|1.5|5
+claude-opus-5|ccmax(ct满分)|标准|3|15|0.3|3.75|-|-|-|USD|0.6|5
+claude-opus-5|claude kiro 90缓存|标准|0.75|3.75|0.075|0.9375|-|-|-|USD|0.15|5
+claude-opus-5|kiro企业分组-2|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-5|kiro企业分组-3|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-5|kiro企业分组|标准|1.4|7|0.14|1.75|-|-|-|USD|0.28|5
+claude-opus-5|测试2|标准|5|25|0.5|6.25|-|-|-|USD|1|5
+claude-sonnet-4-5-20250929|CCMAX-0注入可蒸馏-1|标准|6|30|0.6|7.5|-|-|-|USD|2|5
+claude-sonnet-4-5-20250929|CCMAX-0注入可蒸馏-2|标准|6|30|0.6|7.5|-|-|-|USD|2|5
+claude-sonnet-4-5-20250929|CCMAX-有注入可蒸馏|标准|4.2|21|0.42|5.25|-|-|-|USD|1.4|5
+claude-sonnet-4-5-20250929|CCMAXcode无限制|标准|3.6|18|0.36|4.5|-|-|-|USD|1.2|5
+claude-sonnet-4-5-20250929|CCMAXcode（限制claude code）|标准|3|15|0.3|3.75|-|-|-|USD|1|5
+claude-sonnet-4-5-20250929|CCMAX企业分组2|标准|3.75|18.75|0.375|4.6875|-|-|-|USD|1.25|5
+claude-sonnet-4-5-20250929|CCMAX企业分组4|标准|4.35|21.75|0.435|5.4375|-|-|-|USD|1.45|5
+claude-sonnet-4-5-20250929|CCMAX企业分组|标准|3.75|18.75|0.375|4.6875|-|-|-|USD|1.25|5
+claude-sonnet-4-5-20250929|claude kiro 90缓存|标准|0.45|2.25|0.045|0.5625|-|-|-|USD|0.15|5
+claude-sonnet-4-5-20250929|kiro企业分组-2|标准|0.84|4.2|0.084|1.05|-|-|-|USD|0.28|5
+claude-sonnet-4-5-20250929|kiro企业分组-3|标准|0.84|4.2|0.084|1.05|-|-|-|USD|0.28|5
+claude-sonnet-4-5-20250929|kiro企业分组|标准|0.84|4.2|0.084|1.05|-|-|-|USD|0.28|5
+claude-sonnet-4-5-20250929|测试2|标准|3|15|0.3|3.75|-|-|-|USD|1|5
+claude-sonnet-4-5|CCMAX-0注入可蒸馏-1|标准|6|30|0.6|7.5|-|-|-|USD|2|5
+claude-sonnet-4-5|CCMAX-0注入可蒸馏-2|标准|6|30|0.6|7.5|-|-|-|USD|2|5
+claude-sonnet-4-5|CCMAX-有注入可蒸馏|标准|4.2|21|0.42|5.25|-|-|-|USD|1.4|5
+claude-sonnet-4-5|CCMAXcode无限制|标准|3.6|18|0.36|4.5|-|-|-|USD|1.2|5
+claude-sonnet-4-5|CCMAX企业分组4|标准|4.35|21.75|0.435|5.4375|-|-|-|USD|1.45|5
+claude-sonnet-4-5|CCMAX企业分组|标准|3.75|18.75|0.375|4.6875|-|-|-|USD|1.25|5
+claude-sonnet-4-5|测试2|标准|3|15|0.3|3.75|-|-|-|USD|1|5
+claude-sonnet-4-6-thinking|测试2|标准|75|375|-|-|-|-|-|USD|1|5
+claude-sonnet-4-6|AWSB企业专供|standard|10.8|54|1.08|13.5|-|-|-|USD|3.6|5
+claude-sonnet-4-6|CCMAX-0注入coding-1|standard|5.4|27|0.54|6.75|-|-|-|USD|1.8|5
+claude-sonnet-4-6|CCMAX-0注入可蒸馏-1|standard|6|30|0.6|7.5|-|-|-|USD|2|5
+claude-sonnet-4-6|CCMAX-0注入可蒸馏-2|standard|6|30|0.6|7.5|-|-|-|USD|2|5
+claude-sonnet-4-6|CCMAX-有注入可蒸馏|standard|4.2|21|0.42|5.25|-|-|-|USD|1.4|5
+claude-sonnet-4-6|CCMAXcode无限制|standard|3.6|18|0.36|4.5|-|-|-|USD|1.2|5
+claude-sonnet-4-6|CCMAXcode（限制claude code）|standard|3|15|0.3|3.75|-|-|-|USD|1|5
+claude-sonnet-4-6|CCMAX企业分组2|standard|3.75|18.75|0.375|4.6875|-|-|-|USD|1.25|5
+claude-sonnet-4-6|CCMAX企业分组3|standard|3.75|18.75|0.375|4.6875|-|-|-|USD|1.25|5
+claude-sonnet-4-6|CCMAX企业分组4|standard|4.35|21.75|0.435|5.4375|-|-|-|USD|1.45|5
+claude-sonnet-4-6|CCMAX企业分组5|standard|4.5|22.5|0.45|5.625|-|-|-|USD|1.5|5
+claude-sonnet-4-6|CCMAX企业分组|standard|3.75|18.75|0.375|4.6875|-|-|-|USD|1.25|5
+claude-sonnet-4-6|CCMAX微注入coding（星河号池）|standard|3.9|19.5|0.39|4.875|-|-|-|USD|1.3|5
+claude-sonnet-4-6|CCMAX微注入可蒸馏（星河号池）|standard|4.5|22.5|0.45|5.625|-|-|-|USD|1.5|5
+claude-sonnet-4-6|ccmax(ct满分)|standard|1.8|9|0.18|2.25|-|-|-|USD|0.6|5
+claude-sonnet-4-6|claude kiro 90缓存|standard|0.45|2.25|0.045|0.5625|-|-|-|USD|0.15|5
+claude-sonnet-4-6|kiro企业分组-2|standard|0.84|4.2|0.084|1.05|-|-|-|USD|0.28|5
+claude-sonnet-4-6|kiro企业分组-3|standard|0.84|4.2|0.084|1.05|-|-|-|USD|0.28|5
+claude-sonnet-4-6|kiro企业分组|standard|0.84|4.2|0.084|1.05|-|-|-|USD|0.28|5
+claude-sonnet-4-6|测试2|standard|3|15|0.3|3.75|-|-|-|USD|1|5
+claude-sonnet-5-5-thinking|测试2|标准|75|75|-|-|-|-|-|USD|1|1
+claude-sonnet-5-5|AWSB企业专供|标准|7.2|36|0.36|9|-|-|-|USD|3.6|5
+claude-sonnet-5-5|CCMAX-0注入coding-1|标准|3.6|18|0.18|4.5|-|-|-|USD|1.8|5
+claude-sonnet-5-5|CCMAX-0注入可蒸馏-1|标准|4|20|0.2|5|-|-|-|USD|2|5
+claude-sonnet-5-5|CCMAX-0注入可蒸馏-2|标准|4|20|0.2|5|-|-|-|USD|2|5
+claude-sonnet-5-5|CCMAX-有注入可蒸馏|标准|2.8|14|0.14|3.5|-|-|-|USD|1.4|5
+claude-sonnet-5-5|CCMAXcode无限制|标准|2.4|12|0.12|3|-|-|-|USD|1.2|5
+claude-sonnet-5-5|CCMAXcode（限制claude code）|标准|2|10|0.1|2.5|-|-|-|USD|1|5
+claude-sonnet-5-5|CCMAX企业分组2|标准|2.5|12.5|0.125|3.125|-|-|-|USD|1.25|5
+claude-sonnet-5-5|CCMAX企业分组3|标准|2.5|12.5|0.125|3.125|-|-|-|USD|1.25|5
+claude-sonnet-5-5|CCMAX企业分组4|标准|2.9|14.5|0.145|3.625|-|-|-|USD|1.45|5
+claude-sonnet-5-5|CCMAX企业分组5|标准|3|15|0.15|3.75|-|-|-|USD|1.5|5
+claude-sonnet-5-5|CCMAX企业分组|标准|2.5|12.5|0.125|3.125|-|-|-|USD|1.25|5
+claude-sonnet-5-5|CCMAX微注入coding（星河号池）|标准|2.6|13|0.13|3.25|-|-|-|USD|1.3|5
+claude-sonnet-5-5|CCMAX微注入可蒸馏（星河号池）|标准|3|15|0.15|3.75|-|-|-|USD|1.5|5
+claude-sonnet-5-5|ccmax(ct满分)|标准|1.2|6|0.06|1.5|-|-|-|USD|0.6|5
+claude-sonnet-5-5|claude kiro 90缓存|标准|0.3|1.5|0.015|0.375|-|-|-|USD|0.15|5
+claude-sonnet-5-5|kiro企业分组-2|标准|0.56|2.8|0.028|0.7|-|-|-|USD|0.28|5
+claude-sonnet-5-5|kiro企业分组-3|标准|0.56|2.8|0.028|0.7|-|-|-|USD|0.28|5
+claude-sonnet-5-5|kiro企业分组|标准|0.56|2.8|0.028|0.7|-|-|-|USD|0.28|5
+claude-sonnet-5-5|测试2|标准|2|10|0.1|2.5|-|-|-|USD|1|5
+claude-sonnet-5-thinking|测试2|标准|75|75|-|-|-|-|-|USD|1|1
+claude-sonnet-5|AWSB企业专供|标准|7.2|36|0.72|9|-|-|-|USD|3.6|5
+claude-sonnet-5|CCMAX-0注入coding-1|标准|3.6|18|0.36|4.5|-|-|-|USD|1.8|5
+claude-sonnet-5|CCMAX-0注入可蒸馏-1|标准|4|20|0.4|5|-|-|-|USD|2|5
+claude-sonnet-5|CCMAX-0注入可蒸馏-2|标准|4|20|0.4|5|-|-|-|USD|2|5
+claude-sonnet-5|CCMAX-有注入可蒸馏|标准|2.8|14|0.28|3.5|-|-|-|USD|1.4|5
+claude-sonnet-5|CCMAXcode无限制|标准|2.4|12|0.24|3|-|-|-|USD|1.2|5
+claude-sonnet-5|CCMAXcode（限制claude code）|标准|2|10|0.2|2.5|-|-|-|USD|1|5
+claude-sonnet-5|CCMAX企业分组2|标准|2.5|12.5|0.25|3.125|-|-|-|USD|1.25|5
+claude-sonnet-5|CCMAX企业分组3|标准|2.5|12.5|0.25|3.125|-|-|-|USD|1.25|5
+claude-sonnet-5|CCMAX企业分组4|标准|2.9|14.5|0.29|3.625|-|-|-|USD|1.45|5
+claude-sonnet-5|CCMAX企业分组5|标准|3|15|0.3|3.75|-|-|-|USD|1.5|5
+claude-sonnet-5|CCMAX企业分组|标准|2.5|12.5|0.25|3.125|-|-|-|USD|1.25|5
+claude-sonnet-5|CCMAX微注入coding（星河号池）|标准|2.6|13|0.26|3.25|-|-|-|USD|1.3|5
+claude-sonnet-5|CCMAX微注入可蒸馏（星河号池）|标准|3|15|0.3|3.75|-|-|-|USD|1.5|5
+claude-sonnet-5|ccmax(ct满分)|标准|1.2|6|0.12|1.5|-|-|-|USD|0.6|5
+claude-sonnet-5|claude kiro 90缓存|标准|0.3|1.5|0.03|0.375|-|-|-|USD|0.15|5
+claude-sonnet-5|kiro企业分组-2|标准|0.56|2.8|0.056|0.7|-|-|-|USD|0.28|5
+claude-sonnet-5|kiro企业分组-3|标准|0.56|2.8|0.056|0.7|-|-|-|USD|0.28|5
+claude-sonnet-5|kiro企业分组|标准|0.56|2.8|0.056|0.7|-|-|-|USD|0.28|5
+claude-sonnet-5|测试2|标准|2|10|0.2|2.5|-|-|-|USD|1|5
+codex-auto-review|Codex-pro|标准|2|12|0.2|2.5|-|-|-|USD|0.4|6
+codex-auto-review|GPT PRO|标准|1.25|7.5|0.125|1.5625|-|-|-|USD|0.25|6
+deepseek-flash|DS官key|off_peak|0.09|0.36|0.0018|-|-|-|-|USD|0.6|4
+deepseek-flash|DS官key|peak|0.18|0.72|0.0036|-|-|-|-|USD|0.6|4
+deepseek-v4-flash-0731|Deepseek|base|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4-pro-0813|Deepseek|base|2.25|6.75|0.075|-|-|-|-|USD|0.5|3
+deepseek-v4-pro|DS官key|base|2.7|8.1|0.09|-|-|-|-|USD|0.6|3
+deepseek-v4-pro|Deepseek|base|2.25|6.75|0.075|-|-|-|-|USD|0.5|3
+deepseek-v4-pro|GLM专属分组|base|2.25|6.75|0.075|-|-|-|-|USD|0.5|3
+deepseek-v4-pro|Qwen|base|2.25|6.75|0.075|-|-|-|-|USD|0.5|3
+deepseek-v4-pro|kimi|base|2.025|6.075|0.0675|-|-|-|-|USD|0.45|3
+deepseek-v4-pro|国产模型|base|2.7|8.1|0.09|-|-|-|-|USD|0.6|3
+deepseek-v4.1-flash-1017|DS官key|base|0.6|2.4|0.012|-|-|-|-|USD|0.6|4
+deepseek-v4.1-flash-1017|Deepseek|base|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash|DS官key|base|0.6|2.4|0.012|-|-|-|-|USD|0.6|4
+deepseek-v4.1-flash|Deepseek|base|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash|GLM专属分组|base|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash|Qwen|base|0.5|2|0.01|-|-|-|-|USD|0.5|4
+deepseek-v4.1-flash|kimi|base|0.45|1.8|0.009|-|-|-|-|USD|0.45|4
+deepseek-v4.1-flash|国产模型|base|0.6|2.4|0.012|-|-|-|-|USD|0.6|4
+doubao-seedance-1-0-lite-i2v|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedance-1-0-lite-t2v|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedance-1-0-pro-250528|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedance-1-5-pro-251215|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedance-2-0-fast-260128|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedance-2-0-mini-260615|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedream-4-0-250828|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedream-4-5-251128|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedream-5-0-260128|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedream-5-0-flash-260915|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedream-5-0-lite-260128|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+doubao-seedream-5-0-pro-260628|seedance|标准|63.75|63.75|-|-|-|-|-|USD|0.85|1
+gemini-2.5-flash-image|Gemini AS|official_standard|0.6|5|-|-|-|-|-|USD|2|8.33333333333
+gemini-2.5-flash-image|Gemini VT|official_standard|0.66|5.5|-|-|-|-|-|USD|2.2|8.33333333333
+gemini-2.5-flash-lite|Gemini|标准|30|120|-|-|-|-|-|USD|0.4|4
+gemini-2.5-flash|Gemini|standard|0.12|1|0.012|-|-|-|-|USD|0.4|8.33333333333
+gemini-3-flash-preview|Gemini AS|base|1|6|0.1|-|-|-|-|USD|2|6
+gemini-3-flash-preview|Gemini VT|base|1.1|6.6|0.11|-|-|-|-|USD|2.2|6
+gemini-3-pro-image-preview-per-call|gemini反代生图|base|-|-|-|-|0.08|-|-|USD|1|1
+gemini-3-pro-image-preview|Gemini AS|official_standard|4|24|0.4|-|-|-|-|USD|2|6
+gemini-3-pro-image-preview|Gemini VT|official_standard|4.4|26.4|0.44|-|-|-|-|USD|2.2|6
+gemini-3-pro-image-preview|Gemini|official_standard|0.8|4.8|0.08|-|-|-|-|USD|0.4|6
+gemini-3-pro-image|Gemini AS|official_standard|4|24|0.4|-|-|-|-|USD|2|6
+gemini-3-pro-image|Gemini VT|official_standard|4.4|26.4|0.44|-|-|-|-|USD|2.2|6
+gemini-3.1-flash-image-per-call|gemini反代生图|base|-|-|-|-|0.06|-|-|USD|1|1
+gemini-3.1-flash-image-preview|Gemini AS|official_standard|1|6|0.1|-|-|-|-|USD|2|6
+gemini-3.1-flash-image-preview|Gemini VT|official_standard|1.1|6.6|0.11|-|-|-|-|USD|2.2|6
+gemini-3.1-flash-image|Gemini AS|official_standard|1|6|0.1|-|-|-|-|USD|2|6
+gemini-3.1-flash-image|Gemini VT|official_standard|1.1|6.6|0.11|-|-|-|-|USD|2.2|6
+gemini-3.1-flash-image|Gemini|official_standard|0.2|1.2|0.02|-|-|-|-|USD|0.4|6
+gemini-3.1-flash-lite-image|Gemini AS|official_standard|0.5|3|0.05|-|-|-|-|USD|2|6
+gemini-3.1-flash-lite-image|Gemini VT|official_standard|0.55|3.3|0.055|-|-|-|-|USD|2.2|6
+gemini-3.1-flash-lite-preview|Gemini AS|base|0.5|3|0.05|-|-|-|-|USD|2|6
+gemini-3.1-flash-lite-preview|Gemini VT|base|0.55|3.3|0.055|-|-|-|-|USD|2.2|6
+gemini-3.1-flash-lite-preview|Gemini|base|0.1|0.6|0.01|-|-|-|-|USD|0.4|6
+gemini-3.1-flash-lite|Gemini AS|base|0.5|3|0.05|0.1666|-|-|-|USD|2|6
+gemini-3.1-flash-lite|Gemini VT|base|0.55|3.3|0.055|0.18326|-|-|-|USD|2.2|6
+gemini-3.1-flash-lite|Gemini|base|0.1|0.6|0.01|0.03332|-|-|-|USD|0.4|6
+gemini-3.1-pro-preview-customtools|Gemini AS|base|4|24|0.4|4|-|-|-|USD|2|6
+gemini-3.1-pro-preview-customtools|Gemini AS|long_context|8|36|0.8|8|-|-|-|USD|2|4.5
+gemini-3.1-pro-preview|Gemini AS|base|4|24|0.4|4|-|-|-|USD|2|6
+gemini-3.1-pro-preview|Gemini AS|long_context|8|36|0.8|8|-|-|-|USD|2|4.5
+gemini-3.1-pro-preview|Gemini VT|base|4.4|26.4|0.44|4.4|-|-|-|USD|2.2|6
+gemini-3.1-pro-preview|Gemini VT|long_context|8.8|39.6|0.88|8.8|-|-|-|USD|2.2|4.5
+gemini-3.5-flash-lite|Gemini AS|base|0.6|5|0.06|-|-|-|-|USD|2|8.33333333333
+gemini-3.5-flash-lite|Gemini VT|base|0.66|5.5|0.066|-|-|-|-|USD|2.2|8.33333333333
+gemini-3.5-flash-lite|Gemini|base|0.12|1|0.012|-|-|-|-|USD|0.4|8.33333333333
+gemini-3.5-flash|Gemini AS|base|3|18|0.3|0.168|-|-|-|USD|2|6
+gemini-3.5-flash|Gemini VT|base|3.3|19.8|0.33|0.1848|-|-|-|USD|2.2|6
+gemini-3.6-flash|Gemini AS|intro_2026|1.5|7.5|0.15|-|-|-|-|USD|2|5
+gemini-3.6-flash|Gemini VT|intro_2026|1.65|8.25|0.165|-|-|-|-|USD|2.2|5
+gemini-3.7-flash|Gemini AS|base|1.5|7.5|0.15|-|-|-|-|USD|2|5
+gemini-3.7-flash|Gemini VT|base|1.65|8.25|0.165|-|-|-|-|USD|2.2|5
+gemini-3.8-flash-lite-tts|Gemini AS|official_standard|1|12|-|-|-|-|-|USD|2|12
+gemini-3.8-flash-tts|Gemini AS|official_standard|1|18|-|-|-|-|-|USD|2|18
+gemini-3.8-flash|Gemini AS|intro_2026|1.5|7.5|0.15|1|-|-|-|USD|2|5
+gemini-3.8-flash|Gemini VT|intro_2026|1.65|8.25|0.165|1.1|-|-|-|USD|2.2|5
+gemini-3.8-flash|Gemini-2|intro_2026|0.3|1.5|0.03|0.2|-|-|-|USD|0.4|5
+gemini-3.8-flash|Gemini|intro_2026|0.3|1.5|0.03|0.2|-|-|-|USD|0.4|5
+gemini-4-argon|Gemini AS|official_standard|4|20|0.2|-|-|-|-|USD|2|5
+gemini-4-argon|Gemini VT|official_standard|4.4|22|0.22|-|-|-|-|USD|2.2|5
+gemini-4-argon|Gemini-argon|official_standard|1.44|7.2|0.072|-|-|-|-|USD|0.72|5
+gemini-4-carbon|Gemini AS|base|4|20|0.2|-|-|-|-|USD|2|5
+gemini-4-carbon|Gemini VT|base|4.4|22|0.22|-|-|-|-|USD|2.2|5
+gemini-4-carbon|Gemini-argon|base|1.44|7.2|0.072|-|-|-|-|USD|0.72|5
+gemini-4-hydrogen|Gemini AS|base|3|15|0.15|-|-|-|-|USD|2|5
+gemini-4-hydrogen|Gemini VT|base|3.3|16.5|0.165|-|-|-|-|USD|2.2|5
+gemini-4-hydrogen|Gemini-2|base|0.6|3|0.03|-|-|-|-|USD|0.4|5
+gemini-4-hydrogen|Gemini-argon|base|1.08|5.4|0.054|-|-|-|-|USD|0.72|5
+gemini-4-neon|Gemini AS|base|6|30|0.3|-|-|-|-|USD|2|5
+gemini-nano-banana-2.1-per-call|gemini反代生图|base|-|-|-|-|0.06|-|-|USD|1|1
+gemini-nano-banana-2.1|Gemini AS|base|3|15|0.3|-|-|-|-|USD|2|5
+gemini-nano-banana-2.1|Gemini VT|base|3.3|16.5|0.33|-|-|-|-|USD|2.2|5
+gemini-nano-banana-2.1|Gemini|base|0.6|3|0.06|-|-|-|-|USD|0.4|5
+gemini-robotics-er-2-preview|Gemini AS|base|2|10|0.2|-|-|-|-|USD|2|5
+glm-5.1|GLM5.3专属分组|标准|5.6|19.6|1.4|-|-|-|-|USD|0.7|3.5
+glm-5.1|GLM专属分组|标准|4|14|1|-|-|-|-|USD|0.5|3.5
+glm-5.2|GLM5.3专属分组|标准|5.6|19.6|1.4|-|-|-|-|USD|0.7|3.5
+glm-5.2|GLM专属分组|标准|4|14|1|-|-|-|-|USD|0.5|3.5
+glm-5.3-flashx|GLM5.3专属分组|标准|1.4|4.9|0.399|0.399|-|-|-|USD|0.7|3.5
+glm-5.3-flash|GLM5.3专属分组|标准|0.56|1.96|0.14|0.161|-|-|-|USD|0.7|3.5
+glm-5.3-flash|GLM专属分组|标准|0.4|1.4|0.1|0.115|-|-|-|USD|0.5|3.5
+glm-5.3-flash|kimi|标准|0.36|1.26|0.09|0.1035|-|-|-|USD|0.45|3.5
+glm-5.3|Deepseek|标准|4|14|1|-|-|-|-|USD|0.5|3.5
+glm-5.3|GLM5.3专属分组|标准|5.6|19.6|1.4|-|-|-|-|USD|0.7|3.5
+glm-5.3|GLM专属分组|标准|4|14|1|-|-|-|-|USD|0.5|3.5
+glm-5.3|Qwen|标准|4|14|1|-|-|-|-|USD|0.5|3.5
+glm-5.3|kimi|标准|3.6|12.6|0.9|-|-|-|-|USD|0.45|3.5
+glm-5.3|国产模型|标准|4.8|16.8|1.2|-|-|-|-|USD|0.6|3.5
+gpt-5.5|Codex-pro|base|2|12|0.2|-|-|-|-|USD|0.4|6
+gpt-5.5|Codex-pro|第2档|4|18|0.4|-|-|-|-|USD|0.4|4.5
+gpt-5.6-luna|Azure_gpt-带生图|base|0.64|3.84|0.064|0.8|-|-|-|USD|3.2|6
+gpt-5.6-luna|Azure_gpt-带生图|第2档|1.28|5.76|0.128|1.6|-|-|-|USD|3.2|4.5
+gpt-5.6-luna|Azure_gpt|base|0.44|2.64|0.044|0.55|-|-|-|USD|2.2|6
+gpt-5.6-luna|Azure_gpt|第2档|0.88|3.96|0.088|1.1|-|-|-|USD|2.2|4.5
+gpt-5.6-luna|Codex-pro|base|0.08|0.48|0.008|0.1|-|-|-|USD|0.4|6
+gpt-5.6-luna|Codex-pro|第2档|0.16|0.72|0.016|0.2|-|-|-|USD|0.4|4.5
+gpt-5.6-luna|GPT PRO|base|0.05|0.3|0.005|0.0625|-|-|-|USD|0.25|6
+gpt-5.6-luna|GPT PRO|第2档|0.1|0.45|0.01|0.125|-|-|-|USD|0.25|4.5
+gpt-5.6-sol|Azure_gpt-带生图|long_context|25.6|96|2.56|32|-|-|-|USD|3.2|3.75
+gpt-5.6-sol|Azure_gpt-带生图|standard|12.8|64|1.28|16|-|-|-|USD|3.2|5
+gpt-5.6-sol|Azure_gpt|long_context|17.6|66|1.76|22|-|-|-|USD|2.2|3.75
+gpt-5.6-sol|Azure_gpt|standard|8.8|44|0.88|11|-|-|-|USD|2.2|5
+gpt-5.6-sol|Codex-pro|long_context|3.2|12|0.32|4|-|-|-|USD|0.4|3.75
+gpt-5.6-sol|Codex-pro|standard|1.6|8|0.16|2|-|-|-|USD|0.4|5
+gpt-5.6-sol|GPT PLUS|long_context|0.96|3.6|0.096|1.2|-|-|-|USD|0.12|3.75
+gpt-5.6-sol|GPT PLUS|standard|0.48|2.4|0.048|0.6|-|-|-|USD|0.12|5
+gpt-5.6-sol|GPT PRO|long_context|2|7.5|0.2|2.5|-|-|-|USD|0.25|3.75
+gpt-5.6-sol|GPT PRO|standard|1|5|0.1|1.25|-|-|-|USD|0.25|5
+gpt-5.6-terra|Azure_gpt-带生图|base|6.4|38.4|0.64|8|-|-|-|USD|3.2|6
+gpt-5.6-terra|Azure_gpt-带生图|第2档|12.8|57.6|1.28|16|-|-|-|USD|3.2|4.5
+gpt-5.6-terra|Azure_gpt|base|4.4|26.4|0.44|5.5|-|-|-|USD|2.2|6
+gpt-5.6-terra|Azure_gpt|第2档|8.8|39.6|0.88|11|-|-|-|USD|2.2|4.5
+gpt-5.6-terra|Codex-pro|base|0.8|4.8|0.08|1|-|-|-|USD|0.4|6
+gpt-5.6-terra|Codex-pro|第2档|1.6|7.2|0.16|2|-|-|-|USD|0.4|4.5
+gpt-5.6-terra|GPT PLUS|base|0.24|1.44|0.024|0.3|-|-|-|USD|0.12|6
+gpt-5.6-terra|GPT PLUS|第2档|0.48|2.16|0.048|0.6|-|-|-|USD|0.12|4.5
+gpt-5.6-terra|GPT PRO|base|0.5|3|0.05|0.625|-|-|-|USD|0.25|6
+gpt-5.6-terra|GPT PRO|第2档|1|4.5|0.1|1.25|-|-|-|USD|0.25|4.5
+gpt-5|Azure_gpt|standard|2.75|22|0.275|-|-|-|-|USD|2.2|8
+gpt-6-astra|Azure_gpt-带生图|long_context|64|240|6.4|80|-|-|-|USD|3.2|3.75
+gpt-6-astra|Azure_gpt-带生图|standard|32|160|3.2|40|-|-|-|USD|3.2|5
+gpt-6-astra|Azure_gpt|long_context|44|165|4.4|55|-|-|-|USD|2.2|3.75
+gpt-6-astra|Azure_gpt|standard|22|110|2.2|27.5|-|-|-|USD|2.2|5
+gpt-6-astra|Codex-pro|long_context|8|30|0.8|10|-|-|-|USD|0.4|3.75
+gpt-6-astra|Codex-pro|standard|4|20|0.4|5|-|-|-|USD|0.4|5
+gpt-6-astra|GPT PLUS|long_context|2.4|9|0.24|3|-|-|-|USD|0.12|3.75
+gpt-6-astra|GPT PLUS|standard|1.2|6|0.12|1.5|-|-|-|USD|0.12|5
+gpt-6-astra|GPT PRO|long_context|5|18.75|0.5|6.25|-|-|-|USD|0.25|3.75
+gpt-6-astra|GPT PRO|standard|2.5|12.5|0.25|3.125|-|-|-|USD|0.25|5
+gpt-6-luna|Azure_gpt-带生图|base|0.32|1.6|0.032|0.8|-|-|-|USD|3.2|5
+gpt-6-luna|Azure_gpt-带生图|tier_2|0.64|2.4|0.064|1.6|-|-|-|USD|3.2|3.75
+gpt-6-luna|Azure_gpt|base|0.22|1.1|0.022|0.55|-|-|-|USD|2.2|5
+gpt-6-luna|Azure_gpt|tier_2|0.44|1.65|0.044|1.1|-|-|-|USD|2.2|3.75
+gpt-6-luna|Codex-pro|base|0.04|0.2|0.004|0.1|-|-|-|USD|0.4|5
+gpt-6-luna|Codex-pro|tier_2|0.08|0.3|0.008|0.2|-|-|-|USD|0.4|3.75
+gpt-6-sol|Azure_gpt-带生图|base|6.4|32|0.64|8|-|-|-|USD|3.2|5
+gpt-6-sol|Azure_gpt-带生图|tier_2|12.8|48|1.28|16|-|-|-|USD|3.2|3.75
+gpt-6-sol|Azure_gpt|base|4.4|22|0.44|5.5|-|-|-|USD|2.2|5
+gpt-6-sol|Azure_gpt|tier_2|8.8|33|0.88|11|-|-|-|USD|2.2|3.75
+gpt-6-sol|Codex-pro|base|0.8|4|0.08|1|-|-|-|USD|0.4|5
+gpt-6-sol|Codex-pro|tier_2|1.6|6|0.16|2|-|-|-|USD|0.4|3.75
+gpt-6-sol|GPT PLUS|base|0.24|1.2|0.024|0.3|-|-|-|USD|0.12|5
+gpt-6-sol|GPT PLUS|tier_2|0.48|1.8|0.048|0.6|-|-|-|USD|0.12|3.75
+gpt-6-sol|GPT PRO|base|0.5|2.5|0.05|0.625|-|-|-|USD|0.25|5
+gpt-6-sol|GPT PRO|tier_2|1|3.75|0.1|1.25|-|-|-|USD|0.25|3.75
+gpt-6.1-sol|Azure_gpt|tier_1|4.4|22|0.22|11|-|-|-|USD|2.2|5
+gpt-6.1-sol|Azure_gpt|tier_2|8.8|33|0.44|22|-|-|-|USD|2.2|3.75
+gpt-6.1-sol|Codex-pro|tier_1|0.8|4|0.04|2|-|-|-|USD|0.4|5
+gpt-6.1-sol|Codex-pro|tier_2|1.6|6|0.08|4|-|-|-|USD|0.4|3.75
+gpt-6.1-sol|GPT PLUS|tier_1|0.24|1.2|0.012|0.6|-|-|-|USD|0.12|5
+gpt-6.1-sol|GPT PLUS|tier_2|0.48|1.8|0.024|1.2|-|-|-|USD|0.12|3.75
+gpt-6.1-sol|GPT PRO|tier_1|0.5|2.5|0.025|1.25|-|-|-|USD|0.25|5
+gpt-6.1-sol|GPT PRO|tier_2|1|3.75|0.05|2.5|-|-|-|USD|0.25|3.75
+gpt-6.1-terra|Azure_gpt|base|2.2|11|0.11|5.5|-|-|-|USD|2.2|5
+gpt-6.1-terra|Azure_gpt|base|4.4|16.5|0.22|11|-|-|-|USD|2.2|3.75
+gpt-6.1-terra|Codex-pro|base|0.4|2|0.02|1|-|-|-|USD|0.4|5
+gpt-6.1-terra|Codex-pro|base|0.8|3|0.04|2|-|-|-|USD|0.4|3.75
+gpt-6.1-terra|GPT PLUS|base|0.12|0.6|0.006|0.3|-|-|-|USD|0.12|5
+gpt-6.1-terra|GPT PLUS|base|0.24|0.9|0.012|0.6|-|-|-|USD|0.12|3.75
+gpt-6.1-terra|GPT PRO|base|0.25|1.25|0.0125|0.625|-|-|-|USD|0.25|5
+gpt-6.1-terra|GPT PRO|base|0.5|1.875|0.025|1.25|-|-|-|USD|0.25|3.75
+gpt-6.2-astra|Codex-pro|base|3.2|16|0.16|8|-|-|-|USD|0.4|5
+gpt-6.2-astra|Codex-pro|long_context|6.4|24|0.32|16|-|-|-|USD|0.4|3.75
+gpt-6.2-astra|GPT PLUS|base|0.96|4.8|0.048|2.4|-|-|-|USD|0.12|5
+gpt-6.2-astra|GPT PLUS|long_context|1.92|7.2|0.096|4.8|-|-|-|USD|0.12|3.75
+gpt-6.2-astra|GPT PRO|base|2|10|0.1|5|-|-|-|USD|0.25|5
+gpt-6.2-astra|GPT PRO|long_context|4|15|0.2|10|-|-|-|USD|0.25|3.75
+gpt-6.2-sol|Codex-pro|base|0.8|4|0.04|2|-|-|-|USD|0.4|5
+gpt-6.2-sol|Codex-pro|long_context|1.6|6|0.08|4|-|-|-|USD|0.4|3.75
+gpt-6.2-sol|GPT PLUS|base|0.24|1.2|0.012|0.6|-|-|-|USD|0.12|5
+gpt-6.2-sol|GPT PLUS|long_context|0.48|1.8|0.024|1.2|-|-|-|USD|0.12|3.75
+gpt-6.2-sol|GPT PRO|base|0.5|2.5|0.025|1.25|-|-|-|USD|0.25|5
+gpt-6.2-sol|GPT PRO|long_context|1|3.75|0.05|2.5|-|-|-|USD|0.25|3.75
+gpt-image-1.5|Azure_gpt-带生图|base|16|0|4|-|-|-|-|USD|3.2|0
+gpt-image-2-per-call|生图（gpt-image-超分）|base|-|-|-|-|0.1|-|-|USD|1|1
+gpt-image-2.5-flare-per-call|生图（gpt-image-超分）|base|-|-|-|-|0.1|-|-|USD|1|1
+gpt-image-2.5-flare|Azure_gpt-带生图|base|16|0|4|-|-|-|-|USD|3.2|0
+gpt-image-2.5-sunburst-per-call|生图（gpt-image-超分）|base|-|-|-|-|0.1|-|-|USD|1|1
+gpt-image-2.5-sunburst|Azure_gpt-带生图|base|16|0|4|-|-|-|-|USD|3.2|0
+gpt-image-2.5|生图（gpt-image-超分）|base|-|-|-|-|0.1|-|-|USD|1|1
+gpt-image-2.6-flare-per-call|生图（gpt-image-超分）|base|-|-|-|-|0.1|-|-|USD|1|1
+gpt-image-2.6-sunburst-per-call|生图（gpt-image-超分）|base|-|-|-|-|0.1|-|-|USD|1|1
+gpt-image-2|Azure_gpt-带生图|base|16|0|4|-|-|-|-|USD|3.2|0
+kimi-k3.1-pro-highspeed|K3官转|标准|14.3|74.8|0.715|14.3|-|-|-|USD|0.55|5.230769230769
+kimi-k3.1-pro|K3官转|标准|7.15|37.4|0.715|7.15|-|-|-|USD|0.55|5.230769230769
+kimi-k3.1-pro|kimi-low|标准|3.12|16.32|0.312|3.12|-|-|-|USD|0.24|5.230769230769
+kimi-k3.1-pro|kimi1013|标准|6.5|34|0.65|6.5|-|-|-|USD|0.5|5.230769230769
+kimi-k3.1-pro|kimi|标准|5.85|30.6|0.585|5.85|-|-|-|USD|0.45|5.230769230769
+kimi-k3.1-pro|国产模型|标准|7.8|40.8|0.78|7.8|-|-|-|USD|0.6|5.230769230769
+kimi-k3|Deepseek|标准|10|50|1|-|-|-|-|USD|0.5|5
+kimi-k3|GLM专属分组|标准|10|50|1|-|-|-|-|USD|0.5|5
+kimi-k3|K3官转|标准|11|55|1.1|-|-|-|-|USD|0.55|5
+kimi-k3|Qwen|标准|10|50|1|-|-|-|-|USD|0.5|5
+kimi-k3|kimi-low|标准|4.8|24|0.48|-|-|-|-|USD|0.24|5
+kimi-k3|kimi1013|标准|10|50|1|-|-|-|-|USD|0.5|5
+kimi-k3|kimi|标准|9|45|0.9|-|-|-|-|USD|0.45|5
+kimi-k3|国产模型|标准|12|60|1.2|-|-|-|-|USD|0.6|5
+qwen3.8-flash|Qwen|标准|0.4|1.35|0.05|-|-|-|-|USD|0.5|3.375
+qwen3.8-max-0902|Qwen|标准|6|18|0.375|7.5|-|-|-|USD|0.5|3
+qwen3.8-max|Deepseek|标准|6|18|0.75|7.5|-|-|-|USD|0.5|3
+qwen3.8-max|GLM专属分组|标准|6|18|0.75|7.5|-|-|-|USD|0.5|3
+qwen3.8-max|Qwen|标准|6|18|0.75|7.5|-|-|-|USD|0.5|3
+qwen3.8-max|kimi|标准|5.4|16.2|0.675|6.75|-|-|-|USD|0.45|3
+qwen3.8-max|国产模型|标准|7.2|21.6|0.9|9|-|-|-|USD|0.6|3
+
+# unresolved
+doubao-seedance-2-0-260128=计费表达式解析不出来
+doubao-seedance-2-5-260628=计费表达式解析不出来

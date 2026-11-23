@@ -402,6 +402,109 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "api.kelaode.si"
       ],
       "needsCode": true
+    },
+    {
+      "id": "0ait",
+      "name": "0AIT 中转站",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，72 个模型 37 个分组（倍率 0.15 ~ 2.0 以上（25 档））；充值 1 美元额度 = ¥7.3",
+      "hosts": [
+        "0ait.com",
+        "www.0ait.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "4zapi",
+      "name": "4Z API",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，323 个模型 80 个分组（倍率 0.040447 ~ 1.1（41 档））；充值 1 美元额度 = ¥6.68752",
+      "hosts": [
+        "4zapi.com",
+        "www.4zapi.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "coderelay",
+      "name": "CodeRelay",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，54 个模型 16 个分组（倍率 0.06 ~ 1.5）；充值 1 元 = 1 美元额度",
+      "hosts": [
+        "coderelay.cn",
+        "www.coderelay.cn"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "corecode",
+      "name": "CoreCode",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，28 个模型 7 个分组（倍率 0.5 ~ 2.05）；充值 1 美元额度 = ¥6.8",
+      "hosts": [
+        "corecode.live",
+        "www.corecode.live"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "kuaipao",
+      "name": "快跑AI",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，118 个模型 15 个分组（倍率 0.2 ~ 15.3）；充值 1 美元额度 = ¥0.4",
+      "hosts": [
+        "kuaipao.ai",
+        "kuaipao.pro",
+        "www.kuaipao.ai",
+        "www.kuaipao.pro"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "packycode",
+      "name": "packycode",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，78 个模型 25 个分组（倍率 0.3 ~ 7）；充值 1 美元额度 = ¥7",
+      "hosts": [
+        "packycode.com",
+        "packyapi.com",
+        "www.packycode.com",
+        "www.packyapi.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "pqh",
+      "name": "PQH 中转站",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，108 个模型 53 个分组（倍率 0.12 ~ 2.6（25 档））；充值 1 美元额度 = ¥7.3",
+      "hosts": [
+        "pqh.ai",
+        "www.pqh.ai"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "xkrelay",
+      "name": "深空API",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，71 个模型 26 个分组（倍率 0.08 ~ 1.5（16 档））；充值 1 元 = 1 美元额度",
+      "hosts": [
+        "xkrelay.com",
+        "www.xkrelay.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "zerocat",
+      "name": "ZeroCat",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，67 个模型 11 个分组（倍率 0.04 ~ 1.5）；充值 1 元 = 1 美元额度",
+      "hosts": [
+        "zero.cat",
+        "www.zero.cat"
+      ],
+      "needsCode": true
     }
   ]
 };

@@ -1,0 +1,1898 @@
+{
+ "auto_groups": [],
+ "data": [
+  {
+   "model_name": "claude-haiku-5-5",
+   "description": "快速型 Claude 模型，面向即时响应辅助、分类与轻量智能体",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "自己人",
+    "【Claude】kiro正价高智高缓  x0.45"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 100000 ? tier(\"le100k\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125 + cc1h * 0.2) : tier(\"gt100k\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 0.625 + cc1h * 1)",
+   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+  },
+  {
+   "model_name": "kimi-k3.1-pro",
+   "description": "具备 1M-token 上下文窗口和始终开启推理能力的多模态 Kimi 模型，适用于编程、3D 创作和金融研究",
+   "icon": "Moonshot",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 13 + c * 68 + cr * 1.3 + cc * 13 + cc1h * 26)"
+  },
+  {
+   "model_name": "claude-opus-4-5",
+   "description": "Claude 旗舰模型，面向深度推理、编程与长程智能体",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,200K",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "vip",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "deepseek-tts",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.7",
+   "description": "xAI 的前沿模型，面向长时运行的智能体、编程、知识工作与视觉项目",
+   "icon": "XAI",
+   "tags": "推理,工具,文件,多模态,500K",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "grok高智分组  x0.2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len < 200000 ? tier(\"标准\", p * 2 + c * 6 + cr * 0.5) : tier(\"长上下文\", p * 4 + c * 12 + cr * 1)"
+  },
+  {
+   "model_name": "claude-opus-5-5",
+   "description": "用于长期运行的智能体式编码和知识工作的 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "自己人",
+    "vip",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 4 + c * 20 + cr * 0.2 + cc * 5 + cc1h * 8)"
+  },
+  {
+   "model_name": "gemini-3.5-flash-lite",
+   "description": "在多模态推理、工具调用与成本之间取得平衡的快速型 Gemini 模型",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.333333333333334,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "description": "gpt-image-2.5-sunburst 图像模型入口，面向提示词驱动的图像生成、编辑与视觉设计工作流。",
+   "tags": "文件,多模态,图像生成,图像编辑",
+   "vendor_id": 6,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图   最大1.5k     x1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "XK-gemini-4-hydrogen",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.08,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gemini 酒馆按次 ant分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "deepseek-v4.1-flash",
+   "description": "DeepSeek V4.1 Flash，面向日常对话、推理、编程与智能体任务的快速模型。",
+   "icon": "DeepSeek.Color",
+   "tags": "推理,工具,编程",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "",
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "peak_offpeak",
+   "peak_offpeak_status": {
+    "rule_version": "deepseek-2026-09",
+    "calendar_version": "cn-2026-state-council-7",
+    "calendar_ready": true,
+    "peak": false,
+    "billing_time": "2026-11-23T13:51:36.089643871+08:00",
+    "next_switch": "2026-11-23T14:00:00+08:00",
+    "reason": "off_peak"
+   },
+   "peak_offpeak": {
+    "preset": "deepseek-2026-09",
+    "reference_model": "flash",
+    "input": 1,
+    "cache": 0.02,
+    "output": 4
+   },
+   "billing_expr": "deepseekPeak() ? tier(\"peak\", p * 2 + cr * 0.04 + c * 8) : tier(\"off_peak\", p * 1 + cr * 0.02 + c * 4)"
+  },
+  {
+   "model_name": "deepseek-ocr",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6.1-terra",
+   "description": "快速高效的模型，适用于视觉推理、精准的计算机操作以及清晰自然的写作。",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】    低价分组  x0.06",
+    "【GPT】    官key    x 0.6",
+    "【GPT】   plus     x0.13",
+    "【GPT】    低价高智科技分组  x0.08"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 1 + c * 5 + cr * 0.05 + cc * 1.25 + cc1h * 1.25) : tier(\"长上下文\", p * 2 + c * 7.5 + cr * 0.1 + cc * 2.5 + cc1h * 2.5)"
+  },
+  {
+   "model_name": "claude-fable-5",
+   "description": "面向创意写作、分析与可控智能体工作流的 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "自己人",
+    "【Claude】Curso复活归来   x0.5",
+    "vip",
+    "【Claude】Kiro随机智商和缓存   x0.2"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 10 + c * 50 + cr * 1 + cc * 12.5 + cc1h * 20)"
+  },
+  {
+   "model_name": "deepseek-search",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "deepseek-tools-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"request\", fixed(0.00075))"
+  },
+  {
+   "model_name": "grok-4.5",
+   "description": "xAI 的 Grok 模型，面向对话、编程、智能体工具调用，幻觉风险更低",
+   "icon": "XAI",
+   "tags": "推理,工具,文件,多模态,500K",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "grok高智分组  x0.2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"标准\", p * 2 + c * 6 + cr * 0.3) : tier(\"长上下文\", p * 4 + c * 12 + cr * 0.6)"
+  },
+  {
+   "model_name": "gemini-4-neon-medium",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.15)"
+  },
+  {
+   "model_name": "glm-5.3-flash",
+   "description": "原生多模态 GLM 模型，面向高效编程与长程智能体任务",
+   "icon": "ZAI",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 0.075,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.333333333333,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.8 + c * 2.8 + cr * 0.23 + cc * 0.23)"
+  },
+  {
+   "model_name": "glm-5.3",
+   "description": "GLM 旗舰模型，面向长程编程、智能体与复杂项目交付",
+   "icon": "ZAI",
+   "tags": "推理,工具,开源权重,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "create_cache_ratio": 0.25,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 8 + c * 28 + cr * 2 + cc * 2)"
+  },
+  {
+   "model_name": "glm-5.2",
+   "description": "开源 GLM 旗舰模型，面向长程编程智能体与百万 token 上下文任务",
+   "icon": "ZAI",
+   "tags": "推理,工具,开源权重,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "create_cache_ratio": 0.25,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 8 + c * 28 + cr * 2 + cc * 2)"
+  },
+  {
+   "model_name": "kimi-k3",
+   "description": "多模态 Kimi 模型，具备 100 万 token 上下文与可切换的最高强度思考模式，面向长程智能体任务",
+   "icon": "Moonshot",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 10,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2",
+   "description": "图像模型，面向提示词驱动的生成、编辑与视觉设计工作流",
+   "icon": "OpenAI",
+   "tags": "文件,多模态",
+   "vendor_id": 6,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图   最大1.5k     x1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "description": "日常使用的 Claude 智能体模型，面向编程、规划、网页浏览与通用工作",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人",
+    "vip",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5 + cc1h * 4)"
+  },
+  {
+   "model_name": "claude-haiku-4-5",
+   "description": "快速型 Claude，适合轻量智能体、办公任务与即时响应对话",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,200K",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1 + c * 5 + cr * 0.1 + cc * 1.25)"
+  },
+  {
+   "model_name": "XK-gemini-4-carbon",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.15,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gemini 酒馆按次 ant分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5-1",
+   "description": "面向高难度推理与长程智能体任务的 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "enable_groups": [
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "自己人",
+    "【Claude】Curso复活归来   x0.5",
+    "vip",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "【Claude】kiro正价高智高缓  x0.45"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 10 + c * 50 + cr * 0.25 + cc * 12.5 + cc1h * 20)"
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "description": "高端 Claude 模型，面向高难度编程、规划与更慢但更专业的推理",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人",
+    "vip",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "kimi-k2.6",
+   "description": "多模态 Kimi 主力模型，面向智能体循环、编程任务与视觉上下文",
+   "icon": "Moonshot",
+   "tags": "推理,工具,文件,开源权重,多模态,262.1K",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 3.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4.153846153846,
+   "cache_ratio": 0.169230769231,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.6-flash",
+   "description": "在多模态推理、工具调用与成本之间取得平衡的快速型 Gemini 模型",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-6",
+   "description": "Claude 主力模型，适合编程智能体、细致分析与生产环境成本控制",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.09999999999999999,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "vip",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.29999999999999997 + cc * 3.75 + cc1h * 6)"
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "description": "以更低成本实现接近 Astra 的性能，适用于复杂编码、计算机操作和专业工作。",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】    低价分组  x0.06",
+    "【GPT】    官key    x 0.6",
+    "【GPT】   plus     x0.13",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23",
+    "GPT    ultra fast组  x4",
+    "【GPT】强制fast不额外计费分组  x0.25"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5) : tier(\"长上下文\", p * 4 + c * 20 + cr * 0.2 + cc * 5)"
+  },
+  {
+   "model_name": "deepseek-v4.1-flash-1017",
+   "description": "DeepSeek V4.1 Flash 的 1017 版本入口，面向日常对话、推理、编程与智能体任务。",
+   "tags": "推理,工具,编程",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "",
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "peak_offpeak",
+   "peak_offpeak_status": {
+    "rule_version": "deepseek-2026-09",
+    "calendar_version": "cn-2026-state-council-7",
+    "calendar_ready": true,
+    "peak": false,
+    "billing_time": "2026-11-23T13:51:36.089643871+08:00",
+    "next_switch": "2026-11-23T14:00:00+08:00",
+    "reason": "off_peak"
+   },
+   "peak_offpeak": {
+    "preset": "deepseek-2026-09",
+    "reference_model": "flash",
+    "input": 1,
+    "cache": 0.02,
+    "output": 4
+   },
+   "billing_expr": "deepseekPeak() ? tier(\"peak\", p * 2 + cr * 0.04 + c * 8) : tier(\"off_peak\", p * 1 + cr * 0.02 + c * 4)"
+  },
+  {
+   "model_name": "gemini-4-hydrogen",
+   "description": "Google 的 Gemini 4 模型，适用于日常 coding 和 agentic workflows，提供四个思考级别和 1M-token 上下文窗口",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "Gemini  x0.4",
+    "Gemini 神秘渠道   x 1.2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.5 + c * 7.5 + cr * 0.075 + cc * 1.5)"
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "description": "前沿 GPT-5.6 模型，面向复杂专业工作、编程与智能体工作流",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "【GPT】   plus     x0.13",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】    低价分组  x0.06",
+    "【GPT】    官key    x 0.6"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"272k_plus\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
+  },
+  {
+   "model_name": "gpt-6-astra",
+   "description": "GPT-6 Astra 是 OpenAI 能力最强的模型，面向复杂推理、编程、计算机操作、研究与文档创作。",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "高智Astra·Codex x0.1",
+    "【GPT】    pro加plus混池      x0.23",
+    "GPT    ultra fast组  x4",
+    "【GPT】    低价分组  x0.06",
+    "【GPT】    官key    x 0.6",
+    "高智Astra     x0.1",
+    "【GPT】   plus     x0.13",
+    "【GPT】强制fast不额外计费分组  x0.25",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 10 + c * 50 + cr * 1 + cc * 12.5) : tier(\"272k_plus\", p * 20 + c * 75 + cr * 2 + cc * 25)"
+  },
+  {
+   "model_name": "claude-haiku-4-5-20251001",
+   "description": "快速型 Claude 模型，面向即时响应辅助、分类与轻量智能体",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,200K",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1 + c * 5 + cr * 0.1 + cc * 1.25)"
+  },
+  {
+   "model_name": "claude-opus-4-7",
+   "description": "更强的 Opus 档位，面向高阶软件开发与高风险决策推理",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人",
+    "vip",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "glm-5.3-flashx",
+   "description": "GLM-5.3-Flash 的高速服务版本，面向编程与智能体工作流",
+   "icon": "ZAI",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.285,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 7 + cr * 0.5)"
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "description": "面向高难度推理与长程智能体任务的 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 8 + c * 40 + cr * 0.2 + cc * 10 + cc1h * 16)"
+  },
+  {
+   "model_name": "deepseek-v4-pro",
+   "description": "DeepSeek V4 Pro 快照版本，支持百万 token 上下文以及思考与非思考模式",
+   "icon": "DeepSeek.Color",
+   "tags": "推理,工具,开源权重,1M",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "",
+    "国模官key   x 0.5",
+    "国模优惠渠道   x 0.15",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "peak_offpeak",
+   "peak_offpeak_status": {
+    "rule_version": "deepseek-2026-09",
+    "calendar_version": "cn-2026-state-council-7",
+    "calendar_ready": true,
+    "peak": false,
+    "billing_time": "2026-11-23T13:51:36.089643871+08:00",
+    "next_switch": "2026-11-23T14:00:00+08:00",
+    "reason": "off_peak"
+   },
+   "peak_offpeak": {
+    "preset": "deepseek-2026-09",
+    "reference_model": "flash",
+    "input": 9,
+    "cache": 0.3,
+    "output": 27
+   },
+   "billing_expr": "deepseekPeak() ? tier(\"peak\", p * 18 + cr * 0.6 + c * 54) : tier(\"off_peak\", p * 9 + cr * 0.3 + c * 27)"
+  },
+  {
+   "model_name": "kimi-k2.7-code",
+   "description": "专注编程的 Kimi 模型，更擅长长程代码仓库任务，且减少过度思考",
+   "icon": "Moonshot",
+   "tags": "推理,工具,文件,开源权重,多模态,262.1K",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 3.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4.153846153846,
+   "cache_ratio": 0.2,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-4-argon",
+   "description": "Google 旗舰级推理模型，适用于复杂软件工程、深度数学与科学，以及长程自主智能体",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1,
+   "enable_groups": [
+    "Gemini  x0.4",
+    "Gemini 神秘渠道   x 1.2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5.6-luna",
+   "description": "高性价比的 GPT-5.6，适合快速、高吞吐的负载",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "【GPT】    官key    x 0.6",
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】   pro      x0.3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 0.2 + c * 1.2 + cr * 0.02 + cc * 0.25) : tier(\"272k_plus\", p * 0.4 + c * 1.8 + cr * 0.04 + cc * 0.5)"
+  },
+  {
+   "model_name": "XK-gemini-3.8-flash",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gemini 酒馆按次 ant分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-4-neon-high",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.15)"
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "description": "顶级 Claude Opus 档位，面向最高难度的推理、编程与长程智能体",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人",
+    "vip",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "claude-sonnet-4-5-20250929",
+   "description": "兼顾编程、分析、智能体工作流与成本控制的均衡型 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,已弃用,200K",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.09999999999999999,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】 coding专属不可蒸馏 x1.3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.29999999999999997 + cc * 3.75 + cc1h * 6)"
+  },
+  {
+   "model_name": "glm-5.3-prime",
+   "vendor_id": -1018,
+   "quota_type": 0,
+   "model_ratio": 8,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 16 + c * 56 + cr * 4)"
+  },
+  {
+   "model_name": "deepseek-asr",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-4-carbon",
+   "description": "Google 最强大的推理模型，适用于复杂软件工程、深度数学与科学、高事实准确性以及长周期自主代理",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1,
+   "enable_groups": [
+    "Gemini  x0.4",
+    "Gemini 神秘渠道   x 1.2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-5",
+   "description": "最强的 Claude Opus 模型，面向编程、智能体与专业工作",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "自己人",
+    "vip",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】 coding专属不可蒸馏 x1.3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "gemini-3.8-flash",
+   "description": "Google 最智能的 Flash 模型，为长程软件工程、自主智能体与复杂企业工作流打造",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Gemini 神秘渠道   x 1.2",
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6-luna",
+   "description": "OpenAI 针对专注型高吞吐任务打造的最高效模型",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】    官key    x 0.6",
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】   pro      x0.3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125) : tier(\"tier_2\", p * 0.2 + c * 1 + cr * 0.02 + cc * 0.25)"
+  },
+  {
+   "model_name": "claude-opus-4-5-20251101",
+   "description": "Claude 旗舰模型，面向深度推理、编程与长程智能体",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,200K",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "【Claude】 coding专属不可蒸馏 x1.3"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "gpt-image-2.6",
+   "description": "gpt-image-2.6 图像模型入口，面向提示词驱动的图像生成、编辑与视觉设计工作流。",
+   "tags": "文件,多模态,图像生成,图像编辑",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图   最大1.5k     x1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.05)) * image_count"
+  },
+  {
+   "model_name": "gpt-5.6-terra",
+   "description": "能力与成本兼顾的均衡型 GPT-5.6，适合日常工作",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】    低价分组  x0.06",
+    "【GPT】    官key    x 0.6",
+    "【GPT】   plus     x0.13",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5) : tier(\"272k_plus\", p * 4 + c * 18 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "description": "用于复杂编码和智能体式工作流的 OpenAI 模型",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】   plus     x0.13",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】    低价分组  x0.06",
+    "【GPT】    官key    x 0.6"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"base\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5) : tier(\"tier_2\", p * 4 + c * 20 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "gpt-image-2.6-flare",
+   "description": "gpt-image-2.6-flare 图像模型入口，面向提示词驱动的图像生成、编辑与视觉设计工作流。",
+   "tags": "文件,多模态,图像生成,图像编辑",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图超分2k4k     0.1/张",
+    "生图   最大1.5k     x1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.05)) * image_count"
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "description": "GPT-6.2 Sol 适合日常开发、写作和资料整理。把需求交给它，可以先做一个小原型，再根据报错或截图逐轮修改；给它会议记录，也可以让它提炼决定、标明待确认的问题并起草跟进邮件。支持文本和图像输入，适合需要频繁来回修改的任务。",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "【GPT】    官key    x 0.6",
+    "【GPT】   plus     x0.13",
+    "【GPT】强制fast不额外计费分组  x0.25",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5 + cc1h * 2.5 + cc12h * 5) : tier(\"long_context\", p * 4 + c * 15 + cr * 0.2 + cc * 5 + cc1h * 5 + cc12h * 5)"
+  },
+  {
+   "model_name": "deepseek-fetch",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "国模官key   x 0.5",
+    "自己人"
+   ],
+   "supported_endpoint_types": [
+    "deepseek-tools-fetch"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"request\", fixed(0.00075))"
+  },
+  {
+   "model_name": "deepseek-v4-flash",
+   "description": "10月17日更新的 DeepSeek V4.1 Flash，在推理、编程、agentic 任务和视觉理解方面有所改进",
+   "icon": "DeepSeek.Color",
+   "tags": "推理,工具,文件,开源权重,多模态,已弃用,1M",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.02,
+   "enable_groups": [
+    "国模官key   x 0.5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(hour(\"UTC\") >= 1 && hour(\"UTC\") < 4) || (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10)\n? tier(\"peak\", p * 3 + cr * 0.1 + c * 9)\n: tier(\"off_peak\", p * 1.5 + cr * 0.05 + c * 4.5)"
+  },
+  {
+   "model_name": "gpt-image-2.6-sunburst",
+   "description": "gpt-image-2.6-sunburst 图像模型入口，面向提示词驱动的图像生成、编辑与视觉设计工作流。",
+   "tags": "文件,多模态,图像生成,图像编辑",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图超分2k4k     0.1/张",
+    "生图   最大1.5k     x1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.05)) * image_count"
+  },
+  {
+   "model_name": "claude-sonnet-4-5",
+   "description": "兼顾编程、分析、智能体工作流与成本控制的均衡型 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,已弃用,200K",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.09999999999999999,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "自己人",
+    "【Claude】kiro正价高智高缓  x0.45",
+    "【Claude】Kiro随机智商和缓存   x0.2"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.29999999999999997 + cc * 3.75 + cc1h * 6)"
+  },
+  {
+   "model_name": "gemini-4-neon-low",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.15)"
+  },
+  {
+   "model_name": "gemini-4-neon-xhigh",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "Gemini  x0.4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.15)"
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "description": "用于日常编码、智能体和知识工作的快速 Claude 模型",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【Claude】 coding专属不可蒸馏 x1.3",
+    "【Claude】max外接分组可蒸馏 x 1.5",
+    "自己人",
+    "vip",
+    "【Claude】Kiro随机智商和缓存   x0.2",
+    "【Claude】Curso复活归来   x0.5",
+    "【Claude】kiro正价高智高缓  x0.45"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.1 + cc * 2.5 + cc1h * 4)"
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "description": "GPT-6.2 Astra 适合需要反复推敲的复杂项目。你可以给它现有代码和一组约束，让它比较重构方案、解释取舍，再设计验证步骤。它也擅长把分散的资料整理成符合指定模板的报告或演示稿。支持文本和图像输入，可结合界面截图讨论布局与交互。",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "【GPT】强制fast不额外计费分组  x0.25",
+    "【GPT】    低价高智科技分组  x0.08",
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23",
+    "【GPT】   plus     x0.13",
+    "【GPT】    官key    x 0.6"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 8 + c * 40 + cr * 0.4 + cc * 10 + cc1h * 10 + cc12h * 20) : tier(\"long_context\", p * 16 + c * 60 + cr * 0.8 + cc * 20 + cc1h * 20 + cc12h * 20)"
+  },
+  {
+   "model_name": "gpt-image-2.5-flare",
+   "description": "gpt-image-2.5-flare 图像模型入口，面向提示词驱动的图像生成、编辑与视觉设计工作流。",
+   "tags": "文件,多模态,图像生成,图像编辑",
+   "vendor_id": 6,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "生图   最大1.5k     x1"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "codex-auto-review",
+   "description": "面向代码审查的 Codex 自动评审入口，适用于检查代码变更、定位缺陷与整理改进建议。",
+   "icon": "OpenAI",
+   "tags": "编程,代码审查",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【GPT】    官key    x 0.6",
+    "【GPT】   plus     x0.13",
+    "【GPT】   pro      x0.3",
+    "【GPT】    pro加plus混池      x0.23"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.6",
+   "description": "xAI 的前沿模型，面向长时运行的智能体、编程、知识工作与视觉项目",
+   "icon": "XAI",
+   "tags": "推理,工具,文件,多模态,500K",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "grok高智分组  x0.2"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"标准\", p * 2 + c * 6 + cr * 0.5) : tier(\"长上下文\", p * 4 + c * 12 + cr * 1)"
+  },
+  {
+   "model_name": "XK-gemini-4-argon",
+   "vendor_id": 4,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.15,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Gemini 酒馆按次 ant分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-4-neon",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "Gemini  x0.4",
+    "Gemini 神秘渠道   x 1.2"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.15)"
+  }
+ ],
+ "group_ratio": {
+  "Gemini  x0.4": 0.4,
+  "Gemini 神秘渠道   x 1.2": 1.2,
+  "Gemini 酒馆按次 ant分组": 1,
+  "grok高智分组  x0.2": 0.2,
+  "【Claude】 coding专属不可蒸馏 x1.3": 1.3,
+  "【Claude】Kiro随机智商和缓存   x0.2": 0.2,
+  "【Claude】kiro正价高智高缓  x0.45": 0.45,
+  "【Claude】max外接分组可蒸馏 x 1.5": 1.5,
+  "【GPT】    pro加plus混池      x0.23": 0.23,
+  "【GPT】    低价高智科技分组  x0.08": 0.08,
+  "【GPT】    官key    x 0.6": 0.6,
+  "【GPT】   plus     x0.13": 0.13,
+  "【GPT】   pro      x0.3": 0.3,
+  "【GPT】强制fast不额外计费分组  x0.25": 0.25,
+  "国模优惠渠道   x 0.15": 0.15,
+  "国模官key   x 0.5": 0.5,
+  "测试   x 0.01": 1,
+  "生图   最大1.5k     x1": 1,
+  "生图超分2k4k     0.1/张": 2
+ },
+ "peak_offpeak_status": {
+  "rule_version": "deepseek-2026-09",
+  "calendar_version": "cn-2026-state-council-7",
+  "calendar_ready": true,
+  "peak": false,
+  "billing_time": "2026-11-23T13:51:36.089643871+08:00",
+  "next_switch": "2026-11-23T14:00:00+08:00",
+  "reason": "off_peak"
+ },
+ "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+ "success": true,
+ "supported_endpoint": {
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "deepseek-tools-fetch": {
+   "path": "/v1/tools/fetch",
+   "method": "POST"
+  },
+  "deepseek-tools-search": {
+   "path": "/v1/tools/search",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  },
+  "openai-response": {
+   "path": "/v1/responses",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "Gemini  x0.4": "反重力过来的Gemini，只有coding场景有缓存，目前流口水，使用即默认接受",
+  "Gemini 神秘渠道   x 1.2": "高稳定性高智",
+  "Gemini 酒馆按次 ant分组": "ent渠道按次分组，价格在模型广场",
+  "grok高智分组  x0.2": "grok高智分组  x0.2",
+  "【Claude】 coding专属不可蒸馏 x1.3": "coding专属，不可蒸馏和外接使用",
+  "【Claude】Kiro随机智商和缓存   x0.2": "Kiro渠道会有很多提示词注入，介意勿用。智商与缓存随机，此分组不做任何保证，使用即默认同意",
+  "【Claude】kiro正价高智高缓  x0.45": "Kiro渠道会有很多提示词注入，介意勿用。正价号池，智商和缓存都在线",
+  "【Claude】max外接分组可蒸馏 x 1.5": "",
+  "【GPT】    pro加plus混池      x0.23": "pro加plus混池组成",
+  "【GPT】    低价高智科技分组  x0.08": "带注入，介意勿用，缓存略低",
+  "【GPT】    官key    x 0.6": "open不倒我不倒",
+  "【GPT】   plus     x0.13": "Astra高智。sol概率降",
+  "【GPT】   pro      x0.3": "pro号池组成",
+  "【GPT】强制fast不额外计费分组  x0.25": "免费fast，但是由于号池跑的快所以缓存较低一些",
+  "国模优惠渠道   x 0.15": "特殊渠道，还在就证明可用",
+  "国模官key   x 0.5": "来自官方的力量",
+  "测试   x 0.01": "只有opus5.5",
+  "生图   最大1.5k     x1": "生图 x1",
+  "生图超分2k4k     0.1/张": "超分出来2k和4k分辨率的图片"
+ },
+ "vendors": [
+  {
+   "id": 25,
+   "name": "Inception",
+   "icon": "Inception"
+  },
+  {
+   "id": 13,
+   "name": "MiniMax Token Plan (minimax.io)",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 2,
+   "name": "Anthropic",
+   "icon": "Claude.Color"
+  },
+  {
+   "id": 8,
+   "name": "Tencent TokenHub",
+   "icon": "Hunyuan.Color"
+  },
+  {
+   "id": 9,
+   "name": "Alibaba",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 17,
+   "name": "Mistral",
+   "icon": "Mistral.Color"
+  },
+  {
+   "id": 21,
+   "name": "Z.AI Coding Plan",
+   "icon": "ZAI"
+  },
+  {
+   "id": 1,
+   "name": "Moonshot AI",
+   "icon": "Moonshot"
+  },
+  {
+   "id": 5,
+   "name": "Z.AI",
+   "icon": "ZAI"
+  },
+  {
+   "id": 27,
+   "name": "Xiaomi Token Plan (Europe)",
+   "icon": "XiaomiMiMo"
+  },
+  {
+   "id": 29,
+   "name": "Nova",
+   "icon": "Nova.Color"
+  },
+  {
+   "id": 32,
+   "name": "Alibaba Coding Plan",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 36,
+   "name": "Perplexity",
+   "icon": "Perplexity.Color"
+  },
+  {
+   "id": 14,
+   "name": "Thinking Machines"
+  },
+  {
+   "id": 6,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": 26,
+   "name": "Xiaomi",
+   "icon": "XiaomiMiMo"
+  },
+  {
+   "id": 30,
+   "name": "Poolside",
+   "icon": "Poolside.Color"
+  },
+  {
+   "id": 35,
+   "name": "Upstage",
+   "icon": "Upstage.Color"
+  },
+  {
+   "id": 39,
+   "name": "Arcee",
+   "icon": "Arcee"
+  },
+  {
+   "id": 23,
+   "name": "Tencent Coding Plan (China)",
+   "icon": "Hunyuan.Color"
+  },
+  {
+   "id": 28,
+   "name": "Meta",
+   "icon": "Meta.Color"
+  },
+  {
+   "id": 15,
+   "name": "Morph",
+   "icon": "Morph.Color"
+  },
+  {
+   "id": 18,
+   "name": "Volcengine Ark",
+   "icon": "Doubao.Color"
+  },
+  {
+   "id": 31,
+   "name": "Alibaba (China)",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 33,
+   "name": "Sarvam AI"
+  },
+  {
+   "id": 11,
+   "name": "LongCat",
+   "icon": "LongCat.Color"
+  },
+  {
+   "id": 22,
+   "name": "Alibaba Token Plan",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 24,
+   "name": "MiniMax (minimax.cn)",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 37,
+   "name": "StepFun (Global)",
+   "icon": "Stepfun"
+  },
+  {
+   "id": 3,
+   "name": "DeepSeek",
+   "icon": "DeepSeek.Color"
+  },
+  {
+   "id": 4,
+   "name": "Google",
+   "icon": "Gemini.Color"
+  },
+  {
+   "id": 10,
+   "name": "Bailing",
+   "icon": "AntGroup.Color"
+  },
+  {
+   "id": 12,
+   "name": "MiniMax (minimax.io)",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 16,
+   "name": "Cohere",
+   "icon": "Cohere.Color"
+  },
+  {
+   "id": 20,
+   "name": "Sakana AI"
+  },
+  {
+   "id": 38,
+   "name": "StepFun Step Plan (China)",
+   "icon": "Stepfun"
+  },
+  {
+   "id": 7,
+   "name": "xAI",
+   "icon": "XAI"
+  },
+  {
+   "id": 19,
+   "name": "Volcengine Ark Coding Plan",
+   "icon": "Doubao.Color"
+  },
+  {
+   "id": 34,
+   "name": "SenseNova (China)",
+   "icon": "SenseNova.Color"
+  },
+  {
+   "id": -1018,
+   "name": "智谱",
+   "icon": "Zhipu.Color"
+  }
+ ]
+}

@@ -1,0 +1,643 @@
+{
+ "auto_groups": [
+  "Claude 满血（可外接）",
+  "GPT",
+  "Grok",
+  "GPT生图1-4K",
+  "Seedance视频"
+ ],
+ "data": [
+  {
+   "model_name": "gpt-5.6-terra",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "GPT 福利"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+  },
+  {
+   "model_name": "gpt-image-2.6-flare",
+   "vendor_id": -1012,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.075,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "GPT生图1-4K"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.32)) * image_count * ((param(\"size\") == \"1024x1024\" || param(\"size\") == \"1024x768\" || param(\"size\") == \"768x1024\" || param(\"size\") == \"1024x576\" || param(\"size\") == \"576x1024\" || param(\"size\") == \"1024x640\" || param(\"size\") == \"640x1024\" || param(\"size\") == \"512x512\" || param(\"size\") == \"256x256\" || param(\"size\") == \"1k\" || param(\"size\") == \"1K\") ? 0.5 : 1) * ((param(\"size\") == \"3840x2160\" || param(\"size\") == \"2160x3840\" || param(\"size\") == \"3840x3840\" || param(\"size\") == \"4096x4096\" || param(\"size\") == \"4096x2304\" || param(\"size\") == \"2304x4096\" || param(\"size\") == \"2560x1440\" || param(\"size\") == \"1440x2560\" || param(\"size\") == \"2560x2560\" || param(\"size\") == \"4k\" || param(\"size\") == \"4K\") ? 1.5 : 1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-image-2.6-sunburst",
+   "vendor_id": -1012,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.075,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "GPT生图1-4K"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.32)) * image_count * ((param(\"size\") == \"1024x1024\" || param(\"size\") == \"1024x768\" || param(\"size\") == \"768x1024\" || param(\"size\") == \"1024x576\" || param(\"size\") == \"576x1024\" || param(\"size\") == \"1024x640\" || param(\"size\") == \"640x1024\" || param(\"size\") == \"512x512\" || param(\"size\") == \"256x256\" || param(\"size\") == \"1k\" || param(\"size\") == \"1K\") ? 0.5 : 1) * ((param(\"size\") == \"3840x2160\" || param(\"size\") == \"2160x3840\" || param(\"size\") == \"3840x3840\" || param(\"size\") == \"4096x4096\" || param(\"size\") == \"4096x2304\" || param(\"size\") == \"2304x4096\" || param(\"size\") == \"2560x1440\" || param(\"size\") == \"1440x2560\" || param(\"size\") == \"2560x2560\" || param(\"size\") == \"4k\" || param(\"size\") == \"4K\") ? 1.5 : 1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-6.1-terra",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "GPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 1 + cr * 0.05 + cc * 1.25 + cc12h * 2.5 + c * 5) : tier(\"272k_plus\", p * 2 + cr * 0.1 + cc * 2.5 + cc12h * 5 + c * 7.5)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "claude-opus-5",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "Claude 满血（仅限CC）",
+    "Claude 满血（可外接）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "seedance-2.5-480p",
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "official_media_price": {
+    "currency": "CNY",
+    "per_second": 0.67
+   },
+   "enable_groups": [
+    "Seedance视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", u(\"seconds\") * 0.48)",
+   "billing_usage_schema": {
+    "seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Video generation unit price",
+      "zh": "视频生成单价"
+     }
+    }
+   },
+   "billing_usage_examples": [
+    {
+     "label": "5s",
+     "facts": {
+      "seconds": 5
+     }
+    }
+   ]
+  },
+  {
+   "model_name": "grok-4.7",
+   "vendor_id": -1014,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2",
+   "vendor_id": -1012,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.075,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "GPT生图1-4K"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.32)) * image_count * ((param(\"size\") == \"1024x1024\" || param(\"size\") == \"1024x768\" || param(\"size\") == \"768x1024\" || param(\"size\") == \"1024x576\" || param(\"size\") == \"576x1024\" || param(\"size\") == \"1024x640\" || param(\"size\") == \"640x1024\" || param(\"size\") == \"512x512\" || param(\"size\") == \"256x256\" || param(\"size\") == \"1k\" || param(\"size\") == \"1K\") ? 0.5 : 1) * ((param(\"size\") == \"3840x2160\" || param(\"size\") == \"2160x3840\" || param(\"size\") == \"3840x3840\" || param(\"size\") == \"4096x4096\" || param(\"size\") == \"4096x2304\" || param(\"size\") == \"2304x4096\" || param(\"size\") == \"2560x1440\" || param(\"size\") == \"1440x2560\" || param(\"size\") == \"2560x2560\" || param(\"size\") == \"4k\" || param(\"size\") == \"4K\") ? 1.5 : 1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "codex-auto-review",
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5.999999999999999,
+   "cache_ratio": 0.09999999999999999,
+   "enable_groups": [
+    "GPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-5-5",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 2,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "Claude 满血（仅限CC）",
+    "Claude 满血（可外接）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "create_cache_ratio": 1.25,
+   "official_price_markup": 1.5,
+   "enable_groups": [
+    "Claude 满血（可外接）",
+    "Claude 满血（仅限CC）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "GPT 福利"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + cr * 0.2 + cc * 2.5 + c * 10) : tier(\"272k_plus\", p * 4 + cr * 0.4 + cc * 5 + c * 15)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "GPT 福利"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6-astra",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "GPT 福利",
+    "GPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 10 + cr * 1 + cc * 12.5 + c * 50) : tier(\"272k_plus\", p * 20 + cr * 2 + cc * 25 + c * 75)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "GPT 福利",
+    "GPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 8 + cr * 0.4 + cc * 10 + c * 40) : tier(\"272k_plus\", p * 16 + cr * 0.8 + cc * 20 + c * 60)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "seedance-2.5-720p-fixed",
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 8.8,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "official_media_price": {
+    "currency": "CNY",
+    "per_second": 1.51
+   },
+   "enable_groups": [
+    "Seedance视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_usage_schema": {
+    "seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Video generation unit price",
+      "zh": "视频生成单价"
+     }
+    }
+   },
+   "billing_usage_examples": [
+    {
+     "label": "5s",
+     "facts": {
+      "seconds": 5
+     }
+    }
+   ]
+  },
+  {
+   "model_name": "seedance-2.5-720p",
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "official_media_price": {
+    "currency": "CNY",
+    "per_second": 1.51
+   },
+   "enable_groups": [
+    "Seedance视频"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", u(\"seconds\") * 0.64)",
+   "billing_usage_schema": {
+    "seconds": {
+     "type": "number",
+     "unit": "second",
+     "description": {
+      "en": "Video generation unit price",
+      "zh": "视频生成单价"
+     }
+    }
+   },
+   "billing_usage_examples": [
+    {
+     "label": "5s",
+     "facts": {
+      "seconds": 5
+     }
+    }
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "Claude 满血（可外接）",
+    "Claude 满血（仅限CC）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-haiku-5-5",
+   "quota_type": 0,
+   "model_ratio": 0.05,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "Claude 满血（仅限CC）",
+    "Claude 满血（可外接）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 100000 ? tier(\"standard\", p * 0.1 + c * 0.5 + cr * 0.01 + cc * 0.125 + cc1h * 0.2) : tier(\"long_context\", p * 0.5 + c * 2.5 + cr * 0.05 + cc * 0.625 + cc1h * 1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "Claude 满血（仅限CC）",
+    "Claude 满血（可外接）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-imagine-image",
+   "vendor_id": -1014,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.05,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "GPT 福利",
+    "GPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "vendor_id": -1012,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.05,
+   "enable_groups": [
+    "GPT 福利",
+    "GPT"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + cr * 0.1 + cc * 2.5 + c * 10) : tier(\"272k_plus\", p * 4 + cr * 0.2 + cc * 5 + c * 15)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-image-2.5-flare",
+   "vendor_id": -1012,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.075,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "GPT生图1-4K"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.32)) * image_count * ((param(\"size\") == \"1024x1024\" || param(\"size\") == \"1024x768\" || param(\"size\") == \"768x1024\" || param(\"size\") == \"1024x576\" || param(\"size\") == \"576x1024\" || param(\"size\") == \"1024x640\" || param(\"size\") == \"640x1024\" || param(\"size\") == \"512x512\" || param(\"size\") == \"256x256\" || param(\"size\") == \"1k\" || param(\"size\") == \"1K\") ? 0.5 : 1) * ((param(\"size\") == \"3840x2160\" || param(\"size\") == \"2160x3840\" || param(\"size\") == \"3840x3840\" || param(\"size\") == \"4096x4096\" || param(\"size\") == \"4096x2304\" || param(\"size\") == \"2304x4096\" || param(\"size\") == \"2560x1440\" || param(\"size\") == \"1440x2560\" || param(\"size\") == \"2560x2560\" || param(\"size\") == \"4k\" || param(\"size\") == \"4K\") ? 1.5 : 1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "vendor_id": -1012,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.075,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "GPT生图1-4K"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"image\", fixed(0.32)) * image_count * ((param(\"size\") == \"1024x1024\" || param(\"size\") == \"1024x768\" || param(\"size\") == \"768x1024\" || param(\"size\") == \"1024x576\" || param(\"size\") == \"576x1024\" || param(\"size\") == \"1024x640\" || param(\"size\") == \"640x1024\" || param(\"size\") == \"512x512\" || param(\"size\") == \"256x256\" || param(\"size\") == \"1k\" || param(\"size\") == \"1K\") ? 0.5 : 1) * ((param(\"size\") == \"3840x2160\" || param(\"size\") == \"2160x3840\" || param(\"size\") == \"3840x3840\" || param(\"size\") == \"4096x4096\" || param(\"size\") == \"4096x2304\" || param(\"size\") == \"2304x4096\" || param(\"size\") == \"2560x1440\" || param(\"size\") == \"1440x2560\" || param(\"size\") == \"2560x2560\" || param(\"size\") == \"4k\" || param(\"size\") == \"4K\") ? 1.5 : 1)",
+   "ordinary_pricing": true
+  },
+  {
+   "model_name": "claude-fable-5-1",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 7.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "create_cache_ratio": 1.25,
+   "official_price_markup": 1.5,
+   "enable_groups": [
+    "Claude 满血（仅限CC）",
+    "Claude 满血（可外接）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "vendor_id": -1002,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "Claude 满血（仅限CC）",
+    "Claude 满血（可外接）"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.6",
+   "vendor_id": -1014,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "Grok"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  }
+ ],
+ "group_ratio": {
+  "Claude 满血（仅限CC）": 1.9,
+  "Claude 满血（可外接）": 2.05,
+  "GPT": 0.7,
+  "GPT 福利": 0.5,
+  "GPT生图1-4K": 1,
+  "Grok": 1.2,
+  "Seedance视频": 1,
+  "auto": 1
+ },
+ "hkd_per_cny": 1.168,
+ "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+ "success": true,
+ "supported_endpoint": {
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "Claude 满血（仅限CC）": "仅限 Claude Code CLI/桌面端App 使用",
+  "Claude 满血（可外接）": "支持其他CLI/SDK",
+  "GPT": "第三方渠道：GPT-6.2 / GPT-6.1 / GPT-6 全系列，0.7 倍率（约 1 折）。支持 Codex、其他 CLI 和 SDK，Chat Completions 与 Responses；缓存命中率实测约七成",
+  "GPT 福利": "最便宜：GPT-6.1 / GPT-6 / GPT-5.6 系列，0.5 倍率。不保证智商和缓存，可用性不稳定，适合不赶时间、失败可重试的任务",
+  "GPT生图1-4K": "GPT生图1-4K \n1K：0.16\n2K：0.32\n4K：0.48",
+  "Grok": "Grok 号池：grok-4.5 / 4.6 / 4.7，兼容 OpenAI 接口",
+  "Seedance视频": "【不卡脸】seedance-2.5-720p-fixed 30图 10视频 10音频 5-30秒 自由时长 固定价格 按次计费\nseedance-2.5-480p / seedance-2.5-720p 按秒计费",
+  "auto": "自动：按模型自动选择分组，可调用所有分组"
+ },
+ "vendors": [
+  {
+   "id": -1002,
+   "name": "Anthropic",
+   "icon": "Claude.Color"
+  },
+  {
+   "id": -1012,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": -1014,
+   "name": "xAI",
+   "icon": "XAI"
+  }
+ ]
+}

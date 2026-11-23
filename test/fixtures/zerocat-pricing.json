@@ -1,0 +1,1752 @@
+{
+ "auto_groups": [
+  "【GPT】Pro稳定分组",
+  "【国模】特惠分组",
+  "【国模】阿里百炼分组",
+  "【Claude】Ultra纯血分组",
+  "【Gemini】反重力分组",
+  "【Kiro】正价分组",
+  "【Kiro】速刷分组",
+  "【Grok】Heavy分组"
+ ],
+ "availability": {
+  "all": {
+   "[ant]gemini-3.1-pro": 8.6,
+   "[ant]gemini-3.6-flash": 35.54,
+   "[ant]gemini-4-argon": 50.76,
+   "[ant]gemini-4-hydrogen": 88.08,
+   "[ent]gemini-4-argon": 100,
+   "[ent]gemini-4-carbon": 99.32,
+   "[ent]gemini-4-hydrogen": 100,
+   "claude-fable-5": 100,
+   "claude-fable-5-1": 100,
+   "claude-fable-5-2": 99.92,
+   "claude-haiku-4-5": 97.14,
+   "claude-haiku-5-5": 68.97,
+   "claude-opus-4-6": 100,
+   "claude-opus-4-7": 100,
+   "claude-opus-4-8": 100,
+   "claude-opus-5": 99.23,
+   "claude-opus-5-5": 99.04,
+   "claude-sonnet-4-6": 100,
+   "claude-sonnet-5": 99.66,
+   "claude-sonnet-5-5": 97.46,
+   "codex-auto-review": 99.34,
+   "deepseek-v4-flash": 99.87,
+   "deepseek-v4-flash-0731": 99.75,
+   "deepseek-v4-pro": 99.84,
+   "deepseek-v4-pro-0813": 98.9,
+   "deepseek-v4.1-flash": 99.96,
+   "deepseek-v4.1-flash-1017": 99.97,
+   "gemini-3.1-flash": 99.83,
+   "gemini-3.1-pro-preview": 21.73,
+   "gemini-3.5-flash-lite": 97.38,
+   "gemini-3.6-flash": 96.49,
+   "gemini-3.8-flash": 0,
+   "glm-5.2": 98.35,
+   "glm-5.3": 99.98,
+   "glm-5.3-flash": 99.93,
+   "gpt-5.6-sol": 99.32,
+   "gpt-5.6-terra": 81.56,
+   "gpt-6-astra": 99.83,
+   "gpt-6-astra-ultrafast": 0,
+   "gpt-6-sol": 99.94,
+   "gpt-6.1-sol": 99.75,
+   "gpt-6.1-sol-ultrafast": 100,
+   "gpt-6.1-terra": 99.54,
+   "gpt-6.2-astra": 99.81,
+   "gpt-6.2-astra-ultrafast": 100,
+   "gpt-6.2-sol": 99.9,
+   "gpt-6.2-sol-ultrafast": 98.66,
+   "gpt-image-2": 100,
+   "gpt-image-2.5": 100,
+   "gpt-image-2.5-flare": 100,
+   "gpt-image-2.5-sunburst": 100,
+   "gpt-image-2.6": 100,
+   "gpt-image-2.6-flare": 100,
+   "gpt-image-2.6-sunburst": 100,
+   "grok-4.5": 99.13,
+   "grok-4.6": 96.45,
+   "grok-4.7": 97.84,
+   "hy4-preview": 94.53,
+   "kimi-k3": 99.57,
+   "kimi-k3.1-pro": 99.78,
+   "minimax-m3": 99.85,
+   "minimax-m3.1-flash": 100,
+   "nano-banana-2.1": 28.57,
+   "nano-banana-pro": 98.71,
+   "qwen3.8-max": 0,
+   "qwen3.8-max-0902": 0,
+   "qwen4-max": 88.51
+  },
+  "groups": {
+   "auto": {
+    "gpt-6.1-sol": 0,
+    "gpt-6.1-terra": 0
+   },
+   "【Claude】Coding分组": {
+    "claude-haiku-5-5": 68.97,
+    "claude-opus-5": 54.35,
+    "claude-opus-5-5": 15.89,
+    "claude-sonnet-5": 91.49,
+    "claude-sonnet-5-5": 27.27
+   },
+   "【Claude】Ultra纯血分组": {
+    "claude-fable-5": 100,
+    "claude-fable-5-1": 100,
+    "claude-fable-5-2": 99.92,
+    "claude-haiku-4-5": 97.14,
+    "claude-opus-4-6": 100,
+    "claude-opus-4-7": 100,
+    "claude-opus-4-8": 100,
+    "claude-opus-5": 100,
+    "claude-opus-5-5": 100,
+    "claude-sonnet-4-6": 100,
+    "claude-sonnet-5": 100,
+    "claude-sonnet-5-5": 100
+   },
+   "【GPT】Pro稳定分组": {
+    "codex-auto-review": 99.34,
+    "gpt-5.6-sol": 99.32,
+    "gpt-5.6-terra": 81.56,
+    "gpt-6-astra": 99.83,
+    "gpt-6-sol": 99.94,
+    "gpt-6.1-sol": 99.74,
+    "gpt-6.1-terra": 99.55,
+    "gpt-6.2-astra": 99.83,
+    "gpt-6.2-sol": 99.89
+   },
+   "【GPT】Ultrafast分组": {
+    "gpt-6-astra-ultrafast": 0,
+    "gpt-6.1-sol-ultrafast": 100,
+    "gpt-6.2-astra-ultrafast": 100,
+    "gpt-6.2-sol": 0,
+    "gpt-6.2-sol-ultrafast": 98.66
+   },
+   "【GPT】混池分组": {
+    "gpt-6-astra": 100,
+    "gpt-6.1-sol": 99.88,
+    "gpt-6.2-astra": 99.43,
+    "gpt-6.2-sol": 99.94
+   },
+   "【Gemini】反重力分组": {
+    "gemini-3.1-flash": 99.83,
+    "gemini-3.1-pro-preview": 21.73,
+    "gemini-3.5-flash-lite": 97.38,
+    "gemini-3.6-flash": 96.49,
+    "gemini-3.8-flash": 0
+   },
+   "【Grok】Heavy分组": {
+    "grok-4.5": 99.13,
+    "grok-4.6": 96.45,
+    "grok-4.7": 97.84
+   },
+   "【Kiro】正价分组": {
+    "claude-opus-4-6": 100,
+    "claude-opus-4-7": 100,
+    "claude-opus-4-8": 100,
+    "claude-opus-5": 95.32,
+    "claude-opus-5-5": 99.51,
+    "claude-sonnet-4-6": 100,
+    "claude-sonnet-5": 100,
+    "claude-sonnet-5-5": 96.41
+   },
+   "【国模】特惠分组": {
+    "deepseek-v4-flash": 99.87,
+    "deepseek-v4-flash-0731": 99.75,
+    "deepseek-v4-pro": 99.84,
+    "deepseek-v4-pro-0813": 98.9,
+    "deepseek-v4.1-flash": 99.96,
+    "deepseek-v4.1-flash-1017": 99.97,
+    "glm-5.2": 98.35,
+    "glm-5.3": 99.98,
+    "glm-5.3-flash": 99.93,
+    "hy4-preview": 94.53,
+    "kimi-k3": 99.57,
+    "kimi-k3.1-pro": 99.78,
+    "minimax-m3": 99.85,
+    "minimax-m3.1-flash": 100,
+    "qwen3.8-max": 0,
+    "qwen3.8-max-0902": 0,
+    "qwen4-max": 88.51
+   },
+   "【生图】特惠分组": {
+    "gpt-image-2": 100,
+    "gpt-image-2.5": 100,
+    "gpt-image-2.5-flare": 100,
+    "gpt-image-2.5-sunburst": 100,
+    "gpt-image-2.6": 100,
+    "gpt-image-2.6-flare": 100,
+    "gpt-image-2.6-sunburst": 100,
+    "nano-banana-2.1": 28.57,
+    "nano-banana-pro": 98.71
+   },
+   "【酒馆】按次分组": {
+    "[ant]gemini-3.1-pro": 8.6,
+    "[ant]gemini-3.6-flash": 35.54,
+    "[ant]gemini-4-argon": 50.76,
+    "[ant]gemini-4-hydrogen": 88.08,
+    "[ent]gemini-4-argon": 100,
+    "[ent]gemini-4-carbon": 99.32,
+    "[ent]gemini-4-hydrogen": 100
+   }
+  }
+ },
+ "data": [
+  {
+   "model_name": "deepseek-v4-pro-0813",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(tier(\"base\", p * 4.5 + c * 13.5 + cr * 0.15)) * (hour(\"UTC\") >= 1 && hour(\"UTC\") < 4 ? 2 : 1) * (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10 ? 2 : 1)",
+   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+  },
+  {
+   "model_name": "qwen3.8-max",
+   "description": "2.4-trillion-parameter MoE flagship for coding, professional work, multimodal understanding, and long-horizon agentic workflows",
+   "icon": "Qwen.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.125,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini"
+   ]
+  },
+  {
+   "model_name": "[ent]gemini-4-hydrogen",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.1))"
+  },
+  {
+   "model_name": "claude-haiku-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【Claude】Coding分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 100000 ? tier(\"0_100k\", p * 0.1 + cr * 0.01 + cc * 0.125 + cc1h * 0.2 + c * 0.5) : tier(\"100k_plus\", p * 0.5 + cr * 0.05 + cc * 0.625 + cc1h * 1 + c * 2.5)"
+  },
+  {
+   "model_name": "claude-opus-5",
+   "description": "Strongest Claude Opus model for coding, agents, and professional work",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Kiro】正价分组",
+    "【Claude】Coding分组",
+    "【Claude】Ultra纯血分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-6",
+   "description": "Claude workhorse for coding agents, careful analysis, and production cost control",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组",
+    "【Kiro】正价分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "qwen4-max",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 10 + c * 30 + cc1h * 20 + cr * 0.5 + cc * 12.5)"
+  },
+  {
+   "model_name": "claude-fable-5",
+   "description": "Claude model for creative writing, analysis, and controlled agent workflows",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-haiku-4-5",
+   "description": "Fast Claude lane for lightweight agents, office tasks, and responsive chat",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,200K",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-pro-preview",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【Gemini】反重力分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.8-flash",
+   "description": "Google's most intelligent Flash model, engineered for long-horizon software engineering, autonomous agents, and complex enterprise workflows",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 0.375,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.09999999999999999,
+   "enable_groups": [
+    "【Gemini】反重力分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.5",
+   "description": "xAI's Grok model for chat, coding, agentic tools, and lower hallucination risk",
+   "icon": "XAI",
+   "tags": "推理,工具,文件,多模态,500K",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.15,
+   "enable_groups": [
+    "【Grok】Heavy分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + c * 6 + cr * 0.3) : tier(\"200k_plus\", p * 4 + c * 12 + cr * 0.6)"
+  },
+  {
+   "model_name": "deepseek-v4-flash-0731",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(tier(\"base\", p * 1.5 + c * 4.5 + cr * 0.05)) * (hour(\"UTC\") >= 1 && hour(\"UTC\") < 4 ? 2 : 1) * (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10 ? 2 : 1)"
+  },
+  {
+   "model_name": "deepseek-v4.1-flash-1017",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(tier(\"base\", p * 1 + c * 4 + cr * 0.02)) * (hour(\"UTC\") >= 1 && hour(\"UTC\") < 4 ? 2 : 1) * (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10 ? 2 : 1)"
+  },
+  {
+   "model_name": "glm-5.3-flash",
+   "description": "Native multimodal GLM model for efficient coding and long-horizon agent tasks",
+   "icon": "ZAI",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.2875,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【Claude】Coding分组",
+    "【Claude】Ultra纯血分组",
+    "【Kiro】正价分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 2 + cr * 0.2 + cc * 2.5 + cc1h * 4 + c * 10)"
+  },
+  {
+   "model_name": "gpt-6-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai-alpha-search",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + cr * 0.2 + cc * 2.5 + c * 10) : tier(\"272k_plus\", p * 4 + cr * 0.4 + cc * 5 + c * 15)"
+  },
+  {
+   "model_name": "minimax-m3",
+   "vendor_id": 9,
+   "quota_type": 0,
+   "model_ratio": 0.1775,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.2507042253521127,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 512000 ? tier(\"standard\", p * 2.1 + c * 8.4 + cr * 0.42) : tier(\"long_context\", p * 4.2 + c * 16.8 + cr * 0.84)"
+  },
+  {
+   "model_name": "gpt-image-2.6",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "gpt-6.1-terra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000\n? tier(\"0_272k\", p * 1 + cr * 0.05 + cc * 1.25 + c * 5)\n: tier(\"272k_plus\", p * 2 + cr * 0.1 + cc * 2.5 + c * 7.5)"
+  },
+  {
+   "model_name": "gpt-6-astra",
+   "description": "GPT-6 Astra is OpenAI's most capable model for complex reasoning, coding, computer use, research, and document creation.",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【GPT】混池分组",
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai-alpha-search",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 10 + c * 50 + cr * 1 + cc * 12.5) : tier(\"272k_plus\", p * 20 + c * 75 + cr * 2 + cc * 25)"
+  },
+  {
+   "model_name": "gpt-6.2-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Pro稳定分组",
+    "【GPT】混池分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + cr * 0.1 + cc * 2.5 + c * 10) : tier(\"272k_plus\", p * 4 + cr * 0.2 + cc * 5 + c * 15)"
+  },
+  {
+   "model_name": "deepseek-v4-flash",
+   "description": "DeepSeek V4.1 Flash model for reasoning and agentic coding",
+   "icon": "DeepSeek.Color",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.0665,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.021052631578947368,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(tier(\"base\", p * 1.5 + c * 4.5 + cr * 0.05)) * (hour(\"UTC\") >= 1 && hour(\"UTC\") < 4 ? 2 : 1) * (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10 ? 2 : 1)"
+  },
+  {
+   "model_name": "qwen3.8-max-0902",
+   "vendor_id": 10,
+   "quota_type": 0,
+   "model_ratio": 6,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.125,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini"
+   ]
+  },
+  {
+   "model_name": "gemini-3.6-flash",
+   "description": "Fast Gemini model balancing multimodal reasoning, tool use, and cost",
+   "icon": "Gemini.Color",
+   "tags": "推理,工具,文件,多模态,音频,1M",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 0.75,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【Gemini】反重力分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-image-2.6-sunburst",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "gpt-image-2",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "gpt-6.2-astra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Pro稳定分组",
+    "【GPT】混池分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 8 + c * 40 + cr * 0.4 + cc * 10) : tier(\"272k_plus\", p * 16 + c * 60 + cr * 0.8 + cc * 20)"
+  },
+  {
+   "model_name": "gpt-6.2-sol-ultrafast",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Ultrafast分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 6 + cr * 0.3 + cc * 7.5 + cc12h * 15 + c * 30) : tier(\"272k_plus\", p * 12 + cr * 0.6 + cc * 15 + cc12h * 30 + c * 45)"
+  },
+  {
+   "model_name": "kimi-k3",
+   "description": "Multimodal Kimi model with 1M context and toggleable max-effort thinking for long-horizon agent work",
+   "icon": "Moonshot",
+   "tags": "推理,工具,文件,开源权重,多模态,1M",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 10,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "[ent]gemini-4-carbon",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.12))"
+  },
+  {
+   "model_name": "glm-5.3",
+   "description": "Flagship GLM model for long-horizon coding, agents, and complex project delivery",
+   "icon": "ZAI",
+   "tags": "推理,工具,开源权重,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "kimi-k3.1-pro",
+   "vendor_id": 6,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 13 + c * 68 + cr * 1.3)"
+  },
+  {
+   "model_name": "gpt-image-2.5",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "[ent]gemini-4-argon",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.1))"
+  },
+  {
+   "model_name": "claude-opus-4-7",
+   "description": "Stronger Opus tier for advanced software work and high-stakes reasoning",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组",
+    "【Kiro】正价分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-flash",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "【Gemini】反重力分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.25 + c * 1.5 + cr * 0.025)"
+  },
+  {
+   "model_name": "codex-auto-review",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai-alpha-search",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "deepseek-v4.1-flash",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.075,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "cache_ratio": 0.02,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(tier(\"base\", p * 1 + c * 4 + cr * 0.02)) * (hour(\"UTC\") >= 1 && hour(\"UTC\") < 4 ? 2 : 1) * (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10 ? 2 : 1)"
+  },
+  {
+   "model_name": "claude-fable-5-2",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "create_cache_ratio": 2,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 8 + c * 40 + cr * 0.2 + cc * 10 + cc1h * 16)"
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "description": "High-end Claude for difficult coding, planning, and slower expert reasoning",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Kiro】正价分组",
+    "【Claude】Ultra纯血分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "[ant]gemini-3.1-pro",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.05))"
+  },
+  {
+   "model_name": "claude-fable-5-1",
+   "description": "Claude model for demanding reasoning and long-horizon agentic work",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.025,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "grok-4.6",
+   "description": "xAI's frontier model for long-running agents, coding, knowledge work, and visual projects",
+   "icon": "XAI",
+   "tags": "推理,工具,文件,多模态,500K",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "【Grok】Heavy分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + c * 6 + cr * 0.5) : tier(\"200k_plus\", p * 4 + c * 12 + cr * 1)"
+  },
+  {
+   "model_name": "deepseek-v4-pro",
+   "description": "DeepSeek V4 Pro snapshot with million-token context and support for thinking and non-thinking modes",
+   "icon": "DeepSeek.Color",
+   "tags": "推理,工具,开源权重,1M",
+   "vendor_id": 4,
+   "quota_type": 0,
+   "model_ratio": 0.7765,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "cache_ratio": 0.0023341918866709595,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(tier(\"base\", p * 4.5 + c * 13.5 + cr * 0.15)) * (hour(\"UTC\") >= 1 && hour(\"UTC\") < 4 ? 2 : 1) * (hour(\"UTC\") >= 6 && hour(\"UTC\") < 10 ? 2 : 1)"
+  },
+  {
+   "model_name": "gpt-image-2.6-flare",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "[ant]gemini-3.6-flash",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.03))"
+  },
+  {
+   "model_name": "[ant]gemini-4-hydrogen",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.05))"
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "description": "Top Claude Opus tier for the hardest reasoning, coding, and long-horizon agents",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Ultra纯血分组",
+    "【Kiro】正价分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "gemini-3.5-flash-lite",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.333333333333334,
+   "cache_ratio": 0.1,
+   "enable_groups": [
+    "【Gemini】反重力分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5.6-sol",
+   "description": "Frontier GPT-5.6 model for complex professional work, coding, and agentic workflows",
+   "icon": "OpenAI",
+   "tags": "推理,工具,文件,多模态,1.1M",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai-alpha-search",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 5 + c * 30 + cr * 0.5 + cc * 6.25) : tier(\"272k_plus\", p * 10 + c * 45 + cr * 1 + cc * 12.5)"
+  },
+  {
+   "model_name": "gpt-5.6-terra",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + c * 12 + cr * 0.2 + cc * 2.5) : tier(\"272k_plus\", p * 4 + c * 18 + cr * 0.4 + cc * 5)"
+  },
+  {
+   "model_name": "gpt-6-astra-ultrafast",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Ultrafast分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 60 + cr * 6 + cc * 75 + cc12h * 150 + c * 300) : tier(\"272k_plus\", p * 120 + cr * 12 + cc * 150 + cc12h * 300 + c * 450)"
+  },
+  {
+   "model_name": "gpt-6.1-sol-ultrafast",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Ultrafast分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 12 + cr * 0.6 + cc * 15 + cc12h * 30 + c * 60) : tier(\"272k_plus\", p * 24 + cr * 1.2 + cc * 30 + cc12h * 60 + c * 90)"
+  },
+  {
+   "model_name": "gpt-6.2-astra-ultrafast",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】Ultrafast分组"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 24 + cr * 1.2 + cc * 30 + cc12h * 60 + c * 120) : tier(\"272k_plus\", p * 48 + cr * 2.4 + cc * 60 + cc12h * 120 + c * 180)"
+  },
+  {
+   "model_name": "hy4-preview",
+   "vendor_id": 14,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 6 + c * 18 + cr * 0.3)"
+  },
+  {
+   "model_name": "gpt-image-2.5-flare",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "nano-banana-pro",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(2.5))"
+  },
+  {
+   "model_name": "claude-opus-5-5",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【Claude】Coding分组",
+    "【Claude】Ultra纯血分组",
+    "【Kiro】正价分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"standard\", p * 4 + cr * 0.2 + cc * 5 + cc1h * 8 + c * 20)"
+  },
+  {
+   "model_name": "gpt-6.1-sol",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "【GPT】混池分组",
+    "【GPT】Pro稳定分组"
+   ],
+   "supported_endpoint_types": [
+    "openai-alpha-search",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"0_272k\", p * 2 + cr * 0.1 + cc * 2.5 + c * 10) : tier(\"272k_plus\", p * 4 + cr * 0.2 + cc * 5 + c * 15)"
+  },
+  {
+   "model_name": "grok-4.7",
+   "vendor_id": 8,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【Grok】Heavy分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 200000 ? tier(\"0_200k\", p * 2 + cr * 0.5 + c * 6) : tier(\"200k_plus\", p * 4 + cr * 1 + c * 12)"
+  },
+  {
+   "model_name": "glm-5.2",
+   "description": "Open flagship GLM for long-horizon coding agents and million-token context work",
+   "icon": "ZAI",
+   "tags": "推理,工具,开源权重,1M",
+   "vendor_id": 5,
+   "quota_type": 0,
+   "model_ratio": 4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 3.5,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ]
+  },
+  {
+   "model_name": "minimax-m3.1-flash",
+   "vendor_id": 9,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【国模】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "anthropic",
+    "gemini",
+    "openai-response-compact",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1 + c * 4 + cr * 0.1)"
+  },
+  {
+   "model_name": "gpt-image-2.5-sunburst",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "cache_ratio": 0.25,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1))"
+  },
+  {
+   "model_name": "nano-banana-2.1",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【生图】特惠分组"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(1.5))"
+  },
+  {
+   "model_name": "[ant]gemini-4-argon",
+   "vendor_id": 7,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "【酒馆】按次分组"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", fixed(0.1))"
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "description": "Everyday Claude agent model for coding, planning, browsing, and general work",
+   "icon": "Claude.Color",
+   "tags": "推理,工具,文件,多模态,1M",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 1,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "【Claude】Coding分组",
+    "【Claude】Ultra纯血分组",
+    "【Kiro】正价分组"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ]
+  }
+ ],
+ "group_ratio": {
+  "auto": 1,
+  "【Claude】Coding分组": 0.7,
+  "【Claude】Ultra纯血分组": 1.5,
+  "【GPT】Pro稳定分组": 0.22,
+  "【GPT】Ultrafast分组": 0.15,
+  "【GPT】混池分组": 0.15,
+  "【Gemini】反重力分组": 0.25,
+  "【Grok】Heavy分组": 0.2,
+  "【Kiro】正价分组": 0.5,
+  "【Kiro】速刷分组": 0.1,
+  "【国模】特惠分组": 0.2,
+  "【国模】阿里百炼分组": 0.4,
+  "【生图】特惠分组": 0.04,
+  "【酒馆】按次分组": 1
+ },
+ "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+ "success": true,
+ "supported_endpoint": {
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "gemini": {
+   "path": "/v1beta/models/{model}:generateContent",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  },
+  "openai-alpha-search": {
+   "path": "/v1/alpha/search",
+   "method": "POST"
+  },
+  "openai-response": {
+   "path": "/v1/responses",
+   "method": "POST"
+  },
+  "openai-response-compact": {
+   "path": "/v1/responses/compact",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "auto": "按全局顺序选用含该模型的分组，可能落到外接或特惠分组",
+  "【Claude】Coding分组": "标准 | 仅限Vibe Coding，模型拒答会正常扣费",
+  "【Claude】Ultra纯血分组": "自营｜Ultra 纯血，禁止破限、蒸馏",
+  "【GPT】Pro稳定分组": "自营｜Codex 主力，禁止破限、蒸馏",
+  "【GPT】Ultrafast分组": "极速｜强制 Ultrafast，适合低延迟调用，独立定价",
+  "【GPT】混池分组": "自营｜不降智，使用前请自行测试",
+  "【Gemini】反重力分组": "标准｜Gemini 反重力渠道，无缓存",
+  "【Grok】Heavy分组": "标准｜Grok Heavy 渠道",
+  "【Kiro】正价分组": "标准｜Kiro 正价订阅号池，高缓存",
+  "【Kiro】速刷分组": "特惠｜正价订阅号池，高缓存，用不了就是没号了再补号",
+  "【国模】特惠分组": "特惠｜三方订阅渠道，保底90%缓存",
+  "【国模】阿里百炼分组": "标准｜阿里百炼渠道",
+  "【生图】特惠分组": "特惠｜别用流式接口，否则会多次计费；超分生图 0.04/张",
+  "【酒馆】按次分组": "标准｜Gemini 按次计费，适合酒馆"
+ },
+ "vendors": [
+  {
+   "id": 14,
+   "name": "腾讯",
+   "icon": "Hunyuan.Color"
+  },
+  {
+   "id": 1,
+   "name": "Anthropic",
+   "icon": "Claude.Color"
+  },
+  {
+   "id": 5,
+   "name": "智谱",
+   "icon": "Zhipu.Color"
+  },
+  {
+   "id": 6,
+   "name": "Moonshot",
+   "icon": "Moonshot"
+  },
+  {
+   "id": 8,
+   "name": "xAI",
+   "icon": "XAI"
+  },
+  {
+   "id": 9,
+   "name": "MiniMax",
+   "icon": "Minimax.Color"
+  },
+  {
+   "id": 10,
+   "name": "阿里巴巴",
+   "icon": "Qwen.Color"
+  },
+  {
+   "id": 2,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": 3,
+   "name": "讯飞",
+   "icon": "Spark.Color"
+  },
+  {
+   "id": 4,
+   "name": "DeepSeek",
+   "icon": "DeepSeek.Color"
+  },
+  {
+   "id": 7,
+   "name": "Google",
+   "icon": "Gemini.Color"
+  }
+ ]
+}
