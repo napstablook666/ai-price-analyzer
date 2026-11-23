@@ -1,7 +1,7 @@
 import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice, priceEntryTone } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { buildMonthlyCostRankings, createDashboardIndex, createDashboardRowsCache, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "./dashboard-index.js";
+import { buildMonthlyCostRankings, createDashboardIndex, createDashboardRowsCache, deltaTone, emptyStateCopy, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, pendingSitePlugins, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { STATION_CATEGORY_LABELS } from "./shared/schema.js";
@@ -219,6 +219,9 @@ function renderSummary(rows) {
     ["首选方案", String(recommended), "同模型推荐"],
     ["需核验", String(needsReview), reviewNote]
   ];
+  // 插件库里有、站点列表里没有的插件不会自己变成站点，这里显式点出来，否则只会表现为「这个站怎么没数据」。
+  const pending = isPublic ? [] : state.pendingPlugins || [];
+  if (pending.length) cards.push(["未添加站点", String(pending.length), `${pending.map(plugin => plugin.name).join("、")} 在插件库里，添加到站点后才会参与采集与比价`]);
   $("#summary").innerHTML = cards.map(([label, value, note], index) => `<span class="summary-item${index === 0 ? " is-primary" : ""}" title="${escapeHtml(note)}"><span class="summary-label">${escapeHtml(label)}</span><strong class="summary-value">${escapeHtml(value)}</strong></span>`).join("");
 }
 function renderStationFilter(rows) {
@@ -950,6 +953,16 @@ function renderRows() {
     const keys = heading.dataset.sortKeys.split(" ");
     heading.setAttribute("aria-sort", keys.includes(state.filters.sortBy) ? (state.filters.sortDirection === "asc" ? "ascending" : "descending") : "none");
   }
+  // 三态分开：没站点 / 采不到 / 被筛光，文案不同，别把「筛光」说成「没采集」。
+  const emptyCopy = emptyStateCopy({
+    comparisonMode: state.comparisonMode,
+    stationCount: Number(state.data?.refreshScope?.stationCount) || 0,
+    rowCount: state.rows.length,
+    pendingNames: (state.pendingPlugins || []).map(plugin => plugin.name)
+  });
+  $("#empty-state").querySelector("h3").textContent = emptyCopy.title;
+  $("#empty-state").querySelector("p").textContent = emptyCopy.note;
+  $("#empty-state-action-label").textContent = emptyCopy.actionLabel;
   $("#empty-state").hidden = visible.length > 0;
   $(".table-wrap").hidden = visible.length === 0;
   hydrateIcons($("#comparison-body"));
@@ -1120,6 +1133,7 @@ function renderRefreshPreflight(preflight = state.refreshPreflight) {
 
 function render(data, { preservePage = false } = {}) {
   state.data = data;
+  state.pendingPlugins = pendingSitePlugins(data.sitePlugins);
   state.refreshInProgress = Boolean(data.refreshInProgress);
   state.comparisonMode = data.settings?.comparisonMode === "public" ? "public" : "paid";
   state.refreshPreflight = data.refreshPreflight || null;
@@ -1148,16 +1162,6 @@ if (!preservePage) { state.page = 0; pageFilterKey = null; }
   $("#sort-secondary").value = state.filters.sortSecondary;
   $("#sort-direction").value = state.filters.sortDirection;
   renderRows();
-  const hasStations = Number(data.refreshScope?.stationCount) > 0;
-  const emptyState = $("#empty-state");
-  const publicEmpty = state.comparisonMode === "public";
-  emptyState.querySelector("h3").textContent = publicEmpty
-    ? (hasStations ? "还没有公益站报价" : "还没有公益站")
-    : (hasStations ? (state.rows.length ? "站点已保存，尚未采集报价" : "还没有可比较的报价") : "还没有可比较的报价");
-  emptyState.querySelector("p").textContent = publicEmpty
-    ? "启用公益站后刷新。"
-    : (hasStations ? (state.rows.length ? "点右上角刷新开始采集。" : "当前站点没有可比的文本计费字段。") : "添加中转站并刷新即可。");
-  $("#empty-state-action-label").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
   renderFreshness();
   hydrateIcons();

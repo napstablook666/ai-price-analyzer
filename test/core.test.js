@@ -11,7 +11,7 @@ import { AIAPI_EFFECTIVE_PRICE_FIELDS, AIAPI_GROUP_PRICE_FIELDS, AIAPI_PRICE_KEY
 import { buildStationRequest, resolveStationCollection } from "../src/core/request-strategy.js";
 import { addRecommendationStatus, buildComparisonRows, currencyToRmb, filterComparisonsByMode, getProxyPriceQuote, getProxyPrices, summarizeComparisons, workloadCost } from "../src/core/pricing.js";
 import { getPartialDiagnostics } from "../src/core/partial-diagnostics.js";
-import { createDashboardIndex, matchesModelQueries, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "../src/dashboard-index.js";
+import { createDashboardIndex, emptyStateCopy, matchesModelQueries, modeSwitchFilters, paginateRows, parsePageInput, pendingSitePlugins, rowBandClasses } from "../src/dashboard-index.js";
 import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing.js";
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
@@ -6368,4 +6368,38 @@ test("按用量分档没有用量数据时保留最低档，不整行消失", ()
   });
   assert.ok(comparison);
   assert.equal(comparison.offers[0].prices.input, 2);
+});
+
+test("空态文案按三态分开，被筛光不能写成尚未采集", () => {
+  assert.deepEqual(
+    emptyStateCopy({ stationCount: 0, rowCount: 0 }),
+    { title: "还没有可比较的报价", note: "添加中转站并刷新即可。", actionLabel: "添加第一个站点" }
+  );
+  const notCollected = emptyStateCopy({ stationCount: 3, rowCount: 0 });
+  assert.equal(notCollected.title, "站点已保存，尚未采集报价");
+  assert.match(notCollected.note, /刷新开始采集/);
+  const filteredOut = emptyStateCopy({ stationCount: 3, rowCount: 8356 });
+  assert.equal(filteredOut.title, "没有符合筛选的报价");
+  assert.match(filteredOut.note, /8356 条报价/);
+  assert.equal(filteredOut.actionLabel, "管理站点");
+  assert.equal(emptyStateCopy({ comparisonMode: "public", stationCount: 0 }).title, "还没有公益站");
+  assert.equal(emptyStateCopy({ comparisonMode: "public", stationCount: 2, rowCount: 0 }).title, "还没有公益站报价");
+});
+
+test("空态把插件库里没添加的站点名字点出来", () => {
+  const copy = emptyStateCopy({ stationCount: 2, rowCount: 100, pendingNames: ["OpenRouter", "Man8Out"] });
+  assert.match(copy.note, /OpenRouter、Man8Out/);
+  assert.match(copy.note, /添加后才会参与采集/);
+});
+
+test("插件库里没添加的插件单独列出来，addable=false 的不算", () => {
+  const pending = pendingSitePlugins([
+    { id: "openrouter", name: "OpenRouter", added: false },
+    { id: "leaflow", name: "Leaflow", added: true },
+    { id: "disabled", name: "Disabled", addable: false },
+    { id: "man8out", name: "Man8Out" }
+  ]);
+  assert.deepEqual(pending.map(plugin => plugin.id), ["openrouter", "man8out"]);
+  assert.deepEqual(pendingSitePlugins(null), []);
+  assert.deepEqual(pendingSitePlugins([]), []);
 });

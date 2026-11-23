@@ -116,3 +116,35 @@ export function monthlyCostRankingFor(row, rankings) {
 export function modeSwitchFilters(filters = {}, providerFilter = null) {
   return { ...filters, search: "", stationId: "", provider: Array.isArray(providerFilter) ? [...providerFilter] : null, group: null, models: [] };
 }
+
+// 插件库里有、站点列表里没有的插件：新版本发的插件不会自己变成站点，不给提示就是「怎么没出现」。
+export function pendingSitePlugins(sitePlugins = []) {
+  return (Array.isArray(sitePlugins) ? sitePlugins : [])
+    .filter(plugin => plugin && plugin.addable !== false && plugin.added !== true)
+    .map(plugin => ({ id: String(plugin.id || ""), name: String(plugin.name || plugin.id || "") }));
+}
+
+// 空态文案按「有没有站点 / 采没采到 / 被筛没」三态分开，之前把「有报价但被筛光」说成尚未采集，会骗人。
+export function emptyStateCopy({ comparisonMode = "paid", stationCount = 0, rowCount = 0, pendingNames = [] } = {}) {
+  const publicMode = comparisonMode === "public";
+  const pendingNote = pendingNames.length ? `插件库里还有 ${pendingNames.join("、")} 没添加，添加后才会参与采集。` : "";
+  if (!(Number(stationCount) > 0)) {
+    return {
+      title: publicMode ? "还没有公益站" : "还没有可比较的报价",
+      note: publicMode ? "添加公益站并刷新即可。" : "添加中转站并刷新即可。",
+      actionLabel: "添加第一个站点"
+    };
+  }
+  if (!(Number(rowCount) > 0)) {
+    return {
+      title: publicMode ? "还没有公益站报价" : "站点已保存，尚未采集报价",
+      note: `点右上角刷新开始采集。${pendingNote}`,
+      actionLabel: "管理站点"
+    };
+  }
+  return {
+    title: "没有符合筛选的报价",
+    note: `清空搜索或放宽筛选，本次已采集 ${rowCount} 条报价。${pendingNote}`,
+    actionLabel: "管理站点"
+  };
+}
