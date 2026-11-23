@@ -127,13 +127,13 @@ function decodeMarketplace(payload) {
           item.image_base = sizes[0].price;
         }
       } else {
-        item.intervals = tokenIntervalsOf(pricing, divisor);
+        // Fast 通道价并进同一分组的档位里（label 以 Fast 开头），不额外造分组
+        item.intervals = [
+          ...tokenIntervalsOf(pricing, divisor),
+          ...fastIntervalsOf(pricing, divisor)
+        ];
       }
       items.push(item);
-      const fastIntervals = mode === "image" ? [] : fastIntervalsOf(pricing, divisor);
-      if (fastIntervals.length) {
-        items.push({ ...item, enable_groups: [`${groupName} · Fast`], intervals: fastIntervals });
-      }
     }
   }
   return { ...payload, data: items };
