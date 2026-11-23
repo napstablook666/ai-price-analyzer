@@ -18,7 +18,11 @@ const IMAGE_TIER_FIELDS = [
 ];
 
 function finiteOrNull(value) {
-  const number = Number(value);
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  if (!text) return null;
+  const number = Number(text);
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
