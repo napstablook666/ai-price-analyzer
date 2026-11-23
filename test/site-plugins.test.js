@@ -143,6 +143,77 @@ test("橘子API 安装预设后匿名采价，充值档位与待支付金额已�
   });
 });
 
+test("velamost 匿名采集 price-map 全目录，美元报价与页面起价一致，分组倍率只折算一次", async () => {
+  await withCleanRegistry(async () => {
+    const providers = await loadSitePlugins(["velamost", "ooioo"]);
+    const velamost = providers.find(provider => provider.id === "velamost");
+    const ooioo = providers.find(provider => provider.id === "ooioo");
+    const [velamostPreset] = addProviderStationPresets([], [velamost]);
+    const collection = resolveStationCollection({ ...velamostPreset, baseUrl: "https://velamost.com/pricing" });
+    const station = collection.station;
+
+    assert.equal(sitePluginForStation(station).id, "velamost");
+    assert.equal(station.mode, "direct");
+    assert.equal(station.auth.type, "none");
+    assert.equal(station.priceCurrency, "USD");
+    assert.equal(station.priceCurrencyVerified, true);
+    assert.equal(station.rechargeAuto, false);
+    assert.equal(station.rechargeRateVerified, false);
+
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/velamost-pricing.json", import.meta.url), "utf8"));
+    const requests = [];
+    const snapshot = await collectStation(station, {
+      collection,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
+      }
+    });
+
+    assert.equal(requests.length, 1, "匿名报价采集不应请求需登录的充值接口");
+    assert.equal(new URL(requests[0].url).pathname, "/api/pricing");
+    assert.equal(requests[0].init.method, "GET");
+    assert.equal(requests[0].init.credentials, "omit");
+    assert.equal(requests[0].init.headers.Authorization, undefined);
+    assert.equal(snapshot.status, "success");
+    assert.equal(snapshot.source, "tokenflux");
+    assert.equal(snapshot.normalized.sourceFormat, "tokenflux");
+    assert.equal(snapshot.normalized.data.length, 126);
+    assert.equal(Object.keys(snapshot.normalized.group_ratio).length, 7);
+
+    // 走 model_ratio 的模型：归一价 = model_ratio × 2 × 分组倍率，与页面「起」价逐字一致。
+    const lite = snapshot.normalized.data.find(row => row.model_name === "claude-sonnet-5" && row.proxy_group_name === "Claude- lite");
+    assert.deepEqual([lite.input_price, lite.output_price, lite.cache_read_price], [2.7, 13.5, 0.27]);
+    const officialLite = snapshot.normalized.data.find(row => row.model_name === "gpt-5.4-mini-2026-03-17");
+    assert.deepEqual([officialLite.input_price, officialLite.output_price], [225, 1350]);
+
+    // billing_expr 的模型：表达式系数折算后落到 USD/百万。
+    const carbon = snapshot.normalized.data.find(row => row.model_name === "gemini-4-carbon");
+    assert.deepEqual([carbon.input_price, carbon.output_price, carbon.cache_read_price, carbon.cache_write_price], [1.8, 9, 0.09, 2.25]);
+    assert.equal(snapshot.normalized.data.every(row => row.price_currency === "USD"), true);
+
+    // 同模型归行：velamost 与 ooioo 的 claude-fable-5 落在同一比价行。
+    const [ooiooPreset] = addProviderStationPresets([], [ooioo]);
+    const ooiooCollection = resolveStationCollection({ ...ooiooPreset, baseUrl: "https://ooioo.work/pricing" });
+    const ooiooStation = ooiooCollection.station;
+    const ooiooFixture = JSON.parse(readFileSync(new URL("./fixtures/ooioo-pricing.json", import.meta.url), "utf8"));
+    const ooiooSnapshot = await collectStation(ooiooStation, {
+      collection: ooiooCollection,
+      fetchImpl: async () => new Response(JSON.stringify(ooiooFixture), { headers: { "content-type": "application/json" } })
+    });
+    const comparisons = buildComparisonRows({
+      stations: [station, ooiooStation],
+      snapshots: [snapshot, ooiooSnapshot],
+      references: { models: [] },
+      showUnmatched: true,
+      usage: { input: 1_000_000, output: 0 }
+    });
+    const fable = comparisons.find(row => row.canonicalModel === "claude-fable-5");
+    assert.ok(fable, "claude-fable-5 应出现在比价行");
+    assert.deepEqual([...new Set(fable.offers.map(offer => offer.stationId))].sort(), ["ooioo", "velamost"]);
+  });
+});
+
 test("ooioo 匿名采集 price-map 全目录，USD 报价与 1:1 充值比例按公开文档记录", async () => {
   await withCleanRegistry(async () => {
     const providers = await loadSitePlugins(["ooioo"]);

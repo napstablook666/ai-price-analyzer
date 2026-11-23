@@ -362,6 +362,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "00i00.work"
       ],
       "needsCode": true
+    },
+    {
+      "id": "velamost",
+      "name": "VelaMost",
+      "version": "0.21.0",
+      "description": "公开 /api/pricing 直连采集，92 个模型；分组倍率报文内自带，美元计价；充值比例需登录未验证",
+      "hosts": [
+        "velamost.com"
+      ],
+      "needsCode": true
     }
   ]
 };
