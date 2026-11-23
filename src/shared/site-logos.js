@@ -37,6 +37,7 @@ export const SITE_LOGOS = {
   "stellaisle-carpool": "icons/sites/stellaisle-carpool.png",
   "tokenflux": "icons/sites/tokenflux.png",
   "true-sota": "icons/sites/true-sota.svg",
+  "velamost": "icons/sites/velamost.png",
   "windhub": "icons/sites/windhub.png",
   "xingya": "icons/sites/xingya.png"
 };
