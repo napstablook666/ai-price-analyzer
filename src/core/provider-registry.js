@@ -226,5 +226,30 @@ export function prepareStationInput(stationInput = {}) {
   const provider = providerById(stationInput.pluginId) || providerForStation(stationInput, { forPrepare: true });
   const prepared = provider?.prepare ? provider.prepare(stationInput, stationContext(stationInput)) : stationInput;
   const priceCurrency = provider?.preservePriceCurrency && prepared.priceCurrency ? prepared.priceCurrency : "CREDITS";
-  return { ...prepared, priceCurrency, priceCurrencyVerified: true, rechargeRateVerified: provider?.preserveRechargeRateVerification ? prepared.rechargeRateVerified !== false : true };
+  return {
+    ...prepared,
+    ...providerRecharge(provider, prepared),
+    priceCurrency,
+    priceCurrencyVerified: true,
+    rechargeRateVerified: provider?.preserveRechargeRateVerification ? prepared.rechargeRateVerified !== false : true
+  };
+}
+
+// 插件声明了汇率溢价，元价就由插件口径决定（实时汇率 × 溢价）。站点里存着的是上一次算出来的
+// rechargeRate 常数，汇率一变它就跟基准价脱钩，所以只在站点自己没填溢价时用插件的值盖掉，
+// 顺便丢掉那条过时的推导常数。用户手填过 rechargePremium 的，一切照旧。
+function providerRecharge(provider, station) {
+  const declared = typeof provider?.preset === "function" ? provider.preset(station) : provider?.preset;
+  const premium = Number(declared?.rechargePremium);
+  if (!Number.isFinite(premium) || premium <= 0) return {};
+  if (Number(station.rechargePremium) > 0) return {};
+  const rechargeRmb = Number(declared.rechargeRmb);
+  const rechargeCredits = Number(declared.rechargeCredits);
+  return {
+    rechargeCurrency: declared.rechargeCurrency,
+    rechargeRmb,
+    rechargeCredits,
+    rechargePremium: premium,
+    rechargeRate: rechargeCredits > 0 && rechargeRmb > 0 ? rechargeRmb / rechargeCredits : 1
+  };
 }

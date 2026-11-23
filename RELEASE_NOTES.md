@@ -1,23 +1,20 @@
-# AI Price Analyzer v0.26.1
+# AI Price Analyzer v0.26.2
 
 ## 修复
 
-- **美元计价站的元价不再写死汇率。** OpenRouter 之前把「1 额度 = ¥7.665」存成常数（2026-11-23 的 7.3 × 1.05），而基准价按实时汇率折算。汇率跌到 6.6813 时，两边尺子不一致，自己跟自己比变成 `+14.72%`，表里 435 行全挂着这个数。现在插件只声明 `rechargePremium: 1.05`（加密充值 5% 手续费），元价由计算层 `pricing.rechargeForCurrency` 用实时汇率乘出来。实测两档汇率（6.68 / 7.3）自比都是 `+5%`，只剩支付手续费这一个真实差价，且不随汇率漂。
-- **仪表盘会说「插件装了但没站点」。** OpenRouter 随 0.26.0 出货后只躺在插件库，没自动变成站点，界面上毫无提示，表现就是「搜不到、表是空的」。统计条新增「未添加站点 N」，空态按站点名册判断，并区分没添加、没采集、被筛光三种情况。
+- **已经加过的 OpenRouter 站点会自己改口径。** 0.26.1 只修了新加的站点：插件声明 `rechargePremium: 1.05`、元价交给实时汇率乘，但老站点配置里还留着上次算出来的 `rechargeRate: 7.665`，插件声明碰不到它，界面上自比照样是 `+14.72%`。现在 `prepareStationInput` 在站点自己没有 `rechargePremium` 时套用插件声明的溢价并清掉那条过时常数，升级刷新即生效，不用删站点重建。手填过溢价的站点一切照旧。
 
 ## 计费口径
 
-- **`rechargePremium` 是站点字段**，含义是「实时汇率之上的支付手续费倍率」，不填按 1 处理，老站点行为不变。存 `rechargeRate`（元价常数）仍然支持，但美元站应该改用 premium，否则汇率一动就对不上基准。
-- **收银台证据里的 `paidRmb` 留空。** OpenRouter 三笔实测（$10.50 / $10.80 / $105.50）是美元金额，人民币金额按实时汇率折，不再写死 7.3 的旧值冒充观测值。
+- **插件声明优先于站点存下的推导值。** `rechargeRate` 是 `rechargeRmb / rechargeCredits` 的推导结果，插件声明了 `rechargePremium` 就说明元价该跟着实时汇率走；把上一次的推导值当用户数据供着，汇率一动就会与基准价脱钩。
 
 ## 兼容性
 
-- 无新增扩展权限。
-- 没有 `rechargePremium` 的站点走原逻辑，`rechargeRate` 常数照旧生效，历史快照不受影响。
-- 版本号护栏：`docs/guide/install.md` 里的扩展版本现在由 `sync-version.mjs` 校验，避免像 0.22.0 那样漂四个版本没人发现。
+- 无新增扩展权限，无 schema 变更。
+- 没有 `rechargePremium` 的站点（全部非美元计价站）走的还是原逻辑。
 
 ## 附件
 
-- `ai-relay-price-extension-v0.26.1.zip`：可直接加载的扩展目录包。
-- `ai-price-analyzer-v0.26.1-source.zip`：扩展与插件两仓的源码快照。
+- `ai-relay-price-extension-v0.26.2.zip`：可直接加载的扩展目录包。
+- `ai-price-analyzer-v0.26.2-source.zip`：扩展与插件两仓的源码快照。
 - `SHA256SUMS.txt`、`update.json`、`update.ps1`：校验与签名更新清单。

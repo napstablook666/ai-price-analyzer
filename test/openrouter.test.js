@@ -4,7 +4,12 @@ import test from "node:test";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
 import { buildComparisonRows, flattenComparisonRows } from "../src/core/pricing.js";
 import { parseOpenRouterData } from "../src/core/openrouter.js";
+import { prepareStationInput } from "../src/core/provider-registry.js";
 import { sitePlugin } from "../src/site-plugins/providers/openrouter.js";
+import { loadSitePlugin } from "../src/site-plugins/loader.js";
+
+// 插件是懒加载的，服务端要先把 provider 注册进注册表，prepareStationInput 才认得 pluginId。
+await loadSitePlugin("openrouter");
 
 // 真实报文裁剪：一条长度档模型 + 它的 :batch 兄弟、无 cache 价的模型、路由占位（-1）、
 // 浮动别名（~ 开头 + alias_target）、:free 变体、时段档模型、按张计价模型。
@@ -102,9 +107,36 @@ test("openrouter：充值折算 = 加密 5% × 实时汇率，自比只剩 5% �
   assert.ok(sitePlugin.preset.rechargePaymentsVerified);
 });
 
-function selfDiffPercent(exchangeRate) {
-  const selfStation = {
+test("openrouter：0.26.0 存下的站点升级后改用实时汇率", () => {
+  // 0.26.0 加出来的站点长这样：元价写死 7.665，没有 premium。
+  const legacy = prepareStationInput({
     id: "openrouter",
+    pluginId: "openrouter",
+    name: "OpenRouter",
+    baseUrl: "https://openrouter.ai/models",
+    priceCurrency: "USD",
+    priceCurrencyVerified: true,
+    rechargeCurrency: "CNY",
+    rechargeRmb: 7.665,
+    rechargeCredits: 1,
+    rechargeRate: 7.665,
+    rechargeRateVerified: true
+  });
+  assert.equal(legacy.rechargePremium, 1.05);
+  assert.equal(legacy.rechargeRate, 1);
+  assert.equal(legacy.rechargeRmb, 1);
+  assert.equal(legacy.priceCurrency, "USD");
+  assert.equal(Number(selfDiffPercent(6.6813, legacy).toFixed(2)), 5);
+  // 手填过溢价的站点不被覆盖。
+  const manual = prepareStationInput({ ...legacy, rechargePremium: 1.2 });
+  assert.equal(manual.rechargePremium, 1.2);
+});
+
+// 自比用的站点：字段取自插件声明，等同于界面上「添加 OpenRouter」后存下来的样子。
+function selfStation() {
+  return {
+    id: "openrouter",
+    pluginId: "openrouter",
     name: "OpenRouter",
     priceCurrency: sitePlugin.preset.priceCurrency,
     priceCurrencyVerified: true,
@@ -115,9 +147,12 @@ function selfDiffPercent(exchangeRate) {
     rechargeRateVerified: true,
     category: "relay"
   };
+}
+
+function selfDiffPercent(exchangeRate, station = selfStation()) {
   const rows = buildComparisonRows({
-    stations: [selfStation],
-    snapshots: [{ stationId: selfStation.id, collectedAt: 1, status: "success", normalized }],
+    stations: [station],
+    snapshots: [{ stationId: station.id, collectedAt: 1, status: "success", normalized }],
     references: {
       models: parseOpenRouterData(STRUCTURED_CLONE(SOURCE)),
       exchangeRate,
