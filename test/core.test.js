@@ -6363,3 +6363,53 @@ test("saves settings automatically instead of behind a global save button", () =
   assert.match(dashboard, /settingsDirty = true;\n\s*settingsStale = true;/);
   assert.match(dashboard, /if \(settingsStale\) \{[\s\S]{0,80}load\(\);/);
 });
+
+test("按用量分档按单次请求长度取一档，同模型只出一行", () => {
+  const rowsFor = perRequest => buildComparisonRows({
+    stations: [{ id: "tiered", name: "Tiered", category: "proxy", priceCurrencyVerified: true, rechargeRateVerified: true }],
+    snapshots: [{
+      stationId: "tiered",
+      collectedAt: 1,
+      status: "success",
+      normalized: {
+        data: [
+          { model_name: "long-ctx", min_tokens: 0, max_tokens: 200000, input_price: 2, output_price: 6, price_currency: "USD" },
+          { model_name: "long-ctx", min_tokens: 200001, max_tokens: null, input_price: 3, output_price: 9, price_currency: "USD" }
+        ]
+      }
+    }],
+    references: { models: [{ name: "long-ctx", provider: "official", input: 2, output: 6 }] },
+    usage: { input: perRequest, output: 0, requests: 1 }
+  });
+
+  const short = rowsFor(10000);
+  const long = rowsFor(300000);
+
+  // 两个长度档必须合成一行，不能一个模型两行。
+  assert.equal(short.length, 1);
+  assert.equal(long.length, 1);
+  // 单次 10K 落在最低档，单次 300K 落在高挡，月成本必须不同。
+  assert.equal(short[0].offers[0].monthlyCost.toFixed(6), "0.020000");
+  assert.equal(long[0].offers[0].monthlyCost.toFixed(6), "0.900000");
+});
+
+test("按用量分档没有用量数据时保留最低档，不整行消失", () => {
+  const [comparison] = buildComparisonRows({
+    stations: [{ id: "tiered", name: "Tiered", category: "proxy", priceCurrencyVerified: true, rechargeRateVerified: true }],
+    snapshots: [{
+      stationId: "tiered",
+      collectedAt: 1,
+      status: "success",
+      normalized: {
+        data: [
+          { model_name: "long-ctx", min_tokens: 0, max_tokens: 200000, input_price: 2, output_price: 6, price_currency: "USD" },
+          { model_name: "long-ctx", min_tokens: 200001, max_tokens: null, input_price: 3, output_price: 9, price_currency: "USD" }
+        ]
+      }
+    }],
+    references: { models: [{ name: "long-ctx", provider: "official", input: 2, output: 6 }] },
+    usage: {}
+  });
+  assert.ok(comparison);
+  assert.equal(comparison.offers[0].prices.input, 2);
+});

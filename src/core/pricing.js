@@ -361,6 +361,17 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
 
     snapshot.normalized.data.forEach((item, itemIndex) => {
       if (item.catalogOnly) return;
+      // 按用量分档（上下文长度区间）只留命中当前单次请求长度的那一档：同一模型在表里只出一行，
+      // 单价与月成本都按这一档算。长度取站点画像的 tokensPerRequest，没配就用估算用量的均值。
+      // 时段档、按秒档不在这里过滤，它们各自成行（见下面 rowTierKey）。
+      if (item.min_tokens != null || item.max_tokens != null) {
+        const length = tokensPerRequest;
+        const lower = item.min_tokens == null ? 0 : Number(item.min_tokens);
+        const upper = item.max_tokens == null ? Infinity : Number(item.max_tokens);
+        // 没有用量数据时保留最低档，保证每个模型仍有代表价，不会整行消失。
+        const missed = length > 0 ? length < lower || length >= upper : lower > 0;
+        if (missed) return;
+      }
       const matches = matchModelWithOverrides(item.model_name, referenceList, { stationId: station.id, index: matchingIndex });
       if (!matches.length && stationCategory !== "public" && !showUnmatched) return;
       const matchResults = matches.length ? matches : [{ match: null, rule: "未匹配", ruleId: "unmatched", confidence: 0 }];
@@ -386,8 +397,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
           const billingMode = billingModeOf(baseCostPrices ?? quotedPrices);
           const mediaType = mediaTypeForPricing(item, { targetField: billingMode });
           const rowMediaKey = mediaType || (billingMode === "image" ? "image" : "text");
-          // 按秒计价的视频档（分辨率）是各自独立的报价，不能像上下文分档那样加权合并。
-          // 每个档位一行：时段档、上下文档、按秒档都各自独立成行，不做加权合并。
+          // 时段档与按秒档（视频分辨率）各自独立成行，每个档一行，不做加权合并。
+          // 上下文长度分档不在这里分行：入口处已按单次请求长度选中一档，同一模型只出一行。
           const rowTierKey = item.tier_name ? `${item.request_unit === "second" ? "second" : "tier"}:${item.tier_name}` : `item:${itemIndex}`;
           const rowKey = [station.id, item.model_name, canonicalModel, group, rowMediaKey, rowTierKey].join("\u0000");
           const row = grouped.get(rowKey) || {

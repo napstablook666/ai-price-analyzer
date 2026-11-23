@@ -121,6 +121,22 @@ function normalizeBillingConditions(value) {
   }).filter(Boolean);
 }
 
+// `time_pricing.periods` 是「基准价 × 时段倍率」的写法，跟 `billing_conditions` 的
+// 「这一档单价就是这个数」不是一回事，所以单独拆行：每段一行，时段外的基准价另算一行。
+function timePeriodVariants(timePricing) {
+  const periods = Array.isArray(timePricing?.periods) ? timePricing.periods : [];
+  const weekdaysOnly = timePricing?.weekdays_only === true;
+  return periods
+    .map(period => {
+      const factor = Number(period?.multiplier);
+      const start = String(period?.start_time || "").slice(0, 5);
+      const end = String(period?.end_time || "").slice(0, 5);
+      if (!Number.isFinite(factor) || factor <= 0 || factor === 1 || !start || !end) return null;
+      return { label: `${weekdaysOnly ? "工作日" : "每日"} ${start}–${end} ×${factor}`, factor };
+    })
+    .filter(Boolean);
+}
+
 function billingConditionsOf(item) {
   const explicit = item?.billing_conditions ?? item?.billingConditions ?? item?.time_conditions ?? item?.timeConditions;
   const conditions = normalizeBillingConditions(explicit);
@@ -320,6 +336,28 @@ function ternaryBranches(expression) {
   return branches;
 }
 
+// 表达式常写成 `(p*2+c*8+cr*0.04)` 或 `(p*2+c*8+cr*0.04)*0.5`：外层括号和顶层倍率都不是价格项，
+// 不剥掉会让系数解析漏掉紧贴括号的那一项（`(p*2` 匹配不上 `p`）。
+function scaledBody(text) {
+  let value = String(text || "").trim();
+  let scale = 1;
+  for (;;) {
+    const scaled = value.match(/^(\([\s\S]*\))\s*([*/])\s*(\d+(?:\.\d+)?|\.\d+)$/);
+    if (!scaled) break;
+    const factor = Number(scaled[3]);
+    if (!Number.isFinite(factor) || factor === 0) break;
+    scale *= scaled[2] === "/" ? 1 / factor : factor;
+    value = scaled[1].trim();
+  }
+  for (;;) {
+    if (!value.startsWith("(")) break;
+    const span = balancedSpan(value, 1);
+    if (!span || span.end !== value.length - 1) break;
+    value = span.body.trim();
+  }
+  return { body: value, scale };
+}
+
 function boundaryOf(condition) {
   const match = String(condition || "").match(TIER_BOUNDARY_PATTERN);
   if (!match) return {};
@@ -392,16 +430,17 @@ export function parseBillingTiers(expression) {
       continue;
     }
     if (/\bu\s*\(/i.test(body)) continue;
+    const { body: priceBody, scale } = scaledBody(body);
     const coefficients = {};
-    for (const term of body.match(/[+-]?[^+-]+/g) || []) {
+    for (const term of priceBody.match(/[+-]?[^+-]+/g) || []) {
       const parts = term.trim().match(/^([+-]?)\s*(?:(\d+(?:\.\d+)?|\.\d+)\s*\*\s*)?([a-z0-9]+)(?:\s*\*\s*(\d+(?:\.\d+)?|\.\d+))?$/i);
       if (!parts) continue;
       const sign = parts[1] === "-" ? -1 : 1;
       const coefficient = Number(parts[2] || parts[4] || 1) * sign;
       coefficients[parts[3].toLowerCase()] = (coefficients[parts[3].toLowerCase()] || 0) + coefficient;
     }
-    const input = Number(coefficients.p || 0);
-    const output = Number(coefficients.c || 0);
+    const input = Number(coefficients.p || 0) * scale;
+    const output = Number(coefficients.c || 0) * scale;
     if (input <= 0 && output <= 0) continue;
     tiers.push({
       name,
@@ -410,9 +449,9 @@ export function parseBillingTiers(expression) {
       ratio: input / SYSTEM_BASE_PRICE_PER_1M,
       completion: input > 0 ? output / input : 1,
       billing: {
-        cacheRead: Number(coefficients.cr || 0),
-        cacheWrite: Number(coefficients.cc || 0),
-        cacheWrite1h: Number(coefficients.cc1h || 0)
+        cacheRead: Number(coefficients.cr || 0) * scale,
+        cacheWrite: Number(coefficients.cc || 0) * scale,
+        cacheWrite1h: Number(coefficients.cc1h || 0) * scale
       },
       unit: "token",
       fixed: null,
@@ -1604,25 +1643,36 @@ export class ModelPlazaStrategy extends ParsingStrategy {
             continue;
           }
           unpricedModels.delete(unpricedTierKey);
-          data.push({
-            model_name: modelName,
-            model_display_name: String(model?.display_name || model?.label || modelName),
-            model_ratio: input === null ? 0 : input / SYSTEM_BASE_PRICE_PER_1M,
-            completion_ratio: input > 0 && output !== null ? output / input : 1,
-            input_price: input,
-            output_price: output,
-            cache_read_price: cacheRead,
-            cache_write_price: cacheWrite,
-            cache_write_1h_price: cacheWrite1h,
-            request_price: null,
-            price_currency: priceCurrency,
-            enable_groups: [groupName],
-            proxy_group_name: groupName,
-            group_ratio: multiplier,
-            ...(tierLabel ? { tier_name: tierLabel } : {}),
-            ...(billingConditions.length ? { billing_conditions: billingConditions } : {}),
-            evidence: "exact"
-          });
+          // 站点把一天切成若干时段、给每段一个乘法器的（`time_pricing.periods`），每段各出一行，
+          // 时段外的基准价也留一行。同一个模型因此会有多行，这不是同一个报价被拆开，是站点真按时间收不同的钱。
+          const timeVariants = timePeriodVariants(model?.time_pricing);
+          // 站点时段外仍按基准价收，所以基准那一行必须留着，时段行接在后面。
+          const rowVariants = timeVariants.length ? [{ label: "", factor: 1 }, ...timeVariants] : [{ label: "", factor: 1 }];
+          for (const rowVariant of rowVariants) {
+            const scaled = value => (value === null ? null : value * rowVariant.factor);
+            const rowInput = scaled(input);
+            const rowOutput = scaled(output);
+            const rowTierLabel = [tierLabel, rowVariant.label].filter(Boolean).join(" ");
+            data.push({
+              model_name: modelName,
+              model_display_name: String(model?.display_name || model?.label || modelName),
+              model_ratio: rowInput === null ? 0 : rowInput / SYSTEM_BASE_PRICE_PER_1M,
+              completion_ratio: rowInput > 0 && rowOutput !== null ? rowOutput / rowInput : 1,
+              input_price: rowInput,
+              output_price: rowOutput,
+              cache_read_price: scaled(cacheRead),
+              cache_write_price: scaled(cacheWrite),
+              cache_write_1h_price: scaled(cacheWrite1h),
+              request_price: null,
+              price_currency: priceCurrency,
+              enable_groups: [groupName],
+              proxy_group_name: groupName,
+              group_ratio: multiplier,
+              ...(rowTierLabel ? { tier_name: rowTierLabel } : {}),
+              ...(billingConditions.length ? { billing_conditions: billingConditions } : {}),
+              evidence: "exact"
+            });
+          }
         }
       }
     }
