@@ -193,7 +193,7 @@ const preset = {
   rechargeRateNote: RECHARGE_NOTE,
   priceCurrency: "USD",
   priceCurrencyVerified: true,
-  priceCurrencyNote: "模型广场单价是美元/token，已含分组倍率（0.099–1.9）；Fast 通道的价单独从 fast_* 字段取，与标准价倍率不固定，单独成「分组 · Fast」报价；峰时倍率不改基础价，未折算。",
+  priceCurrencyNote: "模型广场单价是美元/token，已含分组倍率（0.099–1.9）；Fast 通道价从 fast_* 字段取，与标准价倍率不固定（实测 1x / 1.33x / 2x），按 Fast 档位与标准档并列；峰时倍率不改基础价，未折算。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
