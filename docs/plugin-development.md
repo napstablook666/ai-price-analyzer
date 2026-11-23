@@ -106,6 +106,7 @@ export const sitePlugin = {
 - `request` 决定采集请求怎么发：`requestPolicy(urlOrFn, { credentials })`。`page` 模式通常用 `localStoragePageAuth` / `cookiePageAuth`；登录态只在 HttpOnly cookie 里的站点用 `cookieRefreshAuth({ cookieName, refreshPath, accessTokenPath, expiresAtPath })`，由 service worker 借 DNR 换出 access token。
 - `decodeResponse(payload)` 是同步纯函数：采集器读取主响应并把 `request.aux` 挂到 `payload.__aux` 后、价格校验与归一前调用。可解析 HTML 内嵌 JSON，也可合并多份报价；无钩子时保持原响应。失败向上报错，不回退旧目录，不执行站点脚本。示例见 SpiderAI（HTML）与 Leaflow（目录 + 计费 API）。
 - Leaflow 的目录、充值和计费边界见 [Leaflow 插件取证](./leaflow-research.md)。
+- OpenRouter 的目录口径、长度档形状和充值费率见 [OpenRouter 插件取证](./openrouter-research.md)。
 - `preset` 是插件自带的默认站点模板，首页「添加」用的就是它。
 - `modelAliases` 不要手写，构建器会从 `models.json` 注入。
 

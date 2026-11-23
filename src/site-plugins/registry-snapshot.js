@@ -596,6 +596,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "ai.man8out.com"
       ],
       "needsCode": true
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "version": "0.25.0",
+      "description": "官方聚合站，匿名 /api/v1/models 直连全量价目",
+      "hosts": [
+        "openrouter.ai"
+      ],
+      "needsCode": true
     }
   ]
 };

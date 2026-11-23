@@ -56,5 +56,6 @@ export const SITE_PLUGIN_ORDER = [
   "nexaix",
   "yescode",
   "rightcode",
-  "man8out"
+  "man8out",
+  "openrouter"
 ];

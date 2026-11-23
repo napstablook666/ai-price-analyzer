@@ -38,6 +38,7 @@ export const SITE_LOGOS = {
   "nodeai": "icons/sites/nodeai.png",
   "ooioo": "icons/sites/ooioo.png",
   "openlux": "icons/sites/openlux.svg",
+  "openrouter": "icons/sites/openrouter.svg",
   "packycode": "icons/sites/packycode.svg",
   "poloai": "icons/sites/poloai.svg",
   "pqh": "icons/sites/pqh.png",

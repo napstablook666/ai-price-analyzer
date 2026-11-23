@@ -58,6 +58,7 @@ import { sitePlugin as nexaixPlugin } from "./providers/nexaix.js";
 import { sitePlugin as yescodePlugin } from "./providers/yescode.js";
 import { sitePlugin as rightcodePlugin } from "./providers/rightcode.js";
 import { sitePlugin as man8outPlugin } from "./providers/man8out.js";
+import { sitePlugin as openrouterPlugin } from "./providers/openrouter.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -133,7 +134,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("nexaix", "NexAIX", "nexaix.ai", "direct", () => ({ sitePlugin: nexaixPlugin }), { paths: ["/pricing"], description: "new-api 站点，7 个模型两个分组，匿名直连采集倍率" }),
   entry("yescode", "YesCode", "co.yes.vg", "direct", () => ({ sitePlugin: yescodePlugin }), { paths: ["/model-plaza","/subscription"], description: "sub2api 变体，公开模型目录 61 个模型，自带倍率，另有按次出图" }),
   entry("rightcode", "Right Code", "rightapi.io", "direct", () => ({ sitePlugin: rightcodePlugin }), { paths: ["/pricing","/console"], description: "Spring Boot 站，13 个上游渠道 111 个模型，含上下文分档与按次出图" }),
-  entry("man8out", "Man8Out", "ai.man8out.com", "direct", () => ({ sitePlugin: man8outPlugin }), { paths: ["/modelsmarket"], description: "公开渠道目录，直连采集" })
+  entry("man8out", "Man8Out", "ai.man8out.com", "direct", () => ({ sitePlugin: man8outPlugin }), { paths: ["/modelsmarket"], description: "公开渠道目录，直连采集" }),
+  entry("openrouter", "OpenRouter", "openrouter.ai", "direct", () => ({ sitePlugin: openrouterPlugin }), { paths: ["/","/models","/settings/credits","/workspaces"], description: "官方聚合站，匿名 /api/v1/models 直连全量价目" })
 ];
 
 export function sitePluginById(id) {
