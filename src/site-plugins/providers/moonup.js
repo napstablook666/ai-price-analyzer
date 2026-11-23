@@ -65,6 +65,28 @@ function tokenIntervalsOf(pricing, ratio) {
   }).filter(cell => cell.input !== null || cell.output !== null);
 }
 
+// Fast 通道与标准价不是固定倍率关系（实测同一模型不同上下文档分别 1.0x / 1.33x / 2x），
+// 所以单独摊一组区间，按「分组 · Fast」报价，不去拿标准价乘系数。
+function fastIntervalsOf(pricing, ratio) {
+  const intervals = Array.isArray(pricing?.context_intervals) && pricing.context_intervals.length
+    ? pricing.context_intervals
+    : [pricing];
+  return intervals.map((interval, index) => {
+    const min = finiteOrNull(interval?.min_tokens);
+    const max = finiteOrNull(interval?.max_tokens);
+    const label = intervalLabel(min, max, index, intervals.length);
+    return {
+      input: perMillionBase(interval?.fast_input_price_per_token, ratio),
+      output: perMillionBase(interval?.fast_output_price_per_token, ratio),
+      cacheRead: perMillionBase(interval?.fast_cache_read_price_per_token, ratio),
+      cacheWrite: perMillionBase(interval?.fast_cache_write_price_per_token, ratio),
+      label: label ? `Fast ${label}` : "Fast",
+      ...(min !== null && min > 0 ? { min_tokens: min } : {}),
+      ...(max !== null && max > 0 ? { max_tokens: max } : {})
+    };
+  }).filter(cell => cell.input !== null || cell.output !== null);
+}
+
 function imageSizesOf(pricing, ratio) {
   return IMAGE_TIER_FIELDS
     .map(({ name, field }) => ({ name, price: basePrice(pricing[field], ratio) }))
@@ -108,6 +130,10 @@ function decodeMarketplace(payload) {
         item.intervals = tokenIntervalsOf(pricing, divisor);
       }
       items.push(item);
+      const fastIntervals = mode === "image" ? [] : fastIntervalsOf(pricing, divisor);
+      if (fastIntervals.length) {
+        items.push({ ...item, enable_groups: [`${groupName} · Fast`], intervals: fastIntervals });
+      }
     }
   }
   return { ...payload, data: items };
@@ -167,7 +193,7 @@ const preset = {
   rechargeRateNote: RECHARGE_NOTE,
   priceCurrency: "USD",
   priceCurrencyVerified: true,
-  priceCurrencyNote: "模型广场单价是美元/token，已含分组倍率（0.099–1.9）；Fast 通道约 2 倍价（fast_* 字段）与 DeepSeek 峰时 2 倍都不改基础价，未折算。",
+  priceCurrencyNote: "模型广场单价是美元/token，已含分组倍率（0.099–1.9）；Fast 通道的价单独从 fast_* 字段取，与标准价倍率不固定，单独成「分组 · Fast」报价；峰时倍率不改基础价，未折算。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },

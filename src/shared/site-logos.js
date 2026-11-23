@@ -20,7 +20,7 @@ export const SITE_LOGOS = {
   "leaflow": "icons/sites/leaflow.svg",
   "liuguang": "icons/sites/liuguang.svg",
   "maolaoapi": "icons/sites/maolaoapi.svg",
-  "moonup": "icons/sites/moonup.png",
+  "moonup": "icons/sites/moonup.svg",
   "newcodex": "icons/sites/newcodex.svg",
   "nexavlinks": "icons/sites/nexavlinks.png",
   "nodeai": "icons/sites/nodeai.png",
