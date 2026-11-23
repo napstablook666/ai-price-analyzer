@@ -27,7 +27,7 @@ import { tokenfluxPriceMap } from "../../core/price-maps/tokenflux.js";
 // 已是当前生效档的折后价（闲时 $0.09/百万 ↔ 页面 ¥0.63，忙时翻倍）。
 // 比价表报当前价；到忙时段站点自己把头部价格翻倍，无需本地处理。
 
-const RECHARGE_NOTE = "公开 /api/pricing 与 /api/status 匿名可读，但 /api/user/topup/info、/api/wallet/info 等充值报文匿名一律 401/403，未取到登录态报文。status 的 usd_exchange_rate=7、price=7 只是展示换算系数，不构成充值比例证据。rechargeRateVerified=false，不从展示系数推断充值比；缺的是登录态下的 amount_options、discount、min_topup 三证。";
+const RECHARGE_NOTE = "公开 /api/pricing 与 /api/status 匿名可读；站点文档自述人民币/美元两种充值、以美元等额换算，支付页显示参考汇率（/docs/eapi-codex-claude#recharge），但档位金额、折扣、最低充值只在登录后的 /api/user/topup/info，匿名 401/403。status 的 usd_exchange_rate=7、price=7 是展示换算系数，不构成充值比例证据。rechargeRateVerified=false，缺登录态的 amount_options、discount、min_topup 三证。";
 
 const PRICE_MAP = {
   base: "tokenflux",
