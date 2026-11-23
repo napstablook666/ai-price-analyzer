@@ -462,6 +462,96 @@ const killAiPricingFixture = {
   }]
 };
 
+// 克劳德 APi 的真实响应裁剪版：GPT 组 0.2x 带 ≤272K / >272K 两档，claude 组 0.9x 不分档。
+const kelaodeFixture = {
+  code: 0,
+  message: "success",
+  data: {
+    description: "1 人民币=1 美刀",
+    groups: [
+      {
+        id: 5,
+        name: "GPT 官方满血不降智分组",
+        platform: "openai",
+        rate_multiplier: 0.2,
+        peak_rate_enabled: false,
+        peak_rate_multiplier: 1,
+        image_rate_independent: false,
+        image_rate_multiplier: 1,
+        video_rate_independent: false,
+        video_rate_multiplier: 1,
+        long_context_pricing_enabled: true,
+        models: [{
+          name: "gpt-5.6",
+          platform: "openai",
+          long_context_basis: "input_tokens",
+          pricing: {
+            billing_mode: "token",
+            input_price: 0.000005,
+            output_price: 0.00003,
+            cache_write_price: 0.00000625,
+            cache_write_1h_price: 0.00000625,
+            cache_read_price: 0.0000005,
+            image_input_price: null,
+            image_output_price: null,
+            per_request_price: null,
+            intervals: [{
+              min_tokens: 0,
+              max_tokens: 272000,
+              tier_label: "≤272K",
+              input_price: 0.000005,
+              output_price: 0.00003,
+              cache_write_price: 0.00000625,
+              cache_write_1h_price: 0.00000625,
+              cache_read_price: 0.0000005,
+              per_request_price: null
+            }, {
+              min_tokens: 272000,
+              max_tokens: null,
+              tier_label: ">272K",
+              input_price: 0.00001,
+              output_price: 0.000045,
+              cache_write_price: 0.0000125,
+              cache_write_1h_price: 0.0000125,
+              cache_read_price: 0.000001,
+              per_request_price: null
+            }]
+          }
+        }]
+      },
+      {
+        id: 1,
+        name: "claude max 官方满血号池",
+        platform: "anthropic",
+        rate_multiplier: 0.9,
+        peak_rate_enabled: false,
+        peak_rate_multiplier: 1,
+        image_rate_independent: false,
+        image_rate_multiplier: 1,
+        video_rate_independent: false,
+        video_rate_multiplier: 1,
+        long_context_pricing_enabled: true,
+        models: [{
+          name: "claude-opus-5-5",
+          platform: "anthropic",
+          pricing: {
+            billing_mode: "token",
+            input_price: 0.000004,
+            output_price: 0.00002,
+            cache_write_price: 0.000005,
+            cache_write_1h_price: 0.000008,
+            cache_read_price: 0.0000002,
+            image_input_price: null,
+            image_output_price: null,
+            per_request_price: null,
+            intervals: []
+          }
+        }]
+      }
+    ]
+  }
+};
+
 const fuckEveryoneFixture = {
   code: 0,
   message: "success",
@@ -2471,6 +2561,24 @@ test("adds the Hepingan station preset", () => {
   assert.equal(stations[1].adapter.endpoint, HEPINGAN_CHANNELS_ENDPOINT);
 });
 
+test("adds the kelaode station preset and keeps its authenticated plaza settings", () => {
+  const provider = providerById("kelaode");
+  const stations = addProviderStationPresets([{ id: "one", baseUrl: "https://soleapi.com" }], [provider], { exchangeRate: 8.2 });
+  assert.equal(stations.length, 2);
+  assert.equal(stations[1].id, "kelaode");
+  assert.equal(stations[1].baseUrl, "https://api.kelaode.si/model-plaza");
+  assert.equal(stations[1].mode, "page");
+  assert.equal(stations[1].adapter.endpoint, "/api/v1/model-plaza");
+  assert.equal(stations[1].adapter.responseFormat, "kelaode-model-plaza");
+  // 模型广场要登录，支付页 4% 手续费是实测值，都不该被全局汇率覆盖。
+  assert.equal(stations[1].rechargeRmb, 1.04);
+  assert.equal(stations[1].rechargeCurrency, "CNY");
+  assert.equal(stations[1].rechargeCredits, 1);
+  assert.equal(stations[1].rechargeRateVerified, true);
+  assert.equal(stations[1].priceCurrency, "USD");
+  assert.equal(normalizeStation(stations[1]).rechargeRate, 1.04);
+});
+
 test("injects every registry preset and forwards the exchange rate", () => {
   const current = [{ id: "existing", baseUrl: "https://relay.example" }];
   const stations = addProviderStationPresets(current, PROVIDER_REGISTRY, { exchangeRate: 8.2 });
@@ -2829,6 +2937,29 @@ test("does not misclassify NodeAI model-plaza payloads in auto mode", () => {
   const normalized = normalizePricingPayload(nodeAiFixture);
   assert.equal(normalized.sourceFormat, "unknown");
   assert.deepEqual(normalized.data, []);
+});
+
+test("normalizes kelaode model-plaza USD pricing with group multipliers and long-context tiers", () => {
+  const normalized = normalizePricingPayload(kelaodeFixture, "kelaode-model-plaza");
+  assert.equal(normalized.sourceFormat, "kelaode-model-plaza");
+  assert.deepEqual(normalized.group_ratio, { "GPT 官方满血不降智分组": 0.2, "claude max 官方满血号池": 0.9 });
+  assert.ok(normalized.data.every(model => model.price_currency === "USD"));
+
+  const tiers = normalized.data.filter(model => model.model_name === "gpt-5.6");
+  assert.deepEqual(tiers.map(model => model.tier_name), ["≤272K", ">272K"]);
+  assert.ok(Math.abs(tiers[0].input_price - 1) < 1e-12);
+  assert.ok(Math.abs(tiers[0].output_price - 6) < 1e-12);
+  assert.ok(Math.abs(tiers[1].input_price - 2) < 1e-12);
+  assert.ok(Math.abs(tiers[1].output_price - 9) < 1e-12);
+
+  const opus = normalized.data.find(model => model.model_name === "claude-opus-5-5");
+  assert.equal(opus.enable_groups[0], "claude max 官方满血号池");
+  assert.ok(Math.abs(opus.input_price - 3.6) < 1e-12);
+  assert.ok(Math.abs(opus.output_price - 18) < 1e-12);
+  assert.ok(Math.abs(opus.cache_read_price - 0.18) < 1e-12);
+  assert.ok(Math.abs(opus.cache_write_1h_price - 7.2) < 1e-12);
+  assert.equal(normalized.invalidPricingValues, undefined);
+  assert.equal(normalized.unpricedModels, undefined);
 });
 
 test("normalizes fuck-everyone model-plaza token, image, and per-request pricing", () => {

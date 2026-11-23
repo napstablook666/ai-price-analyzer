@@ -8,6 +8,7 @@ const definitions = {
   "killai-model-plaza": { label: "KillAI 模型广场", explicit: true, strategy: "model-plaza", profile: "killai" },
   "all-in-one-models": { label: "all-in-one.icu 租户模型", explicit: true, strategy: "all-in-one-models" },
   "fuck-everyone-model-plaza": { label: "fuck-everyone 模型广场", explicit: true, strategy: "model-plaza", profile: "fuck-everyone" },
+  "kelaode-model-plaza": { label: "克劳德 APi 模型广场", explicit: true, strategy: "model-plaza", profile: "kelaode" },
   "tokenflux": { label: "TokenFlux 定价", explicit: true, strategy: "tokenflux" },
   "windhub": { label: "WindHub 公开定价", explicit: true, strategy: "windhub" },
   "stellaisle": { label: "Star API 公开定价", explicit: true, strategy: "stellaisle" },

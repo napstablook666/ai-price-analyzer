@@ -29,6 +29,7 @@ export const STELLAISLE_CARPOOL_ENDPOINT = "/api/carpool-market?availability=ava
 export const RELAYROUTER_PRICING_ENDPOINT = DEFAULT_PRICING_ENDPOINT;
 export const SEVENAI_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza?timezone=Asia%2FShanghai";
 export const FUCK_EVERYONE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
+export const KELAODE_MODEL_PLAZA_ENDPOINT = "/api/v1/model-plaza";
 export const TRUE_SOTA_MODEL_PRICING_ENDPOINT = "/api/v1/model-pricing";
 export const NEXA_CHANNEL_CATALOG_ENDPOINT = "/api/v1/channels/catalog?available_only=true&timezone=Asia%2FShanghai";
 export const AIAPI_MODEL_CATALOG_ENDPOINT = "/api/me/model-catalog";

@@ -39,6 +39,7 @@ import { sitePlugin as ooiooPlugin } from "./providers/ooioo.js";
 import { sitePlugin as eapiPlugin } from "./providers/eapi.js";
 import { sitePlugin as moonupPlugin } from "./providers/moonup.js";
 import { sitePlugin as velamostPlugin } from "./providers/velamost.js";
+import { sitePlugin as kelaodePlugin } from "./providers/kelaode.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -95,7 +96,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("ooioo", "ooioo", "ooioo.work", "direct", () => ({ sitePlugin: ooiooPlugin }), { hosts: ["ooioo.work","oo1oo.work","00i00.work"], paths: ["/","/pricing","/console/topup"], description: "匿名 /api/pricing 直连采集，37 个模型、7 个分组；全按 token 计费，USD 报价；充值比例按公开文档记 1:1，档位未登录核验" }),
   entry("eapi", "E-API", "eapi.site", "direct", () => ({ sitePlugin: eapiPlugin }), { paths: ["/pricing"], description: "匿名模型广场报价；per_token 按折后美元/百万、fixed 按张计；充值 ¥7 = $1 额度（登录态 offers 取证）" }),
   entry("moonup", "MoonUp", "moonup.dev", "direct", () => ({ sitePlugin: moonupPlugin }), { paths: ["/","/models"], description: "订阅制 API 转换平台，公开模型广场直连采集" }),
-  entry("velamost", "VelaMost", "velamost.com", "direct", () => ({ sitePlugin: velamostPlugin }), { paths: ["/pricing"], description: "公开 /api/pricing 直连采集，92 个模型；分组倍率报文内自带，美元计价；充值比例需登录未验证" })
+  entry("velamost", "VelaMost", "velamost.com", "direct", () => ({ sitePlugin: velamostPlugin }), { paths: ["/pricing"], description: "公开 /api/pricing 直连采集，92 个模型；分组倍率报文内自带，美元计价；充值比例需登录未验证" }),
+  entry("kelaode", "克劳德 APi", "api.kelaode.si", "page", () => ({ sitePlugin: kelaodePlugin }), { paths: ["/model-plaza"], description: "模型广场要求登录，复用浏览器登录态，token 过期自动续期" })
 ];
 
 export function sitePluginById(id) {

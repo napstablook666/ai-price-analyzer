@@ -37,5 +37,6 @@ export const SITE_PLUGIN_ORDER = [
   "ooioo",
   "eapi",
   "moonup",
-  "velamost"
+  "velamost",
+  "kelaode"
 ];

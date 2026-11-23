@@ -1372,6 +1372,26 @@ const MODEL_PLAZA_PROFILES = Object.freeze({
       return groupMultiplier;
     },
     nonTokenBilling: Object.freeze({ image: "image", per_request: "request", video: "request" })
+  },
+  // 克劳德 APi：sub2api 面板的模型广场，价格按美元 / 1M token 标，实付 = 官方价 × 分组倍率。
+  // 长上下文分档（GPT 组 ≤272K / >272K，claude-haiku-5-5 ≤100K / >100K）都真实生效，所以保留全部档位。
+  kelaode: {
+    sourceFormat: "kelaode-model-plaza",
+    label: "克劳德 APi",
+    currency: "USD",
+    preserveImageTokenPrices: true,
+    intervalMode: "all",
+    groupMultiplier: group => {
+      const value = group?.user_rate_multiplier ?? group?.rate_multiplier;
+      return value === null || value === undefined || value === "" ? 1 : finitePrice(value);
+    },
+    nonTokenMultiplier: (group, billingMode, groupMultiplier) => {
+      const independentField = billingMode === "image" ? "image_rate_independent" : billingMode === "per_request" ? "video_rate_independent" : "";
+      const multiplierField = billingMode === "image" ? "image_rate_multiplier" : billingMode === "per_request" ? "video_rate_multiplier" : "";
+      if (independentField && group?.[independentField] === true) return finitePrice(group?.[multiplierField]);
+      return groupMultiplier;
+    },
+    nonTokenBilling: Object.freeze({ image: "image", per_request: "request", video: "request" })
   }
 });
 

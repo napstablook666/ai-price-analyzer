@@ -392,6 +392,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "velamost.com"
       ],
       "needsCode": true
+    },
+    {
+      "id": "kelaode",
+      "name": "克劳德 APi",
+      "version": "0.23.0",
+      "description": "模型广场要求登录，复用浏览器登录态，token 过期自动续期",
+      "hosts": [
+        "api.kelaode.si"
+      ],
+      "needsCode": true
     }
   ]
 };
