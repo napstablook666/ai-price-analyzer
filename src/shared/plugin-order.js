@@ -35,5 +35,6 @@ export const SITE_PLUGIN_ORDER = [
   "leaflow",
   "juziai",
   "ooioo",
-  "eapi"
+  "eapi",
+  "moonup"
 ];

@@ -372,6 +372,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "eapi.site"
       ],
       "needsCode": true
+    },
+    {
+      "id": "moonup",
+      "name": "MoonUp",
+      "version": "0.21.0",
+      "description": "订阅制 API 转换平台，公开模型广场直连采集",
+      "hosts": [
+        "moonup.dev"
+      ],
+      "needsCode": true
     }
   ]
 };
