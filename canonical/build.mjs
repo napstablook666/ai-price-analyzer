@@ -13,6 +13,7 @@
 //   3. 小写，`.` `_` 一律当作 `-`
 //   4. 不做任何版本数字合并，v4.1 与 v4 是两个模型
 //   5. 入口集合只收 OpenRouter 收录的身份；models.dev 独有的身份不进表，仅以别名并入相邻组
+//      例外：SUPPLEMENT_IDENTITIES 白名单里的身份（OpenRouter 未收录的图像模型）允许进场
 
 import fs from "node:fs";
 import path from "node:path";
@@ -25,6 +26,14 @@ const CACHE_DIR = path.join(HERE, ".cache");
 const MODELS_DEV_URL = "https://models.dev/api.json";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
 const OFFLINE = process.argv.includes("--offline");
+
+// models.dev 已收录、OpenRouter 尚未收录的图像模型身份。
+// 这类 id 只靠 OpenRouter 入口集合会被整组丢弃，站内写法匹配不到规范身份，跨站比价在这些模型上断链；
+// 白名单里缺源的 key 会被跳过，不影响其它身份。
+const SUPPLEMENT_IDENTITIES = new Set([
+  "gpt-image-2-5",
+  "gpt-image-2-6"
+]);
 
 export const stripDecoration = stripModelDecoration;
 export const bareSpelling = bareModelSpelling;
@@ -121,6 +130,12 @@ export function buildCanonicalTable(modelsDev, openRouter) {
     group.providers.add("openrouter");
     if (Number.isFinite(Number(model?.context_length))) group.limits.push({ context: Number(model.context_length), output: 0 });
   }
+  // 白名单身份即使 OpenRouter 没收录也允许进场（来源仍只有 models.dev 的行）。
+  for (const key of SUPPLEMENT_IDENTITIES) {
+    const group = groups.get(key);
+    if (group) group.openrouter = true;
+  }
+
 
   const models = [];
   for (const [key, group] of groups) {
