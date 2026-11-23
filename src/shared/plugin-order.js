@@ -46,6 +46,7 @@ export const SITE_PLUGIN_ORDER = [
   "kuaipao",
   "packycode",
   "pqh",
+  "undying",
   "xkrelay",
   "zerocat"
 ];

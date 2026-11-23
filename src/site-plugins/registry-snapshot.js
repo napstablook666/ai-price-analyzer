@@ -485,6 +485,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
+      "id": "undying",
+      "name": "Undy API",
+      "version": "0.24.0",
+      "description": "公开定价接口直连采集，88 个模型 75 个分组（倍率 0.37 ~ 11（40 档））；充值 1 美元额度 = ¥7.3",
+      "hosts": [
+        "undyapi.com",
+        "www.undyapi.com"
+      ],
+      "needsCode": true
+    },
+    {
       "id": "xkrelay",
       "name": "深空API",
       "version": "0.24.0",

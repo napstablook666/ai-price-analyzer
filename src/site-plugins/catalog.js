@@ -47,6 +47,7 @@ import { sitePlugin as corecodePlugin } from "./providers/corecode.js";
 import { sitePlugin as kuaipaoPlugin } from "./providers/kuaipao.js";
 import { sitePlugin as packycodePlugin } from "./providers/packycode.js";
 import { sitePlugin as pqhPlugin } from "./providers/pqh.js";
+import { sitePlugin as undyingPlugin } from "./providers/undying.js";
 import { sitePlugin as xkrelayPlugin } from "./providers/xkrelay.js";
 import { sitePlugin as zerocatPlugin } from "./providers/zerocat.js";
 
@@ -114,6 +115,7 @@ export const SITE_PLUGIN_CATALOG = [
   entry("kuaipao", "快跑AI", "kuaipao.ai", "direct", () => ({ sitePlugin: kuaipaoPlugin }), { hosts: ["kuaipao.ai","kuaipao.pro","www.kuaipao.ai","www.kuaipao.pro"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，123 个模型 19 个分组（倍率 0.2 ~ 15.3）；充值 1 美元额度 = ¥0.4" }),
   entry("packycode", "packycode", "packycode.com", "direct", () => ({ sitePlugin: packycodePlugin }), { hosts: ["packycode.com","packyapi.com","www.packycode.com","www.packyapi.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，78 个模型 25 个分组（倍率 0.3 ~ 7）；充值 1 美元额度 = ¥7" }),
   entry("pqh", "PQH 中转站", "pqh.ai", "direct", () => ({ sitePlugin: pqhPlugin }), { hosts: ["pqh.ai","www.pqh.ai"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，108 个模型 53 个分组（倍率 0.12 ~ 2.6（25 档））；充值 1 美元额度 = ¥7.3" }),
+  entry("undying", "Undy API", "undyapi.com", "direct", () => ({ sitePlugin: undyingPlugin }), { hosts: ["undyapi.com","www.undyapi.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，88 个模型 75 个分组（倍率 0.37 ~ 11（40 档））；充值 1 美元额度 = ¥7.3" }),
   entry("xkrelay", "深空API", "xkrelay.com", "direct", () => ({ sitePlugin: xkrelayPlugin }), { hosts: ["xkrelay.com","www.xkrelay.com"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，71 个模型 26 个分组（倍率 0.08 ~ 1.5（16 档））；充值 1 元 = 1 美元额度" }),
   entry("zerocat", "ZeroCat", "zero.cat", "direct", () => ({ sitePlugin: zerocatPlugin }), { hosts: ["zero.cat","www.zero.cat"], paths: ["/","/pricing","/console/topup"], description: "公开定价接口直连采集，67 个模型 11 个分组（倍率 0.04 ~ 1.5）；充值 1 元 = 1 美元额度" })
 ];

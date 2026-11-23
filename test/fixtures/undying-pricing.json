@@ -1,0 +1,1987 @@
+{
+ "auto_groups": [
+  "default"
+ ],
+ "data": [
+  {
+   "model_name": "gemini-3.5-flash",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini超级稳定"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.5 + c * 9 + cr * 0.15)",
+   "pricing_version": "5a90f2b86c08bd983a9a2e6d66c255f4eaef9c4bc934386d2b6ae84ef0ff1f1f"
+  },
+  {
+   "model_name": "claude-fable-5",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "aws-bedrock",
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 10 + c * 50 + cr * 1 + cc * 12.5 + cc1h * 20)"
+  },
+  {
+   "model_name": "o1-2024-12-17",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 15 + c * 60 + cr * 7.5)"
+  },
+  {
+   "model_name": "gemini-2.5-flash-nothinking",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.15,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.33,
+   "enable_groups": [
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini超级稳定"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-4-argon",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gemini超级稳定"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.1 + cc * 0.1 + cc1h * 0.1)"
+  },
+  {
+   "model_name": "o3-mini-2025-01-31-medium",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.55,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.25 + c * 10 + cr * 0.125)"
+  },
+  {
+   "model_name": "gpt-5.4",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(len <= 272000) ? tier(\"tier_1\", p * 2.5 + c * 15 + cr * 0.25) : (tier(\"tier_2\", p * 5 + c * 22.5 + cr * 0.5))"
+  },
+  {
+   "model_name": "claude-opus-4-6-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "aws",
+    "awsb",
+    "az-claude",
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-4o-mini",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.15 + c * 0.6 + cr * 0.075)"
+  },
+  {
+   "model_name": "gpt-5.4-nano",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6.25,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.2 + c * 1.25)"
+  },
+  {
+   "model_name": "gpt-5.4-pro",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(len <= 272000) ? tier(\"tier_1\", p * 30 + c * 180) : (tier(\"tier_2\", p * 60 + c * 270))"
+  },
+  {
+   "model_name": "gemini-2.5-pro",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "default",
+    "gemini-cli逆向",
+    "gemini-cli逆向散户",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(len <= 200000) ? tier(\"tier_1\", p * 1.25 + c * 10 + cr * 0.125) : (tier(\"tier_2\", p * 2.5 + c * 15 + cr * 0.25))"
+  },
+  {
+   "model_name": "gemini-2.5-pro-thinking-128",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.625,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-haiku-4-5-20251001-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "awsb",
+    "az-claude",
+    "claude-code",
+    "github-claude",
+    "aws"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-4.1-2025-04-14",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 8 + cr * 0.5)"
+  },
+  {
+   "model_name": "o3-mini-high",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.55,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-2.5-flash-image",
+   "vendor_id": 1,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.15,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "vertex-ai",
+    "ai-studio",
+    "default",
+    "gemini官方正价",
+    "nano banana绘图"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-2.5-flash-image-preview",
+   "vendor_id": 1,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.3,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "ai-studio",
+    "default",
+    "gemini官方正价",
+    "nano banana绘图",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-5-20251101-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "awsb",
+    "az-claude",
+    "claude",
+    "claude-code",
+    "github-claude",
+    "aws"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-1-20250805",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "claude",
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 15 + c * 75 + cr * 1.5 + cc * 18.75 + cc1h * 30)"
+  },
+  {
+   "model_name": "claude-3-5-haiku-20241022",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.4,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-4.1",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 8 + cr * 1)"
+  },
+  {
+   "model_name": "gpt-4.1-nano",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.1 + c * 0.4)"
+  },
+  {
+   "model_name": "gemini-3.1-flash-lite-preview",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.25 + c * 1.5 + cr * 0.025)"
+  },
+  {
+   "model_name": "gemini-3.6-flash",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini-ant逆向",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.75 + c * 3.75 + cr * 0.075)"
+  },
+  {
+   "model_name": "claude-sonnet-5",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "az-claude",
+    "claude-code",
+    "github-claude",
+    "aws",
+    "aws-bedrock",
+    "awsb"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 10 + cr * 0.2 + cc * 2.5 + cc1h * 4)"
+  },
+  {
+   "model_name": "gpt-5.4-nano-2026-03-17",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6.25,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.2 + c * 1.25)"
+  },
+  {
+   "model_name": "gemini-2.5-pro-thinking",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.625,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-2.5-pro-thinking-512",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.625,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "ai-studio",
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3-flash-preview-thinking-128",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.25,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "vertex-ai",
+    "ai-studio",
+    "default",
+    "gemini-ant逆向",
+    "gemini超级稳定"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3-pro-image-preview",
+   "vendor_id": 1,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.33,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "ai-studio",
+    "default",
+    "gemini官方正价",
+    "nano banana绘图",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3-pro-preview",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio",
+    "default"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 12 + cr * 0.2)"
+  },
+  {
+   "model_name": "claude-opus-4-6-high",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.5-flash-lite",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gemini超级稳定"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.3 + c * 2.499999999999 + cr * 0.03)"
+  },
+  {
+   "model_name": "o3-mini-medium",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.55,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-flash-image-preview",
+   "vendor_id": 1,
+   "quota_type": 1,
+   "model_ratio": 0,
+   "model_price": 0.1655,
+   "owner_by": "",
+   "completion_ratio": 0,
+   "enable_groups": [
+    "ai-studio",
+    "default",
+    "gemini官方正价",
+    "nano banana绘图",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-pro",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-5-20250929-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1.496,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "aws",
+    "awsb",
+    "az-claude",
+    "claude",
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-3-5-sonnet-20241022",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-20250514-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 7.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-4.1-mini-2025-04-14",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.4 + c * 1.6 + cr * 0.1)"
+  },
+  {
+   "model_name": "gpt-5.1",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.25 + c * 10 + cr * 0.125)"
+  },
+  {
+   "model_name": "o3",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 8 + cr * 0.5)"
+  },
+  {
+   "model_name": "claude-opus-4-8",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "aws-bedrock",
+    "awsb",
+    "az-claude",
+    "claude-code",
+    "github-claude",
+    "aws"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "gpt-image-2",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "default"
+   ],
+   "supported_endpoint_types": [
+    "image-generation",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 30 + img * 8)"
+  },
+  {
+   "model_name": "gpt-5.4-pro-2026-03-05",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(len <= 272000) ? tier(\"tier_1\", p * 30 + c * 180) : (tier(\"tier_2\", p * 60 + c * 270))"
+  },
+  {
+   "model_name": "gemini-3.7-flash",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "vertex-ai",
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini-ant逆向",
+    "gemini超级稳定",
+    "svip"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.75 + c * 3.75 + cr * 0.075)"
+  },
+  {
+   "model_name": "claude-haiku-4-5-20251001",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "github-claude",
+    "aws",
+    "aws-bedrock",
+    "awsb",
+    "az-claude",
+    "claude",
+    "claude-code",
+    "claude-max"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1 + c * 5 + cr * 0.1 + cc * 1.25 + cc1h * 2)"
+  },
+  {
+   "model_name": "gpt-4.1-nano-2025-04-14",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.1 + c * 0.4 + cr * 0.025)"
+  },
+  {
+   "model_name": "o1",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 15 + c * 60 + cr * 7.5)"
+  },
+  {
+   "model_name": "o3-mini-low",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.55,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-pro-preview",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gemini-ant逆向",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio",
+    "default"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(len <= 200000) ? tier(\"tier_1\", p * 2 + c * 12 + cr * 0.2) : (tier(\"tier_2\", p * 4 + c * 18 + cr * 0.4))"
+  },
+  {
+   "model_name": "gemini-3.8-flash",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini-ant逆向",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.75 + c * 3.75 + cr * 0.075)"
+  },
+  {
+   "model_name": "claude-opus-4-7",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "claude-code",
+    "github-claude",
+    "aws",
+    "aws-bedrock",
+    "awsb",
+    "az-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "claude-3-5-sonnet-20240620",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-4o",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2.5 + c * 10 + cr * 1.25)"
+  },
+  {
+   "model_name": "o3-mini-2025-01-31-high",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.55,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "o3-2025-04-16",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 2 + c * 8 + cr * 0.5)"
+  },
+  {
+   "model_name": "claude-opus-5",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "aws-bedrock"
+   ],
+   "supported_endpoint_types": [
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "anthropic",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "gpt-5.5",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "(len <= 272000) ? tier(\"tier_1\", p * 5 + c * 30 + cr * 0.5) : (tier(\"tier_2\", p * 10 + c * 45 + cr * 1))"
+  },
+  {
+   "model_name": "claude-opus-4-1-20250805-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 7.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3-flash-preview",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "default",
+    "gemini-ant逆向",
+    "gemini-cli逆向",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip",
+    "ai-studio"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.5 + c * 3 + cr * 0.05)"
+  },
+  {
+   "model_name": "gemini-3.1-pro-preview-thinking-128",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "ai-studio",
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-5-20251101",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "claude-code",
+    "claude-max",
+    "github-claude",
+    "aws",
+    "aws-bedrock",
+    "awsb",
+    "az-claude",
+    "claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "claude-opus-4-7-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "awsb",
+    "az-claude",
+    "claude-code",
+    "github-claude",
+    "aws"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-6-thinking",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "az-claude",
+    "claude-code",
+    "github-claude",
+    "aws",
+    "awsb"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-20250514",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "claude",
+    "claude-code",
+    "claude-max",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.3 + cc * 3.75 + cc1h * 6)"
+  },
+  {
+   "model_name": "o3-mini-2025-01-31",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.1 + c * 4.4 + cr * 0.55)"
+  },
+  {
+   "model_name": "claude-3-7-sonnet-20250219",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 1.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gemini-3.1-flash-lite",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gemini超级稳定"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.25 + c * 1.5 + cr * 0.025)"
+  },
+  {
+   "model_name": "gemini-2.5-pro-nothinking",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 0.625,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "vip",
+    "ai-studio",
+    "default",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-sonnet-4-6",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "awsb",
+    "az-claude",
+    "claude",
+    "claude-code",
+    "claude-max",
+    "github-claude",
+    "aws",
+    "aws-bedrock"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.3 + cc * 3.75 + cc1h * 6)"
+  },
+  {
+   "model_name": "gpt-4.1-mini",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 2,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.4 + c * 1.6)"
+  },
+  {
+   "model_name": "o4-mini",
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "gpt-4",
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.1 + c * 4.4 + cr * 0.275)"
+  },
+  {
+   "model_name": "o4-mini-2025-04-16",
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 1,
+   "enable_groups": [
+    "gpt-4",
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.1 + c * 4.4 + cr * 0.275)"
+  },
+  {
+   "model_name": "gpt-5-mini",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.25 + c * 2 + cr * 0.025)"
+  },
+  {
+   "model_name": "gemini-2.5-flash",
+   "vendor_id": 1,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 8.333333333333334,
+   "enable_groups": [
+    "ai-studio",
+    "default",
+    "gemini-ant逆向",
+    "gemini超级稳定",
+    "svip",
+    "vertex-ai",
+    "vip"
+   ],
+   "supported_endpoint_types": [
+    "gemini",
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.3 + c * 2.502 + cr * 0.03)"
+  },
+  {
+   "model_name": "claude-opus-4-6",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "aws-bedrock",
+    "awsb",
+    "az-claude",
+    "claude",
+    "claude-code",
+    "claude-max",
+    "github-claude",
+    "aws"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 5 + c * 25 + cr * 0.5 + cc * 6.25 + cc1h * 10)"
+  },
+  {
+   "model_name": "claude-opus-4-6-low",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 2.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "claude-opus-4-6-medium",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "claude-code",
+    "github-claude"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "o3-mini",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.1 + c * 4.4 + cr * 0.55)"
+  },
+  {
+   "model_name": "o3-mini-2025-01-31-low",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 0.55,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 4,
+   "enable_groups": [
+    "gpt-4"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5.4-mini-2026-03-17",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 0.75 + c * 4.5)"
+  },
+  {
+   "model_name": "gpt-5.5-2026-04-24",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "len <= 272000 ? tier(\"standard\", p * 5 + c * 30 + cr * 0.5) : tier(\"long_context\", p * 10 + c * 45 + cr * 1)"
+  },
+  {
+   "model_name": "claude-sonnet-4-5-20250929",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "enable_groups": [
+    "az-claude",
+    "claude",
+    "claude-code",
+    "claude-max",
+    "github-claude",
+    "aws",
+    "aws-bedrock",
+    "awsb"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai",
+    "openai-response",
+    "openai-response-compact",
+    "gemini",
+    "openai-alpha-search"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 3 + c * 15 + cr * 0.3 + cc * 3.75 + cc1h * 6)"
+  },
+  {
+   "model_name": "claude-haiku-4-5",
+   "vendor_id": 3,
+   "quota_type": 0,
+   "model_ratio": 0.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 5,
+   "cache_ratio": 0.1,
+   "create_cache_ratio": 1.25,
+   "enable_groups": [
+    "github-claude",
+    "claude-code"
+   ],
+   "supported_endpoint_types": [
+    "anthropic",
+    "openai"
+   ]
+  },
+  {
+   "model_name": "gpt-5.2",
+   "vendor_id": 2,
+   "quota_type": 0,
+   "model_ratio": 37.5,
+   "model_price": 0,
+   "owner_by": "",
+   "completion_ratio": 6,
+   "enable_groups": [
+    "gpt-5"
+   ],
+   "supported_endpoint_types": [
+    "openai"
+   ],
+   "billing_mode": "tiered_expr",
+   "billing_expr": "tier(\"base\", p * 1.75 + c * 14 + cr * 0.175)"
+  }
+ ],
+ "group_ratio": {
+  "Azure-Gpt-1": 0.44,
+  "Azure-Gpt-2": 1,
+  "Azure-Gpt-3": 2.2,
+  "Azure-Gpt-4": 4.4,
+  "Azure-Gpt-5": 6,
+  "Azure-Gpt-6": 9,
+  "ai-studio": 1.6,
+  "aistudio-gemini-常规": 2.6471,
+  "aistudio-gemini-特惠": 1.7647,
+  "aistudio-gemini-超稳": 4.4118,
+  "alibaba-image-常规": 6.5,
+  "alibaba-image-超稳": 8,
+  "alibaba-常规": 7.5,
+  "alibaba-特惠": 5,
+  "alibaba-超稳": 11,
+  "anthropic-claude": 11,
+  "anti-gemini": 0.7353,
+  "aws": 2.8,
+  "aws-bedrock": 4.4118,
+  "aws-claude": 2.8,
+  "aws-claude-常规": 8.8236,
+  "aws-claude-特惠": 4.4118,
+  "aws-claude-超稳": 11,
+  "awsb": 2.8,
+  "az-claude": 2.7,
+  "azure-claude": 4.4118,
+  "azure-grok-常规": 0.7353,
+  "azure-grok-超稳": 1.103,
+  "claude-code": 1.2,
+  "claude-code-常规": 1.7647,
+  "claude-code-超稳": 2.9412,
+  "cli-gemini": 0.7353,
+  "cli-grok-常规": 0.7353,
+  "cli-grok-超稳": 1.0295,
+  "codex-gpt-常规": 0.5883,
+  "codex-gpt-特惠": 0.3677,
+  "codex-gpt-超稳": 0.7353,
+  "deepseek": 11,
+  "default": 2.1,
+  "discounted-banana-常规": 0.7353,
+  "discounted-banana-超稳": 1.0295,
+  "doubao-常规": 7.5,
+  "doubao-特惠": 5,
+  "doubao-超稳": 11,
+  "gemini-ant逆向": 0.7,
+  "gemini-cli逆向": 0.7,
+  "gemini官方正价": 7,
+  "gemini超级稳定": 2.1,
+  "glm": 11,
+  "gpt-4": 0.5,
+  "gpt-5": 0.9,
+  "gpt-image-常规": 0.9192,
+  "gpt-image-特惠": 0.7353,
+  "gpt-image-超稳": 1.3787,
+  "hailuo": 11,
+  "kimi-常规": 7.5,
+  "kimi-超稳": 11,
+  "kiro-claude": 0.8824,
+  "mj": 1.47,
+  "nano banana绘图": 0.8,
+  "openai-gpt-常规": 5.8824,
+  "openai-gpt-超稳": 7.353,
+  "self-deployed-常规": 5,
+  "self-deployed-特惠": 3,
+  "self-deployed-超稳": 7.5,
+  "siliconflow": 7.5,
+  "spark": 11,
+  "vertex-ai": 1.6,
+  "vertex-claude": 4.4118,
+  "vertex-gemini-常规": 4.5,
+  "vertex-gemini-特惠": 2,
+  "vertex-gemini-超稳": 9,
+  "xai-grok": 4.4118,
+  "xiaomi-常规": 7.5,
+  "xiaomi-超稳": 11
+ },
+ "pricing_version": "a42d372ccf0b5dd13ecf71203521f9d2",
+ "success": true,
+ "supported_endpoint": {
+  "anthropic": {
+   "path": "/v1/messages",
+   "method": "POST"
+  },
+  "gemini": {
+   "path": "/v1beta/models/{model}:generateContent",
+   "method": "POST"
+  },
+  "image-generation": {
+   "path": "/v1/images/generations",
+   "method": "POST"
+  },
+  "openai": {
+   "path": "/v1/chat/completions",
+   "method": "POST"
+  },
+  "openai-alpha-search": {
+   "path": "/v1/alpha/search",
+   "method": "POST"
+  },
+  "openai-response": {
+   "path": "/v1/responses",
+   "method": "POST"
+  },
+  "openai-response-compact": {
+   "path": "/v1/responses/compact",
+   "method": "POST"
+  }
+ },
+ "usable_group": {
+  "Azure-Gpt-1": "Azure-Gpt-1",
+  "Azure-Gpt-2": "Azure-Gpt-2",
+  "Azure-Gpt-3": "Azure-Gpt-3",
+  "Azure-Gpt-4": "Azure-Gpt-4",
+  "Azure-Gpt-5": "Azure-Gpt-5",
+  "Azure-Gpt-6": "Azure-Gpt-6",
+  "ai-studio": "ai-studio分组",
+  "aistudio-gemini-常规": "aistudio-gemini-常规",
+  "aistudio-gemini-特惠": "aistudio-gemini-特惠",
+  "aistudio-gemini-超稳": "aistudio-gemini-超稳",
+  "alibaba-image-常规": "alibaba-image-常规",
+  "alibaba-image-超稳": "alibaba-image-超稳",
+  "alibaba-常规": "alibaba-常规",
+  "alibaba-特惠": "alibaba-特惠",
+  "alibaba-超稳": "alibaba-超稳",
+  "anthropic-claude": "anthropic-claude",
+  "anti-gemini": "anti-gemini",
+  "aws": "aws-分组",
+  "aws-bedrock": "aws-bedrock",
+  "aws-claude": "aws-claude分组",
+  "aws-claude-常规": "aws-claude-常规",
+  "aws-claude-特惠": "aws-claude-特惠",
+  "aws-claude-超稳": "aws-claude-超稳",
+  "awsb": "awsb-分组",
+  "az-claude": "az-cluade分组",
+  "azure-claude": "azure-claude",
+  "azure-grok-常规": "azure-grok-常规",
+  "azure-grok-超稳": "azure-grok-超稳",
+  "claude-code": "claude-code分组",
+  "claude-code-常规": "claude-code-常规",
+  "claude-code-超稳": "claude-code-超稳",
+  "cli-gemini": "cli-gemini",
+  "cli-grok-常规": "cli-grok-常规",
+  "cli-grok-超稳": "cli-grok-超稳",
+  "codex-gpt-常规": "codex-gpt-常规",
+  "codex-gpt-特惠": "codex-gpt-特惠",
+  "codex-gpt-超稳": "codex-gpt-超稳",
+  "deepseek": "deepseek",
+  "default": "默认分组",
+  "discounted-banana-常规": "discounted-banana-常规",
+  "discounted-banana-超稳": "discounted-banana-超稳",
+  "doubao-常规": "doubao-常规",
+  "doubao-特惠": "doubao-特惠",
+  "doubao-超稳": "doubao-超稳",
+  "gemini-ant逆向": "gemini-ant逆向分组",
+  "gemini-cli逆向": "gemini-cli逆向分组",
+  "gemini官方正价": "gemini官方正价分组",
+  "gemini超级稳定": "gemini超级稳定分组",
+  "glm": "glm",
+  "gpt-4": "gpt-4分组",
+  "gpt-5": "gpt-5分组",
+  "gpt-image-常规": "gpt-image-常规",
+  "gpt-image-特惠": "gpt-image-特惠",
+  "gpt-image-超稳": "gpt-image-超稳",
+  "hailuo": "hailuo",
+  "kimi-常规": "kimi-常规",
+  "kimi-超稳": "kimi-超稳",
+  "kiro-claude": "kiro-claude",
+  "mj": "mj",
+  "nano banana绘图": "nano banana绘图",
+  "openai-gpt-常规": "openai-gpt-常规",
+  "openai-gpt-超稳": "openai-gpt-超稳",
+  "self-deployed-常规": "self-deployed-常规",
+  "self-deployed-特惠": "self-deployed-特惠",
+  "self-deployed-超稳": "self-deployed-超稳",
+  "siliconflow": "siliconflow",
+  "spark": "spark",
+  "vertex-ai": "vertex-ai分组",
+  "vertex-claude": "vertex-claude",
+  "vertex-gemini-常规": "vertex-gemini-常规",
+  "vertex-gemini-特惠": "vertex-gemini-特惠",
+  "vertex-gemini-超稳": "vertex-gemini-超稳",
+  "xai-grok": "xai-grok",
+  "xiaomi-常规": "xiaomi-常规",
+  "xiaomi-超稳": "xiaomi-超稳"
+ },
+ "vendors": [
+  {
+   "id": 1,
+   "name": "Google",
+   "icon": "Gemini.Color"
+  },
+  {
+   "id": 2,
+   "name": "OpenAI",
+   "icon": "OpenAI"
+  },
+  {
+   "id": 3,
+   "name": "Anthropic",
+   "icon": "Claude.Color"
+  },
+  {
+   "id": 4,
+   "name": "DeepSeek",
+   "icon": "DeepSeek.Color"
+  },
+  {
+   "id": 5,
+   "name": "xAI",
+   "icon": "XAI"
+  },
+  {
+   "id": 6,
+   "name": "Moonshot",
+   "icon": "Moonshot"
+  }
+ ]
+}
