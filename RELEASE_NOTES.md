@@ -1,25 +1,23 @@
-# AI Price Analyzer v0.23.0
+# AI Price Analyzer v0.24.0
 
 ## 新功能
 
-- **新增 eapi 插件。** 匿名读取 `https://eapi.site/api/pricing`，收录 41 条模型报价：33 个按 token 计价、8 个按张计价的图像模型。按 token 的报价取报文里的折后单价（`model_ratio × 2`，与 `input_price_micros` 逐条复算一致），按张的取 `model_price`，不另乘折扣。
-- **新增 moonup 插件。** 订阅制 API 转换平台，直接采公开模型广场；分组倍率取报文自带字段，图像模型按 1K / 2K / 4K 档报单价，fast 通道价单独取字段，不猜。
-- **充值比例写实。** eapi 在登录态钱包接口取到 `fxRateUsdCny=7`：CNY 档 ¥20 到账 $2.857143 额度，即 **¥7 = $1 额度**，无档位折扣。moonup 的充值接口匿名 401，记为未验证，不写比例、不参与折算。
+- **新增克劳德 APi 插件（`api.kelaode.si`）。** 收录 2 个分组、15 个模型，全部按 token 计价，没有图像、视频或按次计费的条目。模型广场开启了登录校验（`settings/public` 的 `model_plaza_require_auth`），匿名读接口返回 401，因此站点走页面模式、复用当前 Chrome 配置文件的登录态：`auth_token` 24 小时，过期后用 `refresh_token` 调 `/api/v1/auth/refresh` 续期并轮换令牌，浏览器登录过一次之后扩展自己就能续上。
+- **充值比例写实。** 站点文案「1 人民币=1 美刀」，但收银台另收 4% 手续费：充 100 元支付 ¥100.00、手续费 ¥4.00、实付 ¥104.00，到账记 $100 额度，折算 **1 美元额度 = ¥1.04**。没有赠送档位，单笔 20–2000 元，只有支付宝一个渠道。
 
 ## 计费口径
 
-- eapi 的 `cache_*_price_micros` 字段恒等于输入价，与 `cache_ratio` 矛盾，判为站点展示层坏字段；缓存读写价按 `cache_ratio` / `create_cache_ratio` 从输入价推算，与站点文档示例逐项吻合。
-- `deepseek-v4.1-flash` 有闲时/忙时两档，插件取报文头部当前生效价，忙时价格翻倍由站点自行切换。
-- 规范模型表按缓存重建；gpt-image-2.5 / 2.6 一类图像模型允许以 models.dev 来源进场，避免整族落进未匹配。
+- 接口给的 `pricing` 是官方基准价（与 `official_pricing` 同值），分组倍率由前端乘上去：GPT 组 0.2x、claude max 组 0.9x。插件按同一规则算实付价，与页面显示逐项核对一致，例如 `claude-opus-5-5` 官方 $4/$20 → 实付 $3.60/$18.00。
+- 长上下文分档真实生效：GPT 组 `≤272K` / `>272K`，`claude-haiku-5-5` `≤100K` / `>100K`。`long_context_basis` 是 `whole_request`，跨过阈值后整个请求按高档计价，不是超量部分分段计价。两个档位都保留，不合并取一档。
 
 ## 兼容性
 
-- 无新增扩展权限。
-- 站点域名继续由插件目录决定，加站不需要重新申请权限。
-- 旧设置里的手动充值比例与充值方案照旧保留。
+- 无新增扩展权限，站点域名继续由插件目录决定。
+- 该站需要登录才能采集。未登录时采集会提示「请先在当前 Chrome 配置文件登录」，不影响其他站点。
+- 收银台 4% 手续费作为实测值写死，不跟随全局市场汇率覆盖。
 
 ## 附件
 
-- `ai-relay-price-extension-v0.23.0.zip`：可直接加载的扩展目录包。
-- `ai-price-analyzer-v0.23.0-source.zip`：扩展与插件两仓的源码快照。
+- `ai-relay-price-extension-v0.24.0.zip`：可直接加载的扩展目录包。
+- `ai-price-analyzer-v0.24.0-source.zip`：扩展与插件两仓的源码快照。
 - `SHA256SUMS.txt`、`update.json`、`update.ps1`：校验与签名更新清单。
