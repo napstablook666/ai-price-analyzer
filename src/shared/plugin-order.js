@@ -55,5 +55,6 @@ export const SITE_PLUGIN_ORDER = [
   "abuapi",
   "nexaix",
   "yescode",
-  "rightcode"
+  "rightcode",
+  "man8out"
 ];

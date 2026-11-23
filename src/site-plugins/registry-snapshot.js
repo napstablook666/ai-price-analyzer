@@ -586,6 +586,16 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "rightapi.io"
       ],
       "needsCode": true
+    },
+    {
+      "id": "man8out",
+      "name": "Man8Out",
+      "version": "0.25.0",
+      "description": "公开渠道目录，直连采集",
+      "hosts": [
+        "ai.man8out.com"
+      ],
+      "needsCode": true
     }
   ]
 };

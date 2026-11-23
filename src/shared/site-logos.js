@@ -29,6 +29,7 @@ export const SITE_LOGOS = {
   "kuaipao": "icons/sites/kuaipao.png",
   "leaflow": "icons/sites/leaflow.svg",
   "liuguang": "icons/sites/liuguang.svg",
+  "man8out": "icons/sites/man8out.png",
   "maolaoapi": "icons/sites/maolaoapi.svg",
   "moonup": "icons/sites/moonup.svg",
   "newcodex": "icons/sites/newcodex.svg",

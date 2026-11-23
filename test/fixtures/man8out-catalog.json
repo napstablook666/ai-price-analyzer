@@ -1,0 +1,893 @@
+{
+  "code": 0,
+  "message": "success",
+  "data": [
+    {
+      "name": "[上游] GROK",
+      "description": "正在创作……已找到……",
+      "platforms": [
+        {
+          "platform": "grok",
+          "groups": [
+            {
+              "id": 41,
+              "name": "[上游] GROK",
+              "platform": "grok",
+              "subscription_type": "standard",
+              "rate_multiplier": 0.15,
+              "peak_rate_enabled": false,
+              "peak_start": "",
+              "peak_end": "",
+              "peak_rate_multiplier": 1,
+              "effective_token_rate": 0.15,
+              "effective_image_rate": 0.15,
+              "is_exclusive": false,
+              "is_accessible": true
+            }
+          ],
+          "supported_models": [
+            {
+              "name": "grok-4.6",
+              "platform": "grok",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000002,
+                "output_price": 0.000006,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": 5e-7,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": 200000,
+                    "tier_label": "standard",
+                    "input_price": 0.000002,
+                    "output_price": 0.000006,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": 5e-7,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": null
+                  },
+                  {
+                    "min_tokens": 200000,
+                    "max_tokens": null,
+                    "tier_label": "long_context",
+                    "input_price": 0.000004,
+                    "output_price": 0.000012,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": 0.000001,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": null
+                  }
+                ]
+              },
+              "provider_company": "grok",
+              "mode": "chat",
+              "input_modalities": [
+                "text",
+                "image"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": 500000,
+              "max_output_tokens": 500000
+            },
+            {
+              "name": "grok-4.7",
+              "platform": "grok",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000002,
+                "output_price": 0.000006,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": 5e-7,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": 200000,
+                    "tier_label": "standard",
+                    "input_price": 0.000002,
+                    "output_price": 0.000006,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": 5e-7,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": null
+                  },
+                  {
+                    "min_tokens": 200000,
+                    "max_tokens": null,
+                    "tier_label": "long_context",
+                    "input_price": 0.000004,
+                    "output_price": 0.000012,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": 0.000001,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": null
+                  }
+                ]
+              },
+              "provider_company": "grok",
+              "mode": "chat",
+              "input_modalities": [
+                "text",
+                "image"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": 500000,
+              "max_output_tokens": 500000
+            },
+            {
+              "name": "grok-4.7-build-fast",
+              "platform": "grok",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000004,
+                "output_price": 0.000012,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": 0.000001,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": 200000,
+                    "tier_label": "standard",
+                    "input_price": 0.000004,
+                    "output_price": 0.000012,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": 0.000001,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": null
+                  },
+                  {
+                    "min_tokens": 200000,
+                    "max_tokens": null,
+                    "tier_label": "long_context",
+                    "input_price": 0.000006,
+                    "output_price": 0.000018,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": 0.0000015,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": null
+                  }
+                ]
+              },
+              "provider_company": "grok",
+              "mode": "",
+              "input_modalities": [
+                "text"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": null,
+              "max_output_tokens": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[仅付费] CCMAX  0注入",
+      "description": "",
+      "platforms": [
+        {
+          "platform": "anthropic",
+          "groups": [
+            {
+              "id": 36,
+              "name": "[仅付费] CCMAX  0注入",
+              "platform": "anthropic",
+              "subscription_type": "standard",
+              "rate_multiplier": 1.5,
+              "peak_rate_enabled": false,
+              "peak_start": "",
+              "peak_end": "",
+              "peak_rate_multiplier": 1,
+              "effective_token_rate": 1.5,
+              "effective_image_rate": 1.5,
+              "is_exclusive": false,
+              "is_accessible": true
+            }
+          ],
+          "supported_models": [
+            {
+              "name": "claude-fable-5-1",
+              "platform": "anthropic",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.00001,
+                "output_price": 0.00005,
+                "cache_write_price": 0.0000125,
+                "cache_write_1h_price": 0.00002,
+                "cache_read_price": 2.5e-7,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": []
+              },
+              "provider_company": "anthropic",
+              "mode": "chat",
+              "input_modalities": [
+                "text"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": 1000000,
+              "max_output_tokens": 128000
+            },
+            {
+              "name": "claude-fable-5-2",
+              "platform": "anthropic",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000008,
+                "output_price": 0.00004,
+                "cache_write_price": 0.00001,
+                "cache_write_1h_price": 0.000016,
+                "cache_read_price": 2.0000000000000002e-7,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": []
+              },
+              "provider_company": "anthropic",
+              "mode": "chat",
+              "input_modalities": [
+                "text",
+                "image"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": 1000000,
+              "max_output_tokens": 128000
+            },
+            {
+              "name": "claude-opus-5-5",
+              "platform": "anthropic",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000004,
+                "output_price": 0.00002,
+                "cache_write_price": 0.000005,
+                "cache_write_1h_price": 0.000008,
+                "cache_read_price": 2e-7,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": []
+              },
+              "provider_company": "anthropic",
+              "mode": "chat",
+              "input_modalities": [
+                "text"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": 1000000,
+              "max_output_tokens": 128000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "image2.6",
+      "description": "GPT Image 2.6 Sunburst / Flare 图片生成与编辑。1K 每张0.012 NEX，支持原生图片协议。",
+      "platforms": [
+        {
+          "platform": "openai",
+          "groups": [
+            {
+              "id": 78,
+              "name": "[生图] 2.6 1分一张稳定生图 支持原生协议无4k",
+              "platform": "openai",
+              "subscription_type": "standard",
+              "rate_multiplier": 1,
+              "peak_rate_enabled": false,
+              "peak_start": "",
+              "peak_end": "",
+              "peak_rate_multiplier": 1,
+              "effective_token_rate": 1,
+              "effective_image_rate": 1,
+              "is_exclusive": false,
+              "is_accessible": true
+            }
+          ],
+          "supported_models": [
+            {
+              "name": "gpt-image-2.6-flare",
+              "platform": "openai",
+              "pricing": {
+                "billing_mode": "image",
+                "input_price": null,
+                "output_price": null,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": null,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": 0.012,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "1K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.012
+                  }
+                ]
+              },
+              "provider_company": "openai",
+              "mode": "image_generation",
+              "input_modalities": [
+                "text",
+                "image"
+              ],
+              "output_modalities": [
+                "image"
+              ],
+              "endpoint_type": "/v1/images/generations",
+              "max_input_tokens": null,
+              "max_output_tokens": null
+            },
+            {
+              "name": "gpt-image-2.6-sunburst",
+              "platform": "openai",
+              "pricing": {
+                "billing_mode": "image",
+                "input_price": null,
+                "output_price": null,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": null,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": 0.012,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "1K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.012
+                  }
+                ]
+              },
+              "provider_company": "openai",
+              "mode": "image_generation",
+              "input_modalities": [
+                "text",
+                "image"
+              ],
+              "output_modalities": [
+                "image"
+              ],
+              "endpoint_type": "/v1/images/generations",
+              "max_input_tokens": null,
+              "max_output_tokens": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[仅付费] 企业对接L3级别官key",
+      "description": "企业对接用，此分组的key是L3用量级别的",
+      "platforms": [
+        {
+          "platform": "openai",
+          "groups": [
+            {
+              "id": 53,
+              "name": "[仅付费] 企业对接L3级别官key",
+              "platform": "openai",
+              "subscription_type": "standard",
+              "rate_multiplier": 1,
+              "peak_rate_enabled": false,
+              "peak_start": "",
+              "peak_end": "",
+              "peak_rate_multiplier": 1,
+              "effective_token_rate": 1,
+              "effective_image_rate": 1,
+              "is_exclusive": false,
+              "is_accessible": true
+            }
+          ],
+          "supported_models": [
+            {
+              "name": "gpt-5.6",
+              "platform": "openai",
+              "pricing": null,
+              "provider_company": "openai",
+              "mode": "chat",
+              "input_modalities": [
+                "text",
+                "pdf",
+                "file"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "/v1/chat/completions",
+              "max_input_tokens": 922000,
+              "max_output_tokens": 128000
+            },
+            {
+              "name": "gpt-6.1-sol",
+              "platform": "openai",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000002,
+                "output_price": 0.00001,
+                "cache_write_price": 0.0000025,
+                "cache_write_1h_price": null,
+                "cache_read_price": 1.0000000000000001e-7,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": []
+              },
+              "provider_company": "openai",
+              "mode": "chat",
+              "input_modalities": [
+                "text",
+                "image"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "/v1/chat/completions",
+              "max_input_tokens": 922000,
+              "max_output_tokens": 128000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[官方] GLM ",
+      "description": "glm5.3",
+      "platforms": [
+        {
+          "platform": "zhipu",
+          "groups": [
+            {
+              "id": 30,
+              "name": "[官方] GLM ",
+              "platform": "zhipu",
+              "subscription_type": "standard",
+              "rate_multiplier": 0.15,
+              "peak_rate_enabled": false,
+              "peak_start": "",
+              "peak_end": "",
+              "peak_rate_multiplier": 1,
+              "effective_token_rate": 0.15,
+              "effective_image_rate": 0.15,
+              "is_exclusive": false,
+              "is_accessible": true
+            }
+          ],
+          "supported_models": [
+            {
+              "name": "glm-5.3",
+              "platform": "zhipu",
+              "pricing": {
+                "billing_mode": "token",
+                "input_price": 0.000008,
+                "output_price": 0.000028,
+                "cache_write_price": 0.000008,
+                "cache_write_1h_price": null,
+                "cache_read_price": 0.000002,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": null,
+                "intervals": []
+              },
+              "provider_company": "zhipu",
+              "mode": "",
+              "input_modalities": [
+                "text"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": null,
+              "max_output_tokens": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "[生图] Nano Banana 2.1",
+      "description": "Nano Banana 2.1 图片生成，按成功生成张数计费。1K、2K 每张 0.08 NEX，4K 每张 0.12 NEX。",
+      "platforms": [
+        {
+          "platform": "gemini",
+          "groups": [
+            {
+              "id": 48,
+              "name": "[生图] Nano Banana 2.1",
+              "platform": "gemini",
+              "subscription_type": "standard",
+              "rate_multiplier": 1,
+              "peak_rate_enabled": false,
+              "peak_start": "",
+              "peak_end": "",
+              "peak_rate_multiplier": 1,
+              "effective_token_rate": 1,
+              "effective_image_rate": 1,
+              "is_exclusive": false,
+              "is_accessible": true
+            }
+          ],
+          "supported_models": [
+            {
+              "name": "gemini-3.0-pro-image",
+              "platform": "gemini",
+              "pricing": {
+                "billing_mode": "image",
+                "input_price": null,
+                "output_price": null,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": null,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": 0.08,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "1K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.08
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "2K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "4K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  }
+                ]
+              },
+              "provider_company": "gemini",
+              "mode": "",
+              "input_modalities": [
+                "text",
+                "image",
+                "pdf"
+              ],
+              "output_modalities": [
+                "image"
+              ],
+              "endpoint_type": "",
+              "max_input_tokens": null,
+              "max_output_tokens": null
+            },
+            {
+              "name": "gemini-3.1-flash-image",
+              "platform": "gemini",
+              "pricing": {
+                "billing_mode": "image",
+                "input_price": null,
+                "output_price": null,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": null,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": 0.08,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "1K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.08
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "2K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "4K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  }
+                ]
+              },
+              "provider_company": "gemini",
+              "mode": "image_generation",
+              "input_modalities": [
+                "text",
+                "image",
+                "pdf"
+              ],
+              "output_modalities": [
+                "image"
+              ],
+              "endpoint_type": "/v1/chat/completions",
+              "max_input_tokens": 65536,
+              "max_output_tokens": 32768
+            },
+            {
+              "name": "gemini-3.1-flash-lite-image",
+              "platform": "gemini",
+              "pricing": {
+                "billing_mode": "image",
+                "input_price": null,
+                "output_price": null,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": null,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": 0.08,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "1K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.08
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "2K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "4K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  }
+                ]
+              },
+              "provider_company": "gemini",
+              "mode": "image_generation",
+              "input_modalities": [
+                "text",
+                "image",
+                "pdf"
+              ],
+              "output_modalities": [
+                "image"
+              ],
+              "endpoint_type": "/v1/chat/completions",
+              "max_input_tokens": 65536,
+              "max_output_tokens": 4096
+            },
+            {
+              "name": "gemini-nano-banana-2.1",
+              "platform": "gemini",
+              "pricing": {
+                "billing_mode": "image",
+                "input_price": null,
+                "output_price": null,
+                "cache_write_price": null,
+                "cache_write_1h_price": null,
+                "cache_read_price": null,
+                "image_input_price": null,
+                "image_output_price": null,
+                "per_request_price": 0.08,
+                "intervals": [
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "1K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.08
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "2K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.08
+                  },
+                  {
+                    "min_tokens": 0,
+                    "max_tokens": null,
+                    "tier_label": "4K",
+                    "input_price": null,
+                    "output_price": null,
+                    "cache_write_price": null,
+                    "cache_write_1h_price": null,
+                    "cache_read_price": null,
+                    "input_multiplier": null,
+                    "output_multiplier": null,
+                    "cache_write_multiplier": null,
+                    "cache_read_multiplier": null,
+                    "per_request_price": 0.12
+                  }
+                ]
+              },
+              "provider_company": "gemini",
+              "mode": "image_generation",
+              "input_modalities": [
+                "text",
+                "image",
+                "pdf"
+              ],
+              "output_modalities": [
+                "image"
+              ],
+              "endpoint_type": "/v1/chat/completions",
+              "max_input_tokens": 131072,
+              "max_output_tokens": 32768
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

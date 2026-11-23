@@ -821,3 +821,75 @@ test("PoloAI special_prices 经真实 collectStation 映射保留尺寸、价格
     assert.deepEqual(snapshot.normalized.unpricedModels || [], []);
   });
 });
+
+test("man8out 匿名采集渠道目录，绝对单价按分组倍率只折算一次，生图走按次计费", async () => {
+  await withCleanRegistry(async () => {
+    const providers = await loadSitePlugins(["man8out"]);
+    const [preset] = addProviderStationPresets([], providers);
+    const collection = resolveStationCollection({ ...preset, baseUrl: "https://ai.man8out.com/modelsmarket" });
+    const station = collection.station;
+
+    assert.equal(sitePluginForStation(station).id, "man8out");
+    assert.equal(station.mode, "direct");
+    assert.equal(station.auth.type, "none");
+    assert.equal(station.priceCurrency, "USD");
+    assert.equal(station.priceCurrencyVerified, true);
+    assert.equal(station.rechargeRateVerified, false);
+
+    const fixture = JSON.parse(readFileSync(new URL("./fixtures/man8out-catalog.json", import.meta.url), "utf8"));
+    const requests = [];
+    const snapshot = await collectStation(station, {
+      collection,
+      fetchImpl: async (url, init) => {
+        requests.push({ url, init });
+        return new Response(JSON.stringify(fixture), { headers: { "content-type": "application/json" } });
+      }
+    });
+
+    // 目录接口匿名可读，不该顺带去碰要登录的 /payment/config 与 /payment/limits。
+    assert.equal(requests.length, 1, "匿名采集不应请求需登录的充值接口");
+    assert.equal(new URL(requests[0].url).pathname, "/api/v1/channels/catalog");
+    assert.equal(new URL(requests[0].url).searchParams.get("available_only"), "true");
+    assert.equal(requests[0].init.credentials, "omit");
+    assert.equal(requests[0].init.headers.Authorization, undefined);
+
+    assert.equal(snapshot.status, "success");
+    assert.equal(snapshot.normalized.sourceFormat, "fastaitoken");
+    assert.equal(snapshot.normalized.data.length, 25);
+    assert.equal(snapshot.normalized.data.every(row => row.price_currency === "USD"), true);
+
+    // 绝对单价 × 分组倍率：grok 官方 $2/$6 × 0.15，跨 200K 后官方翻倍到 $4/$12 再 × 0.15。
+    const grok = snapshot.normalized.data.filter(row => row.model_name === "grok-4.6");
+    assert.deepEqual(grok.map(row => row.tier_name), ["standard", "long_context"]);
+    const [grokShort, grokLong] = grok;
+    assert.ok(Math.abs(grokShort.input_price - 0.3) < 1e-9);
+    assert.ok(Math.abs(grokShort.output_price - 0.9) < 1e-9);
+    assert.ok(Math.abs(grokShort.cache_read_price - 0.075) < 1e-9);
+    assert.ok(Math.abs(grokLong.input_price - 0.6) < 1e-9);
+    assert.ok(Math.abs(grokLong.output_price - 1.8) < 1e-9);
+    assert.ok(Math.abs(grokLong.cache_read_price - 0.15) < 1e-9);
+
+    // 倍率大于 1 的分组不被钳到 1。
+    const opus = snapshot.normalized.data.find(row => row.model_name === "claude-opus-5-5");
+    assert.ok(Math.abs(opus.input_price - 6) < 1e-9);
+    assert.ok(Math.abs(opus.output_price - 30) < 1e-9);
+    assert.ok(Math.abs(opus.cache_read_price - 0.3) < 1e-9);
+    assert.ok(Math.abs(opus.cache_write_price - 7.5) < 1e-9);
+
+    // 没有 intervals 的条目走「标准」档，不凭空造档位。
+    const glm = snapshot.normalized.data.find(row => row.model_name === "glm-5.3");
+    assert.equal(glm.tier_name, "标准");
+    assert.ok(Math.abs(glm.input_price - 1.2) < 1e-9);
+    assert.ok(Math.abs(glm.output_price - 4.2) < 1e-9);
+
+    // billing_mode=image 走按次价，不摊到 token 单价上。
+    const flatImage = snapshot.normalized.data.filter(row => row.model_name === "gpt-image-2.6-flare");
+    assert.deepEqual(flatImage.map(row => [row.tier_name, row.request_price, row.input_price]), [["1K", 0.012, null]]);
+
+    const proImage = snapshot.normalized.data.filter(row => row.model_name === "gemini-3.0-pro-image");
+    assert.deepEqual(proImage.map(row => [row.tier_name, row.request_price]), [["1K", 0.08], ["2K", 0.12], ["4K", 0.12]]);
+
+    // pricing 为 null 的条目表示「没报价」，不能当免费写进比价。
+    assert.equal(snapshot.normalized.data.some(row => row.model_name === "gpt-5.6"), false);
+  });
+});
