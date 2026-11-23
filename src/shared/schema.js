@@ -6,7 +6,6 @@ import { normalizeRechargePlans, normalizeRechargeTiers } from "./recharge-tiers
 import { normalizeRechargePayments } from "./recharge-payments.js";
 
 export const OPENROUTER_URL = "https://openrouter.ai/api/v1/models";
-export const OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images/models";
 export const DEFAULT_EXCHANGE_RATE = 7.3;
 export const SYSTEM_BASE_PRICE_PER_1M = 2.0;
 
@@ -32,14 +31,7 @@ const BUILTIN_30D_MONTHLY_VOLUME = {
   cacheWrite1h: 0,
 };
 
-export const DEFAULT_MONTHLY_USAGE = {
-  ...BUILTIN_30D_MONTHLY_VOLUME,
-  // 站点给了时段窗口时，分档占比由「窗口 × 这条负荷曲线」算；这里选的就是负荷曲线。
-  imageInputTokens: 0,
-  imageOutputTokens: 0,
-  imageTokens: 0,
-  images: 0,
-};
+export const DEFAULT_MONTHLY_USAGE = { ...BUILTIN_30D_MONTHLY_VOLUME };
 
 // magpie 预设的用量来自 settings.magpieSync（网关实测）；还没同步过就退回内置快照。
 export function usagePresetUsage(id, magpieSync = null) {
@@ -62,16 +54,16 @@ export function usagePresetOptions(magpieSync = null) {
   ];
 }
 
-const BASELINE_USAGE = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0, imageInputTokens: 0, imageOutputTokens: 0, imageTokens: 0, images: 0 };
-// 判定口径只看这几个字段，图像用量不参与。
+const BASELINE_USAGE = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0 };
+// 判定口径只看这几个字段。
 const USAGE_MATCH_FIELDS = ["requests", "input", "cacheRead", "cacheWrite", "cacheWrite1h", "output"];
 // 退役预设只用于迁移，不再出现在可选口径中。
 const LEGACY_USAGE_PROFILES = [
   { requests: 32567, input: 196.25 * TOKENS_PER_MILLION, cacheRead: 2077.49 * TOKENS_PER_MILLION, output: 20.03 * TOKENS_PER_MILLION, cacheWrite: 0.79 * TOKENS_PER_MILLION },
-  { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
-  { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
-  { requests: 45494, input: 382.95 * TOKENS_PER_MILLION, cacheRead: 2946.28 * TOKENS_PER_MILLION, output: 30.74 * TOKENS_PER_MILLION, cacheWrite: 0, imageTokens: 0, images: 0 },
-  { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0, imageTokens: 0, images: 0 }
+  { requests: 7900, input: 66.5 * TOKENS_PER_MILLION, cacheRead: 550.7 * TOKENS_PER_MILLION, output: 5.5 * TOKENS_PER_MILLION, cacheWrite: 0 },
+  { requests: 44400, input: 372.6 * TOKENS_PER_MILLION, cacheRead: 2865.3 * TOKENS_PER_MILLION, output: 29.7 * TOKENS_PER_MILLION, cacheWrite: 0 },
+  { requests: 45494, input: 382.95 * TOKENS_PER_MILLION, cacheRead: 2946.28 * TOKENS_PER_MILLION, output: 30.74 * TOKENS_PER_MILLION, cacheWrite: 0 },
+  { requests: 0, input: TOKENS_PER_MILLION, cacheRead: 0, output: 200_000, cacheWrite: 0 }
 ];
 
 function isLegacyUsage(usage) {
@@ -270,13 +262,11 @@ export function normalizeSettings(input = {}) {
     magpieSyncIntervalMinutes: normalizeMagpieSyncInterval(input.magpieSyncIntervalMinutes),
     magpieSync,
   };
-  if (!Object.prototype.hasOwnProperty.call(rawUsage, "imageOutputTokens") && Object.prototype.hasOwnProperty.call(rawUsage, "imageTokens")) settings.usage.imageOutputTokens = rawUsage.imageTokens;
-  settings.usage.imageTokens = settings.usage.imageOutputTokens;
-  // 分档加权下线后这两个键没有消费者了，老设置里的残留一并清掉。
-  for (const retiredKey of ["peakShare", "timeProfile"]) delete settings.usage[retiredKey];
+  // 图像用量只服务生图比价、分档加权已经下线，这些键都没有消费者了，老设置里的残留一并清掉。
+  for (const retiredKey of ["imageInputTokens", "imageOutputTokens", "imageTokens", "images", "peakShare", "timeProfile"]) delete settings.usage[retiredKey];
   delete settings.refreshIntervalMinutes;
   for (const legacyKey of ["llm", "jev", "providerProfiles", "activeProviders", "checkinState", "checkinLoginWatch", "checkinAutomation", "checkinResults"]) delete settings[legacyKey];
-  for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output", "requests", "imageInputTokens", "imageOutputTokens", "imageTokens", "images"]) {
+  for (const field of ["input", "cacheRead", "cacheWrite", "cacheWrite1h", "output", "requests"]) {
     const value = Number(settings.usage[field]);
     settings.usage[field] = Number.isFinite(value) && value >= 0 ? value : base.usage[field];
   }

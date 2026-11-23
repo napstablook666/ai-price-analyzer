@@ -82,7 +82,6 @@ export function buildMonthlyCostRankings(rows = []) {
   rows.forEach((row, position) => {
     if (row?.stationCategory === "public" || row?.pricingUnavailable) return;
     // 有充值阶梯的站按落档后的实付金额排名，否则名次会和表里显示的金额对不上。
-    // 生图行的人民币成本单独算过一版，和按月 token 摊出来的不是同一个数，优先用它。
     const rawMonthlyCost = effectiveMonthlyCost(row);
     if (rawMonthlyCost === null || rawMonthlyCost === undefined || rawMonthlyCost === "") return;
     const monthlyCost = Number(rawMonthlyCost);
@@ -116,16 +115,4 @@ export function monthlyCostRankingFor(row, rankings) {
 // providerFilter 传 null 表示全选；具体值由 dashboard 从 localStorage 的记忆里取，代码里不写死名单。
 export function modeSwitchFilters(filters = {}, providerFilter = null) {
   return { ...filters, search: "", stationId: "", provider: Array.isArray(providerFilter) ? [...providerFilter] : null, group: null, models: [] };
-}
-
-export function mediaModeSwitchFilters(filters = {}, mediaMode = "text", providerFilter = null) {
-  const next = modeSwitchFilters(filters, providerFilter);
-  const mode = ["text", "image", "video"].includes(mediaMode) ? mediaMode : "text";
-  return {
-    ...next,
-    provider: mode === "text" ? next.provider : null,
-    sortBy: mode === "text" ? "blendedUnitPrice" : "mediaUnitPrice",
-    sortSecondary: "diffPercent",
-    sortDirection: "asc"
-  };
 }

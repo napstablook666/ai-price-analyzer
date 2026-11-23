@@ -1,10 +1,5 @@
-export const COMPARISON_MEDIA_MODES = Object.freeze(["text", "image", "video"]);
-
-export const MEDIA_MODE_LABELS = Object.freeze({
-  text: "文本",
-  image: "生图",
-  video: "视频"
-});
+// 本项目只比文本模型的价格。这里只回答「这条报价是不是媒体类型」：判定成 image / video / unknown
+// 的报价在 buildComparisonRows 里整条丢掉，既不进比价表，也不占核验数。
 
 const MEDIA_TYPE_ALIASES = new Map([
   ["text", "text"],
@@ -21,6 +16,9 @@ const MEDIA_TYPE_ALIASES = new Map([
   ["video-generation", "video"],
   ["video_generation", "video"]
 ]);
+
+// 时间计费单位：出现这些单位就说明是按秒/分钟卖的媒体，文本没有这种口径。
+const TIME_BILLED_UNITS = new Set(["second", "seconds", "per_second", "minute", "minutes", "per_minute"]);
 
 const own = (object, key) => Object.prototype.hasOwnProperty.call(object || {}, key);
 
@@ -64,6 +62,10 @@ export function mediaTypeForPricing(item = {}, { targetField = "" } = {}) {
   const billingMode = String(item.billing_mode || item.billingMode || "").trim().toLowerCase();
   if (["image", "per_image", "per_image_generation"].includes(billingMode)) return "image";
   if (["video", "per_video", "per_second", "per_minute"].includes(billingMode)) return "video";
+  // 按秒、按分钟计费的只有视频；文本从不按时间卖，见到就整条丢掉。
+  const billingUnit = String(item.request_unit || item.requestUnit || item.billing_unit || item.billingUnit || "").trim().toLowerCase();
+  if (TIME_BILLED_UNITS.has(billingUnit)) return "video";
+
   if (targetField === "image") return "image";
 
   const videoIndependent = item.video_rate_independent === true || String(item.video_rate_independent ?? "").trim().toLowerCase() === "true";
@@ -79,15 +81,3 @@ export function mediaSpecsOf(item = {}) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return { ...value };
 }
-
-export function mediaModeOf(value) {
-  const normalized = normalizeMediaType(value);
-  return COMPARISON_MEDIA_MODES.includes(normalized) ? normalized : "text";
-}
-
-export function mediaModeMatches(row = {}, mode = "text") {
-  const currentMode = COMPARISON_MEDIA_MODES.includes(mode) ? mode : "text";
-  const rowType = normalizeMediaType(row.mediaType ?? row.media_type) || "text";
-  return rowType === currentMode;
-}
-

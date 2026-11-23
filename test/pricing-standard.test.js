@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { addRecommendationStatus, blendedMixOf, blendedUnitPrice, buildComparisonRows, buildStationIndexes, mixLabel, tokenTotalOf } from "../src/core/pricing.js";
+import { addRecommendationStatus, blendedMixOf, blendedUnitPrice, buildComparisonRows, buildStationIndexes, mixLabel, summarizeComparisons, tokenTotalOf } from "../src/core/pricing.js";
 
 const MIXED_USAGE = { input: 1_000_000, output: 1_000_000 };
 
@@ -112,109 +112,46 @@ test("keeps the dashboard and options pages on the blended price口径", () => {
   assert.doesNotMatch(options, /recommendation-profile/);
 });
 
-const IMAGE_REFERENCES = {
-  models: [{ id: "openai/gpt-image-1", name: "openai/gpt-image-1", provider: "openai", input: 8, output: 8, imageOutput: 30, imagePrice: 0.04 }],
-  imageQuotes: { "openai/gpt-image-1": { unit: "image", value: 0.02, provider: "openai", variant: "" } },
-  exchangeRate: 7.2
-};
-
-test("只有按张价的报价不摊进按 token 的混合口径", () => {
-  const comparison = comparisonFor({
-    models: [{ model_name: "openai/gpt-image-1", input_price: null, output_price: null, image_price: 0.04, price_currency: "CNY" }],
-    references: IMAGE_REFERENCES
+// 本项目只比文本 token 价。生图、视频这些报价整条不进比价表，认不出类型的也按不认识处理。
+test("按张价、按秒价的报价不进比价表", () => {
+  const comparisons = comparisonsFor({
+    models: [
+      { model_name: "openai/gpt-image-1", input_price: 8, output_price: 15, image_price: 0.04, price_currency: "CNY" },
+      { model_name: "seedance-2-5", request_price: 0.2, request_unit: "second", price_currency: "CNY" },
+      { model_name: "plain-text", input_price: 2, output_price: 4, price_currency: "CNY" }
+    ],
+    references: { models: [{ name: "plain-text", provider: "openai", input: 2, output: 4 }] }
   });
-  const offer = comparison.offers[0];
-  assert.equal(offer.billingMode, "image");
-  // 没有 token 价就算不出按 token 的月成本，别再给出 0 元和「低 100%」。
-  assert.equal(offer.blendedUnitPrice, null);
-  assert.equal(offer.blendedMix, null);
-  assert.equal(offer.diffPercent, null);
-  assert.equal(offer.recommended, false);
-  assert.equal(offer.imageQuote.unit, "image");
-  assert.equal(offer.imagePerImage, 0.04);
-  // 官方按张价来自生图接口的 output_image，按汇率折成人民币：0.02 × 7.2。
-  assert.equal(offer.imageOfficialQuote.unit, "image");
-  assert.ok(Math.abs(offer.imageOfficialQuote.value - 0.144) < 1e-9);
-  // 站内和官方都是元/张，直比，可以给档位。
-  assert.equal(offer.imageCompare.kind, "direct");
-  assert.ok(Math.abs(offer.imageCompare.diffPercent - (0.04 - 0.144) / 0.144 * 100) < 1e-9);
-  assert.equal(offer.category, "excellent");
-  // 没填出图张数就不编月成本。
-  assert.equal(offer.imageMonthlyCost, null);
-  assert.ok(offer.estimatedFields.includes("imageBilled"));
+  assert.deepEqual(comparisons.flatMap(comparison => comparison.offers.map(offer => offer.modelName)), ["plain-text"]);
 });
 
-test("填了出图张数就按折合元/张乘出月成本", () => {
-  const comparison = comparisonsFor({
-    models: [{ model_name: "openai/gpt-image-1", input_price: null, output_price: null, image_price: 0.04, price_currency: "CNY" }],
-    references: IMAGE_REFERENCES,
-    usage: { input: 0, output: 0, images: 100 }
-  })[0];
-  const offer = comparison.offers[0];
-  assert.equal(offer.imageCount, 100);
-  assert.equal(offer.imageMonthlyCost, 4);
-  assert.equal(offer.imageMonthlyCostPaid, 4);
+test("插件标了媒体类型的整条不识别，哪怕它同时报了 token 价", () => {
+  const comparisons = comparisonsFor({
+    models: [
+      { model_name: "doubao-seedream-5-0", media_type: "image", input_price: 2, output_price: 4, price_currency: "CNY" },
+      { model_name: "doubao-seedance-2-5", media_type: "video", input_price: 2, output_price: 4, price_currency: "CNY" },
+      { model_name: "plain-text", input_price: 2, output_price: 4, price_currency: "CNY" }
+    ],
+    references: { models: [{ name: "plain-text", provider: "openai", input: 2, output: 4 }] }
+  });
+  assert.deepEqual(comparisons.flatMap(comparison => comparison.offers.map(offer => offer.modelName)), ["plain-text"]);
 });
 
-test("带文本 token 价的图像模型也走生图道，不再按 token 摊成 ¥0", () => {
-  const comparison = comparisonFor({
-    models: [{ model_name: "openai/gpt-image-1", input_price: 8, output_price: 15, image_output_price: 30, image_price: 0.04, price_currency: "CNY" }],
-    references: IMAGE_REFERENCES
+test("媒体报价既不占核验数，也不进汇总", () => {
+  const comparisons = comparisonsFor({
+    models: [
+      { model_name: "openai/gpt-image-1", image_price: 0.04, price_currency: "CNY" },
+      { model_name: "plain-text", input_price: 2, output_price: 4, price_currency: "CNY" }
+    ],
+    references: { models: [{ name: "plain-text", provider: "openai", input: 2, output: 4 }] }
   });
-  const offer = comparison.offers[0];
-  assert.equal(offer.billingMode, "image");
-  assert.equal(offer.blendedUnitPrice, null);
-  // 官方报元/张而站内也报了元/张，取同口径那一条。
-  assert.equal(offer.imageQuote.unit, "image");
-  assert.equal(offer.imagePerImage, 0.04);
-});
-
-test("站内只报图 token 价时留在 token 道，用量里的图像输出能覆盖它", () => {
-  const comparison = comparisonFor({
-    models: [{ model_name: "openai/gpt-image-1", input_price: 8, output_price: 15, image_output_price: 30, price_currency: "CNY" }],
-    references: IMAGE_REFERENCES,
-    usage: { input: 1_000_000, output: 1_000_000, imageOutputTokens: 1_000_000 }
-  });
-  const offer = comparison.offers[0];
+  const summary = summarizeComparisons(comparisons);
+  assert.equal(summary.offerCount, 1);
+  assert.equal(summary.modelCount, 1);
+  const [offer] = comparisons.flatMap(comparison => comparison.offers);
   assert.equal(offer.billingMode, "token");
-  assert.ok(Number.isFinite(offer.monthlyCost));
-  // 8 + 15 + 30 = 53 元。
-  assert.equal(offer.monthlyCost, 53);
-  assert.equal(offer.imageQuote, null);
-});
-
-test("站内 元/张 和 图 token 价都报时，按官方口径取那一条并跨单位折算", () => {
-  const references = {
-    ...IMAGE_REFERENCES,
-    imageQuotes: { "openai/gpt-image-1": { unit: "token", value: 0.00003, provider: "openai", variant: "" } }
-  };
-  const comparison = comparisonFor({
-    models: [{ model_name: "openai/gpt-image-1", input_price: 8, output_price: 15, image_output_price: 30, image_price: 0.04, price_currency: "CNY" }],
-    references
-  });
-  const offer = comparison.offers[0];
-  assert.equal(offer.billingMode, "image");
-  // 官方是元/1M 图 token，站内同口径那一条优先。
-  assert.equal(offer.imageQuote.unit, "token");
-  assert.equal(offer.imageQuote.value, 30);
-  assert.ok(Math.abs(offer.imageOfficialQuote.value - 0.00003 * 7.2) < 1e-12);
-  assert.equal(offer.imageCompare.kind, "same-unit");
-  // 30 vs 0.000216 元/1M：站内贵得多。
-  assert.ok(offer.imageCompare.diffPercent > 100000);
-});
-
-test("官方没有出图价时不给对比，也不编折扣", () => {
-  const comparison = comparisonFor({
-    models: [{ model_name: "some-unknown-image", input_price: null, output_price: null, image_price: 0.5, price_currency: "CNY" }],
-    references: { models: [], imageQuotes: {}, exchangeRate: 7.2 }
-  });
-  const offer = comparison.offers[0];
-  assert.equal(offer.billingMode, "image");
-  assert.equal(offer.imagePerImage, 0.5);
-  assert.equal(offer.imageOfficialQuote, null);
-  assert.equal(offer.imageCompare.kind, "none");
-  assert.equal(offer.imageCompare.diffPercent, null);
-  assert.equal(offer.category, "");
+  assert.equal(offer.imagePerImage, undefined);
+  assert.equal(offer.imageCompare, undefined);
 });
 // 一周 168 格：工作日 9-12、14-18 是高峰，其余空闲。
 const peakHours = () => Array.from({ length: 168 }, (_, index) => {

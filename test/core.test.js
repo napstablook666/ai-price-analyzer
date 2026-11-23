@@ -3,7 +3,7 @@ import { runInNewContext } from "node:vm";
 import test from "node:test";
 import { formatRefreshSummary, icon } from "../src/shared/ui.js";
 import assert from "node:assert/strict";
-import { dropFloatingModels, fetchImageReferences, fetchReferences, parseOpenRouterData, referencesNeedRefresh } from "../src/core/openrouter.js";
+import { dropFloatingModels, fetchReferences, parseOpenRouterData, referencesNeedRefresh } from "../src/core/openrouter.js";
 import { exchangeRateInfo, fetchExchangeRate } from "../src/core/exchange-rate.js";
 import { collectStation as collectPreparedStation } from "../src/core/collectors.js";
 import { ALL_IN_ONE_MODELS_ENDPOINT, CENTOS_PRICING_ENDPOINT, HEPINGAN_CHANNELS_ENDPOINT, WINDHUB_PRICING_ENDPOINT, PROVIDER_REGISTRY, prepareStationInput, providerById, providerForStation } from "../src/core/provider-registry.js";
@@ -16,7 +16,7 @@ import { dashboardPriceLines, formatSourcePrice } from "../src/dashboard-pricing
 import { buildModelMatchIndex, matchModel, matchModelWithOverrides, matchOne } from "../src/core/matching.js";
 import { canonicalKey, resolveCanonicalModel } from "../src/core/canonical.js";
 import { normalizePricingPayload } from "../src/core/normalizers.js";
-import { OPENROUTER_IMAGES_URL, OPENROUTER_URL, convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
+import { OPENROUTER_URL, convertRechargeAmount, DEFAULT_EXCHANGE_RATE, DEFAULT_MONTHLY_USAGE, currentSiteOrigin, isSecureRemoteUrl, normalizeSettings, normalizeStation, TOKENS_PER_MILLION, usagePresetId, usagePresetOptions, usagePresetUsage } from "../src/shared/schema.js";
 import { fetchMagpieUsage, magpieSyncLabel, mergeGatewayUsage, monthlyUsageFromGateway, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../src/core/magpie-usage.js";
 import { NORMALIZATION_VERSION, normalizeProxyData } from "../src/core/normalizers.js";
 import { snapshotNeedsRefresh } from "../src/core/snapshot-policy.js";
@@ -1293,13 +1293,12 @@ test("旧缓存里的浮动别名读出来就丢掉", async () => {
 // 使用不理会 AbortSignal 的桩，证明期限本身能结束等待，而非依赖 fetch 的实现。
 test("reference deadlines preserve cached data and do not discard successful sources", async () => {
   const cachedModel = { id: "cached/model", provider: "cached", input: 1, output: 2 };
-  const cachedQuote = { unit: "image", value: 0.04 };
-  const cache = { models: [cachedModel], exchangeRate: 7.2, imageQuotes: { "image/a": cachedQuote }, imageModels: [], imageQuotesFetchedAt: 1 };
+  const cache = { models: [cachedModel], exchangeRate: 7.2 };
   const signals = new Map();
   const result = await fetchReferences({
     cache,
     now: Date.parse("2026-11-21T12:00:00Z"),
-    timeouts: { models: 20, exchangeRate: 1000, images: 20 },
+    timeouts: { models: 20, exchangeRate: 1000 },
     fetchImpl: (url, { signal }) => {
       signals.set(url, signal);
       if (url.startsWith("https://open.er-api.com/")) return Promise.resolve({ ok: true, json: async () => ({ result: "success", base_code: "USD", rates: { CNY: 7.1 }, time_last_update_unix: Date.parse("2026-11-21T00:00:00Z") / 1000 }) });
@@ -1307,66 +1306,23 @@ test("reference deadlines preserve cached data and do not discard successful sou
     }
   });
   assert.equal(signals.get(OPENROUTER_URL).aborted, true);
-  assert.equal(signals.get(OPENROUTER_IMAGES_URL).aborted, true);
   assert.deepEqual(result.models, cache.models);
-  assert.deepEqual(result.imageQuotes, cache.imageQuotes);
   assert.equal(result.exchangeRate, 7.1);
-  assert.equal(result.warnings.length, 2);
+  assert.equal(result.warnings.length, 1);
   assert.ok(result.warnings.every(warning => warning.includes("请求超时")));
 });
 
-test("image references isolate endpoint failures and preserve each failed model cache", async () => {
-  const quote = { unit: "image", value: 0.2 };
-  const now = 100_000_000;
-  const result = await fetchImageReferences({
-    now,
-    cache: { imageQuotes: { "image/b": quote }, imageQuotesFetchedAt: 1 },
-    fetchImpl: async url => {
-      if (url === OPENROUTER_IMAGES_URL) return { ok: true, json: async () => ({ data: [{ id: "image/a" }, { id: "image/b" }] }) };
-      if (url.includes("image/b/endpoints")) throw new Error("endpoint offline");
-      return { ok: true, json: async () => ({ id: "image/a", endpoints: [{ provider_name: "provider", pricing: [{ billable: "output_image", unit: "image", cost_usd: 0.05 }] }] }) };
-    }
-  });
-  assert.equal(result.imageQuotes["image/a"].value, 0.05);
-  assert.deepEqual(result.imageQuotes["image/b"], quote);
-  assert.equal(result.imageQuotesFetchedAt, 1);
-  assert.match(result.warning, /1 个模型不可用/);
-  let requests = 0;
-  const cached = await fetchImageReferences({
-    now,
-    cache: { ...result, imageQuotesFetchedAt: now },
-    fetchImpl: async () => { requests += 1; throw new Error("should reuse cache"); }
-  });
-  assert.equal(requests, 0);
-  assert.deepEqual(cached.imageQuotes, result.imageQuotes);
-});
-
-test("image reference timeout stops pending requests and does not launch queued endpoints", async () => {
-  const endpoints = [];
-  const signals = [];
-  await assert.rejects(fetchImageReferences({
-    timeoutMs: 20,
-    fetchImpl: async (url, { signal }) => {
-      if (url === OPENROUTER_IMAGES_URL) return { ok: true, json: async () => ({ data: Array.from({ length: 10 }, (_, index) => ({ id: `image/${index}` })) }) };
-      endpoints.push(url);
-      signals.push(signal);
-      return new Promise((resolve, reject) => signal.addEventListener("abort", () => reject(signal.reason), { once: true }));
-    }
-  }), /请求超时/);
-  assert.equal(endpoints.length, 6);
-  assert.ok(signals.every(signal => signal.aborted));
-});
 test("reference cancellation aborts every pending source and retains cache", async () => {
   const controller = new AbortController();
   const signals = [];
   let allStarted;
   const started = new Promise(resolve => { allStarted = resolve; });
-  const cache = { models: [{ id: "cached/a" }], exchangeRate: 7.1, imageQuotes: {}, imageModels: [] };
+  const cache = { models: [{ id: "cached/a" }], exchangeRate: 7.1 };
   const task = fetchReferences({
     cache, signal: controller.signal,
     fetchImpl: (url, { signal }) => {
       signals.push(signal);
-      if (signals.length === 3) allStarted();
+      if (signals.length === 2) allStarted();
       return new Promise(() => {});
     }
   });
@@ -1376,7 +1332,7 @@ test("reference cancellation aborts every pending source and retains cache", asy
   assert.ok(signals.every(signal => signal.aborted));
   assert.deepEqual(result.models, cache.models);
   assert.equal(result.exchangeRate, cache.exchangeRate);
-  assert.equal(result.warnings.length, 3);
+  assert.equal(result.warnings.length, 2);
 });
 
 test("maps OpenRouter USD credits to the unified CREDITS benchmark", () => {
@@ -1492,7 +1448,6 @@ test("automatic rates win over the legacy default; manual payment rates stay exa
 
 test("calculates token workload per million, not per token", () => {
   assert.equal(workloadCost({ input: 0.5, output: 1 }, { input: 1_000_000, output: 200_000 }), 0.7);
-  assert.equal(workloadCost({ imageOutput: 0.1, imagePrice: 0.02 }, { imageTokens: 1_000_000, images: 2 }), 0.14);
   assert.equal(workloadCost({ cacheWrite1h: 0.5 }, { cacheWrite1h: 1_000_000 }), 0.5);
 });
 
@@ -1535,12 +1490,9 @@ test("uses synced 30-day usage for defaults and retired presets while preserving
   const retired = { requests: 321, input: 8_000_023, cacheRead: 9_000_099, cacheWrite: 200, output: 100_000 };
   const magpieSync = { recent30d: { usage: measured, syncedAt: 10 }, recent7d: { usage: retired, syncedAt: 20 } };
   for (const usage of [undefined, DEFAULT_MONTHLY_USAGE, { ...retired, input: 8_000_000, cacheRead: 9_000_100 }]) {
-    const settings = normalizeSettings({ magpieSync, usage: { ...usage, imageInputTokens: 123, imageOutputTokens: 456, images: 7 } });
+    const settings = normalizeSettings({ magpieSync, usage });
     assert.equal(usagePresetId(settings.usage, settings.magpieSync), "recent30d");
     for (const [field, value] of Object.entries(measured)) assert.equal(settings.usage[field], value);
-    assert.equal(settings.usage.imageInputTokens, 123);
-    assert.equal(settings.usage.imageOutputTokens, 456);
-    assert.equal(settings.usage.images, 7);
     assert.equal(settings.magpieSync.recent7d, undefined);
     assert.deepEqual(normalizeSettings(settings), settings);
   }
@@ -2856,8 +2808,8 @@ test("normalizes NodeAI model-plaza pricing with explicit dispatch", () => {
   assert.equal(image.price_currency, "CNY");
   const imagePrices = getProxyPrices(image, 1, 7.2);
   assert.equal(imagePrices.imagePrice, 2.5);
-  assert.equal(workloadCost(imagePrices, { requests: 100, images: 2 }), 5);
-  assert.equal(workloadCost(imagePrices, { requests: 100 }), 0);
+  // 按张计价的整条不进比价表，出图张数不再进月成本。
+  assert.equal(workloadCost(imagePrices, { requests: 100, images: 2 }), 0);
   const imageGeneration = normalized.data.find(model => model.model_name === "node-image-generation");
   assert.equal(imageGeneration.image_price, 0.125);
   assert.equal(imageGeneration.request_price, null);
@@ -3182,9 +3134,11 @@ test("collects fuck-everyone directly and compares unconfirmed recharge rates at
     references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
     usage: DEFAULT_MONTHLY_USAGE
   });
-  const partialOffer = partialRows.find(row => row.canonicalModel === "image-model")?.offers[0];
+  const partialOffer = partialRows.find(row => row.canonicalModel === "text-model")?.offers[0];
   assert.equal(partialOffer.incomplete, true);
   assert.deepEqual(partialOffer.unsupportedBillingModes, ["per_second"]);
+  // 生图、视频这类媒体整条不识别，连档位行都不留。
+  assert.equal(partialRows.some(row => ["image-model", "video-model", "seconds-model"].includes(row.canonicalModel)), false);
   const unpricedFixture = structuredClone(fuckEveryoneFixture);
   unpricedFixture.data.groups[0].models.push({ name: "unpriced-model", pricing: { billing_mode: "token" } });
   const unpricedSnapshot = await collectStationInput({ ...preset, adapter, priceCurrency: "CNY", priceCurrencyVerified: true, rechargeRateVerified: true }, { fetchImpl: async () => response(unpricedFixture) });
@@ -3205,10 +3159,10 @@ test("collects fuck-everyone directly and compares unconfirmed recharge rates at
   const rows = addRecommendationStatus(buildComparisonRows({
     stations: [preset],
     snapshots: [unknownSnapshot],
-    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    references: { models: [{ name: "text-model", provider: "openai", input: 1, output: 1 }] },
     usage: DEFAULT_MONTHLY_USAGE
   }));
-  const offer = rows.find(row => row.canonicalModel === "image-model")?.offers[0];
+  const offer = rows.find(row => row.canonicalModel === "text-model")?.offers[0];
   assert.equal(offer.pricingUnavailable, false);
   assert.equal(offer.pricingUnavailableReasons.includes("recharge_unverified"), false);
   assert.ok(Number.isFinite(offer.monthlyCost));
@@ -3217,18 +3171,20 @@ test("collects fuck-everyone directly and compares unconfirmed recharge rates at
   const rechargeRows = buildComparisonRows({
     stations: [{ ...preset, priceCurrency: "CNY", priceCurrencyVerified: true }],
     snapshots: [confirmedSnapshot],
-    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    references: { models: [{ name: "text-model", provider: "openai", input: 1, output: 1 }] },
     usage: DEFAULT_MONTHLY_USAGE
   });
-  assert.equal(rechargeRows.find(row => row.canonicalModel === "image-model")?.offers[0].pricingUnavailable, false);
+  assert.equal(rechargeRows.find(row => row.canonicalModel === "text-model")?.offers[0].pricingUnavailable, false);
 
+  // 用量里有站内没报的那一项，就该标成算不出价，而不是当 0 处理。
+  const unpricedFieldSnapshot = { stationId: preset.id, collectedAt: 1, status: "success", normalized: { data: [{ model_name: "text-model", input_price: 1, output_price: 2, price_currency: "CREDITS" }] } };
   const incompleteRows = buildComparisonRows({
     stations: [{ ...preset, rechargeRateVerified: true }],
-    snapshots: [verifiedSnapshot],
-    references: { models: [{ name: "image-model", provider: "openai", input: 1, output: 1 }] },
+    snapshots: [unpricedFieldSnapshot],
+    references: { models: [{ name: "text-model", provider: "openai", input: 1, output: 1 }] },
     usage: { ...DEFAULT_MONTHLY_USAGE, cacheWrite1h: 1_000_000 }
   });
-  assert.equal(incompleteRows.find(row => row.canonicalModel === "image-model")?.offers[0].pricingUnavailable, true);
+  assert.equal(incompleteRows.find(row => row.canonicalModel === "text-model")?.offers[0].pricingUnavailable, true);
 });
 
 
@@ -5938,7 +5894,7 @@ test("defaults provider filters to every provider and remembers the selection", 
   assert.match(source, /if \(key === "provider"\) saveProviderFilter\(state\.filters\[key\]\)/);
   assert.match(source, /checked\.length === options\.length \? null : checked/);
   assert.equal((source.match(/modeSwitchFilters\(state\.filters, readProviderFilter\(\)\)/g) || []).length, 1);
-  assert.match(source, /mediaModeSwitchFilters\(state\.filters, state\.mediaMode, readProviderFilter\(\)\)/);
+  assert.doesNotMatch(source, /mediaModeSwitchFilters/);
 });
 
 test("ships one 常用 button that stores a provider list apart from the last selection", () => {

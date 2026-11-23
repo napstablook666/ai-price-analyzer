@@ -823,10 +823,7 @@ const USAGE_INPUTS = [
   { field: "cacheWrite", key: "cache-write", million: true },
   { field: "cacheWrite1h", key: "cache-write-1h", million: true },
   { field: "output", key: "output", million: true },
-  { field: "requests", key: "requests", million: false },
-  { field: "imageInputTokens", key: "image-input-tokens", million: true },
-  { field: "imageOutputTokens", key: "image-output-tokens", million: true },
-  { field: "images", key: "images", million: false }
+  { field: "requests", key: "requests", million: false }
 ];
 
 function readUsageInputs() {

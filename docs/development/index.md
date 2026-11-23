@@ -54,8 +54,7 @@ npm run docs:build                # 构建文档站
 ## 下一步
 
 - [规范模型表](./canonical)
-- [生图模型计费](./image-billing)
-- [生图与视频比价坐标](./media-pricing)
+- [生图与视频字段](./media-pricing)
 - [价格映射文档](./price-map)
 - [测试与验收](./testing)
 - [发布流程](./release)

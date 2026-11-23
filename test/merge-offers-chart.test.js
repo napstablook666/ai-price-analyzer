@@ -78,9 +78,6 @@ test("effectiveMonthlyCost selects paid monthly value for each billing mode", ()
   assert.equal(effectiveMonthlyCost({ monthlyCost: 100, monthlyCostPaid: 80 }), 80);
   assert.equal(effectiveMonthlyCost({ monthlyCost: 0, monthlyCostPaid: 10 }), 10);
   assert.equal(effectiveMonthlyCost({ monthlyCost: 100, monthlyCostPaid: null }), 100);
-  assert.equal(effectiveMonthlyCost({ billingMode: "image", imageMonthlyCost: 40, imageMonthlyCostPaid: 30, monthlyCostPaid: 5 }), 30);
-  assert.equal(effectiveMonthlyCost({ billingMode: "image", imageMonthlyCost: 0, imageMonthlyCostPaid: null }), 0);
-  assert.equal(effectiveMonthlyCost({ billingMode: "image", imageMonthlyCost: null, monthlyCostPaid: 5 }), null);
   assert.equal(effectiveMonthlyCost({ billingMode: "request", monthlyCost: 20, monthlyCostPaid: 16 }), 16);
 });
 
@@ -281,9 +278,9 @@ test("dashboard aligns price matrices and exposes same-model monthly cost rankin
   assert.match(script, /row\.scrollIntoView\(\{ block: "center", behavior \}\);/);
   assert.match(script, /row\.classList\.add\("is-flash"\);/);
   assert.match(css, /\.comparison-table tbody tr\.is-flash td \{ animation: dashboard-row-flash/);
-  // 三类报价同一张表，单价单元格按 billingMode 分派，按 token 的仍走带柱状图的 priceGridMarkup。
+  // 只比文本：按 token 的走带柱状图的 priceGridMarkup，按次的走 requestPriceGridMarkup，生图那套已经拆掉了。
   assert.match(script, /if \(row\.billingMode === "request"\) return requestPriceGridMarkup\(row, currency, chartMarkup\);/);
-  assert.match(script, /if \(row\.billingMode === "image"\) return imagePriceGridMarkup\(row, currency, chartMarkup\);/);
+  assert.equal(script.includes("imagePriceGridMarkup"), false);
   assert.match(script, /return priceGridMarkup\(row, currency, officialQuotedPrices, chartMarkup\);/);
   assert.match(script, /<div class="cost-combined"><div class="cost-combined-main">/);
   assert.match(script, /<div class="cost-combined-main">.*<span class="delta-tag/);

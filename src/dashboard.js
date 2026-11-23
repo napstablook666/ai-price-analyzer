@@ -1,15 +1,13 @@
-import { buildStationIndexes, filterComparisonsByMediaMode, flattenComparisonRows, mixLabel } from "./core/pricing.js";
+import { buildStationIndexes, flattenComparisonRows, mixLabel } from "./core/pricing.js";
 import { dashboardPriceLines, formatSourcePrice, priceEntryTone } from "./dashboard-pricing.js";
 import { callService, escapeHtml, formatMoney, formatRefreshSummary, hydrateIcons, icon, onRefreshProgress, toast } from "./shared/ui.js";
-import { buildMonthlyCostRankings, createDashboardIndex, createDashboardRowsCache, deltaTone, matchesModelQueries, mediaModeSwitchFilters, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "./dashboard-index.js";
+import { buildMonthlyCostRankings, createDashboardIndex, createDashboardRowsCache, deltaTone, matchesModelQueries, monthlyCostBarWidth, monthlyCostRankingFor, modeSwitchFilters, paginateRows, parsePageInput, rowBandClasses } from "./dashboard-index.js";
 import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { STATION_CATEGORY_LABELS } from "./shared/schema.js";
 import { exchangeRateInfo } from "./core/exchange-rate.js";
-import { COMPARISON_MEDIA_MODES, MEDIA_MODE_LABELS, mediaModeOf, normalizeMediaType } from "./core/media.js";
 import { providerIconMarkup, providerLogoFor } from "./shared/provider-icons.js";
 import { siteIconMarkup } from "./shared/site-icon.js";
-import { IMAGE_UNIT_LABELS, IMAGE_UNIT_SUFFIXES, mediaUnitLabel, mediaUnitRank } from "./core/image-billing.js";
 import { DASHBOARD_HTML_IDS } from "./dom-contract.js";
 import { assertDomContract, makeQuery } from "./core/dom-guard.js";
 import { effectiveMonthlyCost } from "./shared/monthly-cost.js";
@@ -69,9 +67,7 @@ const PAGE_SIZE = 20;
 const state = {
   data: null,
   comparisonMode: "paid",
-  mediaMode: "text",
   comparisons: [],
-  unclassifiedMediaCount: 0,
   rows: [],
   page: 0,
   pageCount: 0,
@@ -110,36 +106,21 @@ function formatPrice(value, currency = "CNY", precision = 4) {
   return precision === 4 ? formatMoney(displayValue, symbol) : `${symbol}${displayValue.toFixed(precision)}`;
 }
 
-// 主表一行只放一类报价，但三类报价的单位不同，所以费用项和单价列按 billingMode 换算法。
-// 按 token 的原样展示；按次的把单次价摊成元/1M 并给出平衡点；按张的折成元/张。
-function mediaSpecsLabel(row) {
-  const specs = row.mediaSpecs && typeof row.mediaSpecs === "object" ? row.mediaSpecs : {};
-  const resolution = Array.isArray(specs.resolution?.enum) ? specs.resolution.enum.join(" / ") : "";
-  const seconds = specs.seconds ? "按时长参数" : "";
-  return [resolution && `分辨率 ${resolution}`, seconds].filter(Boolean).join(" · ");
-}
+// 主表一行只放一类报价，所以费用项和单价列按 billingMode 换算法：
+// 按 token 的原样展示；按次的把单次价摊成元/1M 并给出平衡点。
 
 function requestPriceGridMarkup(row, currency, chartMarkup = "") {
   const requestPrice = Number(row.costPrices?.request ?? row.prices?.request);
   const officialRequest = Number(row.officialPrices?.request);
   const costCurrency = row.costCurrency || currency;
-  // 视频按秒计价的档要单独标注，否则 0.35 元/秒 会被读成 0.35 元/次。
-  const perSecond = row.requestUnit === "second";
-  const relayUnit = perSecond ? "/秒" : "/次";
+  // 按次报价只可能是文本；按秒的档属于视频，已经在比价入口整条丢掉。
+  const relayUnit = "/次";
   const relayText = Number.isFinite(requestPrice) && requestPrice > 0
     ? `${formatPrice(requestPrice, costCurrency, 3)}<small>${relayUnit}</small>`
     : "—";
   const officialText = Number.isFinite(officialRequest) && officialRequest > 0
     ? `${formatPrice(officialRequest, currency, 3)}<small>/次</small>`
     : "—";
-  if (state.mediaMode === "video") {
-    const specs = mediaSpecsLabel(row);
-    const chips = [
-      `<span class="price-mini"><span class="price-mini-key">单位</span><span class="price-mini-pair"><span class="price-mini-relay">元${relayUnit}</span></span></span>`,
-      `<span class="price-mini"><span class="price-mini-key">规格</span><span class="price-mini-pair">${escapeHtml(specs || "插件未提供")}</span></span>`
-    ].join("");
-    return `<div class="price-grid"><div class="price-grid-row price-line-primary"><span class="price-key">${perSecond ? "每秒" : "每次"}</span><span class="price-value">${officialText}</span><span class="price-value">${relayText}</span></div><div class="price-grid-detail">${chips}</div></div>${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
-  }
   const unitPrice = Number.isFinite(row.requestUnitPrice)
     ? `${formatPrice(row.requestUnitPrice, "CNY")}<small>/M</small>`
     : "—";
@@ -153,29 +134,6 @@ function requestPriceGridMarkup(row, currency, chartMarkup = "") {
     `<span class="price-mini"><span class="price-mini-key">你的单次</span><span class="price-mini-pair">${profile}</span></span>`
   ].join("");
   return `<div class="price-grid"><div class="price-grid-row price-line-primary"><span class="price-key">单次</span><span class="price-value">${officialText}</span><span class="price-value">${relayText}</span></div><div class="price-grid-detail">${chips}</div></div>${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
-}
-function imagePriceGridMarkup(row, currency, chartMarkup = "") {
-  const station = row.imageQuote ?? row.imageQuoteQuoted;
-  const official = row.imageOfficialQuote;
-  const unit = station ? (IMAGE_UNIT_LABELS[station.unit] || "—") : "—";
-  const suffix = station ? (IMAGE_UNIT_SUFFIXES[station.unit] || "") : "";
-  const officialSuffix = official ? (IMAGE_UNIT_SUFFIXES[official.unit] || "") : "";
-  const relayText = station ? `${formatPrice(station.value, currency, 3)}<small>${suffix}</small>` : "—";
-  const officialText = official ? `${formatPrice(official.value, currency, 4)}<small>${officialSuffix}</small>` : "—";
-  const compare = row.imageCompare;
-  const converted = compare?.kind === "converted";
-  const gap = Number.isFinite(compare?.diffPercent) ? compare.diffPercent : null;
-  const gapClass = gap === null ? "" : gap < -0.5 ? "is-cheap" : gap > 0.5 ? "is-expensive" : "";
-  const gapLabel = gap === null ? "—" : Math.abs(gap) <= 0.5 ? "持平" : `${converted ? "≈" : ""}${gap < 0 ? "低" : "高"} ${Math.abs(gap).toFixed(1)}%`;
-  const perImage = Number.isFinite(row.imagePerImage)
-    ? `${converted ? "≈" : ""}${formatPrice(row.imagePerImage, "CNY", 4)}<small>/张</small>`
-    : "—";
-  const chips = [
-    `<span class="price-mini"><span class="price-mini-key">折合</span><span class="price-mini-pair"><span class="price-mini-relay">${perImage}</span></span></span>`,
-    `<span class="price-mini"><span class="price-mini-key">对比基准</span><span class="price-mini-pair"><span class="price-mini-relay ${gapClass}">${gapLabel}</span></span></span>`,
-    `<span class="price-mini"><span class="price-mini-key">单位</span><span class="price-mini-pair">${escapeHtml(unit)}</span></span>`
-  ].join("");
-  return `<div class="price-grid"><div class="price-grid-row price-line-primary"><span class="price-key">每张</span><span class="price-value">${officialText}</span><span class="price-value">${relayText}</span></div><div class="price-grid-detail">${chips}</div></div>${chartMarkup ? `<div class="price-chart">${chartMarkup}</div>` : ""}`;
 }
 
 
@@ -195,7 +153,7 @@ function collapseToCheapestGroup(rows) {
   if (!state.filters.cheapestGroupOnly || Array.isArray(state.filters.group)) return rows;
   const cheapest = new Map();
   for (const row of rows) {
-    const key = [row.stationId, row.modelName, row.canonicalModel, row.mediaType, row.sizeTier || "", row.requestUnit || ""].join("\u0000");
+    const key = [row.stationId, row.modelName, row.canonicalModel, row.requestUnit || ""].join("\u0000");
     const cost = effectiveMonthlyCost(row);
     const best = cheapest.get(key);
     if (!best || (Number.isFinite(cost) && (!Number.isFinite(best.cost) || cost < best.cost))) cheapest.set(key, { row, cost });
@@ -241,34 +199,24 @@ function renderSummary(rows) {
   const isPublic = state.comparisonMode === "public";
   const matched = rows.filter(row => row.officialName);
   const recommended = rows.filter(row => row.recommended).length;
-  const mediaPending = Number(state.unclassifiedMediaCount) || 0;
-  const needsReview = rows.filter(row => (state.comparisonMode !== "public" && !row.officialName) || row.evidence === "estimated" || row.incomplete || row.pricingUnavailable).length + mediaPending;
+  const needsReview = rows.filter(row => (state.comparisonMode !== "public" && !row.officialName) || row.evidence === "estimated" || row.incomplete || row.pricingUnavailable).length;
   const reviewReasons = rows.flatMap(row => row.pricingUnavailableReasons || []).reduce((counts, reason) => ({ ...counts, [reason]: (counts[reason] || 0) + 1 }), {});
   const reviewNote = [
     rows.filter(row => row.incomplete).length ? `${rows.filter(row => row.incomplete).length} 条部分解析` : "",
-    mediaPending ? `${mediaPending} 条媒体类型待核验` : "",
     ...Object.entries(reviewReasons).map(([reason, count]) => `${count} 条${PRICING_REASON_LABELS[reason] || "价格待核验"}`)
   ].filter(Boolean).join("、") || (isPublic ? "部分解析数据" : "未匹配或推导数据");
   const modelCount = new Set(rows.map(row => row.canonicalModel)).size;
   const stationCount = new Set(rows.map(row => row.stationId)).size;
   const matchRate = rows.length ? Math.round(matched.length / rows.length * 100) : 0;
-  const comparable = state.mediaMode === "image"
-    ? rows.filter(row => row.imageCompare?.kind && row.imageCompare.kind !== "none")
-    : rows.filter(row => row.officialName && !row.pricingUnavailable);
   const cards = isPublic ? [
     ["公益模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个公益站`],
     ["公益站点", String(stationCount), "仅公益站"],
     ["价格单位", "站点积分/额度", "比例 1:1"],
     ["数据状态", String(needsReview), reviewNote]
-  ] : state.mediaMode === "text" ? [
+  ] : [
     ["覆盖模型", String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
     ["基准匹配", String(matched.length), `${matchRate}% 有基准参考价`],
     ["首选方案", String(recommended), "同模型推荐"],
-    ["需核验", String(needsReview), reviewNote]
-  ] : [
-    [`${MEDIA_MODE_LABELS[state.mediaMode]}模型`, String(modelCount), `${rows.length} 条报价 · ${stationCount} 个启用站点`],
-    ["基准匹配", String(matched.length), `${matchRate}% 有基准参考价`],
-    ["可比报价", String(comparable.length), state.mediaMode === "image" ? "同单位或可折合到元/张" : "按次报价已折算成元/1M"],
     ["需核验", String(needsReview), reviewNote]
   ];
   $("#summary").innerHTML = cards.map(([label, value, note], index) => `<span class="summary-item${index === 0 ? " is-primary" : ""}" title="${escapeHtml(note)}"><span class="summary-label">${escapeHtml(label)}</span><strong class="summary-value">${escapeHtml(value)}</strong></span>`).join("");
@@ -580,33 +528,21 @@ $("#model-filter-menu").addEventListener("toggle", event => {
   if (!menu.querySelector("input[data-model-filter]")) renderModelFilter();
 });
 
-// 「混合单价」这一列现在装着三种单位：按 token 是元/1M，按次折算后也是元/1M，可以一起排；
-// 按张是元/张，和元/1M 不是同一个量纲，给它 null 让它排在末尾，不硬混进同一把尺子。
+// 「混合单价」这一列只有两种单位：按 token 是元/1M，按次折算后也是元/1M，可以一起排。
 function unitPriceSortValue(row) {
   if (row.billingMode === "request") return Number.isFinite(row.requestUnitPrice) ? row.requestUnitPrice : null;
-  if (row.billingMode === "image") return null;
   return Number.isFinite(row.blendedUnitPrice) ? row.blendedUnitPrice : null;
 }
 
-function mediaUnitPriceSortValue(row) {
-  if (state.mediaMode === "image") return Number.isFinite(row.mediaUnitPrice) ? row.mediaUnitPrice : null;
-  if (state.mediaMode === "video") {
-    const price = Number(row.mediaUnitPrice);
-    return Number.isFinite(price) && price > 0 ? price : null;
-  }
-  return unitPriceSortValue(row);
-}
 
 function billingModeTagMarkup(row) {
   if (row.billingMode === "request") return ` · <span class="billing-mode-tag is-request">按次</span>`;
-  if (row.billingMode === "image") return ` · <span class="billing-mode-tag is-image">按张</span>`;
   return "";
 }
 
 function sortValue(row, key) {
   if (key === "model") return `${row.displayName} ${row.modelName}`;
   if (key === "blendedUnitPrice") return unitPriceSortValue(row);
-  if (key === "mediaUnitPrice") return mediaUnitPriceSortValue(row);
   if (key === "monthlyCost") return effectiveMonthlyCost(row);
   return row[key];
 }
@@ -621,13 +557,7 @@ function sortRows(rows) {
   const direction = state.filters.sortDirection === "desc" ? -1 : 1;
   const keys = [state.filters.sortBy, state.filters.sortSecondary].filter((key, index, list) => key && key !== "none" && list.indexOf(key) === index);
   // 「单位价格」先按单位分榜再排价：元/张 和 元/1M 图token 不是同一个量纲，
-  // 直接按数值升序会把 0.04 元/张 排在 30 元/1M 后面，看起来像它更贵。
-  const groupedByUnit = state.filters.sortBy === "mediaUnitPrice" && state.mediaMode !== "text";
   return [...rows].sort((left, right) => {
-    if (groupedByUnit) {
-      const unitOrder = mediaUnitRank(left.mediaUnit) - mediaUnitRank(right.mediaUnit);
-      if (unitOrder) return unitOrder;
-    }
     for (const key of keys) {
       const result = compareSortValues(sortValue(left, key), sortValue(right, key), direction);
       if (result) return result;
@@ -636,23 +566,9 @@ function sortRows(rows) {
   });
 }
 
-// 分榜横条：单位换了就插一行，标清这一组是哪个量纲、是不是规格未标。
-function unitGroupMarkup(row, previousRow, force = false) {
-  const unit = row.mediaUnit || "unknown";
-  const continues = Boolean(previousRow) && (previousRow.mediaUnit || "unknown") === unit;
-  if (continues && !force) return "";
-  const label = mediaUnitLabel(unit, "未标单位");
-  const tier = row.mediaUnit === "image" && row.imageTierText ? row.imageTierText : "";
-  const note = tier === "规格未标注"
-    ? `<span class="unit-group-note">站内没标尺寸，不能和基准具名档直接比</span>`
-    : tier ? `<span class="unit-group-note">${escapeHtml(tier)}</span>` : "";
-  const suffix = continues ? `<span class="unit-group-note">（续）</span>` : "";
-  return `<tr class="unit-group-row"><th colspan="7" scope="colgroup"><span class="unit-group-label">${escapeHtml(label)}</span>${note}${suffix}</th></tr>`;
-}
 // 三类报价同一个表格，单价单元格按计费模式换渲染，列标题和排序不变。
 function priceCellMarkup(row, currency, officialQuotedPrices, chartMarkup = "") {
   if (row.billingMode === "request") return requestPriceGridMarkup(row, currency, chartMarkup);
-  if (row.billingMode === "image") return imagePriceGridMarkup(row, currency, chartMarkup);
   return priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup);
 }
 function priceGridMarkup(row, currency, officialQuotedPrices, chartMarkup = "") {
@@ -759,7 +675,11 @@ function renderComparisonMode() {
   $("#provider-filters").closest("details").hidden = isPublic;
   for (const element of document.querySelectorAll(".paid-only-control, .paid-only-column, [data-paid-only='true']")) element.hidden = isPublic;
   for (const element of document.querySelectorAll(".public-only-column")) element.hidden = !isPublic;
-  if (isPublic && ["provider", "monthlyCost", "blendedUnitPrice", "mediaUnitPrice", "diffPercent"].includes(state.filters.sortBy)) state.filters.sortBy = "model";
+  for (const option of $("#sort-by").options) {
+    option.hidden = isPublic && option.dataset.paidOnly === "true";
+    option.disabled = option.hidden;
+  }
+  if (isPublic && ["provider", "monthlyCost", "blendedUnitPrice", "diffPercent"].includes(state.filters.sortBy)) state.filters.sortBy = "model";
   if (isPublic && ["monthlyCost", "blendedUnitPrice", "diffPercent"].includes(state.filters.sortSecondary)) state.filters.sortSecondary = "none";
   $("#sort-by").value = state.filters.sortBy;
   $("#sort-secondary").value = state.filters.sortSecondary;
@@ -767,42 +687,6 @@ function renderComparisonMode() {
   renderReferenceStatus();
 }
 
-function renderMediaMode() {
-  const mode = mediaModeOf(state.mediaMode);
-  state.mediaMode = mode;
-  const isPublic = state.comparisonMode === "public";
-  const title = mode === "image" ? "生图模型" : mode === "video" ? "视频模型" : "文本模型";
-  const note = mode === "image"
-    ? "按图片单位比较，折合价格显示为元/张；不混入 token 报价。"
-    : mode === "video"
-      ? "按片段请求比较，优先显示元/次和插件提供的分辨率、时长规格。"
-      : "按 token、缓存和混合单价比较。";
-  document.body.classList.remove("media-mode-text", "media-mode-image", "media-mode-video");
-  document.body.classList.add(`media-mode-${mode}`);
-  for (const button of document.querySelectorAll("[data-media-mode]")) {
-    const active = button.dataset.mediaMode === mode;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  }
-  $("#media-mode-title").textContent = title;
-  $("#media-mode-note").textContent = note;
-  const unit = mode === "image" ? "图片单位 · 元/张" : mode === "video" ? "视频单位 · 元/次" : "中转币 · 每 1M token";
-  $(".price-head-key").firstChild.textContent = mode === "image" ? "图片费用" : mode === "video" ? "视频费用" : "费用项";
-  $("#price-unit-title").textContent = `价格单位 · ${unit}`;
-  $(".monthly-cost-heading").textContent = mode === "image" ? "月成本 · 元/张" : mode === "video" ? "月成本 · 元/次" : "月成本 · 折算单价";
-  const sortBy = $("#sort-by");
-  for (const option of sortBy.options) {
-    const modes = option.dataset.mediaModes;
-    option.hidden = Boolean(modes && !modes.split(/\s+/).includes(mode)) || (isPublic && option.dataset.paidOnly === "true");
-    option.disabled = option.hidden;
-  }
-  if (isPublic && ["monthlyCost", "blendedUnitPrice", "mediaUnitPrice", "diffPercent"].includes(state.filters.sortBy)) state.filters.sortBy = "model";
-  else if (!isPublic && mode !== "text" && state.filters.sortBy === "blendedUnitPrice") state.filters.sortBy = "mediaUnitPrice";
-  else if (!isPublic && mode === "text" && state.filters.sortBy === "mediaUnitPrice") state.filters.sortBy = "blendedUnitPrice";
-  $("#sort-by").value = state.filters.sortBy;
-  $("#sort-secondary").value = state.filters.sortSecondary;
-  $("#comparison-panel").setAttribute("aria-label", `${title}价格明细表`);
-}
 
 function sanitizeFiltersForRows(rows) {
   const stationIds = new Set(rows.map(row => row.stationId));
@@ -825,14 +709,6 @@ function resetFiltersForModeSwitch() {
   for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
 }
 
-function resetFiltersForMediaMode() {
-  state.filters = mediaModeSwitchFilters(state.filters, state.mediaMode, readProviderFilter());
-  state.page = 0;
-  modelFilterBoxCount = MODEL_FILTER_BOXES;
-  saveModelFilterBoxCount();
-  $("#search").value = "";
-  for (const input of document.querySelectorAll("[data-facet-search]")) input.value = "";
-}
 
 function modelMatchMarkup(row, currency) {
   const candidates = Array.isArray(row.officialCandidates) ? row.officialCandidates : [];
@@ -1017,7 +893,7 @@ function renderRows() {
 
   const currency = state.data?.settings?.defaultCurrency || "CNY";
   const query = state.filters.search.trim().toLowerCase();
-  const filterKey = JSON.stringify([state.mediaMode, state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.cheapestGroupOnly, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
+  const filterKey = JSON.stringify([state.filters.search, state.filters.stationId, state.filters.provider, state.filters.group, state.filters.models, state.filters.showUnmatched, state.filters.cheapestGroupOnly, state.filters.sortBy, state.filters.sortSecondary, state.filters.sortDirection]);
   if (pageFilterKey !== null && pageFilterKey !== filterKey) state.page = 0;
   pageFilterKey = filterKey;
   const { filtered, monthlyCostRankings } = getDerivedRows(state.rows, filterKey, rows => {
@@ -1037,21 +913,15 @@ function renderRows() {
   $("#comparison-previous").disabled = page.page === 0;
   $("#comparison-next").disabled = page.page + 1 >= page.pageCount;
   $("#result-count").textContent = `${filtered.length} 条报价`;
-  // 分榜只在「单位价格」排序下生效：其他排序键不承诺任何单位分组。
-  const groupedByUnit = state.filters.sortBy === "mediaUnitPrice" && state.mediaMode !== "text";
   const firstVisibleIndex = page.page * pageSize;
   $("#comparison-body").innerHTML = visible.map((row, index) => {
     const station = stationFor(row);
-    // 按张的价差按元/张算，和月成本的差不是一回事，用生图那套比较结果。
-    const imageGap = row.billingMode === "image" && Number.isFinite(row.imageCompare?.diffPercent) ? row.imageCompare.diffPercent : null;
     const delta = row.pricingUnavailable ? null
-      : row.billingMode === "image" ? imageGap
-        : !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
+      : !Number.isFinite(row.monthlyCost) ? null : (Number.isFinite(row.diffPercent) ? row.diffPercent : null);
     const deltaClass = delta === null || Math.abs(delta) < 0.005 ? "neutral" : `delta-${deltaTone(delta)}`;
     const deltaLabel = delta === null
       ? (row.pricingUnavailable ? pricingUnavailableLabel(row)
         : row.stationCategory === "public" ? "仅公益站比较"
-          : row.imageCompare?.kind === "tier-mismatch" ? "规格不同"
             : "无基准价")
       : Math.abs(delta) < 0.005 ? "持平" : `${delta < 0 ? "低" : "高"} ${Number(Math.abs(delta).toFixed(2))}%`;
     const isPublic = state.comparisonMode === "public";
@@ -1063,9 +933,7 @@ function renderRows() {
     const tierTag = row => (row.tierName && row.tierName !== "标准" ? row.tierName : "");
     const officialNote = !isPublic ? modelMatchMarkup(row, currency) : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
-    const previousRow = index === 0 ? (firstVisibleIndex > 0 ? filtered[firstVisibleIndex - 1] : null) : visible[index - 1];
-    const unitGroup = groupedByUnit ? unitGroupMarkup(row, previousRow, index === 0) : "";
-    return `${unitGroup}<tr class="${rowClasses}" data-offer-position="${firstVisibleIndex + index}">
+    return `<tr class="${rowClasses}" data-offer-position="${firstVisibleIndex + index}">
       <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}${!isPublic && tierTag(row) ? `<span class="status-tag muted">${escapeHtml(tierTag(row))}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
       <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span>${rechargeTierMarkup(row)}</div></td>
       <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking, index))}</td>
@@ -1099,28 +967,14 @@ function cellChartMarkup({ width, kind = "is-monthly-cost", title, trigger = fal
 }
 
 // 月成本和混合单价合并成一格：上面是月成本与同模型名次，下面是价差和混合单价。
-// 单价行跟着计费模式换标签和单位：按 token 是混合价，按次是折算到每 M，按张是折合每张。
+// 单价行跟着计费模式换标签和单位：按 token 是混合价，按次是折算到每 M。
 function unitPriceLineMarkup(row, currency) {
   const money = (value, precision, suffix, title = "") => `<span class="blended-cost"${title ? ` title="${escapeHtml(title)}"` : ""}>${formatPrice(value, row.costCurrency || currency, precision)}<small>${suffix}</small></span>`;
   if (row.billingMode === "request") {
-    if (state.mediaMode === "video") {
-      const requestPrice = Number(row.costPrices?.request ?? row.prices?.request);
-      const perSecondUnit = row.requestUnit === "second" ? "/秒" : "/次";
-      const value = Number.isFinite(requestPrice) && requestPrice > 0
-        ? money(requestPrice, 3, perSecondUnit, perSecondUnit === "/秒" ? "视频每秒价格" : "视频单次价格")
-        : `<span class="price-empty">无单次价</span>`;
-      return `<span class="blended-line"><span class="blended-label">${perSecondUnit === "/秒" ? "每秒" : "单次"}</span>${value}</span>`;
-    }
     const value = Number.isFinite(row.requestUnitPrice)
       ? money(row.requestUnitPrice, 4, "/M", `单次价 ÷ ${Math.round(row.tokensPerRequest).toLocaleString("zh-CN")} 字/次`)
       : `<span class="price-empty">无折算价</span>`;
     return `<span class="blended-line"><span class="blended-label">折算</span>${value}</span>`;
-  }
-  if (row.billingMode === "image") {
-    const value = Number.isFinite(row.imagePerImage)
-      ? money(row.imagePerImage, 4, "/张", row.imagePerImageAssumption || "")
-      : `<span class="price-empty">无法折合</span>`;
-    return `<span class="blended-line"><span class="blended-label">折合</span>${value}</span>`;
   }
   const blended = Number.isFinite(row.blendedUnitPrice)
     ? money(row.blendedUnitPrice, 4, "/M", row.blendedMix ? `按 ${mixLabel(row.blendedMix)} 混合` : "")
@@ -1144,14 +998,12 @@ function formatPaymentAmount(amount, currency) {
 // 金额只是显示，浮层只挂在下面那根长条上，免得鼠标扫过金额就弹东西。
 function monthlyCostSummaryMarkup(row, currency) {
   const amount = formatPrice(effectiveMonthlyCost(row), row.costCurrency || currency);
-  const noUsage = row.billingMode === "image" && !Number.isFinite(effectiveMonthlyCost(row)) && row.stationCategory !== "public";
-  if (noUsage) return `<strong class="cost-amount cost-amount-missing">填出图张数</strong>`;
   return `<strong class="cost-amount">${amount}</strong>`;
 }
 
 // 充值阶梯是站点规则，不是这一行的价格：提示挂在站点格的「分组」下面。
 function rechargeTierMarkup(row) {
-  const plan = row.billingMode === "image" ? row.imageRechargePlan : row.rechargePlan;
+  const plan = row.rechargePlan;
   const payment = row.rechargePayment;
   if (!plan && !payment) return "";
   const parts = [];
@@ -1270,17 +1122,13 @@ function render(data, { preservePage = false } = {}) {
   state.data = data;
   state.refreshInProgress = Boolean(data.refreshInProgress);
   state.comparisonMode = data.settings?.comparisonMode === "public" ? "public" : "paid";
-  state.mediaMode = mediaModeOf(state.mediaMode);
   state.refreshPreflight = data.refreshPreflight || null;
   renderRefreshPreflight();
 if (!preservePage) { state.page = 0; pageFilterKey = null; }
   const allComparisons = data.comparisons || [];
-  state.unclassifiedMediaCount = flattenComparisonRows(allComparisons)
-    .filter(row => normalizeMediaType(row.mediaType ?? row.media_type) === "unknown").length;
-  const modeComparisons = filterComparisonsByMediaMode(allComparisons, state.mediaMode);
-  state.comparisons = modeComparisons;
-  state.rows = flattenComparisonRows(modeComparisons);
-  state.stationIndexes = new Map(buildStationIndexes(modeComparisons).map(item => [item.stationId, item]));
+  state.comparisons = data.comparisons || [];
+  state.rows = flattenComparisonRows(state.comparisons);
+  state.stationIndexes = new Map(buildStationIndexes(state.comparisons).map(item => [item.stationId, item]));
   sanitizeFiltersForRows(state.rows);
   const index = createDashboardIndex(state.rows, data.stations || []);
   state.searchTextByRow = index.searchTextByRow;
@@ -1288,7 +1136,6 @@ if (!preservePage) { state.page = 0; pageFilterKey = null; }
   state.stationById = index.stationById;
   state.reference = data.references;
   renderComparisonMode();
-  renderMediaMode();
   state.filters.showUnmatched = Boolean(data.settings?.showUnmatched);
   $("#show-unmatched").checked = state.filters.showUnmatched;
   $("#cheapest-group-only").checked = state.filters.cheapestGroupOnly;
@@ -1304,14 +1151,12 @@ if (!preservePage) { state.page = 0; pageFilterKey = null; }
   const hasStations = Number(data.refreshScope?.stationCount) > 0;
   const emptyState = $("#empty-state");
   const publicEmpty = state.comparisonMode === "public";
-  const mediaLabel = MEDIA_MODE_LABELS[state.mediaMode];
-  const modeEmptyTitle = state.mediaMode === "text" ? "还没有可比较的报价" : `暂无${mediaLabel}报价`;
   emptyState.querySelector("h3").textContent = publicEmpty
-    ? (hasStations ? `暂无公益站${mediaLabel}报价` : "还没有公益站")
-    : (hasStations ? (state.rows.length ? "站点已保存，尚未采集报价" : modeEmptyTitle) : modeEmptyTitle);
+    ? (hasStations ? "还没有公益站报价" : "还没有公益站")
+    : (hasStations ? (state.rows.length ? "站点已保存，尚未采集报价" : "还没有可比较的报价") : "还没有可比较的报价");
   emptyState.querySelector("p").textContent = publicEmpty
     ? "启用公益站后刷新。"
-    : (hasStations ? (state.rows.length ? "点右上角刷新开始采集。" : `当前站点没有${mediaLabel}计费字段。`) : "添加中转站并刷新即可。");
+    : (hasStations ? (state.rows.length ? "点右上角刷新开始采集。" : "当前站点没有可比的文本计费字段。") : "添加中转站并刷新即可。");
   $("#empty-state-action-label").textContent = hasStations ? "管理站点" : "添加第一个站点";
   renderReferenceStatus();
   renderFreshness();
@@ -1349,15 +1194,6 @@ document.querySelectorAll("[data-comparison-mode]").forEach(button => {
 });
 
 
-for (const button of document.querySelectorAll("[data-media-mode]")) {
-  button.addEventListener("click", () => {
-    const mode = button.dataset.mediaMode;
-    if (!COMPARISON_MEDIA_MODES.includes(mode) || mode === state.mediaMode || !state.data) return;
-    state.mediaMode = mode;
-    resetFiltersForMediaMode();
-    render(state.data);
-  });
-}
 
 $("#search").addEventListener("input", event => { state.filters.search = event.target.value; renderRows(); });
 document.addEventListener("change", event => {

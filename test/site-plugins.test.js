@@ -346,7 +346,7 @@ test("91Token 匿名采集保留计费条件与9个复杂计费缺口，充值�
     const offer = offers.find(row => row.modelName === "claude-fable-5" && row.groupName === "Claude MAX");
     assert.equal(offer.quotedPrices.input, 13, "比价链不能重复乘分组倍率");
     assert.equal(offer.quotedPrices.output, 65);
-    assert.ok(offers.some(row => row.modelName === "gpt-image-2" && row.billingMode === "image"));
+    assert.equal(offers.some(row => row.modelName === "gpt-image-2"), false, "生图整条不进比价表");
     assert.ok(offers.every(row => !snapshot.normalized.unpricedModels.includes(row.modelName)));
   });
 });
@@ -480,8 +480,8 @@ test("SpiderAI 安装预设后匿名采集完整目录，倍率、媒体单价�
     assert.equal(offer.quotedPrices.output, 4);
     assert.ok(Math.abs(offer.costPrices.input - 0.8 * station.rechargeRate) < 1e-10);
     assert.equal(offer.pricingUnavailable, false);
-    assert.ok(offers.some(row => row.modelName === "gpt-image-2" && row.billingMode === "image"));
-    assert.ok(offers.some(row => row.modelName === "grok-imagine-video" && row.requestUnit === "second"));
+    assert.equal(offers.some(row => row.modelName === "gpt-image-2"), false, "生图整条不进比价表");
+    assert.equal(offers.some(row => row.modelName === "grok-imagine-video"), false, "视频整条不进比价表");
   });
 });
 

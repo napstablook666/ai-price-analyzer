@@ -34,7 +34,7 @@
 
 ## 月用量
 
-`usage` 存在存储里共 11 个键，设置页露出其中十项（`imageTokens` 是内部保留键，界面上不填）。token 类字段按百万 token 计，图片按张。默认值取 magpie 网关最近 30 天用量，按 30 天折算：
+`usage` 存在存储里共 6 个键：5 个 token 字段（按百万 token 计）加 `requests`（按次）。默认值取 magpie 网关最近 30 天用量，按 30 天折算：
 
 | 字段 | 默认值 |
 | --- | --- |
@@ -44,7 +44,6 @@
 | `cacheWrite1h` | 0 |
 | `output` | 28.98 M |
 | `requests` | 54,378 |
-| `imageInputTokens` / `imageOutputTokens` / `images` | 0 |
 
 预设：
 
@@ -66,7 +65,7 @@ magpie-30天的数字来自本机网关 `GET /v1/magpie/usage?period=30d`。扩�
 | `magpieSyncIntervalMinutes` | `360` | 可选 `0`（关闭）、`360`、`1440`；非法值落回 `360` |
 | `magpieSync` | `null` | 同步结果快照，见下 |
 
-`magpieSync.recent30d` 存 `{ usage, syncedAt, window }`，另有 `attemptedAt` 和 `error`。网关没开时保留已同步过的数字并记录错误。`usage` 只更新 `requests` / `input` / `cacheRead` / `cacheWrite` / `output` 五项，1 小时缓存写入和图像用量沿用已有值；废弃的 7 天快照会在读取设置时清理。
+`magpieSync.recent30d` 存 `{ usage, syncedAt, window }`，另有 `attemptedAt` 和 `error`。网关没开时保留已同步过的数字并记录错误。`usage` 只更新 `requests` / `input` / `cacheRead` / `cacheWrite` / `output` 五项，1 小时缓存写入沿用已有值；废弃的 7 天快照会在读取设置时清理。
 
 网关返回最近 30 天的总量，直接作为月用量。还没同步成功过时使用内置快照（上面默认值表中的数字）。
 

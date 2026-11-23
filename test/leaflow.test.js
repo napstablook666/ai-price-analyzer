@@ -95,8 +95,8 @@ test("Leaflow 按 unit_quantity 折算文本与缓存，只展开实际图片规
   const seedance = video.find(row => row.model_name === "seedance-2-5" && row.size_tier === "resolution=720p");
   assert.equal(seedance.request_price, Number(expected.unit_amount) / Number(expected.unit_quantity));
   assert.deepEqual(seedance.media_specs.resolution.enum, ["720p"]);
-  const offer = offersOf(station, snapshot).find(offer => offer.modelName === "seedance-2-5" && offer.mediaSpecs.resolution.enum.includes("720p"));
-  assert.deepEqual(offer.mediaSpecs.resolution.enum, ["720p"]);
+  // 采集侧照旧展开视频秒价和分辨率规格，比价侧整条不认：视频不进比价表。
+  assert.equal(offersOf(station, snapshot).some(offer => offer.mediaType || offer.mediaSpecs), false);
 });
 
 test("Leaflow 美元面值与支付宝人民币报价分开保存，按 67.18/10 折算一次", async () => {

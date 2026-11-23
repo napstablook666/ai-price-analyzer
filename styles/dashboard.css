@@ -2,15 +2,6 @@
 .dashboard-topbar { position: relative; flex: 0 0 auto; min-height: 60px; padding-block: 10px; border-bottom: 1px solid var(--line); background: var(--surface); }
 .dashboard-topbar .top-actions { flex-wrap: wrap; }
 .page-shell { display: flex; flex-direction: column; gap: 16px; width: min(1760px, 100%); flex: 1; height: auto; min-height: 0; margin: 0 auto; padding: 16px 24px 20px; overflow: hidden; }
-.media-mode-bar { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex: 0 0 auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--shadow-raise); }
-.media-mode-copy { display: grid; gap: 2px; min-width: 0; }
-.media-mode-copy strong { color: var(--text); font-size: 15px; }
-.media-mode-copy p { margin: 0; color: var(--text-3); font-size: 11px; }
-.media-mode-switch { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
-.media-mode-button { min-height: 34px; min-width: 72px; padding: 0 12px; border-radius: 4px; color: var(--text-2); background: transparent; font-size: 13px; font-weight: 600; }
-.media-mode-button:hover { color: var(--text); background: var(--surface); }
-.media-mode-button.is-active { color: var(--accent); background: var(--surface); box-shadow: var(--shadow-segment); }
-.media-mode-video .billing-mode-tag { color: var(--accent); }
 
 .summary-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex: 0 0 auto; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-card); background: var(--surface); }
 .summary-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
@@ -338,9 +329,6 @@
   .dashboard-topbar .theme-toggle { width: 44px; height: 44px; }
   .page-shell { height: auto; }
   .comparison-mode-button { min-height: 44px; }
-  .media-mode-bar { align-items: stretch; flex-direction: column; gap: 8px; }
-  .media-mode-switch { width: 100%; overflow-x: auto; }
-  .media-mode-button { flex: 1 0 86px; min-height: 44px; }
   .toolbar-main, .toolbar-options { align-items: stretch; }
   .search-field { flex-basis: 100%; max-width: none; height: 44px; }
   .facet-menu { flex: 1 1 100%; }
@@ -438,12 +426,9 @@
   .monthly-cost-popover { width: min(360px, calc(100vw - 16px)); max-height: 60dvh; }
 }
 
-/* 主表里按次 / 按张报价复用的费用项小标签：折算、平衡点、你的单次、对比官方。 */
+/* 主表里按次报价复用的费用项小标签：折算、平衡点、你的单次、对比官方。 */
 .price-mini-pair .is-cheap { color: var(--ok); }
 .price-mini-pair .is-expensive { color: var(--danger); }
 .cost-amount-missing { color: var(--text-3); font-size: 12px; font-weight: 500; }
 .billing-mode-tag { margin-left: 2px; padding: 0 4px; border-radius: 4px; background: var(--surface-2); color: var(--text-3); font-size: 10px; font-weight: 600; }
-.unit-group-row th { padding: 6px 12px; border-top: 1px solid var(--line-strong); background: var(--surface-2); text-align: left; font-weight: 600; }
-.unit-group-label { color: var(--text-2); font-size: 12px; }
-.unit-group-note { margin-left: 8px; color: var(--text-3); font-size: 11px; font-weight: 400; }
 .tier-estimated { margin-left: 4px; color: var(--warn); font-size: 10px; }

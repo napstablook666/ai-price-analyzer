@@ -2,8 +2,7 @@ import { STATION_CATEGORIES, SYSTEM_BASE_PRICE_PER_1M } from "../shared/schema.j
 import { buildModelMatchIndex, matchModelWithOverrides } from "./matching.js";
 import { STANDARD_PRICE_FIELDS } from "./price-fields.js";
 import { canonicalKey, stripDecoration, stripVendorPrefix } from "./canonical.js";
-import { compareImageQuote, imageCategoryOf, imageTierLabel, imageTierOf, mediaUnitLabel, mediaUnitRank, pickImageQuote, toPerImage } from "./image-billing.js";
-import { mediaModeMatches, mediaSpecsOf, mediaTypeForPricing } from "./media.js";
+import { mediaTypeForPricing } from "./media.js";
 import { effectiveRecharge } from "./recharge.js";
 import { rechargePaymentRate, representativeRechargePayment } from "../shared/recharge-payments.js";
 
@@ -17,13 +16,12 @@ export function currencyToRmb(currency, rechargeRate = 1) {
   return Number.isFinite(rate) ? rate : 1;
 }
 
-export const MIX_KEYS = ["cacheRead", "input", "cacheWrite", "cacheWrite1h", "output", "image"];
+export const MIX_KEYS = ["cacheRead", "input", "cacheWrite", "cacheWrite1h", "output"];
 
-// 混合单价统一口径：requests / images 不计入 token 总量，按次、按张成本只在月成本里体现。
+// 混合单价统一口径：requests 不计入 token 总量，按次成本只在月成本里体现。
 export function tokenTotalOf(usage = {}) {
   return (Number(usage.input) || 0) + (Number(usage.cacheRead) || 0) + (Number(usage.cacheWrite) || 0) +
-    (Number(usage.cacheWrite1h) || 0) + (Number(usage.output) || 0) +
-    (Number(usage.imageInputTokens) || 0) + (Number(usage.imageOutputTokens ?? usage.imageTokens) || 0);
+    (Number(usage.cacheWrite1h) || 0) + (Number(usage.output) || 0);
 }
 
 export function blendedUnitPrice(cost, usage = {}) {
@@ -36,12 +34,7 @@ export function blendedMixOf(usage = {}) {
   const total = tokenTotalOf(usage);
   if (total <= 0) return null;
   const mix = {};
-  for (const key of MIX_KEYS) {
-    const raw = key === "image"
-      ? (Number(usage.imageInputTokens) || 0) + (Number(usage.imageOutputTokens ?? usage.imageTokens) || 0)
-      : (Number(usage[key]) || 0);
-    mix[key] = raw / total;
-  }
+  for (const key of MIX_KEYS) mix[key] = (Number(usage[key]) || 0) / total;
   return mix;
 }
 
@@ -76,11 +69,8 @@ function buildProxyPrices(item = {}, groupRatio = 1, factor = 1, basePrice = SYS
 function hasAnyPrice(prices = {}) {
   return STANDARD_PRICE_FIELDS.some(field => Number.isFinite(prices[field]));
 }
-
-// 有「元/张」才走生图道。这类报价没有 token 维度，摊进按 token 的混合单价
-// 分母里没有「张」，只会算出 ¥0；而且生图模型常常同时报文本 prompt 的 token 价，
-// 只看「有没有 token 价」会把它们判成文本模型。
-// 只报「元/1M 图输出 token」的报价仍留在 token 道，用量里的「图像输出」能覆盖它。
+// 只用来判定「这条不是文本」：比价入口判到 image 直接丢，报价行上只剩 token 和 request 两种。
+// 有「元/张」就算生图道。生图模型常常同时报文本 prompt 的 token 价，只看有没有 token 价会把它判成文本。
 export function billingModeOf(prices = {}) {
   if (Number(prices.request) > 0) return "request";
   if (Number(prices.imagePrice) > 0) return "image";
@@ -117,10 +107,7 @@ export function workloadCost(prices = {}, usage = {}) {
     perMillion(prices.cacheWrite ?? prices.input, usage.cacheWrite) +
     perMillion(prices.cacheWrite1h, usage.cacheWrite1h) +
     perMillion(prices.output, usage.output) +
-    (Number(usage.requests) || 0) * (Number.isFinite(prices.request) ? prices.request : 0) +
-    perMillion(prices.imageInput, usage.imageInputTokens) +
-    perMillion(prices.imageOutput, usage.imageOutputTokens ?? usage.imageTokens) +
-    (Number(usage.images) || 0) * (Number.isFinite(prices.imagePrice) ? prices.imagePrice : 0);
+    (Number(usage.requests) || 0) * (Number.isFinite(prices.request) ? prices.request : 0);
 }
 
 // 落档：橘子站 11 档折扣随额度单调加深，多档拼凑从不比单档便宜，所以取「第一个 >= 消耗的档」即可。
@@ -159,53 +146,6 @@ export function requestUnitPriceOf(requestRmb, tokensPerRequest) {
   return price * 1_000_000 / tokens;
 }
 
-// 官方出图价优先取 /images/models/{id}/endpoints 的 output_image，那里才有单位。
-// 拉不到时退回落 /models 的 image_output（美元/图输出 token），标成估算来源。
-// pricing.image 是「美元/输入图」，不是出图价，这里不用。
-function officialImageQuoteOf(model, references = {}) {
-  if (!model) return null;
-  const factor = Number(references.openRouterRechargeRate) || Number(references.exchangeRate) || 1;
-  const quote = (references.imageQuotes || {})[model.id];
-  if (quote && Number.isFinite(quote.value) && quote.value > 0) {
-    return { unit: quote.unit, value: quote.value * factor, provider: quote.provider, variant: quote.variant, source: "endpoints" };
-  }
-  if (Number.isFinite(model.imageOutput) && model.imageOutput > 0) {
-    return { unit: "token", value: model.imageOutput * factor, provider: "", variant: "", source: "models" };
-  }
-  return null;
-}
-
-// 生图行的整块结果：站内口径、官方口径、折合元/张、价差、月成本。
-// 折算不出来就留 null，展示层显示「—」，不编数。
-function resolveImagePricing({ costPrices, quotedPrices, model, references, modelId, imageCount, skipOfficial, rowTier }) {
-  const official = skipOfficial ? null : officialImageQuoteOf(model, references);
-  const station = pickImageQuote(costPrices ?? {}, official?.unit || "");
-  const stationQuoted = pickImageQuote(quotedPrices ?? {}, official?.unit || "");
-  const stationPerImage = toPerImage(station, modelId);
-  // 站内规格来自自己的档位列（size_tier / tier_name），官方来自 endpoints 的 variant。
-  // 取不到就 unstated，不猜；两边档位不同就当不了同口径，展示层要分开摆。
-  const stationTier = imageTierOf(rowTier);
-  const officialTier = imageTierOf(official?.variant || "");
-  return {
-    station,
-    stationQuoted,
-    official,
-    stationTier,
-    officialTier,
-    stationPerImage,
-    officialPerImage: toPerImage(official, modelId),
-    compare: compareImageQuote(station, official, modelId, stationTier, officialTier),
-    monthlyCost: stationPerImage && imageCount > 0 ? stationPerImage.perImage * imageCount : null
-  };
-}
-
-// 一行自己的计价单位。元/张 和 元/1M 图token 分属两榜，所以单位是分榜键不是展示细节。
-// 视频的 request_price 是每秒价，request_unit 已经标了 second，别和按次混一起。
-function mediaUnitOf(billingMode, requestUnit, imageQuote) {
-  if (billingMode === "image") return imageQuote?.unit || null;
-  if (billingMode === "request") return String(requestUnit || "").trim().toLowerCase() === "second" ? "second" : "request";
-  return null;
-}
 
 function referencePrices(model, exchangeRate = 1) {
   if (!model) return null;
@@ -318,11 +258,9 @@ export function addRecommendationStatus(comparisons, { evidenceThreshold = 60 } 
       Number(offer.officialMonthlyCost) > 0 && Number(offer.confidenceScore) >= threshold);
     let recommended = eligible.reduce((current, offer) => !current || offer.monthlyCost < current.monthlyCost ? offer : current, null);
     for (const offer of comparison.offers) {
-      // 生图行按元/张的价差分档；「按次」行的成本口径是摊出来的，不给档位。
+      // 「按次」行的成本口径是摊出来的，不给档位。
       const mode = offer.billingMode ?? "token";
-      offer.category = comparison.comparisonGroup === "public" ? "" :
-        mode === "image" ? (Number(offer.imagePerImage) > 0 ? imageCategoryOf(offer.imageCompare) : "") :
-          mode === "request" ? "" : classifyOffer(offer);
+      offer.category = comparison.comparisonGroup === "public" ? "" : mode === "request" ? "" : classifyOffer(offer);
       offer.recommendationEligible = eligible.includes(offer);
       offer.recommended = offer === recommended;
       offer.recommendationLabel = comparison.comparisonGroup === "public" ? "" :
@@ -393,19 +331,18 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
         }
         for (const [canonicalModel, results] of resultsByCanonical) {
           const primaryResult = results[0];
-          let costPrices = baseCostPrices;
           const billingMode = billingModeOf(baseCostPrices ?? quotedPrices);
-          const mediaType = mediaTypeForPricing(item, { targetField: billingMode });
-          const rowMediaKey = mediaType || (billingMode === "image" ? "image" : "text");
-          // 时段档与按秒档（视频分辨率）各自独立成行，每个档一行，不做加权合并。
+          // 只比文本模型：生图、视频（以及插件标出的其他媒体类型）整条不识别，不进比价表。
+          // media_type / 计费单位判不出来时，再按「有元/张就是生图」兜一层。
+          if (billingMode === "image" || mediaTypeForPricing(item, { targetField: billingMode })) continue;
+          let costPrices = baseCostPrices;
+          // 时段档各自独立成行，每个档一行，不做加权合并。
           // 上下文长度分档不在这里分行：入口处已按单次请求长度选中一档，同一模型只出一行。
-          const rowTierKey = item.tier_name ? `${item.request_unit === "second" ? "second" : "tier"}:${item.tier_name}` : `item:${itemIndex}`;
-          const rowKey = [station.id, item.model_name, canonicalModel, group, rowMediaKey, rowTierKey].join("\u0000");
+          const rowTierKey = item.tier_name ? `tier:${item.tier_name}` : `item:${itemIndex}`;
+          const rowKey = [station.id, item.model_name, canonicalModel, group, rowTierKey].join("\u0000");
           const row = grouped.get(rowKey) || {
             canonicalModel,
             displayName: primaryResult.match?.display_name || primaryResult.match?.name || item.model_display_name || item.model_name,
-            // 出图规格：映射文档写 size_tier，老站点写 tier_name，两个都认。
-            sizeTier: item.size_tier || item.tier_name || null,
             provider: primaryResult.match?.provider || "未匹配",
             official: null,
             officialCandidates: new Map(),
@@ -431,9 +368,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
             groupName: group,
             groupRatio,
             billingMode,
-            mediaType: mediaType || (billingMode === "image" ? "image" : "text"),
             requestUnit: item.request_unit || "",
-            mediaSpecs: mediaSpecsOf(item),
             tokensPerRequest,
             tokensPerRequestEstimated,
             matchRule: primaryResult.rule,
@@ -565,29 +500,6 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       monthlyCostPaid = row.monthlyCost;
       monthlyCostPaidSource = "derived";
     }
-    // 生图道的四种计费口径（张 / 图 token / 像素 / 次）统一折到元/张再比，折算不出来就留空。
-    const imageCount = Number(usage.images) || 0;
-    const imagePricing = row.billingMode === "image"
-      ? resolveImagePricing({
-        costPrices: row.stationCategory === "public" || row.pricingUnavailable ? null : costUnit,
-        quotedPrices: quotedUnit,
-        model: row.official,
-        references,
-        modelId: row.official?.id || row.modelName,
-        imageCount,
-        rowTier: row.sizeTier,
-        skipOfficial: row.stationCategory === "public"
-      })
-      : null;
-    const imageMonthlyCost = imagePricing?.monthlyCost ?? null;
-    const imageRechargePlan = imageMonthlyCost === null || row.stationCategory === "public"
-      ? null
-      : resolveRechargeTier(rowStation?.rechargeTiers, rechargeFactor > 0 ? imageMonthlyCost / rechargeFactor : imageMonthlyCost);
-    const imageMonthlyCostPaid = imageMonthlyCost === null
-      ? null
-      : paidRate !== null
-        ? (rechargeFactor > 0 ? imageMonthlyCost / rechargeFactor : imageMonthlyCost) * paidRate
-        : (imageRechargePlan ? imageRechargePlan.payRmb * rechargeFactor : imageMonthlyCost);
     const offer = {
       stationId: row.stationId,
       stationName: row.stationName,
@@ -605,38 +517,8 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       matchCandidateCount: orderedCandidates.length,
       groupName: row.groupName,
       groupRatio: row.groupRatio,
-      // 生图行按原始计价单位 + 折合元/张展示，不折成 token 单价，也不参与按 token 的月成本排名。
-      imageQuote: imagePricing?.station ?? null,
-      imageQuoteQuoted: imagePricing?.stationQuoted ?? null,
-      imageOfficialQuote: imagePricing?.official ?? null,
-      imagePerImage: imagePricing?.stationPerImage?.perImage ?? null,
-      imagePerImageAssumption: imagePricing?.stationPerImage?.assumption ?? "",
-      imageOfficialPerImage: imagePricing?.officialPerImage?.perImage ?? null,
-      imageOfficialPerImageAssumption: imagePricing?.officialPerImage?.assumption ?? "",
-      imageCompare: imagePricing?.compare ?? null,
-      imageCount,
-      imageMonthlyCost,
-      imageMonthlyCostPaid,
-      imageRechargePlan,
       billingMode: row.billingMode,
-      mediaType: row.mediaType,
       requestUnit: row.requestUnit,
-      mediaSpecs: row.mediaSpecs,
-      // 分榜键。同一行只属于一个榜，跨榜不给百分比。
-      mediaUnit: mediaUnitOf(row.billingMode, row.requestUnit, imagePricing?.station),
-      mediaUnitText: mediaUnitLabel(mediaUnitOf(row.billingMode, row.requestUnit, imagePricing?.station), ""),
-      // 原始单位价，不再折算成元/张。折现值留在 imagePerImage，只当注释。
-      mediaUnitPrice: row.billingMode === "image"
-        ? (imagePricing?.station?.value ?? null)
-        : row.billingMode === "request"
-          ? (costUnit?.request ?? quotedUnit?.request ?? null)
-          : null,
-      // 规格档。站内一律 unstated，官方的来自 endpoints 的 variant。
-      imageSizeTier: imagePricing?.stationTier?.size ?? null,
-      imageQualityTier: imagePricing?.stationTier?.quality ?? null,
-      imageTierText: imagePricing ? imageTierLabel(imagePricing.stationTier) : null,
-      officialImageTierText: imagePricing?.officialTier ? imageTierLabel(imagePricing.officialTier) : null,
-      imageTierMatches: imagePricing ? imageTierLabel(imagePricing.stationTier) === imageTierLabel(imagePricing.officialTier) : null,
       tokensPerRequest: row.tokensPerRequest,
       tokensPerRequestEstimated: row.tokensPerRequestEstimated,
       tierName: [...row.tierNames].join(" / ") || "标准",
@@ -655,8 +537,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       ...(paidPayment ? { rechargePayment: paidPayment } : {}),
       costCurrency: row.stationCategory === "public" ? row.sourceCurrency : null,
       officialMonthlyCost: row.stationCategory === "public" || !primary ? null : primary.monthlyCost,
-      // 按张计价的价差要按元/张比，跟按 token 的月成本不是一回事，这里不填。
-      diffPercent: row.stationCategory !== "public" && !row.pricingUnavailable && row.billingMode !== "image" && primary && Number.isFinite(row.monthlyCost) && primary.monthlyCost > 0 ? ((row.monthlyCost - primary.monthlyCost) / primary.monthlyCost) * 100 : null,
+      diffPercent: row.stationCategory !== "public" && !row.pricingUnavailable && primary && Number.isFinite(row.monthlyCost) && primary.monthlyCost > 0 ? ((row.monthlyCost - primary.monthlyCost) / primary.monthlyCost) * 100 : null,
       // 按次成本摊进 token 分母会污染口径，折算单价改用 requestUnitPrice（见下方补算）。
       blendedUnitPrice: row.stationCategory === "public" || row.pricingUnavailable || row.billingMode !== "token" ? null : blendedUnitPrice(row.monthlyCost, usage),
       blendedMix: row.stationCategory === "public" || row.pricingUnavailable || row.billingMode !== "token" ? null : blendedMixOf(usage),
@@ -671,7 +552,7 @@ export function buildComparisonRows({ stations = [], snapshots = [], references 
       unpricedModels: row.unpricedModels,
       cacheReadEstimated: row.cacheReadEstimated,
       cacheWriteEstimated: row.cacheWriteEstimated,
-      estimatedFields: [...row.estimatedFields, ...(row.billingMode === "request" ? ["requestBilled"] : []), ...(row.billingMode === "image" ? ["imageBilled"] : [])].sort(),
+      estimatedFields: [...row.estimatedFields, ...(row.billingMode === "request" ? ["requestBilled"] : [])].sort(),
       requestUnitPrice: null,
       breakEvenTokens: null,
       collectedAt: row.collectedAt,
@@ -700,16 +581,6 @@ export function filterComparisonsByMode(comparisons = [], mode = "paid") {
   return comparisons.filter(comparison => comparison.comparisonGroup === comparisonGroup);
 }
 
-
-export function filterComparisonsByMediaMode(comparisons = [], mode = "text") {
-  const currentMode = ["text", "image", "video"].includes(mode) ? mode : "text";
-  return comparisons
-    .map(comparison => ({
-      ...comparison,
-      offers: (comparison.offers || []).filter(offer => mediaModeMatches(offer, currentMode))
-    }))
-    .filter(comparison => comparison.offers.length);
-}
 export function flattenComparisonRows(comparisons) {
   return comparisons.flatMap(comparison => comparison.offers.map(offer => ({ ...offer, canonicalModel: comparison.canonicalModel })));
 }
