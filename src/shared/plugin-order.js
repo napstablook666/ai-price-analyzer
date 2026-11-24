@@ -65,5 +65,13 @@ export const SITE_PLUGIN_ORDER = [
   "teamapi",
   "1xm",
   "linktoagi",
-  "daidaishou"
+  "daidaishou",
+  "fengying",
+  "vbcoding",
+  "qianxing",
+  "yunxuai",
+  "apiaqi",
+  "agentgate",
+  "astrgate",
+  "viola"
 ];

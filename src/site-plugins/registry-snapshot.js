@@ -692,6 +692,88 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "api.daidaishou.xyz"
       ],
       "needsCode": true
+    },
+    {
+      "id": "fengying",
+      "name": "风影",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，53 个模型 101 条全是文本价；5 个分组倍率 0.1 到 999，14 个表达式带 UTC 工作日分时倍率",
+      "hosts": [
+        "api.fengying.xin"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "vbcoding",
+      "name": "VBCoding",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，49 个模型 96 条；9 个分组倍率 0.14 到 5.67，12 个表达式按 100k 上下文分两档并带 1 小时缓存写",
+      "hosts": [
+        "new.vbcoding.cc"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "qianxing",
+      "name": "乾行AI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，45 个模型 111 条；16 个分组倍率 0.25 到 20，44 个表达式含长上下文分档与 service_tier 加价，fast 子域同一份报文",
+      "hosts": [
+        "qianxing.pro",
+        "fast.qianxing.pro"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "yunxuai",
+      "name": "云续AI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，42 个模型 99 条；9 个分组倍率 0.08 到 1.3，26 个表达式按 272k 上下文分档并带缓存写系数",
+      "hosts": [
+        "api.yunxuai.cc"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "apiaqi",
+      "name": "AQIAPI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，39 个模型 166 条；16 个分组倍率 1 到 26，只有 13 个表达式，主要靠 model_ratio 折算",
+      "hosts": [
+        "api2.apiaqi.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "agentgate",
+      "name": "AgentGate",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，39 个模型 76 条；7 个分组倍率 0.25 到 1，39 个表达式全部按 272k 分档并带 12 小时缓存写系数",
+      "hosts": [
+        "agentgate.cc"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "astrgate",
+      "name": "星辰AI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，38 个模型 88 条全是文本价；7 个分组倍率 0.06 到 0.8，37 个表达式单档计价并带 1 小时缓存写",
+      "hosts": [
+        "astra.astrgate.net"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "viola",
+      "name": "Viola",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，36 个模型 103 条；17 个分组倍率 0.1 到 1.25，9 个表达式带上海时区分时翻倍，两个域名同一份报文",
+      "hosts": [
+        "api.viola-api.top",
+        "viola-api.top"
+      ],
+      "needsCode": true
     }
   ]
 };

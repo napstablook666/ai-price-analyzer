@@ -67,6 +67,14 @@ import { sitePlugin as teamapiPlugin } from "./providers/teamapi.js";
 import { sitePlugin as _1xmPlugin } from "./providers/1xm.js";
 import { sitePlugin as linktoagiPlugin } from "./providers/linktoagi.js";
 import { sitePlugin as daidaishouPlugin } from "./providers/daidaishou.js";
+import { sitePlugin as fengyingPlugin } from "./providers/fengying.js";
+import { sitePlugin as vbcodingPlugin } from "./providers/vbcoding.js";
+import { sitePlugin as qianxingPlugin } from "./providers/qianxing.js";
+import { sitePlugin as yunxuaiPlugin } from "./providers/yunxuai.js";
+import { sitePlugin as apiaqiPlugin } from "./providers/apiaqi.js";
+import { sitePlugin as agentgatePlugin } from "./providers/agentgate.js";
+import { sitePlugin as astrgatePlugin } from "./providers/astrgate.js";
+import { sitePlugin as violaPlugin } from "./providers/viola.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -151,7 +159,15 @@ export const SITE_PLUGIN_CATALOG = [
   entry("teamapi", "TeamAPI", "teamapi.chat", "direct", () => ({ sitePlugin: teamapiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，77 个模型 190 条；只有 2 个分组，71 个模型靠 billing_expr 定价，报文额外带 tool_prices 与 claude_plus_offer" }),
   entry("1xm", "OneXModel", "1xm.ai", "direct", () => ({ sitePlugin: _1xmPlugin }), { hosts: ["1xm.ai","www.1xm.ai","api.1xm.ai"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，54 个模型 197 条；11 个分组倍率 0.2 到 7.5，含长上下文翻倍表达式，api.1xm.ai 同一份报文" }),
   entry("linktoagi", "LinkAGI", "api.linktoagi.com", "direct", () => ({ sitePlugin: linktoagiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，47 个模型 134 条；目录与已装 coderelay 相似度 0.963，疑似同一上游转卖，先按独立站接上" }),
-  entry("daidaishou", "呆呆兽", "api.daidaishou.xyz", "direct", () => ({ sitePlugin: daidaishouPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，53 个模型 134 条；8 个分组倍率 0.05 到 1，49 个表达式含按张与 1 小时缓存写系数" })
+  entry("daidaishou", "呆呆兽", "api.daidaishou.xyz", "direct", () => ({ sitePlugin: daidaishouPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，53 个模型 134 条；8 个分组倍率 0.05 到 1，49 个表达式含按张与 1 小时缓存写系数" }),
+  entry("fengying", "风影", "api.fengying.xin", "direct", () => ({ sitePlugin: fengyingPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，53 个模型 101 条全是文本价；5 个分组倍率 0.1 到 999，14 个表达式带 UTC 工作日分时倍率" }),
+  entry("vbcoding", "VBCoding", "new.vbcoding.cc", "direct", () => ({ sitePlugin: vbcodingPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，49 个模型 96 条；9 个分组倍率 0.14 到 5.67，12 个表达式按 100k 上下文分两档并带 1 小时缓存写" }),
+  entry("qianxing", "乾行AI", "qianxing.pro", "direct", () => ({ sitePlugin: qianxingPlugin }), { hosts: ["qianxing.pro","fast.qianxing.pro"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，45 个模型 111 条；16 个分组倍率 0.25 到 20，44 个表达式含长上下文分档与 service_tier 加价，fast 子域同一份报文" }),
+  entry("yunxuai", "云续AI", "api.yunxuai.cc", "direct", () => ({ sitePlugin: yunxuaiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，42 个模型 99 条；9 个分组倍率 0.08 到 1.3，26 个表达式按 272k 上下文分档并带缓存写系数" }),
+  entry("apiaqi", "AQIAPI", "api2.apiaqi.com", "direct", () => ({ sitePlugin: apiaqiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，39 个模型 166 条；16 个分组倍率 1 到 26，只有 13 个表达式，主要靠 model_ratio 折算" }),
+  entry("agentgate", "AgentGate", "agentgate.cc", "direct", () => ({ sitePlugin: agentgatePlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，39 个模型 76 条；7 个分组倍率 0.25 到 1，39 个表达式全部按 272k 分档并带 12 小时缓存写系数" }),
+  entry("astrgate", "星辰AI", "astra.astrgate.net", "direct", () => ({ sitePlugin: astrgatePlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，38 个模型 88 条全是文本价；7 个分组倍率 0.06 到 0.8，37 个表达式单档计价并带 1 小时缓存写" }),
+  entry("viola", "Viola", "api.viola-api.top", "direct", () => ({ sitePlugin: violaPlugin }), { hosts: ["api.viola-api.top","viola-api.top"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，36 个模型 103 条；17 个分组倍率 0.1 到 1.25，9 个表达式带上海时区分时翻倍，两个域名同一份报文" })
 ];
 
 export function sitePluginById(id) {
