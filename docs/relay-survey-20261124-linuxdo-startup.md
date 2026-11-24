@@ -83,7 +83,10 @@
 raw/all-topics.json        1322 帖（三个分类分页到底，cat 46 第 40 页为空）
 raw/parsed.json            428 篇 OP 抽出的主机
 raw/host-rows.json         318 主机 × 分类 / 币种 / 出现过的帖
-raw/pricing/<host>.json    43 份 /api/pricing 原始报文
+raw/pricing/<host>.json    43 份 /api/pricing 原始报文（11-20 快照，在 ego 工作目录）
+raw/batch/<host>.pricing.json  接入时重抓的现网报文（22 家 × 主机 + /api/status）
+raw/batch/summary.json     重抓后的模型数 / 行数 / 未决数（插件写的依据）
+raw/batch/e2e.json         插件自查：走 sitePlugin.prepare → adapter → applyPriceMap 的结果
 raw/a-stats.json           43 家字段盘点（模型数、分组、expr 数…）
 raw/base-dryrun.json       用现有基座 dry-run 后的行数 / 有价行 / 未决数
 raw/a-table.md             下面那张表的数据源
@@ -166,6 +169,8 @@ verify-survey.mjs          拿本文的表和 a-stats / base-dryrun 对账
 
 筛选条件：`/api/pricing` 匿名可读、dry-run 未决 0、模型 ≥ 30、现有插件没覆盖。同一套价的两个域名只占一行（星云、乾行、Viola 各算一家）。
 
+**下表 18 家已全部接成插件**，连同下面补的 4 家（media 行有缺口但文本价全的）与 `axisapi` / `boreara`，一共 22 家，插件 id 见文末「已接成插件」。
+
 | 站 | 主机 | 模型 | 分组 | expr | 备注 |
 | --- | --- | ---: | ---: | ---: | --- |
 | 星云中转 | `xycai.cn` + `xyc.ai` | 336 | 1 | 14 | 两个域名同一目录同一价；单分组，倍率区间窄 |
@@ -189,7 +194,7 @@ verify-survey.mjs          拿本文的表和 a-stats / base-dryrun 对账
 
 模型数够大但媒体行有缺口、同样能先接的还有 4 家 `tokenmarket.cheap`（112 模型）、`xcode.best`（89）、`fuelapi.top`（45）、`ycnovaflow.vip`（32），未决分别是 1 / 1 / 6 / 7 行，都在上面「未决 1~15 行」那 12 家里，不缺文本价。
 
-建议按「模型数 + 有价行数」从上面往下排，先做前 6 家（星云、FoxAPI、KaopuAPI、甜菜、TeamAPI、OneXModel）就能把板块里的主力站覆盖掉大半。
+这 22 家按「模型数 + 有价行数」分三批接完了：第一批 8 家（星云、FoxAPI、KaopuAPI、甜菜、TeamAPI、OneXModel、LinkAGI、呆呆兽），第二批 8 家（风影、VBCoding、乾行、云续、AQIAPI、AgentGate、星辰、Viola），第三批 6 家（Axis API、极光 Boreara、TokenMarket、Xcode、Fuel API、NovaFlow）。
 
 ## 声明怎么写
 
@@ -277,3 +282,43 @@ export const sitePlugin = {
 - 43 家里的 `price`（7.3 / 6.8 / 6.9 / 0.5 / 1）只有 RelayRouter 有实付验证；其余 42 家的充值折算全部未核，插件里必须保持 `priceCurrencyVerified: false`。
 - `xycai.cn` 单分组 336 个模型、`price` 6.9：单分组意味着站内没有折扣档，倍率只有 1 档，比价表里会显示成「无分组折扣」，这是报文事实，不是采集错误。
 - 133 篇标题像站的帖子抽不出域名（只说品牌名、图床发二维码），要浏览器进去才知道落在哪个域名。
+
+## 已接成插件
+
+22 家接完，插件总数 80（`plugins/` 下 58 家原有 + 22 家本轮 + 各自的 carpool/变体）。全部走公开 `/api/pricing`，除了 `boreara` 归 `relayrouter` 基座，其余 21 家归 `allrouter` 基座。下面「行数」是「模型 × 分组」的行数，「未决」是 `parseBillingTiers` 没能给价的行数。
+
+| 站 | 插件 id | 主机 | 模型 | 行数 | 未决 |
+| --- | --- | --- | ---: | ---: | ---: |
+| 星云中转 | `xycai` | `xycai.cn` + `www.xycai.cn` + `xyc.ai` + `www.xyc.ai` | 336 | 382 | 0 |
+| FoxAPI | `foxapi` | `foxapi.chat` + `www.foxapi.chat` | 168 | 314 | 0 |
+| KaopuAPI | `kaopuapi` | `api.kaopuapi.xyz` | 106 | 174 | 0 |
+| 甜菜程序猿 | `tccxy` | `api.tccxy.top` | 103 | 318 | 0 |
+| TeamAPI | `teamapi` | `teamapi.chat` | 77 | 190 | 0 |
+| OneXModel | `1xm` | `1xm.ai` + `www.1xm.ai` + `api.1xm.ai` | 54 | 197 | 0 |
+| LinkAGI | `linktoagi` | `api.linktoagi.com` | 47 | 134 | 0 |
+| 呆呆兽 | `daidaishou` | `api.daidaishou.xyz` | 53 | 134 | 0 |
+| 风影 | `fengying` | `api.fengying.xin` | 53 | 101 | 0 |
+| VBCoding | `vbcoding` | `new.vbcoding.cc` | 49 | 96 | 0 |
+| 乾行AI | `qianxing` | `qianxing.pro` + `fast.qianxing.pro` | 45 | 111 | 0 |
+| 云续AI | `yunxuai` | `api.yunxuai.cc` | 42 | 99 | 0 |
+| AQIAPI | `apiaqi` | `api2.apiaqi.com` | 39 | 166 | 0 |
+| AgentGate | `agentgate` | `agentgate.cc` | 39 | 76 | 0 |
+| 星辰AI | `astrgate` | `astra.astrgate.net` | 38 | 88 | 0 |
+| Viola | `viola` | `api.viola-api.top` + `viola-api.top` | 36 | 103 | 0 |
+| Axis API | `axisapi` | `axisapi.cn` | 35 | 67 | 0 |
+| 极光 Boreara | `boreara` | `api.boreara.com` | 31 | 85 | 0 |
+| TokenMarket | `tokenmarket` | `tokenmarket.cheap` | 100 | 255 | 1 |
+| Xcode | `xcode` | `xcode.best` | 89 | 229 | 1 |
+| Fuel API | `fuelapi` | `fuelapi.top` | 45 | 209 | 6 |
+| NovaFlow 智舟 | `novaflow` | `ycnovaflow.vip` | 31 | 54 | 7 |
+
+最后 4 家有未决行，全是视频按秒（`u("seconds")`）或按 token 计量（`u("tokens") * 46 / 1000000`）的表达式，文本 token 价一行不缺，插件里注明了缺口是哪一个模型。
+
+自查口径：`out/recon/linuxdo-20261124/round-52-e2e.mjs` 走插件自己的 `sitePlugin.load()` → `matches`（逐个 hosts）→ `prepare` → `adapter.priceMap` → 实打 `https://<host>/api/pricing` → `applyPriceMap`，22/22 通过、0 失败，结果落在 `raw/batch/e2e.json`。`npm run verify` 612 项测试全过、`plugins:check` 报 80 个插件产物与源同步。
+
+同模型归行的口径也量了一遍：22 家解析出的文本价行里，`resolveCanonicalModel` 认得出 140 个规范模型，其中 87 个被两家以上同时卖（`claude-opus-5`、`gpt-6-astra`、`gpt-6-1-sol` 各 21 家），这些在比价表里就是同一行。
+
+两处遗留：
+
+- `linktoagi` 与 `coderelay` 目录相似度 0.963，两家都接了，比价表里会并到同一行；确认同一上游转卖后删一边即可。
+- 22 家的 `priceCurrencyVerified` 全是 `false`：`/api/status` 的 `price` 读到就记（0.5 / 1 / 6.9 / 7.3），但一家都没真实付款验证过，`rechargeRmb` 只是配置口径。
