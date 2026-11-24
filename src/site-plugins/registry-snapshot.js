@@ -854,6 +854,38 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "api.jetapi.icu"
       ],
       "needsCode": true
+    },
+    {
+      "id": "dstopology",
+      "name": "FrostFox 妖怪杂货铺",
+      "version": "0.1.0",
+      "description": "登录态采集：67 个模型 169 条（文本 148 / 按次 21）；18 个分组，19 个分组倍率 0.072 到 1，17 个模型把价写进 billing_expr，未决 0 行",
+      "hosts": [
+        "api.dstopology.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "yuki",
+      "name": "Yuki",
+      "version": "0.1.0",
+      "description": "登录态采集：51 个模型 109 条（文本 93 / 按次 16）；9 个分组，9 个分组倍率 0.2 到 1.2，10 个模型把价写进 billing_expr，未决 0 行",
+      "hosts": [
+        "yukiapi.com",
+        "www.yukiapi.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "sccx",
+      "name": "纸飞机",
+      "version": "0.1.0",
+      "description": "登录态采集：23 个模型 59 条（文本 59 / 按次 0）；5 个分组，7 个分组倍率 0.15 到 1.5，17 个模型把价写进 billing_expr，未决 0 行",
+      "hosts": [
+        "sccx.cc",
+        "www.sccx.cc"
+      ],
+      "needsCode": true
     }
   ]
 };

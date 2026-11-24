@@ -26,6 +26,7 @@ export const SITE_LOGOS = {
   "cun": "icons/sites/cun.png",
   "daidaishou": "icons/sites/daidaishou.png",
   "dddai": "icons/sites/dddai.png",
+  "dstopology": "icons/sites/dstopology.png",
   "eapi": "icons/sites/eapi.png",
   "fastaitoken": "icons/sites/fastaitoken.png",
   "fengying": "icons/sites/fengying.png",
@@ -63,6 +64,7 @@ export const SITE_LOGOS = {
   "qianxing": "icons/sites/qianxing.png",
   "relayrouter": "icons/sites/relayrouter.svg",
   "rightcode": "icons/sites/rightcode.png",
+  "sccx": "icons/sites/sccx.png",
   "sevenai": "icons/sites/sevenai.png",
   "sidrune": "icons/sites/sidrune.svg",
   "soleapi": "icons/sites/soleapi.svg",
@@ -84,6 +86,7 @@ export const SITE_LOGOS = {
   "xkrelay": "icons/sites/xkrelay.png",
   "xycai": "icons/sites/xycai.png",
   "yescode": "icons/sites/yescode.png",
+  "yuki": "icons/sites/yuki.png",
   "yunxuai": "icons/sites/yunxuai.png",
   "zerocat": "icons/sites/zerocat.png"
 };

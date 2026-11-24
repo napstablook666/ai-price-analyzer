@@ -81,5 +81,8 @@ export const SITE_PLUGIN_ORDER = [
   "fuelapi",
   "novaflow",
   "hyperroute",
-  "jetapi"
+  "jetapi",
+  "dstopology",
+  "yuki",
+  "sccx"
 ];
