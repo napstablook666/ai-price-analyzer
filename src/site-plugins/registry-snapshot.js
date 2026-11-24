@@ -606,6 +606,92 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "openrouter.ai"
       ],
       "needsCode": true
+    },
+    {
+      "id": "xycai",
+      "name": "星云中转",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，336 个模型 382 条模型×分组；xycai.cn 与 xyc.ai 两个域名同一份报文同一套价，元额 6.9 元对 1 美元",
+      "hosts": [
+        "xycai.cn",
+        "www.xycai.cn",
+        "xyc.ai",
+        "www.xyc.ai"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "foxapi",
+      "name": "FoxAPI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，168 个模型 314 条；9 个分组倍率 0.2 到 10，94 个模型把价写进 billing_expr，含按张 0.06 与长上下文分档",
+      "hosts": [
+        "foxapi.chat",
+        "www.foxapi.chat"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "kaopuapi",
+      "name": "KaopuAPI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，106 个模型 174 条；主要靠按次价（81 条 request 价），只有 2 个 billing_expr 做长上下文分段",
+      "hosts": [
+        "api.kaopuapi.xyz"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "tccxy",
+      "name": "甜菜程序猿",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，103 个模型 318 条，文本价最密（313 条）；17 个分组，54 个表达式含 service_tier 加价与 0.01 倍率福利组",
+      "hosts": [
+        "api.tccxy.top"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "teamapi",
+      "name": "TeamAPI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，77 个模型 190 条；只有 2 个分组，71 个模型靠 billing_expr 定价，报文额外带 tool_prices 与 claude_plus_offer",
+      "hosts": [
+        "teamapi.chat"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "1xm",
+      "name": "OneXModel",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，54 个模型 197 条；11 个分组倍率 0.2 到 7.5，含长上下文翻倍表达式，api.1xm.ai 同一份报文",
+      "hosts": [
+        "1xm.ai",
+        "www.1xm.ai",
+        "api.1xm.ai"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "linktoagi",
+      "name": "LinkAGI",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，47 个模型 134 条；目录与已装 coderelay 相似度 0.963，疑似同一上游转卖，先按独立站接上",
+      "hosts": [
+        "api.linktoagi.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "daidaishou",
+      "name": "呆呆兽",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，53 个模型 134 条；8 个分组倍率 0.05 到 1，49 个表达式含按张与 1 小时缓存写系数",
+      "hosts": [
+        "api.daidaishou.xyz"
+      ],
+      "needsCode": true
     }
   ]
 };

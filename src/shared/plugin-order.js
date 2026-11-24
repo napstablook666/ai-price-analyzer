@@ -57,5 +57,13 @@ export const SITE_PLUGIN_ORDER = [
   "yescode",
   "rightcode",
   "man8out",
-  "openrouter"
+  "openrouter",
+  "xycai",
+  "foxapi",
+  "kaopuapi",
+  "tccxy",
+  "teamapi",
+  "1xm",
+  "linktoagi",
+  "daidaishou"
 ];

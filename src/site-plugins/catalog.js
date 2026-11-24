@@ -59,6 +59,14 @@ import { sitePlugin as yescodePlugin } from "./providers/yescode.js";
 import { sitePlugin as rightcodePlugin } from "./providers/rightcode.js";
 import { sitePlugin as man8outPlugin } from "./providers/man8out.js";
 import { sitePlugin as openrouterPlugin } from "./providers/openrouter.js";
+import { sitePlugin as xycaiPlugin } from "./providers/xycai.js";
+import { sitePlugin as foxapiPlugin } from "./providers/foxapi.js";
+import { sitePlugin as kaopuapiPlugin } from "./providers/kaopuapi.js";
+import { sitePlugin as tccxyPlugin } from "./providers/tccxy.js";
+import { sitePlugin as teamapiPlugin } from "./providers/teamapi.js";
+import { sitePlugin as _1xmPlugin } from "./providers/1xm.js";
+import { sitePlugin as linktoagiPlugin } from "./providers/linktoagi.js";
+import { sitePlugin as daidaishouPlugin } from "./providers/daidaishou.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -135,7 +143,15 @@ export const SITE_PLUGIN_CATALOG = [
   entry("yescode", "YesCode", "co.yes.vg", "direct", () => ({ sitePlugin: yescodePlugin }), { paths: ["/model-plaza","/subscription"], description: "sub2api 变体，公开模型目录 61 个模型，自带倍率，另有按次出图" }),
   entry("rightcode", "Right Code", "rightapi.io", "direct", () => ({ sitePlugin: rightcodePlugin }), { paths: ["/pricing","/console"], description: "Spring Boot 站，13 个上游渠道 111 个模型，含上下文分档与按次出图" }),
   entry("man8out", "Man8Out", "ai.man8out.com", "direct", () => ({ sitePlugin: man8outPlugin }), { paths: ["/modelsmarket"], description: "公开渠道目录，直连采集" }),
-  entry("openrouter", "OpenRouter", "openrouter.ai", "direct", () => ({ sitePlugin: openrouterPlugin }), { paths: ["/","/models","/settings/credits","/workspaces"], description: "官方聚合站，匿名 /api/v1/models 直连全量价目" })
+  entry("openrouter", "OpenRouter", "openrouter.ai", "direct", () => ({ sitePlugin: openrouterPlugin }), { paths: ["/","/models","/settings/credits","/workspaces"], description: "官方聚合站，匿名 /api/v1/models 直连全量价目" }),
+  entry("xycai", "星云中转", "xycai.cn", "direct", () => ({ sitePlugin: xycaiPlugin }), { hosts: ["xycai.cn","www.xycai.cn","xyc.ai","www.xyc.ai"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，336 个模型 382 条模型×分组；xycai.cn 与 xyc.ai 两个域名同一份报文同一套价，元额 6.9 元对 1 美元" }),
+  entry("foxapi", "FoxAPI", "foxapi.chat", "direct", () => ({ sitePlugin: foxapiPlugin }), { hosts: ["foxapi.chat","www.foxapi.chat"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，168 个模型 314 条；9 个分组倍率 0.2 到 10，94 个模型把价写进 billing_expr，含按张 0.06 与长上下文分档" }),
+  entry("kaopuapi", "KaopuAPI", "api.kaopuapi.xyz", "direct", () => ({ sitePlugin: kaopuapiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，106 个模型 174 条；主要靠按次价（81 条 request 价），只有 2 个 billing_expr 做长上下文分段" }),
+  entry("tccxy", "甜菜程序猿", "api.tccxy.top", "direct", () => ({ sitePlugin: tccxyPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，103 个模型 318 条，文本价最密（313 条）；17 个分组，54 个表达式含 service_tier 加价与 0.01 倍率福利组" }),
+  entry("teamapi", "TeamAPI", "teamapi.chat", "direct", () => ({ sitePlugin: teamapiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，77 个模型 190 条；只有 2 个分组，71 个模型靠 billing_expr 定价，报文额外带 tool_prices 与 claude_plus_offer" }),
+  entry("1xm", "OneXModel", "1xm.ai", "direct", () => ({ sitePlugin: _1xmPlugin }), { hosts: ["1xm.ai","www.1xm.ai","api.1xm.ai"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，54 个模型 197 条；11 个分组倍率 0.2 到 7.5，含长上下文翻倍表达式，api.1xm.ai 同一份报文" }),
+  entry("linktoagi", "LinkAGI", "api.linktoagi.com", "direct", () => ({ sitePlugin: linktoagiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，47 个模型 134 条；目录与已装 coderelay 相似度 0.963，疑似同一上游转卖，先按独立站接上" }),
+  entry("daidaishou", "呆呆兽", "api.daidaishou.xyz", "direct", () => ({ sitePlugin: daidaishouPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，53 个模型 134 条；8 个分组倍率 0.05 到 1，49 个表达式含按张与 1 小时缓存写系数" })
 ];
 
 export function sitePluginById(id) {
