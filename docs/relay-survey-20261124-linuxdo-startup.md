@@ -285,7 +285,7 @@ export const sitePlugin = {
 
 ## 已接成插件
 
-22 家接完，插件总数 80（`plugins/` 下 58 家原有 + 22 家本轮 + 各自的 carpool/变体）。全部走公开 `/api/pricing`，除了 `boreara` 归 `relayrouter` 基座，其余 21 家归 `allrouter` 基座。下面「行数」是「模型 × 分组」的行数，「未决」是 `parseBillingTiers` 没能给价的行数。
+25 家接完，插件总数 85（`plugins/` 下 58 家原有 + 25 家本轮 + 各自的 carpool/变体）。全部走公开 `/api/pricing`，除了 `boreara` 归 `relayrouter` 基座，其余 21 家归 `allrouter` 基座。下面「行数」是「模型 × 分组」的行数，「未决」是 `parseBillingTiers` 没能给价的行数。
 
 | 站 | 插件 id | 主机 | 模型 | 行数 | 未决 |
 | --- | --- | --- | ---: | ---: | ---: |
@@ -314,7 +314,7 @@ export const sitePlugin = {
 
 最后 4 家有未决行，全是视频按秒（`u("seconds")`）或按 token 计量（`u("tokens") * 46 / 1000000`）的表达式，文本 token 价一行不缺，插件里注明了缺口是哪一个模型。
 
-自查口径：`out/recon/linuxdo-20261124/round-52-e2e.mjs` 走插件自己的 `sitePlugin.load()` → `matches`（逐个 hosts）→ `prepare` → `adapter.priceMap` → 实打 `https://<host>/api/pricing` → `applyPriceMap`，22/22 通过、0 失败，结果落在 `raw/batch/e2e.json`。`npm run verify` 612 项测试全过、`plugins:check` 报 80 个插件产物与源同步。
+自查口径：`out/recon/linuxdo-20261124/round-52-e2e.mjs` 走插件自己的 `sitePlugin.load()` → `matches`（逐个 hosts）→ `prepare` → `adapter.priceMap` → 实打 `https://<host>/api/pricing` → `applyPriceMap`，22/22 通过、0 失败，结果落在 `raw/batch/e2e.json`。`npm run verify` 612 项测试全过、`plugins:check` 报 85 个插件产物与源同步。
 
 同模型归行的口径也量了一遍：22 家解析出的文本价行里，`resolveCanonicalModel` 认得出 140 个规范模型，其中 87 个被两家以上同时卖（`claude-opus-5`、`gpt-6-astra`、`gpt-6-1-sol` 各 21 家），这些在比价表里就是同一行。
 
@@ -378,3 +378,26 @@ export const sitePlugin = {
 | `hajimi.chat` 的 `/api/*` | 见上表，接口未知，不是取不到 |
 
 充值口径只记不判：`price = 1` 这一档在 New API 里含义漂移，实测区分靠 `usd_exchange_rate` 与 `quota_display_type`——`usd_exchange_rate` 7.3 且按人民币显示的是「7.3 元买 1 美元额度」（纸飞机、Hyperroute），等于 1 的是「1 元买 1 美元额度」（ClawCn、Yuki、JetAPI），ShareLLM 则把额度直接按人民币算（`quota_display_type` CNY、`stripe_unit_price` 1）。这一批一家都没有真实付款记录，所以都不能标已验证。
+
+## 登录态批次（2026-11-24 实测）
+
+B 类里挑出 8 家开页签登录，实际登进去 4 家、接成插件 3 家。报文全部在 `out/recon/linuxdo-20261124/raw/b-login/<host>/`，解析侧数字由 `round-54-offline.mjs` 跑扩展自己的 `applyPriceMap` 得出，和插件注释对得上。
+
+| 站 | 主机 | 模型 | 行数 | 分组 | 分组倍率 | billing_expr | 未决 | 登录机制 |
+| --- | --- | ---: | ---: | ---: | --- | ---: | ---: | --- |
+| FrostFox 妖怪杂货铺 | `api.dstopology.com` | 67 个 | 169 行 | 18 组 | 19 个，0.072 ~ 1 | 17 个 | 0 | localStorage `user.id` → `New-Api-User` 头 + `session` cookie |
+| Yuki | `yukiapi.com` | 51 个 | 109 行 | 9 组 | 9 个，0.2 ~ 1.2 | 10 个 | 0 | 同上 |
+| 纸飞机 | `sccx.cc` | 23 个 | 59 行 | 5 组 | 7 个，0.15 ~ 1.5 | 17 个 | 0 | cookie `new_api_has_session` 换 `data.access_token` |
+| 整数云 | `zhengshuyun.com` | 11 个 | — | — | — | — | — | 未接：Bearer 只存在页面内存，localStorage / sessionStorage / cookie 里都没有 |
+| claudeai.chat（从简 Clarvy） | `claudeai.chat` | 27 个 | — | — | — | — | — | 未接：credits 口径，`input_per_ktok_credits` 位数对不上任何公开充值档 |
+| ClawCn | `www.claw-cn.org` | — | — | — | — | — | — | 未接：登录页 `?redirect=%2Fdashboard` 登录失败，重开仍是 `/sign-in` |
+| XISOME | `xisome.com` | 13 个 | — | — | — | — | — | 未接：页签被关，`/api/pricing` 401 |
+| ShareLLM | `sharellm.net` | — | — | — | — | — | — | 未接：`/api/pricing` 403，站点自己挂 Turnstile |
+
+三家的充值口径（都只读配置，没真实付款）：
+
+- FrostFox：`price` 1、`quota_per_unit` 500000、`quota_display_type` USD、`usd_exchange_rate` 1，即 1 元买 1 美元额度；`/api/user/topup/info` 给了档位折扣，20 元 98 折、50 元 96 折、100 元 93 折、200 元 91 折、300 元 90 折。
+- Yuki：同上一档口径，折扣 50 元 99 折、100 元 98 折、200 元 97 折、300 元 95 折。
+- 纸飞机：`price` 1、`quota_per_unit` 500000、`usd_exchange_rate` 7.3，即 7.3 元买 1 美元额度；充值档位接口要登录且没给公开折扣表。
+
+三家解析都是 0 未决，文本价与按次价全部落地。整数云的 `v1_models.json` 也抓到了 11 个模型，但拿不到它的 Bearer 就写不成插件，报文留着等以后能复现登录时再用。
