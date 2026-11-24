@@ -12,7 +12,7 @@
     "version:check": "node scripts/sync-version.mjs --check",
     "ids:check": "node scripts/check-html-ids.mjs",
     "ids:build": "node scripts/check-html-ids.mjs --write",
-    "verify": "npm run ids:check && npm run orphans:check && npm run guards:check && npm run modules:check && npm test && npm run plugins:check && npm run version:check",
+    "verify": "npm run ids:check && npm run orphans:check && npm run guards:check && npm run modules:check && npm run rust:wire && npm test && npm run plugins:check && npm run version:check",
     "verify:clean": "node scripts/verify-clean.mjs",
     "plugins:build": "node scripts/plugin-build.mjs",
     "plugins:check": "node scripts/plugin-build.mjs --check",
@@ -32,6 +32,7 @@
     "guards:check": "node scripts/guard-coverage.mjs",
     "modules:check": "node scripts/module-contract.mjs",
     "rust:verify": "node scripts/rust-verify.mjs",
+    "rust:wire": "node scripts/rust-wire-check.mjs",
     "gen:shared-data": "node scripts/gen-shared-data.mjs"
   },
   "devDependencies": {

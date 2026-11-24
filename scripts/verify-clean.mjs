@@ -45,6 +45,7 @@ const env = { ...process.env, PLUGIN_DIR: pluginsDir };
 // 每步写成完整命令行字符串：Windows 上 npm 是 .cmd，参数直传会触发 DEP0190
 const steps = [
   ["id 引用校验", "node scripts/check-html-ids.mjs"],
+  ["Rust 接线探针", "node scripts/rust-wire-check.mjs"],
   ["全量测试", "npm test"],
   ["插件产物漂移", "npm run plugins:check"],
   ["版本号一致", "npm run version:check"],

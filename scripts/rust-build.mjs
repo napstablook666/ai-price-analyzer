@@ -42,12 +42,13 @@ export default wasm;
 function buildUnit(unit) {
   const crateDir = join(ROOT, unit.crate);
   if (!existsSync(crateDir)) throw new Error(`crate 不存在：${unit.crate}`);
+  // 纯数据表要先从 src/shared 同步进 crate，再编译：port.rs 用 include_str!("data.json") 把它
+  // 烧进 wasm，顺序反了就会带着上一版表编译，改表也不报错。
+  if (unit.prepare) execFileSync("node", [join(ROOT, unit.prepare)], { stdio: "inherit" });
   execFileSync("cargo", ["+" + TOOLCHAIN, "build", "--release", "--target", TARGET], {
     cwd: crateDir,
     stdio: "inherit"
   });
-  // 纯数据表要从 src/shared 同步进 crate，否则 wasm 里带的是旧表。
-  if (unit.prepare) execFileSync("node", [join(ROOT, unit.prepare)], { stdio: "inherit" });
   const lib = libName(unit.name);
   const wasm = join(crateDir, "target", TARGET, "release", `${lib.replace(/-/g, "_")}.wasm`);
   if (!existsSync(wasm)) throw new Error(`没有产出 wasm：${wasm}`);
