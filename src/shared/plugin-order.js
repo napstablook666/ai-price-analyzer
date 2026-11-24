@@ -79,5 +79,7 @@ export const SITE_PLUGIN_ORDER = [
   "tokenmarket",
   "xcode",
   "fuelapi",
-  "novaflow"
+  "novaflow",
+  "hyperroute",
+  "jetapi"
 ];

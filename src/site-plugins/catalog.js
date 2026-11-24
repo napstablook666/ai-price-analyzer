@@ -81,6 +81,8 @@ import { sitePlugin as tokenmarketPlugin } from "./providers/tokenmarket.js";
 import { sitePlugin as xcodePlugin } from "./providers/xcode.js";
 import { sitePlugin as fuelapiPlugin } from "./providers/fuelapi.js";
 import { sitePlugin as novaflowPlugin } from "./providers/novaflow.js";
+import { sitePlugin as hyperroutePlugin } from "./providers/hyperroute.js";
+import { sitePlugin as jetapiPlugin } from "./providers/jetapi.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -179,7 +181,9 @@ export const SITE_PLUGIN_CATALOG = [
   entry("tokenmarket", "TokenMarket", "tokenmarket.cheap", "direct", () => ({ sitePlugin: tokenmarketPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，100 个模型 255 条；20 个分组倍率 0.08 到 3.6，61 个表达式含按张与图片 token 系数，1 条视频按秒表达式解析不了" }),
   entry("xcode", "Xcode", "xcode.best", "direct", () => ({ sitePlugin: xcodePlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，89 个模型 229 条；26 个分组倍率 0.15 到 3.1，41 个表达式含 fixed 按张价，1 条视频按秒表达式解析不了" }),
   entry("fuelapi", "Fuel API", "fuelapi.top", "direct", () => ({ sitePlugin: fuelapiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，45 个模型 209 条；28 个分组倍率 0.04 到 1.4，45 个模型全带表达式，6 条视频/计量式解析不了" }),
-  entry("novaflow", "NovaFlow 智舟", "ycnovaflow.vip", "direct", () => ({ sitePlugin: novaflowPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，31 个模型 54 条；12 个分组倍率 0.01 到 3，27 个表达式按 100k 上下文分档，7 条计量式解析不了" })
+  entry("novaflow", "NovaFlow 智舟", "ycnovaflow.vip", "direct", () => ({ sitePlugin: novaflowPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，31 个模型 54 条；12 个分组倍率 0.01 到 3，27 个表达式按 100k 上下文分档，7 条计量式解析不了" }),
+  entry("hyperroute", "Hyperroute", "hyperroute.cc", "page", () => ({ sitePlugin: hyperroutePlugin }), { paths: ["/"], description: "Cloudflare 挡住直连，插件开临时页借浏览器上下文读公开 /api/pricing；56 个模型 11 个分组，其中 5 个按次计价" }),
+  entry("jetapi", "JetAPI", "api.jetapi.icu", "page", () => ({ sitePlugin: jetapiPlugin }), { paths: ["/"], description: "Cloudflare 挡住直连，插件开临时页借浏览器上下文读公开 /api/pricing；36 个模型 13 个分组，分组倍率 0.074~1.6" })
 ];
 
 export function sitePluginById(id) {

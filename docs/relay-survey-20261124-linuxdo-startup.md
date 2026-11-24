@@ -270,7 +270,7 @@ export const sitePlugin = {
 
 ## 本轮不做的三批
 
-**B 类 21 家（要登录）**：`claw-cn.org`、`chaoye.xyz`、`hyperroute.cc`、`hajimi.chat`、`gtnet.xyz`、`api.jetapi.icu`、`sharellm.net`、`xisome.com`、`yukiapi.com`、`zhengshuyun.com` 等。`/api/pricing` 存在但要 `Authorization`，匿名拿不到。做法和 `relay-login-survey-20261123.md` 里那 5 家一样：要一份登录后的 cookie，采一次报文，确认形状后写插件。**这是需要用户提供登录态才能推进的一批。**
+**B 类 21 家（要登录）**：`claw-cn.org`、`chaoye.xyz`、`hajimi.chat`、`sharellm.net`、`xisome.com`、`yukiapi.com`、`zhengshuyun.com` 等。`/api/pricing` 存在但要 `Authorization`，匿名拿不到。这批已经逐个摸过一遍，见后面「要登录的这一批」：其中 `hyperroute.cc` 与 `api.jetapi.icu` 只是被 Cloudflare 挡，浏览器里匿名就有价，已经接成插件；其余 16 个主机确认要么缺登录、要么站点本身取不到。**剩下这 16 个要推进，得给一份登录后的 cookie。**
 
 **C 类 41 家（HTML 回落）**：`skcdn.cn`、`ricktoken.top`、`mxwq.net`、`akrouter.com`、`novaferry.com`、`api.arkzero.cn`、`yierbubu.net`、`imagiluxion.ai`、`api-xiaohai.com`、`claude-code-hub.org`、`agentrouter.org` 等。`/api/*` 一律回 index.html，说明不是标准 New API 前端。可行的第一条路是逐个试 `/api/public/models`、`/api/models`、`/api/v1/pricing`，试不到就得用 `ego-browser` 打开站点看真实 XHR。
 
@@ -322,3 +322,59 @@ export const sitePlugin = {
 
 - `linktoagi` 与 `coderelay` 目录相似度 0.963，两家都接了，比价表里会并到同一行；确认同一上游转卖后删一边即可。
 - 22 家的 `priceCurrencyVerified` 全是 `false`：`/api/status` 的 `price` 读到就记（0.5 / 1 / 6.9 / 7.3），但一家都没真实付款验证过，`rechargeRmb` 只是配置口径。
+
+## 第五批：Cloudflare 只放行浏览器的两家
+
+这两家在 node 侧一律 `403 Just a moment`，用 `ego-browser` 开真浏览器匿名访问就 200，价格接口本身不要登录。所以插件走 `mode: "page"`：采集时开一次临时页，借页面上下文发请求，Cloudflare 的挑战由浏览器自己过。
+
+| 站 | 插件 id | 主机 | 模型 | 行数 | 未决 | 计价 |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| Hyperroute | `hyperroute` | `hyperroute.cc` | 56 | 129 | 0 | 124 按 token + 5 按次 |
+| JetAPI | `jetapi` | `api.jetapi.icu` | 36 | 138 | 0 | 132 按 token + 4 按次 + 2 按张 |
+
+**Hyperroute**（`usd_exchange_rate` 7.3，站内额度按人民币显示）
+
+- 11 个分组：`国模专用组`、`claude-max`、`claude-max-ext`、`claude-max2`、`claude-超低特惠`、`gpt-codex`、`gpt-codex2`、`gpt-claudecode`、`grok`、`gpt-image2`、`gpt-超低特惠`。
+- 报文里**没有** `group_ratio`，只有一个 `usable_group` 布尔表，所以分组倍率一律按 1 算，站内也没有折扣档可挑。
+- 价的样子：`glm-5.2` 进 8 / 出 28、`qwen3.8-flash` 进 0.8 / 出 2.7、`claude-fable-5-2` 进 13.33 / 出 66.67（美元每百万 token）。
+- 5 个按次的模型（`quota_type = 1`）是图片一类的固定价。
+
+**JetAPI**（`usd_exchange_rate` 1，1 元买 1 美元额度）
+
+- 13 个分组带 `group_ratio`：`claude Max(企业)` 1.6、`claude Max` 1.5、`claude AWS 满血` 1.2、`claude kiro正价` 0.25、`codex-pro` 0.25、`claude kiro正价（高缓）` 0.3、`codex 高缓` 0.18、`codex 稳定` 0.12、`deepseek` 0.12、`claude kiro 99缓（不稳定）` 0.138、`codex-plus` 0.074、`image` 1。最低 0.074、最高 1.6，同一模型换分组能差 21 倍。
+- 价的样子：`claude-opus-5` 在企业组进 8 / 出 40，在 AWS 满血组进 6 / 出 30。
+- 6 个按次的模型里 2 个是图片（公告写「生图 0.012 元/张」），4 个是固定价调用。
+
+两家的 `/api/status` 都是 `price = 1`、`quota_per_unit = 500000`、`display_in_currency = true`、`stripe_unit_price = 8`，充值档位都没在接口里列出来，所以 `rechargeRateVerified` 是 `false`，只记汇率口径。
+
+自查：`out/recon/linuxdo-20261124/round-53-cf-replay.mjs` 把浏览器里存下来的报文交给插件自己声明的 `priceMap` 解，两家都是 0 未决。`npm run verify` 612 项全过、`plugins:check` 报 82 个插件产物与源同步。
+
+## 要登录的这一批：逐家卡在哪
+
+按「匿名能拿到什么 / 卡在哪 / 要什么才能推进」记录，报文在 `out/recon/linuxdo-20261124/raw/b/` 与 `raw/b-cf/`。
+
+| 站 | 主机 | 匿名拿得到的 | 卡点 | 推进条件 |
+| --- | --- | --- | --- | --- |
+| ClawCn-API | `claw-cn.org`、`api.claw-cn.org` | `/api/status` 200（`ClawCn-API`，`price` 1、`usd_exchange_rate` 1、`quota_display_type` USD、`quota_per_unit` 500000、`stripe_unit_price` 8），`/api/about`、`/api/notice`、`/api/home_page_content` 也 200 | `/api/pricing` 401 `Unauthorized, invalid access token` | 登录 cookie |
+| FrostFox 妖怪杂货铺 | `api.dstopology.com`（门户 `market.frostfox.ai`） | `/api/status` 200（同一套字段）；门户 `/api/site-config` 200（916 KB，含内嵌 logo） | `/api/pricing` 401；门户的 `/api/catalog/pool`、`/api/models`、`/api/catalog`、`/api/network/catalog` 全 404 | 登录 + 接口还没找到 |
+| 纸飞机 | `sccx.cc` | `/api/status` 200（`纸飞机`，`usd_exchange_rate` 7.3、`quota_display_type` USD、`stripe_unit_price` 8） | `/api/pricing` 401 | 登录 cookie |
+| Yuki | `yukiapi.com` | `/api/status` 200（`Yuki`，`usd_exchange_rate` 1） | `/api/pricing` 401 | 登录 cookie |
+| ShareLLM | `sharellm.net` | `/api/status` 200（`ShareLLM`，`quota_display_type` CNY、`usd_exchange_rate` 1、`stripe_unit_price` 1） | `/api/pricing` 403，站点自己挂了 Turnstile | 人工过一次挑战，或登录 |
+| XISOME | `xisome.com` | `/api/models` 200：13 个模型，每个带 `officialInputPriceUsd` / `officialOutputPriceUsd` / `uniformDiscountBps` 7000 / `billingUnit`，但 `pricingReady` 全 `false`、`reasonCodes` 是 `official_evidence_expired` | `/api/pricing` 401「请先登录」 | 登录拿实价 |
+| claudeai.chat | `claudeai.chat` | `/api/models` 200（credits 口径） | `/api/pricing`、`/api/status` 401 | 登录 cookie |
+| 超夜 | `chaoye.xyz` | 无，Orbit 卡密站，全部 401 | 登录墙从首页起 | 登录 cookie |
+| 正数云 | `zhengshuyun.com` | `/api/v1/pricing/public` 200 但 `data` 为 `null` | 登录后才有价 | 登录 cookie |
+| 哈基米 | `hajimi.chat` | 首页 200，整页只有 `/setup/status` 一个 XHR；`/api/pricing`、`/api/status`、`/api/models`、`/api/v1/pricing` 全 404 | 不是 New API 前端 | 得在浏览器里扒真实接口 |
+
+这 10 个是「有救」的。另外 6 个主机不是登录问题，是站本身取不到：
+
+| 主机 | 现象 |
+| --- | --- |
+| `api.66o.uk` | Cloudflare 硬挑战，浏览器里也是 403 `Just a moment`，首页标题拿到了但 `/api/*` 一律不过 |
+| `gtnet.xyz` | `nginx/1.30.2` 直接 403，含 `/api/pricing`、`/api/status`，不是挑战页 |
+| `pro.abnt.it` | Cloudflare 502 |
+| `201008281.xyz` | `ERR_TOO_MANY_REDIRECTS`，重定向环 |
+| `frostfox.ai` | `ERR_CONNECTION_CLOSED`（`market.frostfox.ai` 那个门户活着） |
+| `hajimi.chat` 的 `/api/*` | 见上表，接口未知，不是取不到 |
+
+充值口径只记不判：`price = 1` 这一档在 New API 里含义漂移，实测区分靠 `usd_exchange_rate` 与 `quota_display_type`——`usd_exchange_rate` 7.3 且按人民币显示的是「7.3 元买 1 美元额度」（纸飞机、Hyperroute），等于 1 的是「1 元买 1 美元额度」（ClawCn、Yuki、JetAPI），ShareLLM 则把额度直接按人民币算（`quota_display_type` CNY、`stripe_unit_price` 1）。这一批一家都没有真实付款记录，所以都不能标已验证。

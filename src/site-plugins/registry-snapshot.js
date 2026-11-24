@@ -834,6 +834,26 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "ycnovaflow.vip"
       ],
       "needsCode": true
+    },
+    {
+      "id": "hyperroute",
+      "name": "Hyperroute",
+      "version": "0.1.0",
+      "description": "Cloudflare 挡住直连，插件开临时页借浏览器上下文读公开 /api/pricing；56 个模型 11 个分组，其中 5 个按次计价",
+      "hosts": [
+        "hyperroute.cc"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "jetapi",
+      "name": "JetAPI",
+      "version": "0.1.0",
+      "description": "Cloudflare 挡住直连，插件开临时页借浏览器上下文读公开 /api/pricing；36 个模型 13 个分组，分组倍率 0.074~1.6",
+      "hosts": [
+        "api.jetapi.icu"
+      ],
+      "needsCode": true
     }
   ]
 };
