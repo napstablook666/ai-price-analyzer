@@ -1,0 +1,187 @@
+{"fn":"rawPriceValue","args":[null,["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x","x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[[],{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x",{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x",[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x",["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x",null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":["x",{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x",true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[true,["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":["x",{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[null,true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[[],0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],null],"error":"Cannot read properties of null (reading 'aliases')"}
+{"fn":"rawPriceValue","args":[true,{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,"x"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,{"a":"b"}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[],["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":"b"},[]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[["a",1],0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[0,{"a":{"b":"c"}}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x",0],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"a":{"b":"c"}},{}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[true,true],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":["x","X"],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"2":4,"10":3,"zebra":1,"apple":2,"é":5,"Apple":6},["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{"n":9007199254740992,"f":1e+21,"t":0.1,"neg":-7},["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[[3,1,2],["a",1]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,{"2":4,"10":3,"zebra":1,"apple":2,"é":5,"Apple":6}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,{"n":9007199254740992,"f":1e+21,"t":0.1,"neg":-7}],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[null,[3,1,2]],"error":"Cannot read properties of undefined (reading 'reduce')"}
+{"fn":"rawPriceValue","args":[{},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":0.5}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":0}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":""}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":7}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":"0.3"}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":false}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"input","normalized":"input_price","aliases":["input_price","inputPrice","input","prompt_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"output","normalized":"output_price","aliases":["output_price","outputPrice","output","completion_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":0.02}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"cacheRead","normalized":"cache_read_price","aliases":["cache_read_price","cacheReadPrice","cache_read"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":0.03}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"cacheWrite","normalized":"cache_write_price","aliases":["cache_write_price","cacheWritePrice","cache_write"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"cacheWrite1h","normalized":"cache_write_1h_price","aliases":["cache_write_1h_price","cacheWrite1hPrice","cache_write_1h"]}],"ok":0.05}
+{"fn":"rawPriceValue","args":[{},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":0.01}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"request","normalized":"request_price","aliases":["request_price","requestPrice","request"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":0.1}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"imageInput","normalized":"image_input_price","aliases":["image_input_price","imageInputPrice","image_input_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":0.4}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"imageOutput","normalized":"image_output_price","aliases":["image_output_price","imageOutputPrice","image_token_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":0.5},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"inputPrice":0},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input":""},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"prompt_price":null,"input_price":null,"inputPrice":7},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_read_price":0.02,"cacheWritePrice":0.03},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"request_price":0.01,"image_price":0.2},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":0.2}
+{"fn":"rawPriceValue","args":[{"imageInputPrice":0.1,"imageOutputPrice":0.4},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":"0.3","inputPrice":0.4},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"input_price":false},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}
+{"fn":"rawPriceValue","args":[{"cache_write_1h_price":0.05},{"standard":"imagePrice","normalized":"image_price","aliases":["image_price","imagePrice","per_image_price"]}],"ok":{"$undefined":true}}

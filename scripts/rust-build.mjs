@@ -16,7 +16,8 @@ const TARGET = "wasm32-unknown-unknown";
 // 单元清单：crate 目录 → 产物名。新增 wasm 单元就在这里登记一行。
 const UNITS = [
   { name: "smoke-rs", crate: "rust/smoke-rs" },
-  { name: "shared-rs", crate: "rust/shared-rs", prepare: "scripts/gen-shared-data.mjs" }
+  { name: "shared-rs", crate: "rust/shared-rs", prepare: "scripts/gen-shared-data.mjs" },
+  { name: "price-fields-rs", crate: "rust/price-fields-rs" }
 ];
 
 function libName(name) {

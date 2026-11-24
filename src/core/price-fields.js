@@ -1,3 +1,5 @@
+import { rawPriceValue as rawPriceValueFromRust } from "./rust-price-shim.js";
+
 export const PRICE_FIELD_DEFINITIONS = Object.freeze([
   { standard: "input", normalized: "input_price", aliases: ["input_price", "inputPrice", "input", "prompt_price"] },
   { standard: "output", normalized: "output_price", aliases: ["output_price", "outputPrice", "output", "completion_price"] },
@@ -14,5 +16,5 @@ export const STANDARD_PRICE_FIELDS = Object.freeze(PRICE_FIELD_DEFINITIONS.map(f
 export const NORMALIZED_PRICE_FIELDS = Object.freeze(PRICE_FIELD_DEFINITIONS.map(field => field.normalized));
 
 export function rawPriceValue(item, field) {
-  return field.aliases.reduce((value, alias) => value ?? item?.[alias], undefined);
+  return rawPriceValueFromRust(item, field);
 }

@@ -20,7 +20,9 @@ function ensureWorktree() {
   if (!existsSync(WORKTREE)) {
     execFileSync("git", ["worktree", "add", "--detach", WORKTREE, head], { cwd: ROOT, stdio: "inherit" });
   } else {
-    execFileSync("git", ["-C", WORKTREE, "checkout", "--detach", head], { stdio: "inherit" });
+    // 上一次跑留下的 crate 副本和 pkg/ 都是未跟踪文件，先强制对齐再清干净。
+    execFileSync("git", ["-C", WORKTREE, "checkout", "--detach", "--force", head], { stdio: "inherit" });
+    execFileSync("git", ["-C", WORKTREE, "clean", "-fd", "-e", "node_modules"], { stdio: "inherit" });
   }
   return head;
 }
@@ -41,8 +43,13 @@ function stageCrate(unit) {
   return join("rust", unit);
 }
 
+// 每个单元的 record 额外参数：手写用例文件要让干净签出的 record 也用上。
+const RECORD_ARGS = {
+  "price-fields-rs": ["--inputs", "rust/price-fields-rs/cases-inputs.jsonl"]
+};
+
 const units = process.argv.slice(2);
-const all = units.length > 0 ? units : ["shared-rs"];
+const all = units.length > 0 ? units : ["shared-rs", "price-fields-rs"];
 const head = ensureWorktree();
 console.log(`验证基准：HEAD ${head.slice(0, 8)} → ${WORKTREE}`);
 
@@ -53,7 +60,8 @@ for (const unit of all) {
   // 先 build：diff 走的是 wasm-bindgen 产出的 pkg/，不能拿工作区的旧件凑。
   for (const step of ["record", "build", "diff", "gate"]) {
     try {
-      execFileSync("rust-anything", [step, crate], { cwd: WORKTREE, stdio: "inherit" });
+      const extra = step === "record" ? RECORD_ARGS[unit] ?? [] : [];
+      execFileSync("rust-anything", [step, crate, ...extra], { cwd: WORKTREE, stdio: "inherit" });
       // 采到的用例要留在仓库里，否则下次 diff 没得比。
       if (step === "record") {
         for (const name of ["cases.jsonl", "recorded-from.json"]) {

@@ -1,0 +1,36 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\AI\\AI比价\\extension",
+  "unit": "src/core/price-fields.js",
+  "language": "ts",
+  "kind": "wasm",
+  "crate_name": "price-fields-rs",
+  "exports": [
+    {
+      "name": "rawPriceValue",
+      "file": "src/core/price-fields.js",
+      "line": 16,
+      "params": [
+        {
+          "name": "item",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "field",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}
