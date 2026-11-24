@@ -1,0 +1,9 @@
+target/
+*.node
+# 编出来的 addon 要入库：干净签出没有工具链，靠它跑 verify:clean
+!*.node
+pkg/
+.rust-anything/
+*.so
+*.pyd
+__pycache__/

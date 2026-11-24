@@ -73,7 +73,7 @@ function renderSiteLogos(plugins) {
     .filter(plugin => plugin.icon)
     .map(plugin => `  ${JSON.stringify(plugin.id)}: "icons/sites/${plugin.id}.${plugin.icon.ext}"`);
   const body = entries.length ? `{\n${entries.join(",\n")}\n}` : "{}";
-  return `// ${GENERATED}\n\n// 站点图标映射：模型列旁边的站点标记、中转站筛选、供应商列表都用它。\nexport const SITE_LOGOS = ${body};\n\nexport function siteLogoFor(id) {\n  return SITE_LOGOS[String(id || "")] || "";\n}\n\nexport function siteInitial(name) {\n  const chars = String(name || "").trim();\n  return chars ? chars[0].toUpperCase() : "?";\n}\n`;
+  return `// ${GENERATED}\n\nimport * as rust from "./rust-shim.js";\n\n// 站点图标映射：模型列旁边的站点标记、中转站筛选、供应商列表都用它。\nexport const SITE_LOGOS = ${body};\n\n// 取图标的两个函数由 rust/shared-rs 实现，这里只做转发。\nexport function siteLogoFor(id) {\n  return rust.siteLogoFor(id);\n}\n\nexport function siteInitial(name) {\n  return rust.siteInitial(name);\n}\n`;
 }
 
 function rewriteImports(source) {

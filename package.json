@@ -19,6 +19,7 @@
     "plugins:icons": "node scripts/site-icons.mjs",
     "models:build": "node canonical/build.mjs",
     "models:lookup": "node scripts/model-lookup.mjs",
+    "rust:build": "node scripts/rust-build.mjs",
     "icons:build": "node scripts/provider-logos.mjs",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
@@ -29,7 +30,9 @@
     "recharge:apply": "node scripts/recharge-apply.mjs",
     "orphans:check": "node scripts/dead-exports.mjs",
     "guards:check": "node scripts/guard-coverage.mjs",
-    "modules:check": "node scripts/module-contract.mjs"
+    "modules:check": "node scripts/module-contract.mjs",
+    "rust:verify": "node scripts/rust-verify.mjs",
+    "gen:shared-data": "node scripts/gen-shared-data.mjs"
   },
   "devDependencies": {
     "vitepress": "^1.6.4"

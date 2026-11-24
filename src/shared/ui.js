@@ -1,3 +1,6 @@
+import * as rust from "./rust-shim.js";
+
+
 const ICON_PATHS = {
   "arrow-up-right": '<path d="M7 7h10v10"/><path d="M7 17 17 7"/>',
   "building-2": '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 10h12"/><path d="M6 14h12"/><path d="M6 18h12"/><path d="M9 6h.01"/><path d="M15 6h.01"/><path d="M9 10h.01"/><path d="M15 10h.01"/>',
@@ -73,17 +76,11 @@ export function callService(type, payload = {}) {
 }
 
 export function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return rust.escapeHtml(value);
 }
 
 export function icon(name, { size = 16, className = "icon", label = "" } = {}) {
-  const title = label ? `<title>${escapeHtml(label)}</title>` : "";
-  return `<svg class="lucide ${className}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="${label ? "false" : "true"}"${label ? ' role="img"' : ""}>${title}${ICON_PATHS[name] || ICON_PATHS["circle-help"]}</svg>`;
+  return rust.icon(name, { size, className, label });
 }
 
 export function hydrateIcons(root = document) {
@@ -97,15 +94,11 @@ export function hydrateIcons(root = document) {
 }
 
 export function formatMoney(value, currency = "¥") {
-  if (value === null || value === undefined || value === "") return "—";
-  return Number.isFinite(Number(value)) ? `${currency}${Number(value).toFixed(4)}` : "—";
+  return rust.formatMoney(value, currency);
 }
 
 export function formatRefreshSummary(summary = {}) {
-  const group = summary.comparisonLabel ? `${summary.comparisonLabel}刷新` : "查询";
-  if (!summary.total) return summary.comparisonLabel ? `${summary.comparisonLabel}没有启用的站点，未发起刷新` : "没有启用的站点可查询";
-  const duration = Number.isFinite(Number(summary.durationMs)) ? ` · ${(Number(summary.durationMs) / 1000).toFixed(1)} 秒` : "";
-  return `${group}完成：${Number(summary.successCount) || 0} 成功，${Number(summary.partialCount) || 0} 部分成功，${Number(summary.errorCount) || 0} 失败，共 ${Number(summary.totalModels) || 0} 个模型${duration}`;
+  return rust.formatRefreshSummary(summary);
 }
 
 export function toast(message) {

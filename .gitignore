@@ -32,3 +32,12 @@ Thumbs.db
 
 # 本地键材料（生成 manifest.key 与签名私钥，不进仓库）
 /keys/
+
+# Rust 产物：rust-dist/ 入库，干净签出才能跑 verify:clean
+
+# 本机 linker / libnode 路径，别入库
+/.cargo/
+
+# 编译中间件与 wasm-bindgen 的 pkg 不入库
+rust/*/target/
+rust/*/pkg/

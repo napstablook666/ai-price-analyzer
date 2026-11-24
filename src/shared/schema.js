@@ -1,3 +1,4 @@
+import * as rust from "./rust-shim.js";
 import { DEFAULT_PLUGIN_REGISTRY_URL, normalizeLocalPlugins, normalizeRegistryState } from "../core/declarative-plugin.js";
 import { DEFAULT_UPDATE_CHANNEL, DEFAULT_UPDATE_INTERVAL_MINUTES, normalizeUpdateChannel, normalizeUpdateInterval } from "../core/update-check.js";
 import { DEFAULT_MAGPIE_SYNC_INTERVAL_MINUTES, MAGPIE_USAGE_DEFAULT_BASE_URL, mergeGatewayUsage, normalizeMagpieBaseUrl, normalizeMagpieSyncInterval, normalizeMagpieSyncState } from "../core/magpie-usage.js";
@@ -10,12 +11,7 @@ export const DEFAULT_EXCHANGE_RATE = 7.3;
 export const SYSTEM_BASE_PRICE_PER_1M = 2.0;
 
 export function convertRechargeAmount(amount, fromCurrency, toCurrency, exchangeRate = DEFAULT_EXCHANGE_RATE) {
-  const value = Number(amount);
-  if (!Number.isFinite(value) || value < 0) return null;
-  const configuredRate = Number(exchangeRate);
-  const rate = Number.isFinite(configuredRate) && configuredRate > 0 ? configuredRate : DEFAULT_EXCHANGE_RATE;
-  const rmb = value * (fromCurrency === "USD" ? rate : 1);
-  return toCurrency === "USD" ? rmb / rate : rmb;
+  return rust.convertRechargeAmount(amount, fromCurrency, toCurrency, exchangeRate);
 }
 
 export const TOKENS_PER_MILLION = 1_000_000;
@@ -35,23 +31,11 @@ export const DEFAULT_MONTHLY_USAGE = { ...BUILTIN_30D_MONTHLY_VOLUME };
 
 // magpie 预设的用量来自 settings.magpieSync（网关实测）；还没同步过就退回内置快照。
 export function usagePresetUsage(id, magpieSync = null) {
-  if (id === "baseline") return { ...DEFAULT_MONTHLY_USAGE, ...BASELINE_USAGE };
-  if (id !== "recent30d") return null;
-  return { ...DEFAULT_MONTHLY_USAGE, ...magpieSync?.recent30d?.usage };
+  return rust.usagePresetUsage(id, magpieSync);
 }
 
 export function usagePresetOptions(magpieSync = null) {
-  const stamp = id => {
-    const syncedAt = Number(magpieSync?.[id]?.syncedAt) || 0;
-    if (!syncedAt) return "内置快照";
-    const date = new Date(syncedAt);
-    return `${date.getMonth() + 1} 月 ${date.getDate()} 日同步`;
-  };
-  return [
-    { id: "recent30d", label: `magpie-30天（${stamp("recent30d")}）` },
-    { id: "baseline", label: "基础估算（3000 万输入 / 600 万输出）" },
-    { id: "custom", label: "自定义" },
-  ];
+  return rust.usagePresetOptions(magpieSync);
 }
 
 const BASELINE_USAGE = { requests: 0, input: 30 * TOKENS_PER_MILLION, cacheRead: 0, output: 6_000_000, cacheWrite: 0, cacheWrite1h: 0 };
@@ -84,39 +68,22 @@ function usageMatchesPreset(usage, preset) {
 }
 
 export function usagePresetId(usage, magpieSync = null) {
-  if (usageMatchesPreset(usage, usagePresetUsage("recent30d", magpieSync))) return "recent30d";
-  if (usageMatchesPreset(usage, BASELINE_USAGE)) return "baseline";
-  return "custom";
+  return rust.usagePresetId(usage, magpieSync);
 }
 
 const LOCAL_HTTP_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 export function isSecureRemoteUrl(value) {
-  try {
-    const url = new URL(String(value));
-    return url.protocol === "https:" || (url.protocol === "http:" && LOCAL_HTTP_HOSTS.has(url.hostname));
-  } catch {
-    return false;
-  }
+  return rust.isSecureRemoteUrl(value);
 }
 export function currentSiteOrigin(value) {
-  try {
-    const url = new URL(String(value || ""));
-    return isSecureRemoteUrl(url) ? url.origin : "";
-  } catch {
-    return "";
-  }
+  return rust.currentSiteOrigin(value);
 }
 
 export { normalizeRechargeTiers };
 
-export const BILLING_PROFILE_SOURCES = ["auto", "measured", "manual"];
-
 // 站点用量画像：只喂按次计费模型的折算与平衡点，不参与按量模型的月成本。
 export function normalizeBillingProfile(input) {
-  const tokensPerRequest = Number(input?.tokensPerRequest);
-  if (!Number.isFinite(tokensPerRequest) || tokensPerRequest <= 0) return { tokensPerRequest: 0, source: "auto" };
-  const source = BILLING_PROFILE_SOURCES.includes(input?.source) ? input.source : "manual";
-  return { tokensPerRequest, source: source === "auto" ? "manual" : source };
+  return rust.normalizeBillingProfile(input);
 }
 export const DEFAULT_MATCHING_RULES = [
   { id: "exact", name: "精确名称", enabled: true },
@@ -204,7 +171,7 @@ function cloneDefaultSettings() {
 }
 
 export function cloneDefaultStation() {
-  return structuredClone(DEFAULT_STATION);
+  return rust.cloneDefaultStation();
 }
 
 function normalizeModelAssistant(input = {}) {
@@ -284,11 +251,7 @@ export function normalizeSettings(input = {}) {
 
 
 export function normalizeUrl(value) {
-  const url = new URL(String(value || ""));
-  if (!isSecureRemoteUrl(url)) throw new Error("远程地址必须使用 HTTPS；仅允许 localhost 使用 HTTP");
-  url.hash = "";
-  url.search = "";
-  return url.toString().replace(/\/$/, "");
+  return rust.normalizeUrl(value);
 }
 
 export function normalizeStation(input = {}) {

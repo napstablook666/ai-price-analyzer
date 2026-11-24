@@ -62,7 +62,7 @@ core/collectors.js::collectStation                  按 direct/page 与认证策
 | `src/site-plugins/providers/` | 由 `../plugins/` 生成 | 否 |
 | `src/site-plugins/catalog.js` | 首页站点目录，生成物 | 否 |
 | `src/shared/plugin-order.js` | 站点排序，生成物 | 否 |
-| `src/shared/provider-logos.js` | 模型图标数据（models.dev + simple-icons），生成物 | 否 |
+| `rust/shared-rs/src/data.json` | 品牌图形与别名表（models.dev + simple-icons），由 `scripts/gen-shared-data.mjs` 与 `scripts/provider-logos.mjs` 写 | 否 |
 | `src/core/canonical.js` | 规范模型归一逻辑 | 是 |
 | `src/core/canonical-table.js` | 规范模型表，生成物 | 否 |
 | `canonical/build.mjs` | 规范表生成器（靠齐 OpenRouter 列表，models.dev 补别名） | 是 |
@@ -87,7 +87,7 @@ npm test                                  # 全部扩展测试
 node scripts/plugin-build.mjs              # 改完 plugins/ 后重新生成
 node scripts/plugin-build.mjs --check      # 只校验漂移
 node scripts/model-lookup.mjs claude 4.6   # 查规范模型 id
-node scripts/provider-logos.mjs            # 重新抓品牌图标并生成 provider-logos.js
+node scripts/provider-logos.mjs            # 重新抓品牌图标，写进 rust/shared-rs/src/data.json
 node canonical/build.mjs --offline         # 用缓存重算规范表（联网可去掉 --offline）
 npm run version:patch                      # 扩展版本号同步
 ```

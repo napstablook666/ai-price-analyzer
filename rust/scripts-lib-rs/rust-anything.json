@@ -1,0 +1,30 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\AI\\AI比价\\extension",
+  "unit": "scripts/lib/",
+  "language": "ts",
+  "kind": "napi",
+  "crate_name": "scripts-lib-rs",
+  "exports": [
+    {
+      "name": "resolveMinShell",
+      "file": "scripts/lib/update-version.mjs",
+      "line": 18,
+      "params": [
+        {
+          "name": "arg0",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

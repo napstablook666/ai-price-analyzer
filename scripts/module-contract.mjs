@@ -37,7 +37,6 @@ const BROWSER_ONLY = {
 // 要求两件事——生成命令真的存在，文件开头真的写了「不要手改」，否则下一个人会直接改它。
 const GENERATED = {
   "src/dom-contract.js": { script: "ids:build", reason: "由 check-html-ids.mjs 从 HTML 与选择器里提取，ids:check 在 verify 里守着" },
-  "src/shared/provider-logos.js": { script: "icons:build", reason: "由 provider-logos.mjs 抓 models.dev 与 simple-icons，上游变了才需要重跑" },
   "src/shared/site-logos.js": { script: "plugins:build", reason: "由 plugin-build.mjs 从 plugins/ 汇总，plugins:check 守着漂移" }
 };
 

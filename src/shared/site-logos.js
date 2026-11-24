@@ -1,5 +1,7 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
+import * as rust from "./rust-shim.js";
+
 // 站点图标映射：模型列旁边的站点标记、中转站筛选、供应商列表都用它。
 export const SITE_LOGOS = {
   "0ait": "icons/sites/0ait.svg",
@@ -62,11 +64,11 @@ export const SITE_LOGOS = {
   "zerocat": "icons/sites/zerocat.png"
 };
 
+// 取图标的两个函数由 rust/shared-rs 实现，这里只做转发。
 export function siteLogoFor(id) {
-  return SITE_LOGOS[String(id || "")] || "";
+  return rust.siteLogoFor(id);
 }
 
 export function siteInitial(name) {
-  const chars = String(name || "").trim();
-  return chars ? chars[0].toUpperCase() : "?";
+  return rust.siteInitial(name);
 }

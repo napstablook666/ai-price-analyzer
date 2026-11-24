@@ -25,6 +25,9 @@
     "service_worker": "src/service-worker.js",
     "type": "module"
   },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  },
   "action": {
     "default_title": "打开价格对比",
     "default_icon": {

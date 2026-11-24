@@ -1,10 +1,10 @@
-// 抓取品牌图标并生成 src/shared/provider-logos.js。
+// 抓取品牌图标并写进 rust/shared-rs/src/data.json 的 providerLogos。
 // 图形来自 models.dev/logos 与 simple-icons（CC0 1.0），只保留 <path d="…">，单色渲染。
 // 用法：node scripts/provider-logos.mjs
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const OUTPUT = fileURLToPath(new URL("../src/shared/provider-logos.js", import.meta.url));
+const OUTPUT = fileURLToPath(new URL("../rust/shared-rs/src/data.json", import.meta.url));
 const MODELS_DEV = "https://models.dev/logos/";
 const SIMPLE_ICONS = "https://cdn.jsdelivr.net/npm/simple-icons@latest/icons/";
 
@@ -69,18 +69,8 @@ for (const [slug, [base, file, hex, title]] of Object.entries(ENTRIES)) {
 }
 rows.sort((a, b) => a[0].localeCompare(b[0]));
 
-const body = rows.map(([slug, logo]) => {
-  const paths = logo.paths.map(d => `      ${JSON.stringify(d)}`).join(",\n");
-  const hex = logo.hex ? `"${logo.hex}"` : "null";
-  return `  ${JSON.stringify(slug)}: {\n    title: ${JSON.stringify(logo.title)},\n    hex: ${hex},\n    viewBox: ${JSON.stringify(logo.viewBox)},\n    paths: [\n${paths}\n    ]\n  }`;
-}).join(",\n");
-
-const source = `// 由 scripts/provider-logos.mjs 抓取生成，不要手改。
-// 图形来自 models.dev/logos 与 simple-icons（CC0 1.0），单色，用 currentColor 上色。
-export const PROVIDER_LOGOS = {
-${body}
-};
-`;
-
-writeFileSync(OUTPUT, source, "utf8");
-console.log(`wrote src/shared/provider-logos.js (${rows.length} logos, ${(Buffer.byteLength(source) / 1024).toFixed(1)} KB)`);
+// 品牌图形只有 Rust 用，直接写进 crate 的数据表；data.json 其余键原样保留。
+const data = JSON.parse(readFileSync(OUTPUT, "utf8"));
+data.providerLogos = Object.fromEntries(rows);
+writeFileSync(OUTPUT, JSON.stringify(data));
+console.log(`rust/shared-rs/src/data.json providerLogos ${rows.length} 个`);

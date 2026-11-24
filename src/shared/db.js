@@ -1,3 +1,5 @@
+import * as rust from "./rust-shim.js";
+
 const DB_NAME = "ai-relay-price-comparison";
 const DB_VERSION = 1;
 
@@ -180,7 +182,6 @@ export function putSnapshot(snapshot) {
 
 
 export function redactStation(station = {}) {
-  const { auth = {}, ...rest } = station;
-  return { ...rest, auth: { type: auth.type || "none" } };
+  return rust.redactStation(station);
 }
 

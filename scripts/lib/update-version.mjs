@@ -1,3 +1,9 @@
+// >>> rust-anything: scripts-lib-rs is on. `rust-anything disable ../../rust/scripts-lib-rs` removes this block.
+// @ts-ignore
+const __rustAnything_scripts_lib_rs = ((p) => p && p.env.RUST_ANYTHING_MODE !== 'old' && p.env.RUST_ANYTHING_UNIT_SCRIPTS_LIB !== 'original' && (() => { try { const m = p.getBuiltinModule('node:module'); const at = p.getBuiltinModule('node:path').join(import.meta.dirname, "../../rust/scripts-lib-rs/index.cjs"); return m.createRequire(at)(at) } catch (e) { if (p.env.RUST_ANYTHING_MODE === 'new') throw e } })())(globalThis.process)
+// @ts-ignore
+if (__rustAnything_scripts_lib_rs) { resolveMinShell = __rustAnything_scripts_lib_rs.resolveMinShell }
+// <<< rust-anything: scripts-lib-rs
 // update.json 里 minShell 的取值规则。
 //
 // minShell 是「自更新协议的最低兼容 shell 版本」，不是「这一版的版本号」。

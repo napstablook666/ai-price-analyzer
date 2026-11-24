@@ -1,0 +1,768 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\AI\\AI比价\\extension",
+  "unit": "src/shared/",
+  "language": "ts",
+  "kind": "wasm",
+  "crate_name": "shared-rs",
+  "exports": [
+    {
+      "name": "redactStation",
+      "file": "src/shared/db.js",
+      "line": 182,
+      "params": [
+        {
+          "name": "station",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "stripModelDecoration",
+      "file": "src/shared/model-name.js",
+      "line": 11,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "bareModelSpelling",
+      "file": "src/shared/model-name.js",
+      "line": 21,
+      "params": [
+        {
+          "name": "id",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "canonicalModelKey",
+      "file": "src/shared/model-name.js",
+      "line": 26,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "effectiveMonthlyCost",
+      "file": "src/shared/monthly-cost.js",
+      "line": 2,
+      "params": [
+        {
+          "name": "row",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "providerLogoSlug",
+      "file": "src/shared/provider-icons.js",
+      "line": 100,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "providerLogoFor",
+      "file": "src/shared/provider-icons.js",
+      "line": 111,
+      "params": [
+        {
+          "name": "values",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "providerIconMarkup",
+      "file": "src/shared/provider-icons.js",
+      "line": 131,
+      "params": [
+        {
+          "name": "values",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "arg1",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "normalizeRechargePayments",
+      "file": "src/shared/recharge-payments.js",
+      "line": 7,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "rechargePaymentRate",
+      "file": "src/shared/recharge-payments.js",
+      "line": 52,
+      "params": [
+        {
+          "name": "payment",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "cheapestRechargePayment",
+      "file": "src/shared/recharge-payments.js",
+      "line": 63,
+      "params": [
+        {
+          "name": "payments",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "representativeRechargePayment",
+      "file": "src/shared/recharge-payments.js",
+      "line": 80,
+      "params": [
+        {
+          "name": "payments",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "faceSpend",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "normalizeRechargeTiers",
+      "file": "src/shared/recharge-tiers.js",
+      "line": 3,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "normalizeRechargePlans",
+      "file": "src/shared/recharge-tiers.js",
+      "line": 26,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "convertRechargeAmount",
+      "file": "src/shared/schema.js",
+      "line": 12,
+      "params": [
+        {
+          "name": "amount",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "fromCurrency",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "toCurrency",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "exchangeRate",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "usagePresetUsage",
+      "file": "src/shared/schema.js",
+      "line": 37,
+      "params": [
+        {
+          "name": "id",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "magpieSync",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "usagePresetOptions",
+      "file": "src/shared/schema.js",
+      "line": 43,
+      "params": [
+        {
+          "name": "magpieSync",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "usagePresetId",
+      "file": "src/shared/schema.js",
+      "line": 86,
+      "params": [
+        {
+          "name": "usage",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "magpieSync",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "isSecureRemoteUrl",
+      "file": "src/shared/schema.js",
+      "line": 93,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "currentSiteOrigin",
+      "file": "src/shared/schema.js",
+      "line": 101,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "normalizeBillingProfile",
+      "file": "src/shared/schema.js",
+      "line": 115,
+      "params": [
+        {
+          "name": "input",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "cloneDefaultStation",
+      "file": "src/shared/schema.js",
+      "line": 206,
+      "params": [],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "normalizeUrl",
+      "file": "src/shared/schema.js",
+      "line": 286,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "siteLogoUrl",
+      "file": "src/shared/site-icon.js",
+      "line": 16,
+      "params": [
+        {
+          "name": "id",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "siteIconMarkup",
+      "file": "src/shared/site-icon.js",
+      "line": 22,
+      "params": [
+        {
+          "name": "id",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "name",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "arg2",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "siteLogoFor",
+      "file": "src/shared/site-logos.js",
+      "line": 65,
+      "params": [
+        {
+          "name": "id",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "siteInitial",
+      "file": "src/shared/site-logos.js",
+      "line": 69,
+      "params": [
+        {
+          "name": "name",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "escapeHtml",
+      "file": "src/shared/ui.js",
+      "line": 75,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "icon",
+      "file": "src/shared/ui.js",
+      "line": 84,
+      "params": [
+        {
+          "name": "name",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "arg1",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "formatMoney",
+      "file": "src/shared/ui.js",
+      "line": 99,
+      "params": [
+        {
+          "name": "value",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        },
+        {
+          "name": "currency",
+          "ts_type": "string",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    },
+    {
+      "name": "formatRefreshSummary",
+      "file": "src/shared/ui.js",
+      "line": 104,
+      "params": [
+        {
+          "name": "summary",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "initCollapsibleCards",
+      "file": "src/shared/collapse.js",
+      "line": 14,
+      "reason": "DOM"
+    },
+    {
+      "name": "initCardCollapse",
+      "file": "src/shared/collapse.js",
+      "line": 49,
+      "reason": "DOM"
+    },
+    {
+      "name": "setStationCredential",
+      "file": "src/shared/credentials.js",
+      "line": 36,
+      "reason": "chrome.storage"
+    },
+    {
+      "name": "getStationCredential",
+      "file": "src/shared/credentials.js",
+      "line": 50,
+      "reason": "chrome.storage"
+    },
+    {
+      "name": "removeStationCredential",
+      "file": "src/shared/credentials.js",
+      "line": 55,
+      "reason": "chrome.storage"
+    },
+    {
+      "name": "setModelAssistantKey",
+      "file": "src/shared/credentials.js",
+      "line": 61,
+      "reason": "chrome.storage"
+    },
+    {
+      "name": "getModelAssistantKey",
+      "file": "src/shared/credentials.js",
+      "line": 70,
+      "reason": "chrome.storage"
+    },
+    {
+      "name": "getComparisonRevision",
+      "file": "src/shared/db.js",
+      "line": 7,
+      "reason": "模块级计数器，写入时自增，属于状态不属于逻辑"
+    },
+    {
+      "name": "getValue",
+      "file": "src/shared/db.js",
+      "line": 97,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "setValue",
+      "file": "src/shared/db.js",
+      "line": 102,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "getStations",
+      "file": "src/shared/db.js",
+      "line": 108,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "putStations",
+      "file": "src/shared/db.js",
+      "line": 113,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "getSnapshots",
+      "file": "src/shared/db.js",
+      "line": 125,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "getLatestSnapshots",
+      "file": "src/shared/db.js",
+      "line": 130,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "putSnapshot",
+      "file": "src/shared/db.js",
+      "line": 165,
+      "reason": "IndexedDB"
+    },
+    {
+      "name": "initTopMenu",
+      "file": "src/shared/menu.js",
+      "line": 2,
+      "reason": "DOM"
+    },
+    {
+      "name": "normalizeSettings",
+      "file": "src/shared/schema.js",
+      "line": 237,
+      "reason": "依赖 core 的四个归一化模块，随 U4 core-rs 移植"
+    },
+    {
+      "name": "normalizeStation",
+      "file": "src/shared/schema.js",
+      "line": 294,
+      "reason": "依赖 core 的四个归一化模块，随 U4 core-rs 移植"
+    },
+    {
+      "name": "callService",
+      "file": "src/shared/ui.js",
+      "line": 61,
+      "reason": "chrome.runtime"
+    },
+    {
+      "name": "hydrateIcons",
+      "file": "src/shared/ui.js",
+      "line": 89,
+      "reason": "DOM"
+    },
+    {
+      "name": "toast",
+      "file": "src/shared/ui.js",
+      "line": 111,
+      "reason": "DOM"
+    },
+    {
+      "name": "onRefreshProgress",
+      "file": "src/shared/ui.js",
+      "line": 119,
+      "reason": "chrome.runtime"
+    },
+    {
+      "name": "onAssistProgress",
+      "file": "src/shared/ui.js",
+      "line": 124,
+      "reason": "chrome.runtime"
+    }
+  ]
+}
