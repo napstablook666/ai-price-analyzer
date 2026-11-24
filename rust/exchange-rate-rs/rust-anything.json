@@ -1,0 +1,49 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\AI\\AI比价\\extension",
+  "unit": "src/core/exchange-rate.js",
+  "language": "ts",
+  "kind": "wasm",
+  "crate_name": "exchange-rate-rs",
+  "exports": [
+    {
+      "name": "exchangeRateInfo",
+      "file": "src/core/exchange-rate.js",
+      "line": 48,
+      "params": [
+        {
+          "name": "settings",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        },
+        {
+          "name": "references",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        },
+        {
+          "name": "now",
+          "ts_type": "unknown",
+          "optional": true,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": [
+    {
+      "name": "fetchExchangeRate",
+      "file": "src/core/exchange-rate.js",
+      "line": 26,
+      "reason": "走 fetch + AbortSignal + 超时，wasm 里没有，函数保留 JS"
+    }
+  ]
+}

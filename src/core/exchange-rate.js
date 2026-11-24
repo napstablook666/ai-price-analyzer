@@ -1,4 +1,4 @@
-import { DEFAULT_EXCHANGE_RATE } from "../shared/schema.js";
+import { exchangeRateInfo as exchangeRateInfoFromRust } from "./rust-exchange-shim.js";
 import { withReferenceDeadline } from "./reference-request.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -46,14 +46,5 @@ export async function fetchExchangeRate({ fetchImpl = fetch, signal, now = Date.
 }
 
 export function exchangeRateInfo(settings = {}, references = {}, now = Date.now()) {
-  if (settings.exchangeRateMode === "manual" && positiveRate(settings.exchangeRate)) {
-    return { rate: settings.exchangeRate, mode: "manual", source: "手动指定", date: "", warning: "" };
-  }
-  const rate = references.exchangeRate;
-  const source = references.exchangeRateSource || "历史缓存（来源未记录）";
-  const date = references.exchangeRateDate || "";
-  const rateWarning = (references.warnings || []).find(warning => warning.startsWith("汇率")) || "";
-  if (!positiveRate(rate)) return { rate: DEFAULT_EXCHANGE_RATE, mode: "fallback", source: "应急估算", date: "", warning: "尚无可用参考汇率，暂用估算值，请刷新或手动指定" };
-  const stale = !date || !references.exchangeRateFetchedAt || now - references.exchangeRateFetchedAt > 2 * DAY || now - Date.parse(`${date}T00:00:00Z`) > 7 * DAY;
-  return { rate, mode: "auto", source, date, warning: rateWarning || (stale ? "汇率缓存待更新，当前沿用上次成功值" : "") };
+  return exchangeRateInfoFromRust(settings, references, now);
 }

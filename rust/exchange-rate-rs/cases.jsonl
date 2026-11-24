@@ -1,0 +1,230 @@
+{"fn":"exchangeRateInfo","args":[null,null,["a",1]],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[0,[],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},["a",1],{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},null,{}],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[null,{"a":"b"},null],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[null,{"$undefined":true},{"$undefined":true}],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[[],{"$undefined":true},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},null,{"$undefined":true}],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":["x",["a",1],true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,{"a":"b"},{"a":"b"}],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[0,0,null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,{"a":{"b":"c"}},{"a":{"b":"c"}}],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},{},null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,{"a":{"b":"c"}},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],0,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],true,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{"$undefined":true},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},"x",true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,{"a":"b"},0],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},[],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],[],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},null],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[[],{"a":"b"},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},"x",["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},["a",1],"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,{"$undefined":true},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},[],{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],[],{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0,["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},["a",1],{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{"a":{"b":"c"}},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{"a":"b"},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0,[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":{"b":"c"}},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},["a",1],{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{"a":{"b":"c"}},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},"x","x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"$undefined":true},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",null,[]],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[["a",1],["a",1],{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"$undefined":true},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0,{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,["a",1],0],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[[],"x",{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},null,{}],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},["a",1],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},null,{"a":"b"}],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",{"$undefined":true},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,["a",1],{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},"x",0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},[],{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",null,null],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},"x",true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{"a":"b"},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},0,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{"a":{"b":"c"}},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,[],"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{"a":"b"},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},"x",null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"$undefined":true},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{"a":"b"},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],0,"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,["a",1],{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,{"a":{"b":"c"}},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{"a":"b"},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,[],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",{"a":"b"},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{"a":"b"},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],["a",1],true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},[],"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},[],{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},{"$undefined":true},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,"x",0],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[0,true,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],true,{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"$undefined":true},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{"a":"b"},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":{"b":"c"}},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",{"$undefined":true},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":{"b":"c"}},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{"a":"b"},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},0,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",{},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,true,null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},true,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},"x",0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},0,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},{"a":"b"},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,[],true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},0,{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"a":{"b":"c"}},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},null,{"$undefined":true}],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},["a",1],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},[],null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":"b"},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],true,0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"$undefined":true},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},"x",true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},[],{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":"b"},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,[],"x"],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},["a",1],0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{"$undefined":true},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,null,"x"],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0,{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":"b"},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},true,[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},["a",1],true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":"b"},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,{},null],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":{"b":"c"}},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"a":"b"},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],"x",null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":{"b":"c"}},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{},null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x","x",null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},{"$undefined":true},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{"$undefined":true},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":"b"},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":"b"},["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,null,[]],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},[],"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},"x",{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},[],[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},"x",[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",{"$undefined":true},{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{"a":"b"},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},true,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],0,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,{"a":"b"},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},[],{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x","x",{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x","x",0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,null,["a",1]],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[[],0,{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,0,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"$undefined":true},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,{},null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"$undefined":true},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[0,"x",{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],{},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"a":{"b":"c"}},{"$undefined":true}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[["a",1],true,true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",0,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},true,["a",1]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},null,0],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[[],{},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"a":"b"},true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},"x",null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":"b"},{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],"x","x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},0,true],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",true,null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{},[]],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},[],null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,{},["a",1]],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":"b"},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["x",{"a":"b"},null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{},null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":{"b":"c"}},["a",1],0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,"x"],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[[],0,{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},{"$undefined":true},null],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"a":"b"},{"a":{"b":"c"}},0],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":["X",{},"x"],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[[],[],{"a":{"b":"c"}}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[true,{"a":{"b":"c"}},{}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"$undefined":true},0,{"a":"b"}],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,["a",1],{"$undefined":true}],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000,"warnings":[]},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000,"warnings":["其他警告"]},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000,"warnings":["汇率缓存超过 7 天，已刷新"]},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":"汇率缓存超过 7 天，已刷新"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795262400000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":0},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-10","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-10","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"abc","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"abc","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-13-40","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-13-40","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"历史缓存（来源未记录）","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":0,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":-1,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":"7.3","exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":null,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"manual","exchangeRate":6.71849},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.71849,"mode":"manual","source":"手动指定","date":"","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"manual","exchangeRate":0},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"manual","exchangeRate":"6.7"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"manual"},{},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto","exchangeRate":6.5},{},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[{},{},1795521600000],"ok":{"rate":7.3,"mode":"fallback","source":"应急估算","date":"","warning":"尚无可用参考汇率，暂用估算值，请刷新或手动指定"}}
+{"fn":"exchangeRateInfo","args":[null,{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000},1795521600000],"error":"Cannot read properties of null (reading 'exchangeRateMode')"}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},null,1795521600000],"error":"Cannot read properties of null (reading 'exchangeRate')"}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795518000000,"warnings":"not-an-array"},1795521600000],"error":"(references.warnings || []).find is not a function"}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795348800000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":""}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-24","exchangeRateFetchedAt":1795348799999},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-24","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-17","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-17","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2026-11-16","exchangeRateFetchedAt":1795518000000},1795521600000],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2026-11-16","warning":"汇率缓存待更新，当前沿用上次成功值"}}
+{"fn":"exchangeRateInfo","args":[{"exchangeRateMode":"auto"},{"exchangeRate":6.69198,"exchangeRateSource":"ExchangeRate-API","exchangeRateDate":"2000-01-01","exchangeRateFetchedAt":1},null],"ok":{"rate":6.69198,"mode":"auto","source":"ExchangeRate-API","date":"2000-01-01","warning":""}}

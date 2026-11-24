@@ -45,11 +45,12 @@ function stageCrate(unit) {
 
 // 每个单元的 record 额外参数：手写用例文件要让干净签出的 record 也用上。
 const RECORD_ARGS = {
-  "price-fields-rs": ["--inputs", "rust/price-fields-rs/cases-inputs.jsonl"]
+  "price-fields-rs": ["--inputs", "rust/price-fields-rs/cases-inputs.jsonl"],
+  "exchange-rate-rs": ["--inputs", "rust/exchange-rate-rs/cases-inputs.jsonl"]
 };
 
 const units = process.argv.slice(2);
-const all = units.length > 0 ? units : ["shared-rs", "price-fields-rs"];
+const all = units.length > 0 ? units : ["shared-rs", "price-fields-rs", "exchange-rate-rs"];
 const head = ensureWorktree();
 console.log(`验证基准：HEAD ${head.slice(0, 8)} → ${WORKTREE}`);
 

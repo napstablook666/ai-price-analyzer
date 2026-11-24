@@ -17,7 +17,8 @@ const TARGET = "wasm32-unknown-unknown";
 const UNITS = [
   { name: "smoke-rs", crate: "rust/smoke-rs" },
   { name: "shared-rs", crate: "rust/shared-rs", prepare: "scripts/gen-shared-data.mjs" },
-  { name: "price-fields-rs", crate: "rust/price-fields-rs" }
+  { name: "price-fields-rs", crate: "rust/price-fields-rs" },
+  { name: "exchange-rate-rs", crate: "rust/exchange-rate-rs" }
 ];
 
 function libName(name) {

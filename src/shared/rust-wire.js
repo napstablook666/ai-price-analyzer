@@ -74,7 +74,9 @@ export function callWith(wasm, name, args) {
   const entry = wasm[name];
   if (typeof entry !== "function") throw new Error(`rust-dist 里没有 ${name}`);
   try {
-    return decode(entry(...args.map((arg) => encode(arg === undefined ? null : arg))));
+    // `undefined` 必须原样交给 encode：它靠 `$undefined` 标记区分「没传」和「传了 null」，
+    // 在 Rust 侧这两者行为不同（默认参数 vs 参与算术）。
+    return decode(entry(...args.map((arg) => encode(arg))));
   } catch (error) {
     throwAs(error);
   }
