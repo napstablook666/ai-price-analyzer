@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
-  <title id="title">Right Code</title>
-  <desc id="desc">Angle brackets with a vertical rule, marking a right-aligned code channel.</desc>
-  <rect width="64" height="64" rx="14" fill="#131022"/>
-  <path fill="none" stroke="#a78bfa" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" d="M25 20 12 32l13 12m14-24 13 12-13 12"/>
-  <rect x="30" y="18" width="4" height="28" rx="2" fill="#c4b5fd"/>
-</svg>

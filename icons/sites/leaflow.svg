@@ -1,8 +1,8 @@
 <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 160 160"
-    width="64"
-    height="64"
+    width="160"
+    height="160"
 >
     <!-- 亮色标签栏用深色主花瓣，斜向浅色花瓣加灰色描边以区分底色；暗色标签栏改为主花瓣带浅色描边，按系统主题切换。 -->
     <style>

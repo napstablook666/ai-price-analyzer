@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="2 2 96 96">
+  <style>@media (prefers-color-scheme: dark) { g { stroke: #ededea; stroke-width: 6px } }</style>
+  <g stroke-linejoin="miter" paint-order="stroke">
+    <path fill="#0b1016" d="M8 20h26l14 14v12H26a4 4 0 0 0 0 8h22v12L34 80H8z"/>
+    <path fill="#00a79d" d="M92 20H66L52 34v12h22a4 4 0 0 1 0 8h-9v-4h-3v4H52v12l14 14h26z"/>
+  </g>
+</svg>
