@@ -73,5 +73,11 @@ export const SITE_PLUGIN_ORDER = [
   "apiaqi",
   "agentgate",
   "astrgate",
-  "viola"
+  "viola",
+  "axisapi",
+  "boreara",
+  "tokenmarket",
+  "xcode",
+  "fuelapi",
+  "novaflow"
 ];

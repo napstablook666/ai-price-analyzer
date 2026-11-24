@@ -774,6 +774,66 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "viola-api.top"
       ],
       "needsCode": true
+    },
+    {
+      "id": "axisapi",
+      "name": "Axis API",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，35 个模型 67 条；13 个分组倍率 0.001 到 10，35 个模型全带表达式，含 DeepSeek 上海时区分时双倍",
+      "hosts": [
+        "axisapi.cn"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "boreara",
+      "name": "极光 Boreara",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，31 个模型 85 条；9 个分组倍率 0 到 1（含 free 组），全站零表达式，走 relayrouter 基座吃 quota_type 与 step_ratios",
+      "hosts": [
+        "api.boreara.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "tokenmarket",
+      "name": "TokenMarket",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，100 个模型 255 条；20 个分组倍率 0.08 到 3.6，61 个表达式含按张与图片 token 系数，1 条视频按秒表达式解析不了",
+      "hosts": [
+        "tokenmarket.cheap"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "xcode",
+      "name": "Xcode",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，89 个模型 229 条；26 个分组倍率 0.15 到 3.1，41 个表达式含 fixed 按张价，1 条视频按秒表达式解析不了",
+      "hosts": [
+        "xcode.best"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "fuelapi",
+      "name": "Fuel API",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，45 个模型 209 条；28 个分组倍率 0.04 到 1.4，45 个模型全带表达式，6 条视频/计量式解析不了",
+      "hosts": [
+        "fuelapi.top"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "novaflow",
+      "name": "NovaFlow 智舟",
+      "version": "0.1.0",
+      "description": "公开 /api/pricing 直连采集，31 个模型 54 条；12 个分组倍率 0.01 到 3，27 个表达式按 100k 上下文分档，7 条计量式解析不了",
+      "hosts": [
+        "ycnovaflow.vip"
+      ],
+      "needsCode": true
     }
   ]
 };

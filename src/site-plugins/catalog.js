@@ -75,6 +75,12 @@ import { sitePlugin as apiaqiPlugin } from "./providers/apiaqi.js";
 import { sitePlugin as agentgatePlugin } from "./providers/agentgate.js";
 import { sitePlugin as astrgatePlugin } from "./providers/astrgate.js";
 import { sitePlugin as violaPlugin } from "./providers/viola.js";
+import { sitePlugin as axisapiPlugin } from "./providers/axisapi.js";
+import { sitePlugin as borearaPlugin } from "./providers/boreara.js";
+import { sitePlugin as tokenmarketPlugin } from "./providers/tokenmarket.js";
+import { sitePlugin as xcodePlugin } from "./providers/xcode.js";
+import { sitePlugin as fuelapiPlugin } from "./providers/fuelapi.js";
+import { sitePlugin as novaflowPlugin } from "./providers/novaflow.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -167,7 +173,13 @@ export const SITE_PLUGIN_CATALOG = [
   entry("apiaqi", "AQIAPI", "api2.apiaqi.com", "direct", () => ({ sitePlugin: apiaqiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，39 个模型 166 条；16 个分组倍率 1 到 26，只有 13 个表达式，主要靠 model_ratio 折算" }),
   entry("agentgate", "AgentGate", "agentgate.cc", "direct", () => ({ sitePlugin: agentgatePlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，39 个模型 76 条；7 个分组倍率 0.25 到 1，39 个表达式全部按 272k 分档并带 12 小时缓存写系数" }),
   entry("astrgate", "星辰AI", "astra.astrgate.net", "direct", () => ({ sitePlugin: astrgatePlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，38 个模型 88 条全是文本价；7 个分组倍率 0.06 到 0.8，37 个表达式单档计价并带 1 小时缓存写" }),
-  entry("viola", "Viola", "api.viola-api.top", "direct", () => ({ sitePlugin: violaPlugin }), { hosts: ["api.viola-api.top","viola-api.top"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，36 个模型 103 条；17 个分组倍率 0.1 到 1.25，9 个表达式带上海时区分时翻倍，两个域名同一份报文" })
+  entry("viola", "Viola", "api.viola-api.top", "direct", () => ({ sitePlugin: violaPlugin }), { hosts: ["api.viola-api.top","viola-api.top"], paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，36 个模型 103 条；17 个分组倍率 0.1 到 1.25，9 个表达式带上海时区分时翻倍，两个域名同一份报文" }),
+  entry("axisapi", "Axis API", "axisapi.cn", "direct", () => ({ sitePlugin: axisapiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，35 个模型 67 条；13 个分组倍率 0.001 到 10，35 个模型全带表达式，含 DeepSeek 上海时区分时双倍" }),
+  entry("boreara", "极光 Boreara", "api.boreara.com", "direct", () => ({ sitePlugin: borearaPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，31 个模型 85 条；9 个分组倍率 0 到 1（含 free 组），全站零表达式，走 relayrouter 基座吃 quota_type 与 step_ratios" }),
+  entry("tokenmarket", "TokenMarket", "tokenmarket.cheap", "direct", () => ({ sitePlugin: tokenmarketPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，100 个模型 255 条；20 个分组倍率 0.08 到 3.6，61 个表达式含按张与图片 token 系数，1 条视频按秒表达式解析不了" }),
+  entry("xcode", "Xcode", "xcode.best", "direct", () => ({ sitePlugin: xcodePlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，89 个模型 229 条；26 个分组倍率 0.15 到 3.1，41 个表达式含 fixed 按张价，1 条视频按秒表达式解析不了" }),
+  entry("fuelapi", "Fuel API", "fuelapi.top", "direct", () => ({ sitePlugin: fuelapiPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，45 个模型 209 条；28 个分组倍率 0.04 到 1.4，45 个模型全带表达式，6 条视频/计量式解析不了" }),
+  entry("novaflow", "NovaFlow 智舟", "ycnovaflow.vip", "direct", () => ({ sitePlugin: novaflowPlugin }), { paths: ["/","/pricing","/console","/console/topup"], description: "公开 /api/pricing 直连采集，31 个模型 54 条；12 个分组倍率 0.01 到 3，27 个表达式按 100k 上下文分档，7 条计量式解析不了" })
 ];
 
 export function sitePluginById(id) {
