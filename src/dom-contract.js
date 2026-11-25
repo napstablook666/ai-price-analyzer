@@ -3,6 +3,9 @@
 // 而不是等到某个按钮被点开，才在几十行之外炸成一句 setAttribute of null。
 
 export const DASHBOARD_HTML_IDS = [
+  "auth-status-panel",
+  "auth-status-results",
+  "auth-status-summary",
   "back-to-top",
   "cancel-refresh-preflight",
   "cheapest-group-only",

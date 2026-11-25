@@ -87,6 +87,7 @@ export function buildStationRequest(station, url, strategy) {
     headers,
     body,
     credentials: strategy.credentials,
-    pageRequest: { url, method, headers: pageHeaders, body, credentials: strategy.credentials, pageAuth: strategy.pageAuth }
+    // pageAuth 带上 stationId：页面续期成功后要按它回填凭据仓，页面自己推不出站点身份。
+    pageRequest: { url, method, headers: pageHeaders, body, credentials: strategy.credentials, pageAuth: strategy.pageAuth ? { ...strategy.pageAuth, stationId: station.id } : null }
   };
 }

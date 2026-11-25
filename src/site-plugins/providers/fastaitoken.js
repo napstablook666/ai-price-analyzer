@@ -1,6 +1,6 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
-import { localStoragePageAuth, requestPolicy } from "../../core/provider-registry.js";
+import { localStoragePageAuth, manualTokenAuth, requestPolicy } from "../../core/provider-registry.js";
 
 const preset = {
   id: "fastaitoken",
@@ -36,7 +36,13 @@ const pluginSource = {
     headers: { "X-User-UI-Request": "1" },
     pageHeaders: ["X-User-UI-Request"],
     credentials: "include",
-    pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401])
+    pageAuth: localStoragePageAuth("auth_token", "Authorization", "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试", "Bearer", [401]),
+    // 站点没有可换 token 的端点：/api/v1/channels/available 匿名 401，但 /api/v1/user/refresh、
+    // /api/v1/auth/refresh 都是 404（2026-11-25 实测），探活也无从判起。
+    // 所以让用户在面板粘长效令牌，粘过就当不过期；页面路径照旧可用，不受影响。
+    renewal: manualTokenAuth({
+      missingMessage: "未找到 FastAIToken 登录凭据，请先在当前 Chrome 配置文件登录后重试"
+    })
   })
 };
 

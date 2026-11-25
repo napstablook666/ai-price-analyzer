@@ -1,4 +1,7 @@
 import { collectStation, createPageFetch } from "./core/collectors.js";
+import { applyPageRenewal, renewalFromProvider, renewStationAuth } from "./core/renewal.js";
+import { applyKeepaliveResult, authConfirmedFromRenewal, KEEPALIVE_ALARM_PREFIX, keepaliveAlarmName, planKeepalive, planKeepaliveSweeps, resolveSweepStationIds } from "./core/auth-keepalive.js";
+import { PAGE_WINDOW_AUTH_RENEWAL_TYPE } from "./core/bridge-protocol.js";
 import { modelAliasesForStations, prepareStationInput, providerForStation } from "./core/provider-registry.js";
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
 import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
@@ -22,7 +25,7 @@ import { normalizeSettings, normalizeStation, usagePresetId } from "./shared/sch
 import { getComparisonRevision, getLatestSnapshots, getSnapshots, getStations, getValue, putSnapshot, putStations, setValue } from "./shared/db.js";
 import { buildSettingsExport, parseSettingsExport } from "./core/settings-transfer.js";
 import { mergeStationSave } from "./core/station-save.js";
-import { getModelAssistantKey, getStationCredential, removeStationCredential, setStationCredential, setModelAssistantKey } from "./shared/credentials.js";
+import { clearStationRenewal, getModelAssistantKey, getStationCredential, getStationRenewal, listStationRenewals, removeStationCredential, setStationCredential, setModelAssistantKey, setStationRenewal } from "./shared/credentials.js";
 import { completeChat, fetchModelCatalog, testModelConnection } from "./core/model-api.js";
 import { ASSIST_BATCH_SIZE, ASSIST_CONCURRENCY, ASSIST_RETRIES, ASSIST_RETRY_DELAY_MS, ASSIST_TIMEOUT_MS, applyAssistResults, assistFailureLabel, assistMaxTokens, buildAssistEntries, buildAssistPool, buildAssistPrompt, cacheKey, collapseAssistEntries, collectUnmatchedModels, llmMatchesFromCache, overrideFromAssist, parseAssistResponse, poolSummaryLabel, selectPendingEntries, spreadAssistResults, summarizeCache, summarizePool } from "./core/llm-matching.js";
 import { MAGPIE_USAGE_WINDOWS, fetchMagpieUsage, mergeGatewayUsage, normalizeMagpieSyncInterval } from "./core/magpie-usage.js";
@@ -118,7 +121,6 @@ async function stationWithCredentials(station) {
 // 只放在 HttpOnly cookie 里的登录态：借 DNR 补齐 refresh 接口要的 Origin 与 Cookie，
 // 在 service worker 里换出 access token，省掉每轮刷新都开一个临时标签页。
 const COOKIE_AUTH_RULE_BASE = 9300;
-const COOKIE_AUTH_TOKENS = new Map();
 
 function readPayloadPath(value, path) {
   return String(path || "").split(".").filter(Boolean).reduce((current, key) => current && typeof current === "object" ? current[key] : undefined, value);
@@ -130,9 +132,12 @@ function cookieAuthRuleId(stationId) {
   return COOKIE_AUTH_RULE_BASE + hash;
 }
 
+// 换出来的 token 落凭据仓，不再放内存 Map：service worker 被回收后重启一次不再重新换，
+// 少打一次接口，也少一次撞风控的机会。
 async function cookieAuthAccessToken(station, cookieAuth) {
-  const cached = COOKIE_AUTH_TOKENS.get(station.id);
-  if (cached && cached.expiresAt > Date.now()) return cached.token;
+  const stored = await getStationCredential(station.id);
+  const renewal = await getStationRenewal(station.id);
+  if (stored.token && renewal.status === "ok" && Number(renewal.expiresAt) > Date.now()) return stored.token;
   const origin = new URL(station.baseUrl).origin;
   const refreshUrl = new URL(cookieAuth.refreshPath, origin).toString();
   const cookie = await chrome.cookies.get({ url: refreshUrl, name: cookieAuth.cookieName }).catch(() => null);
@@ -160,7 +165,9 @@ async function cookieAuthAccessToken(station, cookieAuth) {
     const token = String(readPayloadPath(payload, cookieAuth.accessTokenPath) || "").trim();
     if (!token) throw new Error(cookieAuth.failureMessage);
     const expiresAt = Number(readPayloadPath(payload, cookieAuth.expiresAtPath)) * 1000;
-    COOKIE_AUTH_TOKENS.set(station.id, { token, expiresAt: Number.isFinite(expiresAt) && expiresAt > Date.now() ? expiresAt - 60000 : Date.now() + 4 * 60 * 1000 });
+    const nextExpiresAt = Number.isFinite(expiresAt) && expiresAt > Date.now() ? expiresAt - 60000 : Date.now() + 4 * 60 * 1000;
+    await setStationCredential(station.id, { token, username: stored.username, password: stored.password });
+    await setStationRenewal(station.id, { expiresAt: nextExpiresAt, lastRenewedAt: Date.now(), renewFailures: 0, status: "ok" });
     return token;
   } finally {
     chrome.declarativeNetRequest.updateSessionRules({ removeRuleIds: [ruleId] }).catch(() => {});
@@ -177,9 +184,151 @@ async function collectWithCookieAuth(station, collection, cookieAuth) {
     return await attempt();
   } catch (error) {
     if (String(error?.message || "") === cookieAuth.missingMessage) throw error;
-    COOKIE_AUTH_TOKENS.delete(station.id);
+    await clearStationRenewal(station.id);
     return attempt();
   }
+}
+
+// 面板的登录态来自凭据仓，不再靠每轮开标签页现探：仓里有 ok 就是 ok，
+// 保活失败会把它推成 unknown / needsLogin，面板跟着变。
+async function authStatusForUi(stations) {
+  const stored = new Map((await listStationRenewals()).map(row => [row.stationId, row]));
+  const rows = [];
+  for (const station of stations) {
+    const provider = providerForStation(station);
+    const renewal = renewalFromProvider(provider);
+    const pageAuth = Boolean(provider?.request?.pageAuth || provider?.request?.credentials === "include");
+    if (!renewal && !pageAuth) continue;
+    const saved = stored.get(station.id) || {};
+    rows.push({
+      stationId: station.id,
+      stationName: station.name || station.id,
+      baseUrl: String(station.baseUrl || ""),
+      status: saved.status || "unknown",
+      // 续期能力以插件声明为准，声明不到就说明只能靠页面，面板上要能看出区别。
+      renewalKind: renewal?.kind || (pageAuth ? "page" : "cookie"),
+      expiresAt: Number(saved.expiresAt) > 0 ? Number(saved.expiresAt) : null,
+      lastRenewedAt: Number(saved.lastRenewedAt) > 0 ? Number(saved.lastRenewedAt) : null,
+      renewFailures: Number(saved.renewFailures) > 0 ? Number(saved.renewFailures) : 0
+    });
+  }
+  return rows.sort((left, right) => left.stationName.localeCompare(right.stationName, "zh-CN"));
+}
+
+// 长效令牌由用户自己粘：写进仓，expiresAt 置 null（不过期），保活排期会自动跳过这个站。
+async function saveStationToken(stationId, token) {
+  const id = String(stationId || "");
+  const value = String(token || "").trim();
+  if (!id) throw new Error("缺少站点 id");
+  if (!value) throw new Error("令牌不能为空");
+  const stored = await getStationCredential(id);
+  await setStationCredential(id, { token: value, username: stored.username, password: stored.password });
+  await setStationRenewal(id, { expiresAt: null, refreshToken: "", lastRenewedAt: Date.now(), renewFailures: 0, status: "ok" });
+  await scheduleAuthKeepalive();
+  return dashboard();
+}
+
+// Chrome 的 alarm 总数有上限，留出余量给更新检查那几个常驻 alarm。
+const KEEPALIVE_ALARM_LIMIT = 480;
+const KEEPALIVE_SWEEP_SIZE = 20;
+// 批次名单跟着 alarm 走。用 local 而不是 session：alarm 本身跨浏览器重启还在，
+// session 存储会被清掉，那时候名单就丢了。
+const KEEPALIVE_SWEEP_ROSTER_KEY = "ai-price-analyzer:auth-keepalive-sweeps";
+
+async function readKeepaliveRoster() {
+  const stored = await chrome.storage?.local?.get(KEEPALIVE_SWEEP_ROSTER_KEY).catch(() => ({}));
+  const roster = stored?.[KEEPALIVE_SWEEP_ROSTER_KEY];
+  return roster && typeof roster === "object" ? roster : {};
+}
+
+async function saveKeepaliveRoster(roster) {
+  await chrome.storage?.local?.set({ [KEEPALIVE_SWEEP_ROSTER_KEY]: roster }).catch(error => {
+    console.warn("[AI比价] 保存保活批次名单失败", error);
+  });
+}
+
+async function keepaliveEntries() {
+  const stations = await getPreparedStations();
+  const stored = new Map((await listStationRenewals()).map(row => [row.stationId, row]));
+  const entries = [];
+  for (const station of stations) {
+    const renewal = renewalFromProvider(providerForStation(station));
+    if (!renewal) continue;
+    const saved = stored.get(station.id) || {};
+    entries.push({
+      stationId: station.id,
+      expiresAt: Number(saved.expiresAt) > 0 ? Number(saved.expiresAt) : null,
+      renewFailures: Number(saved.renewFailures) > 0 ? Number(saved.renewFailures) : 0,
+      renewalKind: renewal.kind,
+      renewal,
+      station
+    });
+  }
+  return entries;
+}
+
+// 排期按凭据仓的过期时间算，不按采集轮次算：100 个登录站每天 100 次，摊在一天里，
+// 而不是每次采集集中开 100 个标签页。超过 alarm 上限的站按批合并，不丢排期。
+async function scheduleAuthKeepalive() {
+  const existing = await chrome.alarms.getAll().catch(() => []);
+  for (const alarm of existing) if (alarm.name.startsWith(KEEPALIVE_ALARM_PREFIX)) await chrome.alarms.clear(alarm.name);
+
+  const entries = await keepaliveEntries().catch(error => {
+    console.warn("[AI比价] 读取保活排期失败", error);
+    return [];
+  });
+  const plans = planKeepalive(entries);
+
+  const direct = plans.slice(0, KEEPALIVE_ALARM_LIMIT);
+  for (const plan of direct) chrome.alarms.create(keepaliveAlarmName(plan.stationId), { when: plan.when });
+
+  // 批号本身不记名单：排期随时重算，靠批号回切会错位，把不该醒的站叫醒、
+  // 把该醒的站推到尾巴丢掉。所以把当时那一批的站点 id 跟 alarm 一起存下来。
+  const sweeps = planKeepaliveSweeps(plans, { alarmLimit: KEEPALIVE_ALARM_LIMIT, sweepSize: KEEPALIVE_SWEEP_SIZE });
+  const roster = {};
+  for (const sweep of sweeps) {
+    roster[sweep.name] = sweep.stationIds;
+    chrome.alarms.create(sweep.name, { when: sweep.when });
+  }
+  await saveKeepaliveRoster(roster);
+
+  return { planned: plans.length, scheduled: direct.length + sweeps.reduce((sum, sweep) => sum + sweep.stationIds.length, 0) };
+}
+
+// 直连站的 alarm 名字就是站点 id；批次的名单跟 alarm 一起存过，直接照名字取。
+// 拿不报名单（浏览器重装、session 存储被清）就退回按当前排期重算一遍。
+async function runAuthKeepaliveFromAlarm(alarmName) {
+  const name = String(alarmName || "");
+  const suffix = name.slice(KEEPALIVE_ALARM_PREFIX.length);
+  if (!suffix.startsWith("sweep:")) return runAuthKeepalive([suffix]);
+  const roster = await readKeepaliveRoster();
+  const plans = roster[name] ? [] : planKeepalive(await keepaliveEntries());
+  return runAuthKeepalive(resolveSweepStationIds(roster, name, plans, {
+    alarmLimit: KEEPALIVE_ALARM_LIMIT,
+    sweepSize: KEEPALIVE_SWEEP_SIZE
+  }));
+}
+
+async function runAuthKeepalive(stationIds) {
+  if (!stationIds.length) return;
+  const entries = await keepaliveEntries();
+  const byId = new Map(entries.map(entry => [entry.stationId, entry]));
+  for (const stationId of stationIds) {
+    const entry = byId.get(stationId);
+    // 站被删了或不再声明可无头续期：顺手把这个站的 alarm 收掉。
+    if (!entry) {
+      await chrome.alarms.clear(keepaliveAlarmName(stationId));
+      continue;
+    }
+    try {
+      await renewStationAuth(entry.station, entry.renewal);
+    } catch (error) {
+      // 续期执行器自己会把结果写仓；抛出来说明连写仓都没走到，这里补一次失败计数。
+      console.warn("[AI比价] 续期失败", stationId, error);
+      await setStationRenewal(stationId, applyKeepaliveResult(await getStationRenewal(stationId), false));
+    }
+  }
+  await scheduleAuthKeepalive();
 }
 
 // 拿不到页面标签页的原因不止「没登录」：同一站点多开了几个页面同样会走到这里，
@@ -393,6 +542,14 @@ function safePreflightTabUrl(value) {
 }
 
 
+// 仓里登记「已登录」且没过期，就当登录态还活着，不再开标签页确认。
+// 没有过期时间不等于永不过期：只有用户自己粘的长效令牌才是那样，
+// 别的站缺过期时间只是「还没测出来」，让它们照样走预检，不然登录态死了也没人发现。
+async function stationAuthConfirmed(station) {
+  const renewal = await getStationRenewal(station.id);
+  return authConfirmedFromRenewal(renewal, renewalFromProvider(providerForStation(station))?.kind);
+}
+
 async function preflightPageStation(station, requestRevision) {
   let opened;
   try {
@@ -553,16 +710,32 @@ async function createRefreshPreflight() {
   const { stations } = scope;
   const requestMode = scope.comparisonMode;
   const requestSignature = refreshStationSignature(stations, requestMode);
-  const results = [];
-  for (const station of stations) {
+  // 15 个登录站串行开标签页是分钟级；这里按刷新并发度并行，标签页本身仍由 findOrOpenPageTab 按源排队。
+  const results = new Array(stations.length);
+  const outcomes = await runWithConcurrency(stations, REFRESH_CONCURRENCY, async (station, index) => {
     await loadSitePluginForStation(station);
     const provider = providerForStation(station);
     if (!requiresPageSessionPreflight(station, provider)) {
-      results.push({ stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "无需页面登录预检" });
-      continue;
+      return { stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "无需页面登录预检" };
     }
-    results.push(await preflightPageStation(station, requestRevision));
-  }
+    // 仓里刚续过、还没过期的站不重复开标签页确认一次登录，省掉整轮一轮开销。
+    if (await stationAuthConfirmed(station)) {
+      return { stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "凭据仓里的登录态仍然有效" };
+    }
+    return preflightPageStation(station, requestRevision);
+  });
+  outcomes.forEach((outcome, index) => {
+    results[index] = outcome.status === "fulfilled"
+      ? outcome.value
+      : {
+        stationId: stations[index].id,
+        stationName: stations[index].name,
+        status: "uncertain",
+        reason: pageSessionStatusReason("uncertain", outcome.reason?.message),
+        tabId: null,
+        tabUrl: ""
+      };
+  });
   const currentSettings = await getSettings();
   const currentScope = refreshScope(await getPreparedStations(), currentSettings.comparisonMode);
   const currentSignature = refreshStationSignature(currentScope.stations, currentScope.comparisonMode);
@@ -728,7 +901,8 @@ async function dashboard() {
     .filter(snapshot => snapshot.status === "error" && stationsById.has(snapshot.stationId))
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
-  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), stationIndexes: buildStationIndexes(selectedComparisons), refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight };
+  const authStatus = await authStatusForUi(comparisonStations);
+  return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), stationIndexes: buildStationIndexes(selectedComparisons), refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight, authStatus };
 }
 
 // 采集定时器已下线，这里只清升级残留，避免旧 alarm 继续触发。
@@ -932,6 +1106,9 @@ async function saveStations(input, removedIds = [], origin = "") {
   setActivePluginIds(installedPluginIds(pluginSettings));
   pruneSitePlugins(stations, [...installedPluginIds(pluginSettings)]);
   await invalidation;
+  // 增删站会改变谁需要保活：不重排的话新加的站要等下次启动才有 alarm，
+  // 删掉的站还留着一条指向空站点的 alarm。
+  await scheduleAuthKeepalive();
   notifyStationsChanged(origin);
   return stations;
 }
@@ -1728,6 +1905,7 @@ case "UNINSTALL_PLUGINS": return uninstallPlugins(message.ids);
     case "ADD_LOCAL_PLUGIN": return addLocalPlugin(message.spec);
     case "REMOVE_LOCAL_PLUGIN": return removeLocalPlugin(message.id);
     case "ADAPT_STATION": return adaptStation(message);
+    case "SAVE_STATION_TOKEN": return saveStationToken(message.stationId, message.token);
     case "REFRESH_PREFLIGHT": return createRefreshPreflight();
     case "CANCEL_REFRESH_PREFLIGHT": return cancelRefreshPreflight();
     case "REFRESH_ALL": {
@@ -1786,6 +1964,10 @@ ensureWorkspacePlugins();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "REFRESH_PROGRESS") return;
+  if (message?.type === PAGE_WINDOW_AUTH_RENEWAL_TYPE) {
+    applyPageRenewal(message.renewal).catch(error => console.warn("[AI比价] 页面续期结果落仓失败", error));
+    return;
+  }
   handle(message, sender).then(data => sendResponse({ ok: true, data })).catch(error => sendResponse({ ok: false, error: error.message || String(error), ...(error.code ? { code: error.code } : {}) }));
   return true;
 });
@@ -1829,7 +2011,7 @@ chrome.runtime.onInstalled.addListener(() => {
   scheduleUpdateAlarm();
   scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
-  ensureWorkspacePlugins({ force: true });
+  ensureWorkspacePlugins({ force: true }).then(() => scheduleAuthKeepalive()).catch(error => console.warn("[AI比价] 建保活排期失败", error));
 });
 chrome.runtime.onStartup.addListener(() => {
   clearLegacyAlarms();
@@ -1837,11 +2019,14 @@ chrome.runtime.onStartup.addListener(() => {
   scheduleUpdateAlarm();
   scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
-  ensureWorkspacePlugins({ force: true });
+  ensureWorkspacePlugins({ force: true }).then(() => scheduleAuthKeepalive()).catch(error => console.warn("[AI比价] 建保活排期失败", error));
 });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === REFERENCE_ALARM_NAME) return refreshOfficialReferences().catch(error => console.warn("[AI比价] 刷新参考数据失败", error));
   if (alarm.name === UPDATE_ALARM_NAME) return runUpdateCheck().catch(error => console.warn("[AI比价] 检查更新失败", error));
   if (alarm.name === MARKER_WATCH_ALARM_NAME) return watchUpdateMarker().catch(error => console.warn("[AI比价] 检查更新标记失败", error));
   if (alarm.name === MAGPIE_USAGE_ALARM_NAME) return runMagpieUsageSync().catch(error => console.warn("[AI比价] 同步 magpie 用量失败", error));
+  if (alarm.name.startsWith(KEEPALIVE_ALARM_PREFIX)) {
+    return runAuthKeepaliveFromAlarm(alarm.name).catch(error => console.warn("[AI比价] 保活续期失败", error));
+  }
 });

@@ -54,6 +54,57 @@ core/collectors.js::collectStation                  按 direct/page 与认证策
 - 站点已经在自身价格里折过充值比例时，`billingProfile` 会被标记，避免二次打折。
 
 
+## 凭据仓与登录态保活
+
+需登录站点的关键不是「怎么登一次」，是「登过之后什么时候会再失效」。凭据和续期状态都在 `chrome.storage.local` 的 `ai-price-analyzer:tokens` 里，每站一条记录（`src/shared/credentials.js`）：
+
+| 字段 | 含义 |
+| --- | --- |
+| `token` | 采集实际用的 access token |
+| `identity` | 站点要的身份标识，替换 `{{identity}}` 用（New-API 系的 `New-Api-User`） |
+| `username` / `password` | 站点账号，用户在设置里填的 |
+| `expiresAt` | token 到期时间（毫秒）。`null` 表示不会过期或不知道 |
+| `refreshToken` | refresh 令牌，`kind: "refresh-token"` 用 |
+| `lastRenewedAt` | 上次续期成功时间（毫秒），面板上的「上次续期」读它 |
+| `renewFailures` | 连续失败次数，退避与判定都靠它 |
+| `status` | `ok` / `needsLogin` / `unknown` |
+
+换出来的 token 必须落这个仓，不要再放 service worker 的内存变量：MV3 的 worker 随时被回收，内存里的东西一重启就没了，会变成「每次唤醒都重新换一次 token」，多打接口也多撞风控。
+
+### 续期怎么跑
+
+```text
+chrome.alarms: auth-keepalive:<stationId>
+  ↓ core/auth-keepalive.js::planKeepalive   按 expiresAt 排期，错峰
+  ↓ service-worker.js                       到点执行
+core/renewal.js::renewalFromProvider        插件声明 → 续期配置
+  ↓ core/renewal.js::renewStationAuth       四种 kind 各走一条
+凭据仓回写 token / expiresAt / lastRenewedAt / status
+  ↓
+chrome.alarms 重排下一次（成功按新 expiresAt，失败退避）
+```
+
+排期参数在 `core/auth-keepalive.js::KEEPALIVE_DEFAULTS`：
+
+- 提前 `10min` 动手，给失败留一次重试余量。
+- 同刻到期的站按站点 id 的 FNV-1a 哈希摊到 `288` 个 5 分钟槽里，不会整点一起醒；槽位比「离临期还剩多久」还长时按剩余窗口取模，排期不会落到过期之后。
+- 范围夹在 `now+1min` 到 `now+23h` 之间：太早会自激回环，太晚站点会话本身可能已被服务端回收。
+- 失败退避 `15min × 2^(n-1)`，封顶 `6h`；网络、5xx 这类可能自己好的失败连续 `3` 次才转成 `needsLogin`，在此之前只是 `unknown`。401/403 与「仓里没有凭据」是确定的失败，当次就转 `needsLogin`，不等三次。
+- `kind: "manual-token"` 不排期，长效令牌没有过期概念。
+
+`chrome.alarms` 有数量上限，所以前 `480` 个站一站点一个 alarm，超出的按 `20` 个一批合成 sweep alarm（`KEEPALIVE_ALARM_LIMIT` / `KEEPALIVE_SWEEP_SIZE`）。
+
+批次名字里只有批号，名单跟着 alarm 一起存进 `chrome.storage.local` 的 `ai-price-analyzer:auth-keepalive-sweeps`（`core/auth-keepalive.js::planKeepaliveSweeps` 生成，`resolveSweepStationIds` 取用）。不靠批号回切当前排期：排期每次重算次序都会动，回切会把没到点的站提前叫醒、把被推到尾巴的站漏掉。名单丢了（重装、存储被清）才退回按当前排期算，不会因此不续期。
+
+### 刷新预检不再开标签页
+
+`REFRESH_ALL` 之前的登录态检查读的是凭据仓里的 `status`，不再为每个 page 站开一次标签页探活。判据在 `core/auth-keepalive.js::authConfirmedFromRenewal`：`status: "ok"` 且 `expiresAt` 还没到才算活着；`expiresAt` 缺失不算永不过期（只有用户自己粘的 `manual-token` 是那样），缺过期时间的站照样走预检，否则登录态死了也没人发现。实测一次全量刷新（14 个 page 站）的临时标签页数从 27 降到 14，证据见 `.omt3/evidence/u8-d3-tab-count.txt`，脚本 `node scripts/measure-tabs.mjs`。
+
+`mode: "page"` 的站还是要开标签页，因为采集本身只能靠页面。但「刷新前先探一次」这一轮没了，标签页开销从每站 2 次降到每站 1 次。
+
+### 插件声明决定续期能力
+
+插件在 `request.renewal` 或 `request.cookieAuth` 里声明怎么续，映射函数 `core/renewal.js::renewalFromProvider` 是 service worker 与测试共用的唯一入口。协议与四种 kind 见 [插件开发与维护规范](./plugin-development.md#登录态与续期)。
 ## 目录职责
 
 | 路径 | 职责 | 能不能手改 |

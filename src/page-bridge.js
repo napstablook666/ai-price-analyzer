@@ -18,6 +18,7 @@
 const PAGE_WINDOW_REQUEST_TYPE = "AI_RELAY_PAGE_BRIDGE_REQUEST_V6";
 const PAGE_WINDOW_CAPTURE_REQUEST_TYPE = "AI_RELAY_PAGE_CAPTURE_REQUEST_V6";
 const PAGE_WINDOW_RESPONSE_TYPE = "AI_RELAY_PAGE_BRIDGE_RESPONSE_V6";
+const PAGE_WINDOW_AUTH_RENEWAL_TYPE = "AI_RELAY_PAGE_AUTH_RENEWAL_V6";
 const ALLOWED_METHODS = new Set(["GET", "POST"]);
 const ALLOWED_HEADERS = new Set(["accept", "content-type", "authorization", "x-api-key", "x-trpc-source", "x-user-ui-request", "new-api-user"]);
 const ALLOWED_CREDENTIALS = new Set(["omit", "same-origin", "include"]);
@@ -444,10 +445,17 @@ async function applyPageAuth(headers, pageAuth) {
   if (hasHeader(headers, header)) return;
   let token = readStoredPageToken(pageAuth);
   if (!token && pageAuth.refresh) {
-    if (await refreshPageAuth(pageAuth)) token = readStoredPageToken(pageAuth);
+    const renewed = await refreshPageAuth(pageAuth);
+    if (persistPageAuth(pageAuth, renewed)) {
+      postAuthRenewal(pageAuth, renewed);
+      token = readStoredPageToken(pageAuth);
+    }
   }
   if (!token) throw new Error(`${pageAuth.missingMessage || "未找到页面登录凭据，请先在当前 Chrome 配置文件登录后重试"}${describePageAuthState(pageAuth)}`);
   headers[header] = pageAuth.scheme ? `${pageAuth.scheme} ${token}` : token;
+  // New-Api-User 是站点用户 ID，不是秘密也不参与过期。报给 service worker 存进凭据仓，
+  // 之后它自己就能拼出这个头去探活，不必为判一次存亡再开标签页。
+  if (header.toLowerCase() === "new-api-user") postAuthIdentity(pageAuth, token);
 }
 
 async function validateRequest(request) {
@@ -469,18 +477,21 @@ function pathValue(value, path) {
   return String(path || "").split(".").filter(Boolean).reduce((current, key) => current && typeof current === "object" ? current[key] : undefined, value);
 }
 
+// 续期只负责把新令牌交给调用方：落 localStorage 归 persistPageAuth（网页里要留一份给站点自己用，
+// service worker 侧要落凭据仓），这里写死落盘会让无头续期拿不到结果。
+// 返回 { ok:false } 或 { ok:true, accessToken, refreshToken, expiresAt }。
 async function refreshPageAuth(pageAuth) {
   const refresh = pageAuth?.refresh;
-  if (!refresh || typeof refresh !== "object") return false;
+  if (!refresh || typeof refresh !== "object") return { ok: false };
   let refreshUrl;
-  try { refreshUrl = new URL(String(refresh.endpoint || ""), window.location.href); } catch { return false; }
-  if (!isSameSiteOrigin(refreshUrl.origin, window.location.origin)) return false;
+  try { refreshUrl = new URL(String(refresh.endpoint || ""), window.location.href); } catch { return { ok: false }; }
+  if (!isSameSiteOrigin(refreshUrl.origin, window.location.origin)) return { ok: false };
   alignToPageOrigin(refreshUrl);
   const cookieOnly = refresh.cookieOnly === true;
   const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
   const refreshTokenPath = String(refresh.refreshTokenPath || "");
   const refreshToken = cookieOnly ? "" : (refreshTokenPath ? readStoredPath(pageAuth.storageKey, refreshTokenPath) : String(readStorageValue(window.localStorage, refreshTokenKey) || readStorageValue(window.sessionStorage, refreshTokenKey) || "").trim());
-  if (!cookieOnly && !refreshToken) return false;
+  if (!cookieOnly && !refreshToken) return { ok: false };
   const headers = { Accept: "application/json", "Content-Type": "application/json" };
   const accessToken = readStoredPageToken(pageAuth);
   const authHeader = String(pageAuth.header || "");
@@ -494,26 +505,66 @@ async function refreshPageAuth(pageAuth) {
       credentials,
       body: cookieOnly ? undefined : JSON.stringify({ [String(refresh.requestTokenKey || "refresh_token")]: refreshToken })
     });
-    if (!response.ok) return false;
+    if (!response.ok) return { ok: false };
     const payload = await response.json();
     const data = pathValue(payload, refresh.responsePath || "data");
-    if (!data || typeof data !== "object") return false;
+    if (!data || typeof data !== "object") return { ok: false };
     const accessKey = String(refresh.accessTokenKey || "access_token");
     const nextAccessToken = String(data[accessKey] || "").trim();
-    if (!nextAccessToken) return false;
-    if (!writeStoredPageToken(pageAuth, nextAccessToken)) return false;
+    if (!nextAccessToken) return { ok: false };
     const nextRefreshToken = String(data[String(refresh.refreshTokenKey || "refresh_token")] || "").trim();
-    if (nextRefreshToken) {
-      if (refreshTokenPath) writeStoredPath(pageAuth.storageKey, refreshTokenPath, nextRefreshToken);
-      else if (refreshTokenKey) window.localStorage.setItem(refreshTokenKey, nextRefreshToken);
-    }
     const expiresIn = Number(data[String(refresh.expiresInKey || "")]);
-    const expiresAtKey = String(refresh.expiresAtStorageKey || "");
-    if (expiresAtKey && Number.isFinite(expiresIn) && expiresIn > 0) window.localStorage.setItem(expiresAtKey, String(Date.now() + Math.ceil(expiresIn * 1000)));
-    return true;
+    return {
+      ok: true,
+      accessToken: nextAccessToken,
+      refreshToken: nextRefreshToken,
+      expiresAt: Number.isFinite(expiresIn) && expiresIn > 0 ? Date.now() + Math.ceil(expiresIn * 1000) : null
+    };
   } catch {
-    return false;
+    return { ok: false };
   }
+}
+
+// 令牌写回页面存储：网页里那一份要跟着更新，否则站点自己的界面还拿着旧令牌。
+// 写不进去就不算续期成功，否则调用方会以为页面已同步。
+function persistPageAuth(pageAuth, renewed) {
+  if (!renewed?.ok) return false;
+  if (!writeStoredPageToken(pageAuth, renewed.accessToken)) return false;
+  const refresh = pageAuth?.refresh || {};
+  const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
+  const refreshTokenPath = String(refresh.refreshTokenPath || "");
+  if (renewed.refreshToken) {
+    if (refreshTokenPath) writeStoredPath(pageAuth.storageKey, refreshTokenPath, renewed.refreshToken);
+    else if (refreshTokenKey) window.localStorage.setItem(refreshTokenKey, renewed.refreshToken);
+  }
+  const expiresAtKey = String(refresh.expiresAtStorageKey || "");
+  if (expiresAtKey && Number.isFinite(renewed.expiresAt)) window.localStorage.setItem(expiresAtKey, String(renewed.expiresAt));
+  return true;
+}
+
+// 续期结果要回给 service worker 落仓，否则页面一关令牌就丢，下一轮刷新又得重新续。
+// 只回 access 令牌与过期时间：refresh 令牌留在页面本地存储里，不经过 window.postMessage 再扩散一次。
+function postAuthIdentity(pageAuth, identity) {
+  const value = String(identity || "").trim();
+  const stationId = String(pageAuth?.stationId || "");
+  if (!value || !stationId) return;
+  window.postMessage({
+    type: PAGE_WINDOW_AUTH_RENEWAL_TYPE,
+    renewal: { identity: value, stationId }
+  }, window.location.origin);
+}
+
+function postAuthRenewal(pageAuth, renewed) {
+  if (!renewed?.ok) return;
+  window.postMessage({
+    type: PAGE_WINDOW_AUTH_RENEWAL_TYPE,
+    renewal: {
+      accessToken: renewed.accessToken,
+      expiresAt: renewed.expiresAt,
+      storageKey: String(pageAuth?.storageKey || ""),
+      stationId: String(pageAuth?.stationId || "")
+    }
+  }, window.location.origin);
 }
 
 function shouldRefreshPageAuth(pageAuth, response) {
@@ -576,7 +627,13 @@ async function onMessage(event) {
   if (type !== PAGE_WINDOW_REQUEST_TYPE) return;
   try {
     let response = await executeRequest(request);
-    if (!response.ok && shouldRefreshPageAuth(request?.pageAuth, response) && await refreshPageAuth(request.pageAuth)) response = await executeRequest(request);
+    if (!response.ok && shouldRefreshPageAuth(request?.pageAuth, response)) {
+      const renewed = await refreshPageAuth(request.pageAuth);
+      if (persistPageAuth(request.pageAuth, renewed)) {
+        postAuthRenewal(request.pageAuth, renewed);
+        response = await executeRequest(request);
+      }
+    }
     const contentType = response.headers.get("content-type") || "";
     const body = contentType.includes("json") ? await response.json() : await response.text();
     if (!payloadFitsCaptureLimit(body)) throw new Error("页面响应过大");

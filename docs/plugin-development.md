@@ -144,6 +144,80 @@ node scripts/model-lookup.mjs claude sonnet
 
 查到就填规范 id；查不到说明它确实是个新模型，别名表也解决不了，先确认规范表是否需要重算。
 
+## 登录态与续期
+
+需登录的站点分两类，续期手段完全不同：
+
+- **`mode: "page"`**：采集必须借浏览器的登录态开标签页。续期靠页面自己（站点前端跑它的 refresh），扩展只在凭据仓记状态。
+- **`mode: "direct"` + `pageAuth`**：接口用 token，凭据从页面读一次进仓，之后 service worker 无头续期，不用再开标签页。
+
+插件在 `requestPolicy` 里声明怎么续期，二选一：
+
+```js
+// 老写法：站点有换 token 的接口。service worker 借 DNR 改写 Origin 与 Cookie，
+// 换出 access token 并落仓，全程不开页面。
+request: requestPolicy(ENDPOINT, {
+  cookieAuth: cookieRefreshAuth({
+    cookieName: "new_api_has_session",
+    refreshPath: "/api/user/auth/refresh",
+    accessTokenPath: "data.access_token",
+    expiresAtPath: "data.access_expires_at"
+  })
+})
+
+// 新写法：显式声明 renewal，kind 取下面四种之一。
+request: requestPolicy(ENDPOINT, {
+  renewal: sessionProbeAuth({
+    probePath: "/api/user/self",
+    probeHeaders: { "New-Api-User": "{{identity}}" }
+  })
+})
+```
+
+`request.cookieAuth` 存在时按 `kind: "cookie"` 处理，`request.renewal` 优先。两样都没有就不排无头任务。映射在 `src/core/renewal.js` 的 `renewalFromProvider`，service worker 和测试用的是同一个函数。
+
+四种 `kind`：
+
+| kind | 干什么 | 谁能用 |
+| --- | --- | --- |
+| `cookie` | 拿 cookie 换 access token，带 `expiresAt` 落仓 | 站点有换 token 接口，且该接口认 cookie（New-API 系常见） |
+| `refresh-token` | 用仓里的 refresh 令牌换新 access token | 站点有标准 OAuth 式 refresh，且页面能读到 refresh 令牌 |
+| `session-probe` | 往一个要登录的地址探一次，200 算活着，401/403 算失效。**只判存亡，不换 token** | 换 token 接口不存在，但有一个稳定要登录的地址 |
+| `manual-token` | 不动网络，用户在面板粘一个长效令牌，粘过就当不过期（`expiresAt: null`） | 前面三条都走不通 |
+
+**kind 判定顺序**，从上往下试，第一个成立的就是它：
+
+1. 站点有换 token 的接口，且这个接口只认 cookie → `cookie`（`cookieRefreshAuth`）。
+2. 接口认 refresh 令牌，页面里能读到 refresh 令牌 → `refresh-token`。
+3. 有稳定的要登录地址，但换不出 token → `session-probe`。
+4. 连探活都判不了（例如探活地址本身也被风控，或者站点要求人机验证）→ `manual-token`。
+
+**OAuth 站（GitHub / LinuxDO 之类第三方授权登录）怎么选**：登录方式不影响扩展侧做法，只看登录之后留下什么。留 session cookie 且站有换 token 接口就是 `cookie`；只剩一个长效令牌就是 `manual-token`。不要按「用户是用密码还是 OAuth 登的」区分。
+
+`session-probe` 的两个坑：
+
+- `probeHeaders` 里的 `{{identity}}` / `{{token}}` 由凭据仓替换。New-API 系站点不带 `New-Api-User` 头一律 401，拼不出这个头就会把「已登录」误报成 `needsLogin`。
+- 探活不是续期。`kind` 是 `session-probe` 的站，会话到期后只能靠用户在面板点「打开登录页」重登一次，扩展替它续不了。
+
+**现状**（`node scripts/list-auth-stations.mjs` 打印，2026-11 那次）：
+
+| 站点 | mode | pageAuth | renewal kind |
+| --- | --- | --- | --- |
+| `clawcn` | `direct` | 否 | `cookie` |
+| `sccx` | `direct` | 否 | `cookie` |
+| `killai` | `page` | 否 | `cookie` |
+| `dstopology` | `direct` | 是 | `session-probe` |
+| `yuki` | `direct` | 是 | `session-probe` |
+| `cun` | `page` | 是 | `session-probe` |
+| `stellaisle-carpool` | `page` | 是 | `session-probe` |
+| `fastaitoken` | `page` | 是 | `manual-token` |
+| `aiapi` / `all-in-one` / `hepingan` / `initapi` / `jiji` / `kelaode` / `leaflow` | `page` | 是 | 无声明 |
+
+「无声明」的 7 个只能靠页面自己续，凭据仓里状态停在 `unknown`；用户发现采不到时在面板点「打开登录页」重登一次。给它们补声明是后续的事。
+
+`session-probe` 的站会话到期后也要重登一次——探活只判存亡，换不出新凭据。真正登一次就长期不动的只有 `cookie` 与 `manual-token`。
+新站点不确定该用哪条时，先按 1 → 4 试一遍，把结论写进插件注释，并标「待实测」，等真机跑过再改成实测结论。
+
 ## 新增一个站点
 
 1. `mkdir plugins/<id>`，写 `manifest.json`、`plugin.js`、`models.json`（可以是 `{"aliases":{}}`）。
@@ -152,6 +226,8 @@ node scripts/model-lookup.mjs claude sonnet
 4. 手动验收：加载扩展 → 首页能看到插件 → 添加站点 → 采集一次 → 比价表里模型能对上。
 5. 采集不到时先看请求：`page` 模式要先在浏览器里打开该站登录，`direct` 模式要确认接口不需要 token 或 cookie。
 
+6. 站点要登录的话，按 [登录态与续期](#登录态与续期) 的 1 → 4 顺序给它选一个 `renewal`，写进 `requestPolicy`。选 `manual-token` 或干脆不声明的，用户每次会话过期都得手动重登一次，别默认走这条。
+
 ## 常见坑
 
 - 改了 `plugins/` 忘了 `plugin-build`：扩展跑的是 `providers/` 里的旧代码，行为看起来"没生效"。
@@ -159,3 +235,5 @@ node scripts/model-lookup.mjs claude sonnet
 - 给能自动归一的名字硬加别名：多一层维护成本，还可能挡住后续规范表更新。
 - 一个插件塞多个域名但不写 `hosts`：站点地址匹配会落到别的插件上。
 - `preset.id` 和插件 `id` 不一致：添加站点后保存的 `pluginId` 指不到插件。
+- 需登录的站不写 `renewal`：能用，但用户每次会话过期都会掉一次登录，面板只能显示 `unknown`。加站时先按 1 → 4 试一遍。
+- 把站点专属的解析逻辑写进 `src/page-bridge.js` 或别的共享文件：下一个站形状不同就得改 `extension/`，插件就不再是唯一手写源。站点专属逻辑该留在 `plugins/<id>/plugin.js` 里。

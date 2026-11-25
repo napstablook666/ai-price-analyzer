@@ -13,12 +13,21 @@
 .panel-heading { min-height: 48px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .panel-heading h2 { color: var(--text); font-size: 15px; font-weight: 600; }
 .panel-actions, .refresh-preflight-actions, .refresh-progress-actions { display: flex; align-items: center; gap: 8px; }
-.refresh-preflight-panel, .refresh-progress-panel { flex: 0 0 auto; max-height: 200px; padding: 0 16px 12px; overflow-y: auto; }
+.refresh-preflight-panel, .refresh-progress-panel, .auth-status-panel { flex: 0 0 auto; max-height: 200px; padding: 0 16px 12px; overflow-y: auto; }
 .refresh-preflight-panel > .panel-heading, .refresh-progress-panel > .panel-heading { padding-inline: 0; }
 .refresh-preflight-heading, .refresh-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .refresh-preflight-heading h2, .refresh-progress-heading h2 { margin: 0; font-size: 13px; }
-.refresh-preflight-panel > p, .refresh-progress-panel > p { margin: 8px 0; color: var(--text-2); font-size: 11px; }
-.refresh-preflight-panel ul, .refresh-progress-panel ul { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
+.refresh-preflight-panel > p, .refresh-progress-panel > p, .auth-status-panel > p { margin: 8px 0; color: var(--text-2); font-size: 11px; }
+.auth-status-row { display: grid; grid-template-columns: minmax(100px, .4fr) 76px minmax(0, .5fr) minmax(0, .6fr) auto; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 6px; background: var(--surface-2); font-size: 11px; }
+.auth-status-label { font-weight: 600; }
+.auth-status-kind, .auth-status-time { color: var(--text-2); }
+.auth-needsLogin .auth-status-label, .auth-unknown .auth-status-label { color: var(--warn); }
+.auth-ok .auth-status-label { color: var(--ok); }
+.auth-token-form { display: flex; grid-column: 1 / -1; gap: 6px; align-items: center; padding: 2px 0 0; }
+.auth-token-form button { flex: 0 0 auto; white-space: nowrap; }
+.auth-token-form input { flex: 1 1 auto; min-width: 0; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: inherit; font: inherit; font-size: 11px; }
+
+.refresh-preflight-panel ul, .refresh-progress-panel ul, .auth-status-panel ul { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
 .refresh-progress-panel progress { width: 100%; height: 5px; accent-color: var(--accent); }
 .preflight-result { display: grid; grid-template-columns: minmax(100px, .4fr) 86px minmax(0, 1fr); gap: 8px; padding: 4px 8px; border-radius: 6px; background: var(--surface-2); font-size: 11px; }
 .preflight-label { font-weight: 600; }

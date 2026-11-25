@@ -1,7 +1,7 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
 // 由 out/recon/linuxdo-20261124/make-b-plugins.mjs 生成，报文取自登录态实测。
-import { DEFAULT_PRICING_ENDPOINT as PRICING_ENDPOINT, localStoragePageAuth, requestPolicy } from "../../core/provider-registry.js";
+import { DEFAULT_PRICING_ENDPOINT as PRICING_ENDPOINT, localStoragePageAuth, requestPolicy, sessionProbeAuth } from "../../core/provider-registry.js";
 
 // 站点画像（2026-11-25 登录态复测）：
 //   /api/pricing 匿名 401，带 New-Api-User 头 + session cookie 200，报文是 tokenflux/allrouter 同款形状：
@@ -73,7 +73,20 @@ const pluginSource = {
   responseFormat: "price-map",
   authType: "none",
   rationale: "Yuki 的 /api/pricing 要登录态，带上站点自己的凭据后直连采集",
-  request: requestPolicy(() => PRICING_ENDPOINT, { credentials: "include", pageAuth })
+  request: requestPolicy(() => PRICING_ENDPOINT, {
+    credentials: "include",
+    pageAuth,
+    // POST /api/user/auth/refresh 在这个部署上是 404（2026-11-25 实测，返回
+    // "Invalid URL"），换不了 access token；/api/user/self 存在且要登录，
+    // 而 New-API 强制校验 New-Api-User 头，所以 uid 得先从页面报进凭据仓再探。
+    // 「待实测」：真实会话有效性要等 U9 在已登录的配置文件里跑一次。
+    renewal: sessionProbeAuth({
+      probePath: "/api/user/self",
+      probeHeaders: { "New-Api-User": "{{identity}}" },
+      missingMessage: "未找到Yuki登录凭据，请先在当前 Chrome 配置文件登录后重试",
+      failureMessage: "Yuki 登录态已失效，请在当前 Chrome 配置文件重新登录后重试"
+    })
+  })
 };
 
 const MODEL_ALIASES = [];

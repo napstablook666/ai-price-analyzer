@@ -1,6 +1,6 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
-import { localStoragePageAuth, requestPolicy } from "../../core/provider-registry.js";
+import { localStoragePageAuth, requestPolicy, sessionProbeAuth } from "../../core/provider-registry.js";
 
 const preset = {
   id: "cun",
@@ -34,7 +34,17 @@ const pluginSource = {
   preset,
   request: requestPolicy(() => "/api/pricing", {
     credentials: "include",
-    pageAuth: localStoragePageAuth("uid", "New-Api-User", "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试")
+    pageAuth: localStoragePageAuth("uid", "New-Api-User", "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试"),
+    // POST /api/user/auth/refresh 在这个部署上是 404（2026-11-25 实测，返回
+    // "Invalid URL"），换不了 access token；/api/user/self 存在且要登录，
+    // 而 New-API 强制校验 New-Api-User 头，所以 uid 得先从页面报进凭据仓再探。
+    // 「待实测」：真实会话有效性要等 U9 在已登录的配置文件里跑一次。
+    renewal: sessionProbeAuth({
+      probePath: "/api/user/self",
+      probeHeaders: { "New-Api-User": "{{identity}}" },
+      missingMessage: "未找到 CUN.AI 登录凭据，请先在当前 Chrome 配置文件登录后重试",
+      failureMessage: "CUN.AI 登录态已失效，请在当前 Chrome 配置文件重新登录后重试"
+    })
   })
 };
 

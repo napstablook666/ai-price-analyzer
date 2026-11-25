@@ -1139,6 +1139,43 @@ function renderRefreshPreflight(preflight = state.refreshPreflight) {
   cancel.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
 }
 
+const AUTH_STATUS_LABELS = { ok: "已登录", needsLogin: "需要登录", unknown: "状态未知" };
+const AUTH_KIND_LABELS = { cookie: "cookie 换 token", "refresh-token": "refresh 令牌", "session-probe": "会话探活", "manual-token": "长效令牌", page: "页面续期" };
+
+function formatRenewedAt(value) {
+  const time = Number(value);
+  if (!Number.isFinite(time) || time <= 0) return "从未续期";
+  return new Date(time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+// 登录态直接读 service worker 快照里的 authStatus（来自凭据仓），
+// 不再等一轮标签页预检，所以面板在没点刷新时也能显示谁需要重新登录。
+function renderAuthStatus() {
+  const rows = Array.isArray(state.data?.authStatus) ? state.data.authStatus : [];
+  const panel = $("#auth-status-panel");
+  panel.hidden = rows.length === 0;
+  const summary = $("#auth-status-summary");
+  const list = $("#auth-status-results");
+  if (!rows.length) {
+    summary.textContent = "";
+    list.replaceChildren();
+    return;
+  }
+  const needsLogin = rows.filter(row => row.status === "needsLogin").length;
+  const unknown = rows.filter(row => row.status === "unknown").length;
+  summary.textContent = `${rows.length} 个站点需要登录态，${needsLogin} 个需要重新登录，${unknown} 个状态未知。`;
+  list.innerHTML = rows.map(row => {
+    const openButton = row.status !== "ok" && row.baseUrl
+      ? `<button class="button button-quiet" type="button" data-auth-open="${escapeHtml(row.baseUrl)}"><span>打开登录页</span></button>`
+      : "";
+    const tokenForm = row.renewalKind === "manual-token"
+      ? `<form class="auth-token-form" data-auth-token-form="${escapeHtml(row.stationId)}"><input type="password" name="token" autocomplete="off" placeholder="粘贴长效令牌" aria-label="${escapeHtml(row.stationName)} 的长效令牌"><button class="button button-quiet" type="submit"><span>保存</span></button></form>`
+      : "";
+    const statusClass = ["ok", "needsLogin", "unknown"].includes(row.status) ? row.status : "unknown";
+    return `<li class="auth-status-row auth-${statusClass}"><span class="auth-status-site">${escapeHtml(row.stationName)}</span><span class="auth-status-label">${AUTH_STATUS_LABELS[row.status] || "状态未知"}</span><span class="auth-status-kind">${AUTH_KIND_LABELS[row.renewalKind] || "页面续期"}</span><span class="auth-status-time">${escapeHtml(formatRenewedAt(row.lastRenewedAt))}</span><span class="auth-status-actions">${openButton}</span>${tokenForm}</li>`;
+  }).join("");
+}
+
 function render(data, { preservePage = false } = {}) {
   state.data = data;
   state.pendingPlugins = pendingSitePlugins(data.sitePlugins);
@@ -1146,6 +1183,7 @@ function render(data, { preservePage = false } = {}) {
   state.comparisonMode = data.settings?.comparisonMode === "public" ? "public" : "paid";
   state.refreshPreflight = data.refreshPreflight || null;
   renderRefreshPreflight();
+  renderAuthStatus();
 if (!preservePage) { state.page = 0; pageFilterKey = null; }
   const allComparisons = data.comparisons || [];
   state.comparisons = data.comparisons || [];
@@ -1683,6 +1721,31 @@ $("#cancel-refresh-preflight").addEventListener("click", async () => {
     state.refreshPreflight = null;
     renderRefreshPreflight();
   } catch (error) { toast(error.message); }
+});
+
+// 事件委托挂在列表上：行是每次渲染重生成的，逐个绑会漏。
+$("#auth-status-results").addEventListener("click", event => {
+  const button = event.target.closest("[data-auth-open]");
+  if (!button) return;
+  chrome.tabs.create({ url: button.dataset.authOpen }).catch(error => toast(error.message));
+});
+
+$("#auth-status-results").addEventListener("submit", async event => {
+  const form = event.target.closest("[data-auth-token-form]");
+  if (!form) return;
+  event.preventDefault();
+  const token = String(form.querySelector('input[name="token"]')?.value || "").trim();
+  if (!token) { toast("令牌不能为空"); return; }
+  const button = form.querySelector('button[type="submit"]');
+  if (button) button.disabled = true;
+  try {
+    render(await callService("SAVE_STATION_TOKEN", { stationId: form.dataset.authTokenForm, token }));
+    toast("令牌已保存，保活排期已更新");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    if (button) button.disabled = false;
+  }
 });
 
 $("#close-refresh-progress").addEventListener("click", () => {

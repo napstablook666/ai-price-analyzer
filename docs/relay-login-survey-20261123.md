@@ -90,6 +90,20 @@ u("resolution") == "4k" ? tier("4k-video", u("tokens") * 13.12 / 1000000)
 取价必须在页面上下文里 `fetch`，这样才带 cookie 与 `New-Api-User` 头。命令行 `curl` 一定 401。
 
 sub2api 系的凭证在 `localStorage`：`auth_token`、`refresh_token`、`sub2api_login_account`。
+### 续期能力（扩展侧现状）
+
+上面是「取价必须带登录态」的观察。扩展侧另有一个问题：登录态过期后能不能自动续。`plugins/` 里需要登录的 15 个站，按 `request.renewal` / `request.cookieAuth` 声明分成四档（`node extension/scripts/list-auth-stations.mjs` 打印）：
+
+| 续期档位 | 站点 | 用户要做什么 |
+| --- | --- | --- |
+| `cookie`（cookie 换新 token，带 `expiresAt`） | clawcn、sccx、killai | 登录一次，之后不再管 |
+| `manual-token`（长效令牌，粘一次永不过期） | fastaitoken | 登录一次并粘令牌，之后不再管 |
+| `session-probe`（只探存亡，换不出新凭据） | cun、dstopology、yuki、stellaisle-carpool | 会话到期后重登一次 |
+| 无声明（只能靠页面自己续） | aiapi、all-in-one、hepingan、initapi、jiji、kelaode、leaflow | 会话到期后重登一次 |
+
+口径写法与四种 kind 的定义见 [插件开发与维护规范](./plugin-development.md#登录态与续期)。
+
+`session-probe` 与「无声明」的区别只在面板显示：前者能主动探出 `needsLogin`，后者状态停在 `unknown`，要等采集失败才发现。
 
 ## 按量单价怎么算
 

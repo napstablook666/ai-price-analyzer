@@ -32,6 +32,32 @@ test("plugin catalog exposes metadata without registering providers", async () =
   });
 });
 
+// 五个没有 refresh 端点的站，续期路径必须在插件里声明出来，否则 service worker
+// 只能靠开标签页，登录态也永远停在 unknown。2026-11-25 实测：这四个 New-API 部署的
+// POST /api/user/auth/refresh 都是 404，只能拿 cookie + New-Api-User 探活；
+// fastaitoken 连探活端点都没有，退回用户自己粘长效令牌。
+test("五个无 refresh 站都声明了续期路径，探活头引用的字段能被凭据仓替换", async () => {
+  const expected = {
+    cun: { kind: "session-probe", probePath: "/api/user/self" },
+    dstopology: { kind: "session-probe", probePath: "/api/user/self" },
+    yuki: { kind: "session-probe", probePath: "/api/user/self" },
+    "stellaisle-carpool": { kind: "session-probe", probePath: "/api/user/self" },
+    fastaitoken: { kind: "manual-token" }
+  };
+  for (const [id, want] of Object.entries(expected)) {
+    const module = await import(`../src/site-plugins/providers/${id}.js`);
+    const renewal = module.sitePlugin?.request?.renewal;
+    assert.ok(renewal, `${id} 缺 renewal 声明`);
+    assert.equal(renewal.kind, want.kind, `${id} 的 kind 不对`);
+    if (!want.probePath) continue;
+    assert.equal(renewal.probePath, want.probePath, `${id} 的探活路径不对`);
+    // New-API 不带这个头就一律 401，模板不写对会误报 needsLogin。
+    assert.equal(renewal.probeHeaders?.["New-Api-User"], "{{identity}}", `${id} 缺 New-Api-User 探活头`);
+    // 页面路径仍在：探活只判存亡，采集还是要靠页面读 uid。
+    assert.equal(module.sitePlugin.request.pageAuth?.header, "New-Api-User", `${id} 的页面认证被动了`);
+  }
+});
+
 test("contains no dynamic imports in the extension service-worker source tree", () => {
   const visit = directory => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {

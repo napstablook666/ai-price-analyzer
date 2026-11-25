@@ -106,6 +106,31 @@ export function cookieRefreshAuth(options = {}) {
   };
 }
 
+// 站点没有换 token 的接口，只能拿仓里的凭据往一个要登录的地址探一次：
+// 200 = 会话还在，401/403 = 要重新登录。探活不换 token，所以只判存亡。
+// probeHeaders 里的 {{token}} / {{identity}} 由凭据仓对应字段替换——
+// New-API 那类站不带 New-Api-User 头就一律 401，拼不出这个头就会误报 needsLogin。
+export function sessionProbeAuth(options = {}) {
+  const probeTtlMs = Number(options.probeTtlMs);
+  return {
+    kind: "session-probe",
+    probePath: String(options.probePath || ""),
+    probeHeaders: options.probeHeaders && typeof options.probeHeaders === "object" ? { ...options.probeHeaders } : {},
+    ...(Number.isFinite(probeTtlMs) && probeTtlMs > 0 ? { probeTtlMs } : {}),
+    ...(options.missingMessage ? { missingMessage: String(options.missingMessage) } : {}),
+    ...(options.failureMessage ? { failureMessage: String(options.failureMessage) } : {})
+  };
+}
+
+// 探不了活、也换不了 token 的站：让用户在面板粘一个长效令牌，粘过就当不过期。
+export function manualTokenAuth(options = {}) {
+  return {
+    kind: "manual-token",
+    ...(options.missingMessage ? { missingMessage: String(options.missingMessage) } : {}),
+    ...(options.failureMessage ? { failureMessage: String(options.failureMessage) } : {})
+  };
+}
+
 export function requestPolicy(endpoint, options = {}) {
   return {
     endpoint,
@@ -117,6 +142,9 @@ export function requestPolicy(endpoint, options = {}) {
     query: options.query || null,
     pageAuth: options.pageAuth || null,
     cookieAuth: options.cookieAuth || null,
+    // 无头续期声明：没写 cookieAuth 的站（做不了 cookie 换 token）靠它告诉
+    // service worker 怎么探活。schema 见 core/renewal.js 的 normalizeRenewal。
+    renewal: options.renewal || null,
     preflight: options.preflight || null,
     skipCapture: options.skipCapture === true,
     decodeResponse: typeof options.decodeResponse === "function" ? options.decodeResponse : null,
