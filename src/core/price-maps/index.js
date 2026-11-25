@@ -18,6 +18,7 @@ import { cheapRouterPriceMap } from "./cheaprouter.js";
 import { trueSotaPriceMap } from "./true-sota.js";
 import { sidrunePriceMap } from "./sidrune.js";
 import { relayRouterPriceMap } from "./relayrouter.js";
+import { directPriceMap } from "./direct.js";
 import { allrouterPriceMap } from "./allrouter.js";
 
 // base 名 → 完整映射。名字就是站点 id，也允许按报文形状起的俗名。
@@ -30,7 +31,8 @@ export const PRICE_MAP_BASES = Object.freeze({
   cheaprouter: cheapRouterPriceMap,
   "true-sota": trueSotaPriceMap,
   sidrune: sidrunePriceMap,
-  relayrouter: relayRouterPriceMap
+  relayrouter: relayRouterPriceMap,
+  direct: directPriceMap
 });
 
 function isPlainObject(value) {

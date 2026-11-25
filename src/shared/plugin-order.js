@@ -101,5 +101,6 @@ export const SITE_PLUGIN_ORDER = [
   "puoai",
   "tokenjoy",
   "su8",
-  "sucloud"
+  "sucloud",
+  "relayo"
 ];

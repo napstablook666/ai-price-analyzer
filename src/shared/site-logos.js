@@ -72,6 +72,7 @@ export const SITE_LOGOS = {
   "public-pricing": "icons/sites/public-pricing.png",
   "puoai": "icons/sites/puoai.png",
   "qianxing": "icons/sites/qianxing.png",
+  "relayo": "icons/sites/relayo.svg",
   "relayrouter": "icons/sites/relayrouter.svg",
   "rightcode": "icons/sites/rightcode.png",
   "sccx": "icons/sites/sccx.png",

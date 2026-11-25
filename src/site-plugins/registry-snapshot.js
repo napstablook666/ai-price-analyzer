@@ -1064,6 +1064,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "www.sucloud.vip"
       ],
       "needsCode": true
+    },
+    {
+      "id": "relayo",
+      "name": "Relayo",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，30 个模型（人民币每百万直价，非倍率制）；1 元 = 1 元额度，支付宝 / 微信，自定义充值满 50 起",
+      "hosts": [
+        "acombcom.cn",
+        "www.acombcom.cn"
+      ],
+      "needsCode": true
     }
   ]
 };

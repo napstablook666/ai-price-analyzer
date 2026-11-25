@@ -118,7 +118,12 @@ export const GOLDEN_CASES = Object.freeze([
     note: "4zapi.com 与 openlux 同部署；323 模型抽 67 条覆盖 token/step/按次三形态与 80 个分组倍率；无 expr",
     expectedUnresolved: ["mj_custom_zoom", "mj_inpaint"]
   },
-  { name: "undying", base: "tokenflux", fixture: "undying-pricing.json", note: "undyapi.com 88 模型 75 分组 40 档倍率；expr 54（含 len 分支长上下文档）、按次 4（gemini 出图 $0.15–0.33/张）；报文多 vendors + supported_endpoint" }
+  { name: "undying", base: "tokenflux", fixture: "undying-pricing.json", note: "undyapi.com 88 模型 75 分组 40 档倍率；expr 54（含 len 分支长上下文档）、按次 4（gemini 出图 $0.15–0.33/张）；报文多 vendors + supported_endpoint" },
+  {
+    name: "relayo", base: "direct", fixture: "relayo-pricing.json",
+    note: "acombcom.cn（站名 Relayo）2026-11-25 全量匿名报文；30 个模型 2 个分组，billing_mode=direct 给人民币每百万直价；17 条按 token、13 条按次（9 个出图按张）；2 个免费模型按 0 计费不参与比价",
+    expectedUnresolved: ["hungerg-free", "gpt-6-luna-free"]
+  }
 ]);
 
 // 暂时拿不到 fixture 的 base，理由必须写清楚。
