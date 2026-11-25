@@ -475,3 +475,44 @@ B 类里挑出 8 家开页签登录，实际登进去 4 家、接成插件 3 家
 自查：`out/recon/linuxdo-20261124/round-58-custom.mjs` 走 `catalog → matches → adapter.endpoint → 实打线上 → applyPriceMap → 离线重算`，tokenjoy 70 行、su8 68 行（60 token + 8 按张），两家都 HTTP 200、带价行齐全、离线复核行数一致，2/2 通过。`round-52-e2e.mjs` 那支不适用：它断言 `priceMap.base` 必须存在，这两家没有基座。
 
 `npm run verify`：612 项全过，`plugins:check` 101 个插件产物同步。`icons/sites/su8.svg` 与 `icons/sites/tokenjoy.svg` 是 `plugins:icons` 从 `/favicon.svg` 抓的，生成后要跑 `gen:shared-data` + `rust:build` 让 Rust 侧的图标表跟上，否则 `siteLogoFor()` 返回空串。
+
+## 第八批：逐家适配（2 家）与剩余 150 项的分流
+
+这一轮起改成「一家一家过」：排队表在 `out/recon/linuxdo-20261124/raw/audit/queue.json`（155 项），
+用 `prioritize.mjs` 剔掉 5 个误命中的外链后剩 150 项，`raw/audit/queue2.json`。
+
+### 本轮接的两家
+
+| 站 | 插件 id | 主机 | 模型 | 行数 | 未决 | 形状 | 计价 |
+| --- | --- | --- | ---: | ---: | ---: | --- | --- |
+| SuCloud | `sucloud` | `sucloud.vip` + `www.sucloud.vip` | 319 | 1292 | 2 | `relayrouter` 基座 | 1 元 = 1 美元额度，面值折扣 14 档 |
+| Relayo | `relayo` | `acombcom.cn` + `www.acombcom.cn` | 30 | 56 | 2 | 新基座 `direct` | 1 元 = 1 元额度，人民币每百万 |
+
+**SuCloud**：`/api/pricing` 888 KB、321 条、83 个分组，报文与 RelayRouter / Openlux 同一套（319 个模型目录完全一致），所以直接吃 `relayrouter` 基座、不写规则。倍率刻度按页面核过：`claude-opus-5-5` 价目页写「Enter price $0.9176/M」，等于 `model_ratio 2 × Claude-Code-1 0.229411 × 2`，即 1 倍率 = $2/百万，与基座默认 `ratioBase` 一致，不用覆盖。计费形状 213 个按 token、95 个按次、12 个按时长、1 个按分辨率。
+
+充值口径两个读数冲突，都记下来了：`/api/status` 是 `price = 1`、`original_price = 1`、`currency_type = USD`、`min_topup = 1`，即 1 元 = 1 美元额度；但站点 2025-10-12 的推广帖标题写「充值汇率 ￥0.7 = $1」。插件按运行时配置取 1，`rechargeRateNote` 里写明冲突；没有真实付款，`rechargeRateVerified` 为 `false`。面值折扣表 `bulk_topup_discounts` 14 档（10 元 99 折到 100000 元 92.5 折）是可直接验证的配置，`rechargePlansVerified` 记 `true`。
+
+**Relayo**：`/api/pricing` 16.5 KB、30 条、2 个分组（`default` 1、`Token Plan User` 0.8）。它把 New API 的计费改成 `billing_mode: "direct"`：不给 `model_ratio`，直接给 `input_price` / `output_price` / `cache_read_price` / `cache_write_price`，按人民币每百万 token 计，`billing_type` 分 `tokens` 与 `request`。这个形状现有 9 个基座都不认，所以新写了基座 `direct`（`src/core/price-maps/direct.js`）。
+
+币种是渲染页面核的：`claude-sonnet-5-5` 显示「¥0.53424 / 1M Tokens」缓存读取价，等于接口 `cache_read_price 0.6678 × Token Plan User 0.8`，页面通篇只有 ¥ 没有 $，所以 `priceCurrency` 记 CNY、`priceCurrencyVerified` 为 `true`。
+
+新基座 `direct` 的三条规则：输入价与按次价同时为 0 的归「站点按 0 计费（免费模型），不参与比价」（这家的 `hungerg-free`、`gpt-6-luna-free` 正是站点公告里写的免费上游）；`billing_type: request` 走按次，单位按 `supported_endpoint_types` 判（出图按张，其余按次）；其余按 token 读四个绝对价。快照 `test/fixtures/relayo-pricing.json` + `test/golden/relayo.txt`，`expectedUnresolved` 钉着那两个免费模型。
+
+充值：`/api/status` 的 `price = 1`、`quota_per_unit = 500000`、`quota_display_type = CNY`、`custom_currency_exchange_rate = 1`，即 1 元换 1 元额度。档位 `topup_preset_amounts = "1,20,100"`，支付方式支付宝 / 微信 / 自定义（满 50），易支付未开。全部读自运行时配置，没有真实付款，两个 `Verified` 都保持 `false`。
+
+### 剩下 150 项卡在哪
+
+用 `verify-host.mjs` 对 25 个候选各打 `/api/pricing` 与 `/api/status`，再对 SPA 型站点用 `dig-spa.mjs` 翻 bundle 找价目端点，结果分四类：
+
+| 卡点 | 数量（本轮实测到的） | 站 |
+| --- | ---: | --- |
+| 要登录或要凭据（401） | 5 | `claw-cn.org`、`chaoye.xyz`、`xisome.com`、`inkspires.cn`、`ruanzhubao.com` |
+| Cloudflare 挑战（403） | 7 | `hajimi.chat`、`sharellm.net`、`zhengshuyun.com`、`ghacg.com`、`shuowen.space`、`gtnet.xyz`、`201008281.xyz` |
+| 打不开（DNS 或连接失败） | 4 | `gptnb.cc`、`abnt.it`、`zerexa.cn`、`api.jucode.cn` |
+| 200 但没有公开价目端点 | 8 | `tokenbridge.site`、`recycleai.vip`、`zhiwen.io`、`gitbee.shop`、`sfapi.de`、`epochy.cn`、`flareboard.dev`、`freejointimg.com` |
+
+另外摸出一个不是中转站的：`goaihop.com` 是第三方比价聚合页，HTML 里内嵌别家的 `groupRatio` / `inputPriceCny` / `upstreamGroupId`，自己卖不卖看不清，不按站点接。
+
+`freejointimg.com` 名字就写着图床，归噪声。剩下没点的 120 多项还没过这一轮筛，下一轮按同一支脚本往下推。
+
+自查：`round-52-e2e.mjs sucloud relayo` 2/2 通过（`sucloud` 1292 行、`relayo` 56 行，各 2 行未决是基座按口径排除的按次 0 价与免费模型，已写进 `raw/batch/allow.json`）。`npm run verify` 612 项全过，`plugins:check` 103 个插件产物同步，护栏检查「价格映射 10 个基座里 9 个有快照（1 个待补：stellaisle-carpool）」。
