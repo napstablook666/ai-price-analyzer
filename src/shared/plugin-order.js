@@ -84,5 +84,15 @@ export const SITE_PLUGIN_ORDER = [
   "jetapi",
   "dstopology",
   "yuki",
-  "sccx"
+  "sccx",
+  "deadlion",
+  "orcax",
+  "hhapi",
+  "orbitix",
+  "bitwiseplus",
+  "metr4ai",
+  "ifalso",
+  "tokvi",
+  "fastmodel",
+  "puoai"
 ];

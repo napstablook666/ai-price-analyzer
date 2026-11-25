@@ -886,6 +886,108 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "www.sccx.cc"
       ],
       "needsCode": true
+    },
+    {
+      "id": "deadlion",
+      "name": "New AI",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：17 个模型 26 条（default / vip 两个分组倍率都是 1）；全部按 model_ratio 走 token 价，无 billing_expr、无按次、无缓存字段；quota_per_unit = 1000000 故 ratioBase 1（倍率 1 = $1/百万）",
+      "hosts": [
+        "ai.deadlion.cn"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "orcax",
+      "name": "Orca X 小虎鲸",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：14 个模型 14 条，单一 Gold 分组 0.6 倍；2 个出图模型把张价写进 billing_expr（img / img_cr 变量），12 条带 cache_ratio",
+      "hosts": [
+        "orcax.net"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "hhapi",
+      "name": "HHapi",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，59 个在售模型、27 个分组（倍率 0.06~10），187 行（177 条 token、10 条按张）、6 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
+      "hosts": [
+        "hhapi.xyz",
+        "www.hhapi.xyz"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "orbitix",
+      "name": "Orbitix AI",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：11 个模型 19 条（文本 17 / 按张 2）；4 个分组倍率 0.08 到 1，11 个模型全部带 billing_expr，含工作日 9-12 与 14-16/14-18 点（东亚时区）的 peak 双倍分时档",
+      "hosts": [
+        "newapi.orbitix.site"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "bitwiseplus",
+      "name": "BitwisePlus",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：16 个模型 54 条（文本 44 / 按张 10）；3 个分组倍率 0.1 到 0.2，11 个模型带 billing_expr（272K 分档 + 12 小时缓存 cc12h），5 个出图模型按张 0.2",
+      "hosts": [
+        "bitwiseplus.cc"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "metr4ai",
+      "name": "Akari AI 中转站",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，26 个在售模型、7 个分组（倍率 0.08~1.5），58 行（全 token）、1 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
+      "hosts": [
+        "metr4ai.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "ifalso",
+      "name": "轻盈科技",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，39 个在售模型、14 个分组（倍率 0.3~7），46 行（36 条 token、5 条按秒、5 条按张）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
+      "hosts": [
+        "api.ifalso.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "tokvi",
+      "name": "tokvi",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，25 个在售模型、32 个分组（倍率 全 1），48 行（34 条 token、2 条按张、12 条按秒）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度",
+      "hosts": [
+        "tokvi.net"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "fastmodel",
+      "name": "Fast Model",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，46 个在售模型、1 个分组（倍率 1），31 行（21 条 token、10 条按张/按次）、15 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度",
+      "hosts": [
+        "fastmodel.top"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "puoai",
+      "name": "PuoAI",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，28 个在售模型、1 个分组（倍率 1），25 行（19 条 token、6 条按张）、3 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
+      "hosts": [
+        "puoai.com",
+        "www.puoai.com"
+      ],
+      "needsCode": true
     }
   ]
 };

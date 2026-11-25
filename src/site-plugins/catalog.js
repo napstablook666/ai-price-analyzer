@@ -86,6 +86,16 @@ import { sitePlugin as jetapiPlugin } from "./providers/jetapi.js";
 import { sitePlugin as dstopologyPlugin } from "./providers/dstopology.js";
 import { sitePlugin as yukiPlugin } from "./providers/yuki.js";
 import { sitePlugin as sccxPlugin } from "./providers/sccx.js";
+import { sitePlugin as deadlionPlugin } from "./providers/deadlion.js";
+import { sitePlugin as orcaxPlugin } from "./providers/orcax.js";
+import { sitePlugin as hhapiPlugin } from "./providers/hhapi.js";
+import { sitePlugin as orbitixPlugin } from "./providers/orbitix.js";
+import { sitePlugin as bitwiseplusPlugin } from "./providers/bitwiseplus.js";
+import { sitePlugin as metr4aiPlugin } from "./providers/metr4ai.js";
+import { sitePlugin as ifalsoPlugin } from "./providers/ifalso.js";
+import { sitePlugin as tokviPlugin } from "./providers/tokvi.js";
+import { sitePlugin as fastmodelPlugin } from "./providers/fastmodel.js";
+import { sitePlugin as puoaiPlugin } from "./providers/puoai.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -189,7 +199,17 @@ export const SITE_PLUGIN_CATALOG = [
   entry("jetapi", "JetAPI", "api.jetapi.icu", "page", () => ({ sitePlugin: jetapiPlugin }), { paths: ["/"], description: "Cloudflare 挡住直连，插件开临时页借浏览器上下文读公开 /api/pricing；36 个模型 13 个分组，分组倍率 0.074~1.6" }),
   entry("dstopology", "FrostFox 妖怪杂货铺", "api.dstopology.com", "direct", () => ({ sitePlugin: dstopologyPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup","/login"], description: "登录态采集：67 个模型 169 条（文本 148 / 按次 21）；18 个分组，19 个分组倍率 0.072 到 1，17 个模型把价写进 billing_expr，未决 0 行" }),
   entry("yuki", "Yuki", "yukiapi.com", "direct", () => ({ sitePlugin: yukiPlugin }), { hosts: ["yukiapi.com","www.yukiapi.com"], paths: ["/","/pricing","/console","/console/topup","/topup","/login"], description: "登录态采集：51 个模型 109 条（文本 93 / 按次 16）；9 个分组，9 个分组倍率 0.2 到 1.2，10 个模型把价写进 billing_expr，未决 0 行" }),
-  entry("sccx", "纸飞机", "sccx.cc", "direct", () => ({ sitePlugin: sccxPlugin }), { hosts: ["sccx.cc","www.sccx.cc"], paths: ["/","/sign-in","/console","/console/topup","/topup","/pricing"], description: "登录态采集：23 个模型 59 条（文本 59 / 按次 0）；5 个分组，7 个分组倍率 0.15 到 1.5，17 个模型把价写进 billing_expr，未决 0 行" })
+  entry("sccx", "纸飞机", "sccx.cc", "direct", () => ({ sitePlugin: sccxPlugin }), { hosts: ["sccx.cc","www.sccx.cc"], paths: ["/","/sign-in","/console","/console/topup","/topup","/pricing"], description: "登录态采集：23 个模型 59 条（文本 59 / 按次 0）；5 个分组，7 个分组倍率 0.15 到 1.5，17 个模型把价写进 billing_expr，未决 0 行" }),
+  entry("deadlion", "New AI", "ai.deadlion.cn", "direct", () => ({ sitePlugin: deadlionPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：17 个模型 26 条（default / vip 两个分组倍率都是 1）；全部按 model_ratio 走 token 价，无 billing_expr、无按次、无缓存字段；quota_per_unit = 1000000 故 ratioBase 1（倍率 1 = $1/百万）" }),
+  entry("orcax", "Orca X 小虎鲸", "orcax.net", "direct", () => ({ sitePlugin: orcaxPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：14 个模型 14 条，单一 Gold 分组 0.6 倍；2 个出图模型把张价写进 billing_expr（img / img_cr 变量），12 条带 cache_ratio" }),
+  entry("hhapi", "HHapi", "hhapi.xyz", "direct", () => ({ sitePlugin: hhapiPlugin }), { hosts: ["hhapi.xyz","www.hhapi.xyz"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，59 个在售模型、27 个分组（倍率 0.06~10），187 行（177 条 token、10 条按张）、6 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
+  entry("orbitix", "Orbitix AI", "newapi.orbitix.site", "direct", () => ({ sitePlugin: orbitixPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：11 个模型 19 条（文本 17 / 按张 2）；4 个分组倍率 0.08 到 1，11 个模型全部带 billing_expr，含工作日 9-12 与 14-16/14-18 点（东亚时区）的 peak 双倍分时档" }),
+  entry("bitwiseplus", "BitwisePlus", "bitwiseplus.cc", "direct", () => ({ sitePlugin: bitwiseplusPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：16 个模型 54 条（文本 44 / 按张 10）；3 个分组倍率 0.1 到 0.2，11 个模型带 billing_expr（272K 分档 + 12 小时缓存 cc12h），5 个出图模型按张 0.2" }),
+  entry("metr4ai", "Akari AI 中转站", "metr4ai.com", "direct", () => ({ sitePlugin: metr4aiPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，26 个在售模型、7 个分组（倍率 0.08~1.5），58 行（全 token）、1 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
+  entry("ifalso", "轻盈科技", "api.ifalso.com", "direct", () => ({ sitePlugin: ifalsoPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，39 个在售模型、14 个分组（倍率 0.3~7），46 行（36 条 token、5 条按秒、5 条按张）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
+  entry("tokvi", "tokvi", "tokvi.net", "direct", () => ({ sitePlugin: tokviPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，25 个在售模型、32 个分组（倍率 全 1），48 行（34 条 token、2 条按张、12 条按秒）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度" }),
+  entry("fastmodel", "Fast Model", "fastmodel.top", "direct", () => ({ sitePlugin: fastmodelPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，46 个在售模型、1 个分组（倍率 1），31 行（21 条 token、10 条按张/按次）、15 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度" }),
+  entry("puoai", "PuoAI", "puoai.com", "direct", () => ({ sitePlugin: puoaiPlugin }), { hosts: ["puoai.com","www.puoai.com"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，28 个在售模型、1 个分组（倍率 1），25 行（19 条 token、6 条按张）、3 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" })
 ];
 
 export function sitePluginById(id) {
