@@ -1,6 +1,6 @@
 {
   "name": "ai-price-analyzer",
-  "version": "0.26.2",
+  "version": "0.27.0",
   "updateMinShell": "0.9.0",
   "type": "module",
   "description": "AI 中转站模型价格比价浏览器扩展",
