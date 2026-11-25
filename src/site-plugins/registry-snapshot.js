@@ -1031,6 +1031,28 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "www.puoai.com"
       ],
       "needsCode": true
+    },
+    {
+      "id": "tokenjoy",
+      "name": "TokenJoy",
+      "version": "0.1.0",
+      "description": "匿名 /api/models 直连采集：72 个模型按 4 个渠道（official / cuosor / kiro-power / kiro）分组，实付价已含每模型倍率；1 元人民币 = 1 美元额度，2 个未收录官方价的占位模型不进表",
+      "hosts": [
+        "tokenjoy.org",
+        "www.tokenjoy.org"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "su8",
+      "name": "SU8 Codes",
+      "version": "0.1.0",
+      "description": "匿名 /api/public/models 直连采集：34 个模型 68 条，13 个渠道各出一行，取站点标注的到手价（landed）；8 条按张出图；套餐更便宜但主价用按量价",
+      "hosts": [
+        "www.su8.codes",
+        "su8.codes"
+      ],
+      "needsCode": true
     }
   ]
 };

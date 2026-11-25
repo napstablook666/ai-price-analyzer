@@ -98,5 +98,7 @@ export const SITE_PLUGIN_ORDER = [
   "ifalso",
   "tokvi",
   "fastmodel",
-  "puoai"
+  "puoai",
+  "tokenjoy",
+  "su8"
 ];

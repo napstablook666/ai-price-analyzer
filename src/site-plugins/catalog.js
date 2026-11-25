@@ -100,6 +100,8 @@ import { sitePlugin as ifalsoPlugin } from "./providers/ifalso.js";
 import { sitePlugin as tokviPlugin } from "./providers/tokvi.js";
 import { sitePlugin as fastmodelPlugin } from "./providers/fastmodel.js";
 import { sitePlugin as puoaiPlugin } from "./providers/puoai.js";
+import { sitePlugin as tokenjoyPlugin } from "./providers/tokenjoy.js";
+import { sitePlugin as su8Plugin } from "./providers/su8.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -217,7 +219,9 @@ export const SITE_PLUGIN_CATALOG = [
   entry("ifalso", "轻盈科技", "api.ifalso.com", "direct", () => ({ sitePlugin: ifalsoPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，39 个在售模型、14 个分组（倍率 0.3~7），46 行（36 条 token、5 条按秒、5 条按张）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
   entry("tokvi", "tokvi", "tokvi.net", "direct", () => ({ sitePlugin: tokviPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，25 个在售模型、32 个分组（倍率 全 1），48 行（34 条 token、2 条按张、12 条按秒）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度" }),
   entry("fastmodel", "Fast Model", "fastmodel.top", "direct", () => ({ sitePlugin: fastmodelPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，46 个在售模型、1 个分组（倍率 1），31 行（21 条 token、10 条按张/按次）、15 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度" }),
-  entry("puoai", "PuoAI", "puoai.com", "direct", () => ({ sitePlugin: puoaiPlugin }), { hosts: ["puoai.com","www.puoai.com"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，28 个在售模型、1 个分组（倍率 1），25 行（19 条 token、6 条按张）、3 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" })
+  entry("puoai", "PuoAI", "puoai.com", "direct", () => ({ sitePlugin: puoaiPlugin }), { hosts: ["puoai.com","www.puoai.com"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，28 个在售模型、1 个分组（倍率 1），25 行（19 条 token、6 条按张）、3 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
+  entry("tokenjoy", "TokenJoy", "tokenjoy.org", "direct", () => ({ sitePlugin: tokenjoyPlugin }), { hosts: ["tokenjoy.org","www.tokenjoy.org"], paths: ["/","/models","/pricing","/docs","/console"], description: "匿名 /api/models 直连采集：72 个模型按 4 个渠道（official / cuosor / kiro-power / kiro）分组，实付价已含每模型倍率；1 元人民币 = 1 美元额度，2 个未收录官方价的占位模型不进表" }),
+  entry("su8", "SU8 Codes", "www.su8.codes", "direct", () => ({ sitePlugin: su8Plugin }), { hosts: ["www.su8.codes","su8.codes"], paths: ["/","/models","/pricing","/model/","/docs"], description: "匿名 /api/public/models 直连采集：34 个模型 68 条，13 个渠道各出一行，取站点标注的到手价（landed）；8 条按张出图；套餐更便宜但主价用按量价" })
 ];
 
 export function sitePluginById(id) {

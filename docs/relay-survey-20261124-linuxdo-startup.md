@@ -436,3 +436,42 @@ B 类里挑出 8 家开页签登录，实际登进去 4 家、接成插件 3 家
 - 10 家的收银台档位都要登录，`rechargePlansVerified` 全 `false`；`priceCurrencyVerified` 全 `true`，因为美元额度口径能从报文里的倍率基准与 `quota_per_unit` 对上。
 
 自查口径：`out/recon/round-55/e2e.mjs` 走生成后的 `providers/<id>.js` → `prepare` → `adapter.endpoint` → 实打 `https://<host>/api/pricing` → `applyPriceMap`，10/10 全 200 且都有报价行。干净签出的 `npm run verify` 等价五步（`ids:check`、`rust:wire`、`npm test` 612 项全过、`plugins:check` 95 个同步、`version:check`）一次通过，验的是两个仓库 HEAD，不是脏工作树。
+## 第七批：两家不是 New API 形状的站（2026-11-25）
+
+板块里的大部分转卖站都是 New API 皮肤，前面六批靠 `allrouter` / `relayrouter` 两个基座就能接。这两家不是：它们自己写后端、自己定价目表字段，`/api/pricing` 都不存在，所以这一批给的是**自带完整 `rules` 的映射**，不挂基座（仓库里已经有 11 个插件这么写，不是新发明）。
+
+两家都**匿名可读，不需要登录**，这是能接的前提。
+
+| 站 | 插件 | 主机 | 价目端点 | 模型 / 行数 | 分组 | 未决 | 充值口径 |
+| --- | --- | --- | --- | ---: | ---: | ---: | --- |
+| TokenJoy | `tokenjoy` | `tokenjoy.org` + `www` | `/api/models` | 72 / 70 | 4 个渠道，倍率全 1 | 2 | 1 元 = 1 美元额度 |
+| SU8 Codes | `su8` | `www.su8.codes` + 裸域 | `/api/public/models` | 34 / 68 | 13 个渠道，倍率全 1 | 0 | 美元现金，按汇率 7.3 折人民币 |
+
+**TokenJoy**：报文是 `{available: 70, billing_mode: "token", cny_per_usd: 6.66, models: [...], price_multiplier: 0.6}`，每行 `model` 自带渠道前缀（`kiro-power/claude-sonnet-5-5`），`input` / `output` / `cache_read` / `cache_write` 是实付美元额度每百万 token，已经乘过站点给模型定的 `multiplier`（72 行 `input = usd_input × multiplier` 全成立）。官方美元价在 `usd_input` / `usd_output`，比实付价高，表里不用。
+
+计价口径没有汇率加成：定价页和前端文案都写「1 元人民币买 1 美元额度」，前端把 `input` 原值直接按 ¥ 渲染，`cny_per_usd 6.66` 只用来把官方价折成 ¥ 展示给用户看。所以 `priceCurrency` 是 USD、`rechargeRmb` 是 1。
+
+分组就是渠道（`official` / `cuosor` / `kiro-power` / `kiro`），价格已按渠道分开定好，倍率一律 1，同一模型在三个渠道各出一行，正好能直接比渠道价：`claude-opus-5-5` 在 `official` 是 $4、在 `cuosor` 是 $2.4。
+
+2 条未决是 `cuosor/claude-sonnet-4` 与 `anthropic/claude-sonnet-4`：`known: false` 且 in/out 全 0，是「官方价没收录」的占位，不是免费，走 `unsupported` 进未决，不报 0 元。
+
+`price_multiplier: 0.6` 是「充值越多折扣越深、最高再省 40%」的封顶系数，不参与单价；大额充值档位表要登录才给，所以 `rechargeRateVerified` 是 `false`。
+
+**SU8 Codes**：`/api/public/models` 1007 KB，`data.models[34]`，每个模型下 `channel_prices[]` 合计 68 条，渠道就是分组（Codex / Codex官渠 / Codex-Pro / Azure / Claude / Kimi / Kimi官渠 / DeepSeek官渠 / UltraFast / Volcengine / Zai官渠 / Zhipu / Image生图分组）。
+
+每个渠道给两份价：`pay_as_you_go` 是「官方价 × 渠道倍率」的挂牌价，`pay_as_you_go_effective` 是站点自己标注的到手价。实测两者倍率比恒为 1/6.72（`paygo_effective_multiplier / paygo_multiplier`），也就是余额额度按 6.72 折计费；站点模型页宣传的「landed」用的就是 `effective` 这一份，所以表里一律取它。例：`gpt-5.6-sol` 官方 $4 / $20，Codex 渠道到手 $0.298 / $1.488。
+
+8 条按张：`gpt-image-2.6-sunburst` / `2.6-flare` / `2.5-sunburst` / `2.5-flare` / `gpt-image-2` 在 `Image生图分组` 与 `Azure` 下 `billing_type: "request"`、`meter_unit: "per_request"`，走 `request_price` 美元每张（$0.0268 与 $0.1425 两档）。
+
+套餐确实更便宜，但形态不同，没混进主价：Pro 套餐 $42.47 / 30 天、日额度 $7（42.47 ÷ 210 = 0.2022 现金/额度美元），SU500 $500 / 日额度 $125（0.1333）；额度按北京时间 0 点刷新、未用完可结转一天。同一个 `gpt-5.6-sol`，按量到手 $0.476、Pro 套餐 $0.404、SU500 $0.064。要按套餐价比，得先决定「日额度制」怎么折成单价，这一批没做，写进了 `rechargeRateNote`。
+
+货币是美元现金（Stripe 收 USD），人民币成本按系统默认汇率 7.3 折算，不用站内倍率，所以 `rechargeRateVerified` 是 `true`。
+
+**写法上的两个坑**：
+
+- `su8` 的价在 `models[].channel_prices[]` 里，用映射的 `expand: { itemsPath: "channel_prices", parentKey: "$parent" }` 把桶拍平，模型名与显示名取 `$parent.model_code` / `$parent.display_name`。注意 `$parent.x` 出现在**字段路径**里没问题，但**不能写进表达式**（表达式标识符只认 `[A-Za-z_][A-Za-z0-9_]*` 加点，`$` 不合法）。
+- `tokenjoy` 的模型名带渠道前缀，看着像路径，规范化层会取最后一段（`kiro-power/claude-sonnet-5-5` → `claude-sonnet-5-5`），所以显示名保留前缀不会影响匹配。
+
+自查：`out/recon/linuxdo-20261124/round-58-custom.mjs` 走 `catalog → matches → adapter.endpoint → 实打线上 → applyPriceMap → 离线重算`，tokenjoy 70 行、su8 68 行（60 token + 8 按张），两家都 HTTP 200、带价行齐全、离线复核行数一致，2/2 通过。`round-52-e2e.mjs` 那支不适用：它断言 `priceMap.base` 必须存在，这两家没有基座。
+
+`npm run verify`：612 项全过，`plugins:check` 101 个插件产物同步。`icons/sites/su8.svg` 与 `icons/sites/tokenjoy.svg` 是 `plugins:icons` 从 `/favicon.svg` 抓的，生成后要跑 `gen:shared-data` + `rust:build` 让 Rust 侧的图标表跟上，否则 `siteLogoFor()` 返回空串。
