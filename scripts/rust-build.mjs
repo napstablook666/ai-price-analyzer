@@ -1,10 +1,13 @@
 // 构建 wasm 单元，产物落到 extension/rust-dist/<unit>/
-// 用法：npm run rust:build [-- <unit>...]
+// 用法：npm run rust:build [-- <unit>...] / node scripts/rust-build.mjs --shims-only [<unit>...]
 // 产物是「导入即可调」的 ESM shim：调用方 import 后直接调导出，不需要自己 await init()。
-// Node 与浏览器共用同一份产物：浏览器走 fetch 拿 .wasm，Node 用 fs 读同一个文件。
+// MV3 的 module service worker 不允许顶层 await，所以 wasm 字节以 base64 内联、走 initSync 同步实例化；
+// 用异步 init() 会让 service worker 注册失败（Service worker registration failed. Status code: 3），
+// 表现就是工具栏图标点了没有任何反应。
+// --shims-only：不重编 Rust，只按现有 .wasm 重写 index.js 与内联字节，改 shim 生成逻辑时用它。
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,17 +28,34 @@ function libName(name) {
   return name.replace(/-/g, "_");
 }
 
-function shim(name, lib) {
-  return `// 由 scripts/rust-build.mjs 生成，不要手改。
-import init, * as wasm from "./${lib}.js";
+// 所有单元共用一份解码器：atob 在浏览器和 Node 18+ 都是全局的。
+const DECODER = `// 由 scripts/rust-build.mjs 生成，不要手改。base64 → Uint8Array，给内联的 wasm 字节用。
+export function decodeBase64(text) {
+  const binary = atob(text);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+`;
 
-const wasmSource = globalThis.process?.versions?.node
-  ? await (await import("node:fs/promises")).readFile(new URL("./${lib}_bg.wasm", import.meta.url))
-  : undefined;
-await init({ module_or_path: wasmSource });
+function shim(lib) {
+  return `// 由 scripts/rust-build.mjs 生成，不要手改。
+// MV3 的 module service worker 不允许顶层 await：wasm 必须同步实例化，字节以 base64 内联在本目录。
+import * as wasm from "./${lib}.js";
+import { wasmBase64 } from "./${lib}_wasm.js";
+import { decodeBase64 } from "../decode-base64.js";
+
+// initSync 是命名导出，默认导出是异步的 __wbg_init：service worker 里只认前者。
+wasm.initSync({ module: decodeBase64(wasmBase64) });
 
 export * from "./${lib}.js";
 export default wasm;
+`;
+}
+
+function wasmBytesModule(lib, base64) {
+  return `// 由 scripts/rust-build.mjs 生成，不要手改。${lib}_bg.wasm 的 base64，供 index.js 同步实例化。
+export const wasmBase64 = "${base64}";
 `;
 }
 
@@ -61,14 +81,32 @@ function buildUnit(unit) {
   return { outDir, lib };
 }
 
+async function writeShims(outDir, lib) {
+  const wasmFile = join(outDir, `${lib}_bg.wasm`);
+  if (!existsSync(wasmFile)) throw new Error(`没有 wasm 可内联：${wasmFile}`);
+  const base64 = (await readFile(wasmFile)).toString("base64");
+  await writeFile(join(outDir, `${lib}_wasm.js`), wasmBytesModule(lib, base64), "utf8");
+  await writeFile(join(outDir, "index.js"), shim(lib), "utf8");
+}
+
 async function main() {
-  const only = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const shimsOnly = args.includes("--shims-only");
+  const only = args.filter((arg) => !arg.startsWith("--"));
   const units = only.length === 0 ? UNITS : UNITS.filter((unit) => only.includes(unit.name));
   if (units.length === 0) throw new Error(`没有匹配的单元：${only.join(", ")}`);
+  await mkdir(DIST, { recursive: true });
+  await writeFile(join(DIST, "decode-base64.js"), DECODER, "utf8");
   for (const unit of units) {
-    const { outDir, lib } = buildUnit(unit);
-    await mkdir(outDir, { recursive: true });
-    await writeFile(join(outDir, "index.js"), shim(unit.name, lib), "utf8");
+    let outDir;
+    let lib;
+    if (shimsOnly) {
+      outDir = join(DIST, unit.name);
+      lib = libName(unit.name);
+    } else {
+      ({ outDir, lib } = buildUnit(unit));
+    }
+    await writeShims(outDir, lib);
     console.log(`built rust-dist/${unit.name}/index.js`);
   }
 }

@@ -1,10 +1,11 @@
 // 由 scripts/rust-build.mjs 生成，不要手改。
-import init, * as wasm from "./exchange_rate_rs.js";
+// MV3 的 module service worker 不允许顶层 await：wasm 必须同步实例化，字节以 base64 内联在本目录。
+import * as wasm from "./exchange_rate_rs.js";
+import { wasmBase64 } from "./exchange_rate_rs_wasm.js";
+import { decodeBase64 } from "../decode-base64.js";
 
-const wasmSource = globalThis.process?.versions?.node
-  ? await (await import("node:fs/promises")).readFile(new URL("./exchange_rate_rs_bg.wasm", import.meta.url))
-  : undefined;
-await init({ module_or_path: wasmSource });
+// initSync 是命名导出，默认导出是异步的 __wbg_init：service worker 里只认前者。
+wasm.initSync({ module: decodeBase64(wasmBase64) });
 
 export * from "./exchange_rate_rs.js";
 export default wasm;
