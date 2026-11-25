@@ -270,7 +270,7 @@ export const sitePlugin = {
 
 ## 本轮不做的三批
 
-**B 类 21 家（要登录）**：`claw-cn.org`、`chaoye.xyz`、`hajimi.chat`、`sharellm.net`、`xisome.com`、`yukiapi.com`、`zhengshuyun.com` 等。`/api/pricing` 存在但要 `Authorization`，匿名拿不到。这批已经逐个摸过一遍，见后面「要登录的这一批」：其中 `hyperroute.cc` 与 `api.jetapi.icu` 只是被 Cloudflare 挡，浏览器里匿名就有价，已经接成插件；其余 16 个主机确认要么缺登录、要么站点本身取不到。**剩下这 16 个要推进，得给一份登录后的 cookie。**
+**B 类 21 家（要登录）**：`claw-cn.org`、`chaoye.xyz`、`hajimi.chat`、`sharellm.net`、`xisome.com`、`yukiapi.com`、`zhengshuyun.com` 等。`/api/pricing` 存在但要 `Authorization`，匿名拿不到。这批已经逐个摸过一遍，见后面「要登录的这一批」：其中 `hyperroute.cc` 与 `api.jetapi.icu` 只是被 Cloudflare 挡，浏览器里匿名就有价，已经接成插件；其中有登录态的已经接上 4 家（`api.dstopology.com`、`yukiapi.com`、`sccx.cc`、`claw-cn.org`），其余 12 个主机确认要么缺登录、要么站点本身取不到。**剩下这 12 个要推进，得给一份登录后的 cookie。**
 
 **C 类 41 家（HTML 回落）**：`skcdn.cn`、`ricktoken.top`、`mxwq.net`、`akrouter.com`、`novaferry.com`、`api.arkzero.cn`、`yierbubu.net`、`imagiluxion.ai`、`api-xiaohai.com`、`claude-code-hub.org`、`agentrouter.org` 等。`/api/*` 一律回 index.html，说明不是标准 New API 前端。可行的第一条路是逐个试 `/api/public/models`、`/api/models`、`/api/v1/pricing`，试不到就得用 `ego-browser` 打开站点看真实 XHR。
 
@@ -355,7 +355,7 @@ export const sitePlugin = {
 
 | 站 | 主机 | 匿名拿得到的 | 卡点 | 推进条件 |
 | --- | --- | --- | --- | --- |
-| ClawCn-API | `claw-cn.org`、`api.claw-cn.org` | `/api/status` 200（`ClawCn-API`，`price` 1、`usd_exchange_rate` 1、`quota_display_type` USD、`quota_per_unit` 500000、`stripe_unit_price` 8），`/api/about`、`/api/notice`、`/api/home_page_content` 也 200 | `/api/pricing` 401 `Unauthorized, invalid access token` | 登录 cookie |
+| ClawCn-API ✅ 已接 | `claw-cn.org`、`api.claw-cn.org` | `/api/status` 200（`ClawCn-API`，`price` 1、`usd_exchange_rate` 1、`quota_display_type` USD、`quota_per_unit` 500000、`stripe_unit_price` 8），`/api/about`、`/api/notice`、`/api/home_page_content` 也 200 | `/api/pricing` 401 `Unauthorized, invalid access token` | 登录 cookie |
 | FrostFox 妖怪杂货铺 | `api.dstopology.com`（门户 `market.frostfox.ai`） | `/api/status` 200（同一套字段）；门户 `/api/site-config` 200（916 KB，含内嵌 logo） | `/api/pricing` 401；门户的 `/api/catalog/pool`、`/api/models`、`/api/catalog`、`/api/network/catalog` 全 404 | 登录 + 接口还没找到 |
 | 纸飞机 | `sccx.cc` | `/api/status` 200（`纸飞机`，`usd_exchange_rate` 7.3、`quota_display_type` USD、`stripe_unit_price` 8） | `/api/pricing` 401 | 登录 cookie |
 | Yuki | `yukiapi.com` | `/api/status` 200（`Yuki`，`usd_exchange_rate` 1） | `/api/pricing` 401 | 登录 cookie |
@@ -390,8 +390,8 @@ B 类里挑出 8 家开页签登录，实际登进去 4 家、接成插件 3 家
 | 纸飞机 | `sccx.cc` | 23 个 | 59 行 | 5 组 | 7 个，0.15 ~ 1.5 | 17 个 | 0 | cookie `new_api_has_session` 换 `data.access_token` |
 | 整数云 | `zhengshuyun.com` | 11 个 | — | — | — | — | — | 未接：Bearer 只存在页面内存，localStorage / sessionStorage / cookie 里都没有 |
 | claudeai.chat（从简 Clarvy） | `claudeai.chat` | 27 个 | — | — | — | — | — | 未接：credits 口径，`input_per_ktok_credits` 位数对不上任何公开充值档 |
-| ClawCn | `www.claw-cn.org` | — | — | — | — | — | — | 未接：登录页 `?redirect=%2Fdashboard` 登录失败，重开仍是 `/sign-in` |
-| XISOME | `xisome.com` | 13 个 | — | — | — | — | — | 未接：页签被关，`/api/pricing` 401 |
+| ClawCn | `www.claw-cn.org` | — | — | — | — | — | — | 已接：2026-11-25 登录态实测接成 `clawcn` 插件（cookie 换 `access_token`，88 行 0 未决） |
+| XISOME | `xisome.com` | 13 个 | — | — | — | — | — | 未接：站点暂停注册（13 个模型里 12 个官方/市场证据过期、价格字段为 null），拿不到登录态 |
 | ShareLLM | `sharellm.net` | — | — | — | — | — | — | 未接：`/api/pricing` 403，站点自己挂 Turnstile |
 
 三家的充值口径（都只读配置，没真实付款）：
@@ -500,13 +500,29 @@ B 类里挑出 8 家开页签登录，实际登进去 4 家、接成插件 3 家
 
 充值：`/api/status` 的 `price = 1`、`quota_per_unit = 500000`、`quota_display_type = CNY`、`custom_currency_exchange_rate = 1`，即 1 元换 1 元额度。档位 `topup_preset_amounts = "1,20,100"`，支付方式支付宝 / 微信 / 自定义（满 50），易支付未开。全部读自运行时配置，没有真实付款，两个 `Verified` 都保持 `false`。
 
+
+### 第九批：ClawCn-API（登录态用 cookie 换 token）
+
+| 站 | 插件 id | 主机 | 模型 | 行数 | 未决 | 鉴权 | 计价 |
+| --- | --- | --- | ---: | ---: | ---: | --- | --- |
+| ClawCn-API | `clawcn` | `claw-cn.org` + `www.claw-cn.org` + `api.claw-cn.org` | 47 | 88 | 0 | cookie `new_api_has_session` → `POST /api/user/auth/refresh` 换 `access_token` → `Authorization: Bearer` | 1 元 = 1 美元额度，充值 5 档 96–100 折 |
+
+这家和纸飞机的鉴权同一套，但**access_token 不在 localStorage 里**：页面上只有 `i18nextLng`、`system-config-storage`、`app:rev`、`newapi:default:cache-version`、`status` 五个键，`/api/pricing` 匿名 401 `Unauthorized, invalid access token`，只能拿 cookie 现换。所以插件走 `cookieRefreshAuth`，`accessTokenPath` 是 `data.access_token`、`expiresAtPath` 是 `data.access_expires_at`。
+
+报文是 tokenflux/allrouter 同款（`data` 行数组 + `group_ratio` / `usable_group` / `supported_endpoint` / `vendors` / `pricing_version`，带 `billing_expr` 与 `cache_ratio` / `create_cache_ratio`），直接吃 `allrouter` 基座。倍率刻度按价目页核过：`claude-opus-4-8` 在「国外模型-Anthropic-kiro」组显示 `$3 / 1M` 输入、`$15 / 1M` 输出、`$0.3 / 1M` 缓存，等于 `model_ratio 2.5 × 分组倍率 0.6 × 2`，即 1 倍率 = $2/百万，与基座默认 `ratioBase` 一致，不用覆盖。页面通篇只有 `$` 没有 `¥`，`priceCurrency` 记 USD、`priceCurrencyVerified` 为 `true`。
+
+计费形状：47 个模型、12 个分组倍率、落价 10 个分组、88 条「模型 × 分组 × 分段」，73 条按 token、15 条按次/按张（3 个 `deepseek-*-bytime` 各 3 档长度阶梯走「按次」组，5 个生图模型走「生图专区」按张），未决 0 条。「按次」组站点自己标注「福利组(倍率随时调整)，不保证稳定，并发低」。
+
+充值：`/api/status` 的 `price = 1`、`quota_per_unit = 500000`、`quota_display_type = USD`、`usd_exchange_rate = 1`、`custom_currency_exchange_rate = 1`，即 1 元 = 1 美元额度、没有汇率加成（`stripe_unit_price = 8` 但 `enable_stripe_topup` 为 false，Stripe 档没开）。`/api/user/topup/info`（登录态）面额 10 / 50 / 100 / 500 / 1000，50 与 100 打 98 折、500 打 97 折、1000 打 96 折、10 元档不打折，`min_topup = 5`，支付开支付宝与微信。读的是接口配置，没有真实付款，`rechargeRateVerified` 保持 `false`。
+
+自检：`round-60-harvest.mjs`（ego 页面里换 token 采报文）→ `round-61-login-map.mjs clawcn` 1/1 通过（88 行、88 条带价、0 未决、47 模型、10 分组，离线重算行数一致）。
 ### 剩下 150 项卡在哪
 
 用 `verify-host.mjs` 对 25 个候选各打 `/api/pricing` 与 `/api/status`，再对 SPA 型站点用 `dig-spa.mjs` 翻 bundle 找价目端点，结果分四类：
 
 | 卡点 | 数量（本轮实测到的） | 站 |
 | --- | ---: | --- |
-| 要登录或要凭据（401） | 5 | `claw-cn.org`、`chaoye.xyz`、`xisome.com`、`inkspires.cn`、`ruanzhubao.com` |
+| 要登录或要凭据（401） | 4 | `chaoye.xyz`、`xisome.com`、`inkspires.cn`、`ruanzhubao.com`（`claw-cn.org` 已于 2026-11-25 接上，见上一节） |
 | Cloudflare 挑战（403） | 7 | `hajimi.chat`、`sharellm.net`、`zhengshuyun.com`、`ghacg.com`、`shuowen.space`、`gtnet.xyz`、`201008281.xyz` |
 | 打不开（DNS 或连接失败） | 4 | `gptnb.cc`、`abnt.it`、`zerexa.cn`、`api.jucode.cn` |
 | 200 但没有公开价目端点 | 8 | `tokenbridge.site`、`recycleai.vip`、`zhiwen.io`、`gitbee.shop`、`sfapi.de`、`epochy.cn`、`flareboard.dev`、`freejointimg.com` |

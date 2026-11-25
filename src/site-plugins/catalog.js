@@ -104,6 +104,7 @@ import { sitePlugin as tokenjoyPlugin } from "./providers/tokenjoy.js";
 import { sitePlugin as su8Plugin } from "./providers/su8.js";
 import { sitePlugin as sucloudPlugin } from "./providers/sucloud.js";
 import { sitePlugin as relayoPlugin } from "./providers/relayo.js";
+import { sitePlugin as clawcnPlugin } from "./providers/clawcn.js";
 
 const entry = (id, name, host, mode, load, options = {}) => ({
   id,
@@ -225,7 +226,8 @@ export const SITE_PLUGIN_CATALOG = [
   entry("tokenjoy", "TokenJoy", "tokenjoy.org", "direct", () => ({ sitePlugin: tokenjoyPlugin }), { hosts: ["tokenjoy.org","www.tokenjoy.org"], paths: ["/","/models","/pricing","/docs","/console"], description: "匿名 /api/models 直连采集：72 个模型按 4 个渠道（official / cuosor / kiro-power / kiro）分组，实付价已含每模型倍率；1 元人民币 = 1 美元额度，2 个未收录官方价的占位模型不进表" }),
   entry("su8", "SU8 Codes", "www.su8.codes", "direct", () => ({ sitePlugin: su8Plugin }), { hosts: ["www.su8.codes","su8.codes"], paths: ["/","/models","/pricing","/model/","/docs"], description: "匿名 /api/public/models 直连采集：34 个模型 68 条，13 个渠道各出一行，取站点标注的到手价（landed）；8 条按张出图；套餐更便宜但主价用按量价" }),
   entry("sucloud", "SuCloud", "sucloud.vip", "direct", () => ({ sitePlugin: sucloudPlugin }), { hosts: ["sucloud.vip","www.sucloud.vip"], paths: ["/pricing","/console/topup","/"], description: "公开 /api/pricing 直连采集，319 个模型 83 个分组（报文与 RelayRouter 同源）；充值 1 元 = 1 美元额度，面值越大越便宜（最高 7.5% 折扣）" }),
-  entry("relayo", "Relayo", "acombcom.cn", "direct", () => ({ sitePlugin: relayoPlugin }), { hosts: ["acombcom.cn","www.acombcom.cn"], paths: ["/pricing","/console/topup","/"], description: "公开 /api/pricing 直连采集，30 个模型（人民币每百万直价，非倍率制）；1 元 = 1 元额度，支付宝 / 微信，自定义充值满 50 起" })
+  entry("relayo", "Relayo", "acombcom.cn", "direct", () => ({ sitePlugin: relayoPlugin }), { hosts: ["acombcom.cn","www.acombcom.cn"], paths: ["/pricing","/console/topup","/"], description: "公开 /api/pricing 直连采集，30 个模型（人民币每百万直价，非倍率制）；1 元 = 1 元额度，支付宝 / 微信，自定义充值满 50 起" }),
+  entry("clawcn", "ClawCn-API", "claw-cn.org", "direct", () => ({ sitePlugin: clawcnPlugin }), { hosts: ["claw-cn.org","www.claw-cn.org","api.claw-cn.org"], paths: ["/pricing","/console/topup","/"], description: "价目表要登录（/api/pricing 401），用站点自己的 cookie 换 access_token 后采集；47 个模型 10 个可用分组，1 元 = 1 美元额度" })
 ];
 
 export function sitePluginById(id) {

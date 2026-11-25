@@ -21,6 +21,7 @@ export const SITE_LOGOS = {
   "boreara": "icons/sites/boreara.png",
   "centos": "icons/sites/centos.png",
   "cheaprouter": "icons/sites/cheaprouter.svg",
+  "clawcn": "icons/sites/clawcn.png",
   "coderelay": "icons/sites/coderelay.png",
   "corecode": "icons/sites/corecode.svg",
   "crab": "icons/sites/crab.png",

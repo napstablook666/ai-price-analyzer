@@ -1075,6 +1075,18 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "www.acombcom.cn"
       ],
       "needsCode": true
+    },
+    {
+      "id": "clawcn",
+      "name": "ClawCn-API",
+      "version": "0.26.2",
+      "description": "价目表要登录（/api/pricing 401），用站点自己的 cookie 换 access_token 后采集；47 个模型 10 个可用分组，1 元 = 1 美元额度",
+      "hosts": [
+        "claw-cn.org",
+        "www.claw-cn.org",
+        "api.claw-cn.org"
+      ],
+      "needsCode": true
     }
   ]
 };
