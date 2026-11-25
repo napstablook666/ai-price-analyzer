@@ -28,8 +28,21 @@ const preset = {
   rechargeRmb: 1,
   rechargeCredits: 1,
   rechargeRateVerified: false,
-  rechargeRateNote: "站点 /api/status：price = 1、quota_per_unit = 500000、quota_display_type = USD、usd_exchange_rate = 7.3，即 1 元买 1 美元额度、界面按 7.3 折算人民币显示。充值档位接口匿名读不到，未核实赠送档位，rechargeRateVerified 为 false。",
-  rechargePlansVerified: false,
+  rechargeRateNote: "站点 /api/status：price = 1、quota_per_unit = 500000、quota_display_type = USD、usd_exchange_rate = 7.3，即 1 元买 1 美元额度、界面按 7.3 折算人民币显示。充值档位实测于 2026-11-25（登录态先 POST /api/user/auth/refresh 换 access_token，再读 /api/user/topup/info）：面额 10 / 20 / 50 / 100 / 200 / 500 元，discount 六个档全是 1，既没有赠送额度也没有折扣；支付开支付宝与微信，另有发卡页 https://wzyp.cn/shop/9JWDQ35P。读的是接口配置，没真实付款，rechargeRateVerified 保持 false。",
+  rechargeTiers: [],
+  rechargePlans: [
+    { kind: "topup", amount: 10, credits: 10, discount: 1, currency: "USD", availability: "self_service", verified: true, note: "支付宝 / 微信，无折扣" },
+    { kind: "topup", amount: 20, credits: 20, discount: 1, currency: "USD", availability: "self_service", verified: true, note: "支付宝 / 微信，无折扣" },
+    { kind: "topup", amount: 50, credits: 50, discount: 1, currency: "USD", availability: "self_service", verified: true, note: "支付宝 / 微信，无折扣" },
+    { kind: "topup", amount: 100, credits: 100, discount: 1, currency: "USD", availability: "self_service", verified: true, note: "支付宝 / 微信，无折扣" },
+    { kind: "topup", amount: 200, credits: 200, discount: 1, currency: "USD", availability: "self_service", verified: true, note: "支付宝 / 微信，无折扣" },
+    { kind: "topup", amount: 500, credits: 500, discount: 1, currency: "USD", availability: "self_service", verified: true, note: "支付宝 / 微信，无折扣" }
+  ],
+  rechargePlansVerified: true,
+  rechargePayments: [
+    { channel: "alipay", faceAmount: null, payAmount: null, currency: "CNY", status: "unavailable", paidRmb: null, at: "2026-11-25", note: "站点开支付宝与微信；发卡页在 wzyp.cn，未发起真实订单，未证明到账。" }
+  ],
+  rechargePaymentsVerified: false,
   priceCurrency: "USD",
   priceCurrencyVerified: false,
   priceCurrencyNote: "报价由 /api/pricing 的 model_ratio × 分组倍率折算成美元每百万 token（倍率 1 = $2/M），带 billing_expr 的模型以表达式为准；只读了登录态报文，没有真实付款核对，所以 priceCurrencyVerified 为 false。",

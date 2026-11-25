@@ -869,7 +869,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "yuki",
       "name": "Yuki",
       "version": "0.1.0",
-      "description": "登录态采集：51 个模型 109 条（文本 93 / 按次 16）；9 个分组，9 个分组倍率 0.2 到 1.2，10 个模型把价写进 billing_expr，未决 0 行",
+      "description": "登录态采集：40 个模型 98 条文本价（按次 0 条）；9 个分组，倍率 0.2 到 1.2，10 个模型把价写进 billing_expr，未决 0 行；充值档位 10/20/50/100/200/300 元，50 元起 99/98/97/95 折，只开支付宝",
       "hosts": [
         "yukiapi.com",
         "www.yukiapi.com"
@@ -880,7 +880,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "id": "sccx",
       "name": "纸飞机",
       "version": "0.1.0",
-      "description": "登录态采集：23 个模型 59 条（文本 59 / 按次 0）；5 个分组，7 个分组倍率 0.15 到 1.5，17 个模型把价写进 billing_expr，未决 0 行",
+      "description": "登录态采集：23 个模型 59 条文本价（按次 0 条）；5 个分组，倍率 0.15 到 1.5，17 个模型把价写进 billing_expr，未决 0 行；充值档位 10/20/50/100/200/500 元，无折扣，支付宝与微信",
       "hosts": [
         "sccx.cc",
         "www.sccx.cc"
