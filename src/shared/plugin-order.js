@@ -100,5 +100,6 @@ export const SITE_PLUGIN_ORDER = [
   "fastmodel",
   "puoai",
   "tokenjoy",
-  "su8"
+  "su8",
+  "sucloud"
 ];

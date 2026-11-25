@@ -83,6 +83,7 @@ export const SITE_LOGOS = {
   "stellaisle": "icons/sites/stellaisle.svg",
   "stellaisle-carpool": "icons/sites/stellaisle-carpool.svg",
   "su8": "icons/sites/su8.svg",
+  "sucloud": "icons/sites/sucloud.png",
   "tccxy": "icons/sites/tccxy.png",
   "teamapi": "icons/sites/teamapi.png",
   "tokenflux": "icons/sites/tokenflux.png",

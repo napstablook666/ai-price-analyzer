@@ -1053,6 +1053,17 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
         "su8.codes"
       ],
       "needsCode": true
+    },
+    {
+      "id": "sucloud",
+      "name": "SuCloud",
+      "version": "0.26.2",
+      "description": "公开 /api/pricing 直连采集，319 个模型 83 个分组（报文与 RelayRouter 同源）；充值 1 元 = 1 美元额度，面值越大越便宜（最高 7.5% 折扣）",
+      "hosts": [
+        "sucloud.vip",
+        "www.sucloud.vip"
+      ],
+      "needsCode": true
     }
   ]
 };
