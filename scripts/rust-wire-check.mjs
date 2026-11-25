@@ -6,8 +6,9 @@
 //   3. 接线处确实指向该产物（wasm shim 的 import，napi 的 index.cjs 标记块）；
 //   4. 通过公开模块调一次，返回值与 Rust 侧的已知结果逐字节一致（导入即可调，不需要 init）。
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -82,6 +83,30 @@ function newestSource(crateDir) {
   return newestAt;
 }
 
+// 时间戳比不了先后：git 按索引顺序落盘，rust-dist/ 排在 rust/ 之前，
+// 所以任何干净签出里都是「源码比产物新」，这条检查会把 verify:clean 永远判成失败。
+// 拿得到 git 信息时以「最后一次改动各自路径的提交」为准；产物还有未提交改动时说明刚重新编译，直接放过。
+const gitOut = args => {
+  try {
+    return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+};
+const lastCommitMs = paths => {
+  const stamp = gitOut(["log", "-1", "--format=%ct", "--", ...paths]);
+  return stamp ? Number(stamp) * 1000 : 0;
+};
+function artifactOlderThanSource(unit, built) {
+  // napi 单元的产物落在 rust/<unit>/ 下，wasm 单元落在 rust-dist/<unit>/ 下，两边都要按实际路径查提交。
+  const distPaths = [relative(ROOT, built).replace(/\\/g, "/").replace(/\/[^/]+$/, "")];
+  if (gitOut(["status", "--porcelain", "--untracked-files=all", "--", ...distPaths])) return false;
+  const sourceAt = lastCommitMs([`${unit.crate}/src`]);
+  const artifactAt = lastCommitMs(distPaths);
+  if (sourceAt && artifactAt) return sourceAt > artifactAt;
+  return newestSource(unit.crate) > statSync(built).mtimeMs;
+}
+
 function builtArtifact(unit) {
   const dist = join(ROOT, "rust-dist", unit.name);
   if (unit.marker) {
@@ -100,7 +125,7 @@ if (!selected.length) throw new Error(`没有匹配的单元：${wanted.join(", 
 for (const unit of selected) {
   const built = builtArtifact(unit);
   if (!built) throw new Error(`${unit.name}: 产物缺失，先跑 npm run rust:build ${unit.name}`);
-  if (newestSource(unit.crate) > statSync(built).mtimeMs) {
+  if (artifactOlderThanSource(unit, built)) {
     throw new Error(`${unit.name}: 产物比 ${unit.crate}/src 旧，先跑 npm run rust:build ${unit.name}`);
   }
   const wiring = readFileSync(join(ROOT, unit.shim), "utf8");
