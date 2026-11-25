@@ -1,34 +1,36 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
-import { DEFAULT_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
+import { DEFAULT_PRICING_ENDPOINT as PRICING_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
-// OrcaX 取证（2026-11-25，匿名直连 /api/pricing + /api/status，不需要登录）：
-//   14 个模型，只有 Gold 一个分组（倍率 0.6），2 个带 billing_expr，其余 12 个走 model_ratio。
-//   倍率基准与基座一致（1 单位 = 2 美元/百万）：gpt-6-sol 的 ratio 1 算 $1.2/M、乘 Gold 0.6 后出价。
-//   2 条按张的生图报价，其余 12 条按 token。0 条算不出价。
-//   站点的自述页是 /about，没有可读的充值档位。
-
+// 站点画像（2026-11-24 实测，匿名直连 /api/pricing，不需要登录）：
+//   title / og:title 是「Orca X 小虎鲸｜GPT API 与多模型接入平台」，system_name = OrcaX，register_enabled = true，
+//   turnstile_check = true（只在注册/前端拦，接口匿名可读）。14 个模型，只有 1 个分组 Gold，倍率 0.6。
+//   model_ratio 基准与 allrouter 一致（1 = $2/百万）：gpt-6-astra ratio 5 → $10、gpt-6.2-astra 4 → $8、gpt-6-sol 1 → $2。
+//   2 个出图模型（gpt-image-2.5-sunburst / flare）把张价写进表达式：
+//   tier("standard", p*5 + cr*1.25 + img*8 + img_cr*2 + c*30)，同时带 image-generation 端点，走表达式的 image 变量。
+//   12 条带 cache_ratio，cache_creation 系字段全无。
+//   OP（linux.do 3069487）：1024 程序员节给 Linux DO 新用户送 $10.24 体验额度。
+// 报文形状归到 allrouter 基座，站点差异只有基座选择、ratioBase 与充值口径。
 const PRICE_MAP = { base: "allrouter" };
 
-const HOSTS = ["orcax.net","www.orcax.net"];
-const PATHS = ["/","/pricing","/console/topup"];
+const HOSTS = ["orcax.net"];
+const PATHS = ["/", "/pricing", "/console", "/console/topup", "/topup"];
 
 const preset = {
   id: "orcax",
-  name: "OrcaX",
-  baseUrl: "https://orcax.net/pricing",
+  name: "Orca X 小虎鲸",
+  baseUrl: "https://orcax.net/",
   rechargeRmb: 1,
   rechargeCredits: 1,
-  rechargeRateVerified: true,
-  rechargeRateNote: "price = 1 即「1 元 = 1 美元额度」。额度在界面上显示成 🔱，custom_currency_exchange_rate = 1 表示 1 个 🔱 = 1 美元额度，所以 price = 1 也就是「1 元 = 1 🔱」。",
-  rechargePlansVerified: false,
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点 /api/status：price = 1、quota_per_unit = 500000、quota_display_type = CUSTOM、custom_currency_symbol = 🔱、custom_currency_exchange_rate = 1、usd_exchange_rate = 1，即 ¥1 = 1 美元额度（站内显示成 1 个 🔱）。没有 bulk_topup_discounts、没有 pay_methods；充值端点匿名全部非 200。只读配置没付款，rechargeRateVerified 为 false。",
   priceCurrency: "USD",
-  priceCurrencyVerified: true,
-  priceCurrencyNote: "报文里的倍率与 billing_expr 系数都是美元额度价，报价 = 官方价 × 分组倍率；price = 1、quota_per_unit = 500000、quota_display_type = CUSTOM、custom_currency_symbol = 🔱、custom_currency_exchange_rate = 1、usd_exchange_rate = 1。控制台按站点设置的币种显示额度，不影响这里的价格。",
+  priceCurrencyVerified: false,
+  priceCurrencyNote: "报价 = model_ratio × ratioBase(2) × Gold 分组倍率 0.6，2 个出图模型按表达式里的张价；1 = $2/百万的基准与 allrouter 相同。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
-  adapter: { kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
+  adapter: { kind: "declarative", endpoint: PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
 
 const pluginSource = {
@@ -39,16 +41,16 @@ const pluginSource = {
   prepareMatches: ({ hostname }) => HOSTS.includes(hostname),
   prepare: (stationInput, { url }) => ({
     ...stationInput,
-    baseUrl: `${url.origin}/pricing`,
+    baseUrl: `${url.origin}/`,
     mode: "direct",
     auth: { type: "none" },
-    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
+    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
   }),
   mode: "direct",
   responseFormat: "price-map",
   authType: "none",
-  rationale: "OrcaX 的 /api/pricing 匿名可读，14 个模型单分组、倍率与充值口径都取自 /api/status",
-  request: requestPolicy(() => DEFAULT_PRICING_ENDPOINT, { credentials: "omit" })
+  rationale: "Orca X 小虎鲸 的 /api/pricing 匿名可读，14 个模型 14 条价目与分组倍率都不需要登录",
+  request: requestPolicy(() => PRICING_ENDPOINT, { credentials: "omit" })
 };
 
 const MODEL_ALIASES = [];

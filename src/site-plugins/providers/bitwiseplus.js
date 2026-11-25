@@ -1,36 +1,39 @@
 // 由 scripts/plugin-build.mjs 从 plugins/ 生成，不要手改。重新生成：node scripts/plugin-build.mjs
 
-import { DEFAULT_PRICING_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
+import { DEFAULT_PRICING_ENDPOINT as PRICING_ENDPOINT, requestPolicy } from "../../core/provider-registry.js";
 
-// BitwisePlus 取证（2026-11-25，匿名直连 /api/pricing + /api/status，不需要登录）：
-//   16 个模型 3 个分组（default 0.2、image 0.2、sale 0.1），全部是折扣组，等于是官方价的 1~2 折。
-//   11 个模型带 billing_expr，5 个按张，0 条算不出价。
-//   倍率基准对不齐：gpt-5.6-sol 的 ratio 2.5 配 expr p * 4 反推基准 1.6、gpt-5.6-terra 的 1.25 配 p * 2 反推 1.6，
-//     而 gpt-5.6-luna 的 0.5 配 p * 1 反推 2.0。同一站内基准不一致，说明 ratio 是旧的占位值，以表达式为准，不写 ratioBase 覆盖。
-//   FAQ 另一条：「编程模型选 sale，生图选 image。选错了可以重新建一个令牌」——分组按用途分，价差 2 倍。
-
+// 站点画像（2026-11-24 实测，匿名直连 /api/pricing，不需要登录）：
+//   title 是「BitwisePlus｜面向 AI 编程工具的 GPT 接入站」，system_name = BitwisePlus，register_enabled = true。
+//   16 个模型里 5 个是出图（gpt-image-2.6 / 2.6-sunburst / 2.6-flare / 2.5-sunburst / 2.5-flare），走 model_price 0.2/张 + image-generation 端点；
+//   其余 11 个带 billing_expr，写法是 len <= 272000 长短分档，并且这批里只有它把 12 小时缓存写进表达式（cc12h 变量）。
+//   3 个分组：sale 0.1（usable_group 注明「编程模型，倍率随行情调整」）、default 0.2、image 0.2。
+//   OP（linux.do 3204681）写得很明确：¥1 = $1 站内额度，实际价格 = 模型美元标价 × 分组倍率，没有二次汇率折算，
+//   并给了复算例子（sale 组 gpt-6.2-sol 标价 2/10 → 实付 ¥0.2/1）。
+//   冲突点：/api/status 的 price = 7.3 说的是 ¥7.3 = 1 美元额度，与 OP 自述的 ¥1 = $1 差 7.3 倍。
+//   按 pricing-evidence 的口径，站点自述优先于报文默认值，且 OP 给了可复算的实付例子，所以取 ¥1 = $1；
+//   同时把 rechargeAuto 关掉，避免采集到的 price=7.3 覆盖这个判断。
+// 报文形状归到 allrouter 基座，站点差异只有基座选择、ratioBase 与充值口径。
 const PRICE_MAP = { base: "allrouter" };
 
 const HOSTS = ["bitwiseplus.cc"];
-const PATHS = ["/","/pricing","/console/topup"];
+const PATHS = ["/", "/pricing", "/console", "/console/topup", "/topup"];
 
 const preset = {
   id: "bitwiseplus",
   name: "BitwisePlus",
-  baseUrl: "https://bitwiseplus.cc/pricing",
+  baseUrl: "https://bitwiseplus.cc/",
   rechargeAuto: false,
   rechargeRmb: 1,
   rechargeCredits: 1,
-  rechargeRateVerified: true,
-  rechargeRateNote: "两边对不上，取站点自述：FAQ 明写「额度用完了怎么办？进交流群或私信获取兑换码，¥1 = $1」，而 /api/status 的 price = 7.3 是在线充值渠道的价格，两者差 7.3 倍。表里按 ¥1 = 1 美元额度算，因为用户实际拿额度走的是兑换码这条；rechargeAuto 关掉，避免采集值把 7.3 又盖回来。",
-  rechargePlansVerified: false,
+  rechargeRateVerified: false,
+  rechargeRateNote: "站点自述优先：OP（linux.do 3204681）写明「额度换算：¥1 = $1 站内额度」「实际价格 = 模型美元标价 × 分组倍率，没有汇率二次折算」，并给出 sale 组 gpt-6.2-sol 标价 2/10 实付 ¥0.2/1 的复算例子。/api/status 里 price = 7.3、quota_per_unit = 500000、quota_display_type = CNY、usd_exchange_rate = 1，按 New API 默认口径读是 ¥7.3 = 1 美元额度，与自述冲突，故凑不齐三证，取自述并在插件里关掉自动采集（rechargeAuto: false）。没有 bulk_topup_discounts、没有 pay_methods；充值端点匿名全部非 200；只读配置没付款，rechargeRateVerified 为 false。",
   priceCurrency: "USD",
-  priceCurrencyVerified: true,
-  priceCurrencyNote: "报文里的倍率与 billing_expr 系数都是美元额度价，报价 = 官方价 × 分组倍率；price = 7.3、quota_per_unit = 500000、quota_display_type = CNY、usd_exchange_rate = 1、stripe_unit_price = 8。控制台按站点设置的币种显示额度，不影响这里的价格。",
+  priceCurrencyVerified: false,
+  priceCurrencyNote: "报价 = billing_expr 求值 × 分组倍率（sale 0.1 / default 0.2 / image 0.2），出图模型按 model_price 0.2/张；人民币按站内自述 ¥1 = $1 折算。",
   enabled: true,
   mode: "direct",
   auth: { type: "none" },
-  adapter: { kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
+  adapter: { kind: "declarative", endpoint: PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
 };
 
 const pluginSource = {
@@ -41,16 +44,16 @@ const pluginSource = {
   prepareMatches: ({ hostname }) => HOSTS.includes(hostname),
   prepare: (stationInput, { url }) => ({
     ...stationInput,
-    baseUrl: `${url.origin}/pricing`,
+    baseUrl: `${url.origin}/`,
     mode: "direct",
     auth: { type: "none" },
-    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: DEFAULT_PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
+    adapter: { ...(stationInput.adapter || {}), kind: "declarative", endpoint: PRICING_ENDPOINT, method: "GET", responseFormat: "price-map", priceMap: PRICE_MAP }
   }),
   mode: "direct",
   responseFormat: "price-map",
   authType: "none",
-  rationale: "BitwisePlus 的 /api/pricing 匿名可读，16 个模型 3 个用途分组，充值口径按站点 FAQ 的自述取",
-  request: requestPolicy(() => DEFAULT_PRICING_ENDPOINT, { credentials: "omit" })
+  rationale: "BitwisePlus 的 /api/pricing 匿名可读，16 个模型 54 条价目与分组倍率都不需要登录",
+  request: requestPolicy(() => PRICING_ENDPOINT, { credentials: "omit" })
 };
 
 const MODEL_ALIASES = [];

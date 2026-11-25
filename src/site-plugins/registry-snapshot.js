@@ -898,12 +898,55 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
+      "id": "yuedian",
+      "name": "跃点 API",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：2026-11-24 快照 22 个模型 95 条（文本 91 / 按次 4；次日复测已涨到 137 条，插件按线上实时数据算）；5 个分组倍率 0.2 到 1，20 个模型把价写进 billing_expr，含 272K 长上下文分档与 service_tier 快档双倍",
+      "hosts": [
+        "mxwq.net",
+        "www.mxwq.net"
+      ],
+      "needsCode": true
+    },
+    {
       "id": "orcax",
       "name": "Orca X 小虎鲸",
       "version": "0.1.0",
       "description": "匿名 /api/pricing 直连采集：14 个模型 14 条，单一 Gold 分组 0.6 倍；2 个出图模型把张价写进 billing_expr（img / img_cr 变量），12 条带 cache_ratio",
       "hosts": [
         "orcax.net"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "shenlong",
+      "name": "深龙 AI",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：18 个模型 74 条；9 个分组倍率 0.08 到 1.5（官方直连 / 号池 / 反重力等渠道名），13 个模型带 billing_expr，含 272K 长上下文分档但档名三套混用",
+      "hosts": [
+        "shenlongapi.com",
+        "www.shenlongapi.com"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "tonkic",
+      "name": "TonkicAPI",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：7 个模型 48 条（模型少但分组多）；7 个分组倍率 0.05 到 1，全部 7 个模型都带 billing_expr（272K 长短上下文分档）；备用域 us.tonkicapi.xyz 实测 502",
+      "hosts": [
+        "tonkicapi.xyz",
+        "www.tonkicapi.xyz"
+      ],
+      "needsCode": true
+    },
+    {
+      "id": "moya",
+      "name": "MoyaAI",
+      "version": "0.1.0",
+      "description": "匿名 /api/pricing 直连采集：5 个模型 5 条；模型条目列了 8 个分组名但 group_ratio 只给 3 档（0.1 / 0.15 / 0.8），没有倍率的分组不落行；无 billing_expr，全部 model_ratio 计价",
+      "hosts": [
+        "moyaspace.com"
       ],
       "needsCode": true
     },

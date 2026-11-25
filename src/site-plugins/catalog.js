@@ -87,7 +87,11 @@ import { sitePlugin as dstopologyPlugin } from "./providers/dstopology.js";
 import { sitePlugin as yukiPlugin } from "./providers/yuki.js";
 import { sitePlugin as sccxPlugin } from "./providers/sccx.js";
 import { sitePlugin as deadlionPlugin } from "./providers/deadlion.js";
+import { sitePlugin as yuedianPlugin } from "./providers/yuedian.js";
 import { sitePlugin as orcaxPlugin } from "./providers/orcax.js";
+import { sitePlugin as shenlongPlugin } from "./providers/shenlong.js";
+import { sitePlugin as tonkicPlugin } from "./providers/tonkic.js";
+import { sitePlugin as moyaPlugin } from "./providers/moya.js";
 import { sitePlugin as hhapiPlugin } from "./providers/hhapi.js";
 import { sitePlugin as orbitixPlugin } from "./providers/orbitix.js";
 import { sitePlugin as bitwiseplusPlugin } from "./providers/bitwiseplus.js";
@@ -201,7 +205,11 @@ export const SITE_PLUGIN_CATALOG = [
   entry("yuki", "Yuki", "yukiapi.com", "direct", () => ({ sitePlugin: yukiPlugin }), { hosts: ["yukiapi.com","www.yukiapi.com"], paths: ["/","/pricing","/console","/console/topup","/topup","/login"], description: "登录态采集：51 个模型 109 条（文本 93 / 按次 16）；9 个分组，9 个分组倍率 0.2 到 1.2，10 个模型把价写进 billing_expr，未决 0 行" }),
   entry("sccx", "纸飞机", "sccx.cc", "direct", () => ({ sitePlugin: sccxPlugin }), { hosts: ["sccx.cc","www.sccx.cc"], paths: ["/","/sign-in","/console","/console/topup","/topup","/pricing"], description: "登录态采集：23 个模型 59 条（文本 59 / 按次 0）；5 个分组，7 个分组倍率 0.15 到 1.5，17 个模型把价写进 billing_expr，未决 0 行" }),
   entry("deadlion", "New AI", "ai.deadlion.cn", "direct", () => ({ sitePlugin: deadlionPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：17 个模型 26 条（default / vip 两个分组倍率都是 1）；全部按 model_ratio 走 token 价，无 billing_expr、无按次、无缓存字段；quota_per_unit = 1000000 故 ratioBase 1（倍率 1 = $1/百万）" }),
+  entry("yuedian", "跃点 API", "mxwq.net", "direct", () => ({ sitePlugin: yuedianPlugin }), { hosts: ["mxwq.net","www.mxwq.net"], paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：2026-11-24 快照 22 个模型 95 条（文本 91 / 按次 4；次日复测已涨到 137 条，插件按线上实时数据算）；5 个分组倍率 0.2 到 1，20 个模型把价写进 billing_expr，含 272K 长上下文分档与 service_tier 快档双倍" }),
   entry("orcax", "Orca X 小虎鲸", "orcax.net", "direct", () => ({ sitePlugin: orcaxPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：14 个模型 14 条，单一 Gold 分组 0.6 倍；2 个出图模型把张价写进 billing_expr（img / img_cr 变量），12 条带 cache_ratio" }),
+  entry("shenlong", "深龙 AI", "shenlongapi.com", "direct", () => ({ sitePlugin: shenlongPlugin }), { hosts: ["shenlongapi.com","www.shenlongapi.com"], paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：18 个模型 74 条；9 个分组倍率 0.08 到 1.5（官方直连 / 号池 / 反重力等渠道名），13 个模型带 billing_expr，含 272K 长上下文分档但档名三套混用" }),
+  entry("tonkic", "TonkicAPI", "tonkicapi.xyz", "direct", () => ({ sitePlugin: tonkicPlugin }), { hosts: ["tonkicapi.xyz","www.tonkicapi.xyz"], paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：7 个模型 48 条（模型少但分组多）；7 个分组倍率 0.05 到 1，全部 7 个模型都带 billing_expr（272K 长短上下文分档）；备用域 us.tonkicapi.xyz 实测 502" }),
+  entry("moya", "MoyaAI", "moyaspace.com", "direct", () => ({ sitePlugin: moyaPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：5 个模型 5 条；模型条目列了 8 个分组名但 group_ratio 只给 3 档（0.1 / 0.15 / 0.8），没有倍率的分组不落行；无 billing_expr，全部 model_ratio 计价" }),
   entry("hhapi", "HHapi", "hhapi.xyz", "direct", () => ({ sitePlugin: hhapiPlugin }), { hosts: ["hhapi.xyz","www.hhapi.xyz"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，59 个在售模型、27 个分组（倍率 0.06~10），187 行（177 条 token、10 条按张）、6 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
   entry("orbitix", "Orbitix AI", "newapi.orbitix.site", "direct", () => ({ sitePlugin: orbitixPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：11 个模型 19 条（文本 17 / 按张 2）；4 个分组倍率 0.08 到 1，11 个模型全部带 billing_expr，含工作日 9-12 与 14-16/14-18 点（东亚时区）的 peak 双倍分时档" }),
   entry("bitwiseplus", "BitwisePlus", "bitwiseplus.cc", "direct", () => ({ sitePlugin: bitwiseplusPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：16 个模型 54 条（文本 44 / 按张 10）；3 个分组倍率 0.1 到 0.2，11 个模型带 billing_expr（272K 分档 + 12 小时缓存 cc12h），5 个出图模型按张 0.2" }),
