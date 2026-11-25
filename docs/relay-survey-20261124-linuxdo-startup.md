@@ -401,3 +401,38 @@ B 类里挑出 8 家开页签登录，实际登进去 4 家、接成插件 3 家
 - 纸飞机：`price` 1、`quota_per_unit` 500000、`usd_exchange_rate` 7.3，即 7.3 元买 1 美元额度；充值档位接口要登录且没给公开折扣表。
 
 三家解析都是 0 未决，文本价与按次价全部落地。整数云的 `v1_models.json` 也抓到了 11 个模型，但拿不到它的 Bearer 就写不成插件，报文留着等以后能复现登录时再用。
+## 第六批：匿名可直采的 10 家（2026-11-25）
+
+从上面 A 类里挑 `/api/pricing` 与 `/api/status` 都匿名可读、现有插件没有覆盖的，写完声明就接成。接完插件总数 95（`plugins/` 下 85 + 本轮 10）。
+
+8 家归 `allrouter` 基座（有 `billing_expr`），`deadlion` 没有表达式、带 RelayRouter 系字段，归 `relayrouter`。
+
+| 站 | 插件 id | 主机 | 模型 | 行数 | 未决 | 分组 | 充值口径 |
+| --- | --- | --- | ---: | ---: | ---: | ---: | --- |
+| HHapi | `hhapi` | `hhapi.xyz` + `www.hhapi.xyz` | 59 | 187 | 6 | 27 组，0.06 ~ 10 | `price` 1 → 1 元 = 1 美元额度 |
+| Akari AI | `metr4ai` | `metr4ai.com` | 26 | 58 | 1 | 7 组，0.08 ~ 1.5 | `price` 1 → 1 元 = 1 美元额度 |
+| 轻盈科技 | `ifalso` | `api.ifalso.com` | 39 | 46 | 4 | 14 组，0.3 ~ 7 | `price` 1 → 1 元 = 1 美元额度 |
+| tokvi | `tokvi` | `tokvi.net` | 25 | 48 | 4 | 32 组，全是 1 | `price` 7.3 → 7.3 元 = 1 美元额度 |
+| Fast Model | `fastmodel` | `fastmodel.top` | 46 | 31 | 15 | 1 组 | `price` 7.3 → 7.3 元 = 1 美元额度 |
+| BitwisePlus | `bitwiseplus` | `bitwiseplus.cc` | 16 | 54 | 0 | 3 组，0.1 / 0.2 | FAQ 自述兑换码 ¥1 = \$1，与 `price` 7.3 冲突，取自述并关掉 `rechargeAuto` |
+| PuoAI | `puoai` | `puoai.com` + `www` | 28 | 25 | 3 | 1 组 | `price` 1 → 1 元 = 1 美元额度 |
+| Orbitix AI | `orbitix` | `newapi.orbitix.site` | 11 | 19 | 0 | 4 组，0.08 ~ 1 | `price` 1 → 1 元 = 1 美元额度 |
+| OrcaX | `orcax` | `orcax.net` + `www` | 14 | 14 | 0 | 1 组，0.6 | `price` 1、`custom_currency_exchange_rate` 1 → 1 元 = 1 🔱 = 1 美元额度 |
+| New AI | `deadlion` | `ai.deadlion.cn` | 17 | 26 | 0 | 2 组，都是 1 | `price` 7.3 → 7.3 元 = 1 美元额度；额度按「积分」显示（`quota_per_unit` 1000000） |
+
+同批还探到另外 3 家同样匿名可读：深龙 AI（`shenlongapi.com`，18 个模型 74 行、9 组分 0.08 ~ 1.5、`price` 6.8）、MoyaAI（`moyaspace.com`，5 个模型 3 组分）、TonkicAPI（`tonkicapi.xyz`，7 个模型 7 个折扣组）。这三家同时在另一条线里写成了 `shenlong` / `moya` / `tonkic` 三个目录，为避免同一主机挂两个插件，本次提交没有收进来，口径与上面这张表一致。
+
+两家没接：
+
+- `acombcom.cn`：绝对价形状（`billing_mode: "direct"` + 逐行 `input_price` / `output_price` / `request_price`），现有两个基座都不认，要新基座或 `groups.fallbackRatio`。本轮还是不做。
+- `api.jucode.cn`：`/api/pricing` 与 `/api/status` 都 410，`{"error":{"type":"service_discontinued"}}`，2026-11-20 已停服，退款见 `api.jucode.net`。
+
+口径与缺口：
+
+- 倍率基准逐条核过，1 单位 = 2 美元/百万 token，没有站点需要 `ratioBase` 覆盖。多家的 `model_ratio` 是旧占位值（`37.5`、`0.175` 这类），表达式存在时以表达式为准，两个基座本来就是这个顺序。
+- 33 条未决分两类，都不是站点方言：`u(...)` 用量计量的秒/张计价（`fastmodel` 15 条 minimax_h3 系列、`tokvi` 4 条、`ifalso` 4 条），和站点自标 0 价的占位行 `tier("base", p * 0 + c * 0)`（`hhapi`、`puoai`、`metr4ai`）。文本价一行不缺。
+- `deadlion` 顶层 `time_discount` 给 6 个 glm 模型挂了「高峰期 ×2.5」，两个基座都不读这个字段，表里出的是非高峰价，高峰时段实际扣费要乘 2.5。
+- `ifalso` 的 `claude-sonnet-5` 只有占位倍率 37.5、没有表达式，算出来 $75/M，是站点自己的占位值，报文里没有第二个数可校准，照报文出价并在插件里注明。
+- 10 家的收银台档位都要登录，`rechargePlansVerified` 全 `false`；`priceCurrencyVerified` 全 `true`，因为美元额度口径能从报文里的倍率基准与 `quota_per_unit` 对上。
+
+自查口径：`out/recon/round-55/e2e.mjs` 走生成后的 `providers/<id>.js` → `prepare` → `adapter.endpoint` → 实打 `https://<host>/api/pricing` → `applyPriceMap`，10/10 全 200 且都有报价行。干净签出的 `npm run verify` 等价五步（`ids:check`、`rust:wire`、`npm test` 612 项全过、`plugins:check` 95 个同步、`version:check`）一次通过，验的是两个仓库 HEAD，不是脏工作树。
