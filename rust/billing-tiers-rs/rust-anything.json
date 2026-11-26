@@ -1,0 +1,30 @@
+{
+  "schema": "rust-anything/bridge@1",
+  "root": "D:\\AI\\AI比价\\extension",
+  "unit": "src/core/billing-tiers.js",
+  "language": "ts",
+  "kind": "wasm",
+  "crate_name": "billing-tiers-rs",
+  "exports": [
+    {
+      "name": "parseBillingTiers",
+      "file": "src/core/billing-tiers.js",
+      "line": 160,
+      "params": [
+        {
+          "name": "expression",
+          "ts_type": "unknown",
+          "optional": false,
+          "rest": false
+        }
+      ],
+      "returns": "unknown",
+      "is_async": false,
+      "is_generator": false,
+      "type_params": [],
+      "uses_instanceof": false
+    }
+  ],
+  "classes": [],
+  "js_only": []
+}

@@ -10,7 +10,7 @@ function assertWorkerShim(source) {
     "MV3 wasm shim 必须调用命名导出 initSync，并使用内联字节");
 }
 
-for (const unit of ["shared-rs", "price-fields-rs", "exchange-rate-rs"]) {
+for (const unit of ["shared-rs", "price-fields-rs", "exchange-rate-rs", "billing-tiers-rs"]) {
   test(`${unit} 生成入口可同步初始化，不依赖 Node 放行顶层 await`, () => {
     const source = readFileSync(new URL(`../rust-dist/${unit}/index.js`, import.meta.url), "utf8");
     assertWorkerShim(source);

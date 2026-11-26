@@ -63,6 +63,24 @@ const UNITS = [
         warnings: []
       });
     }
+  },
+  {
+    name: "billing-tiers-rs",
+    crate: "rust/billing-tiers-rs",
+    shim: "src/core/rust-billing-shim.js",
+    async probe() {
+      const { parseBillingTiers } = await import(new URL("../src/core/billing-tiers.js", import.meta.url));
+      // 期望值是移植前 JS 实现录下来的那条用例，逐字段对齐才能证明解析真的在 Rust 侧跑。
+      assert.deepEqual(
+        parseBillingTiers('len < 200000 ? tier("short_context", p * 2 + c * 6 + cr * 0.5) : tier("long_context", p * 4 + c * 12 + cr * 1)'),
+        [
+          { name: "short_context", input: 2, output: 6, ratio: 1, completion: 3, billing: { cacheRead: 0.5, cacheWrite: 0, cacheWrite1h: 0 }, unit: "token", fixed: null, minTokens: 0, maxTokens: 200000, maxInclusive: false },
+          { name: "long_context", input: 4, output: 12, ratio: 2, completion: 3, billing: { cacheRead: 1, cacheWrite: 0, cacheWrite1h: 0 }, unit: "token", fixed: null, minTokens: 200000, maxTokens: null, maxInclusive: true }
+        ]
+      );
+      assert.deepEqual(parseBillingTiers("nothing here"), []);
+      assert.deepEqual(parseBillingTiers(null), []);
+    }
   }
 ];
 
