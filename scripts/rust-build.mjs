@@ -5,6 +5,7 @@
 // 用异步 init() 会让 service worker 注册失败（Service worker registration failed. Status code: 3），
 // 表现就是工具栏图标点了没有任何反应。
 // --shims-only：不重编 Rust，只按现有 .wasm 重写 index.js 与内联字节，改 shim 生成逻辑时用它。
+// 它不刷新 build-inputs.json：没重编就不能声称产物是照当前源码编的；只改 shim 时保留旧指纹。
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fingerprintPayload, FINGERPRINT_NAME } from "./lib/rust-build-inputs.mjs";
@@ -95,8 +96,11 @@ async function main() {
   const args = process.argv.slice(2);
   const shimsOnly = args.includes("--shims-only");
   const only = args.filter((arg) => !arg.startsWith("--"));
-  const units = only.length === 0 ? UNITS : UNITS.filter((unit) => only.includes(unit.name));
-  if (units.length === 0) throw new Error(`没有匹配的单元：${only.join(", ")}`);
+  const normalized = new Set(only.map(name => (name.endsWith("-rs") ? name : `${name}-rs`)));
+  const units = only.length === 0 ? UNITS : UNITS.filter(unit => normalized.has(unit.name));
+  if (units.length === 0) {
+    throw new Error(`没有匹配的单元：${only.join(", ")}（可用：${UNITS.map(unit => unit.name).join(", ")}）`);
+  }
   await mkdir(DIST, { recursive: true });
   await writeFile(join(DIST, "decode-base64.js"), DECODER, "utf8");
   for (const unit of units) {
@@ -111,11 +115,15 @@ async function main() {
     await writeShims(outDir, lib);
     // 存一份「照着哪些输入编出来」的指纹，rust:wire 拿它判断产物新不新。比提交时间可靠：
     // 源码改动不影响 codegen 时产物字节不变，提交时间那套会永久判旧。
-    await writeFile(
-      join(outDir, FINGERPRINT_NAME),
-      `${JSON.stringify(fingerprintPayload(unit.name, join(ROOT, unit.crate)), null, 2)}\n`,
-      "utf8"
-    );
+    // 只有真的重编过才写：--shims-only 不重编 Rust，此时若刷新指纹，等于声称产物是照当前
+    // 源码编的，产物没动却让 rust:wire 变绿——陈旧产物被洗白。
+    if (!shimsOnly) {
+      await writeFile(
+        join(outDir, FINGERPRINT_NAME),
+        `${JSON.stringify(fingerprintPayload(unit.name, join(ROOT, unit.crate)), null, 2)}\n`,
+        "utf8"
+      );
+    }
     console.log(`built rust-dist/${unit.name}/index.js`);
   }
 }

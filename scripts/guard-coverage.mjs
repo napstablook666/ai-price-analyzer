@@ -70,6 +70,20 @@ for (const name of ["rust:lint", "rust:wire"]) {
   }
 }
 
+// 5. rust-dist/ 里每个 wasm 产物目录都要带构建指纹，避免回退旧时间闸门。
+//    指纹是 rust:wire 判断「产物是照当前源码编出来的」的唯一依据；文件不在就只能退回提交
+//    时间，而提交时间那套会放过「源码改了但产物字节没变」的情况。产物在、指纹不在，
+//    说明产物没在指纹机制下重建过——少一个文件不该让闸门变绿。
+const distDirUrl = new URL("rust-dist/", ROOT);
+const wasmProducts = readdirSync(distDirUrl)
+  .filter(name => existsSync(new URL(`${name}/index.js`, distDirUrl)))
+  .sort();
+for (const name of wasmProducts) {
+  if (!existsSync(new URL(`${name}/build-inputs.json`, distDirUrl))) {
+    problems.push(`rust-dist/${name} 缺 build-inputs.json：先跑 npm run rust:build ${name}`);
+  }
+}
+
 if (problems.length > 0) {
   console.error(`护栏覆盖率检查失败，${problems.length} 处：`);
   for (const line of problems) console.error(`  ${line}`);
@@ -80,5 +94,5 @@ const baseCount = Object.keys(PRICE_MAP_BASES).length;
 const snapshot = baseCount - pending.length;
 console.log(
   `护栏覆盖率检查通过：${onDisk.length} 个测试全部接线，价格映射 ${baseCount} 个基座里 ${snapshot} 个有快照` +
-    `（${pending.length} 个待补：${pending.join(", ") || "无"}），AGENTS.md 里的 ${mentioned.size} 条命令都存在。`
+    `（${pending.length} 个待补：${pending.join(", ") || "无"}），AGENTS.md 里的 ${mentioned.size} 条命令都存在，${wasmProducts.length} 个 wasm 产物都带构建指纹。`
 );

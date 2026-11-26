@@ -5,6 +5,7 @@
 //   2. 产物不比 crate/src 里的源码旧（旧了说明忘了 npm run rust:build）；
 //   3. 接线处确实指向该产物（wasm shim 的 import，napi 的 index.cjs 标记块）；
 //   4. 通过公开模块调一次，返回值与 Rust 侧的已知结果逐字节一致（导入即可调，不需要 init）。
+//   5. wasm 产物的 build-inputs.json 与当前 crate 输入指纹一致。
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -128,19 +129,21 @@ function artifactOlderThanSource(unit, built) {
     try {
       stamp = JSON.parse(readFileSync(stampPath, "utf8"));
     } catch {
-      return true; // 指纹文件读不出来，按旧处理，让调用方重建
+      return "build-inputs.json 无法读取";
     }
-    if (stamp?.source !== sourceFingerprint(join(ROOT, unit.crate))) return true;
+    if (stamp?.source !== sourceFingerprint(join(ROOT, unit.crate))) {
+      return `构建指纹与 ${unit.crate}/src 不符`;
+    }
     // 指纹对得上，再确认产物文件本身还在原地（被手删过就还得重建）。
-    return !existsSync(built);
+    return existsSync(built) ? null : "产物文件缺失";
   }
 
   // 没有指纹：老产物或新加的 crate，退回提交时间。产物有未提交改动说明刚重新编译，直接放过。
-  if (gitOut(["status", "--porcelain", "--untracked-files=all", "--", distDir])) return false;
+  if (gitOut(["status", "--porcelain", "--untracked-files=all", "--", distDir])) return null;
   const sourceAt = lastCommitMs([`${unit.crate}/src`]);
   const artifactAt = lastCommitMs([distDir]);
-  if (sourceAt && artifactAt) return sourceAt > artifactAt;
-  return newestSource(unit.crate) > statSync(built).mtimeMs;
+  if (sourceAt && artifactAt) return sourceAt > artifactAt ? `产物比 ${unit.crate}/src 旧` : null;
+  return newestSource(unit.crate) > statSync(built).mtimeMs ? `产物比 ${unit.crate}/src 旧` : null;
 }
 
 function builtArtifact(unit) {
@@ -161,8 +164,9 @@ if (!selected.length) throw new Error(`没有匹配的单元：${wanted.join(", 
 for (const unit of selected) {
   const built = builtArtifact(unit);
   if (!built) throw new Error(`${unit.name}: 产物缺失，先跑 npm run rust:build ${unit.name}`);
-  if (artifactOlderThanSource(unit, built)) {
-    throw new Error(`${unit.name}: 产物比 ${unit.crate}/src 旧，先跑 npm run rust:build ${unit.name}`);
+  const staleReason = artifactOlderThanSource(unit, built);
+  if (staleReason) {
+    throw new Error(`${unit.name}: ${staleReason}，先跑 npm run rust:build ${unit.name}`);
   }
   const wiring = readFileSync(join(ROOT, unit.shim), "utf8");
   const expected = unit.marker ?? `rust-dist/${unit.name}/index.js`;
