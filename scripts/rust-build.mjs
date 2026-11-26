@@ -7,6 +7,7 @@
 // --shims-only：不重编 Rust，只按现有 .wasm 重写 index.js 与内联字节，改 shim 生成逻辑时用它。
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { fingerprintPayload, FINGERPRINT_NAME } from "./lib/rust-build-inputs.mjs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -108,6 +109,13 @@ async function main() {
       ({ outDir, lib } = buildUnit(unit));
     }
     await writeShims(outDir, lib);
+    // 存一份「照着哪些输入编出来」的指纹，rust:wire 拿它判断产物新不新。比提交时间可靠：
+    // 源码改动不影响 codegen 时产物字节不变，提交时间那套会永久判旧。
+    await writeFile(
+      join(outDir, FINGERPRINT_NAME),
+      `${JSON.stringify(fingerprintPayload(unit.name, join(ROOT, unit.crate)), null, 2)}\n`,
+      "utf8"
+    );
     console.log(`built rust-dist/${unit.name}/index.js`);
   }
 }

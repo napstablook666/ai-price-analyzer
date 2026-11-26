@@ -10,8 +10,22 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FINGERPRINT_NAME, sourceFingerprint } from "./lib/rust-build-inputs.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
+// 指纹优先，提交时间只是没有指纹时的退路（老产物、新加的 crate）。
+const gitOut = args => {
+  try {
+    return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+};
+const lastCommitMs = paths => {
+  const stamp = gitOut(["log", "-1", "--format=%ct", "--", ...paths]);
+  return stamp ? Number(stamp) * 1000 : 0;
+};
 
 const UNITS = [
   {
@@ -100,27 +114,31 @@ function newestSource(crateDir) {
   walk(join(ROOT, crateDir, "src"));
   return newestAt;
 }
-
-// 时间戳比不了先后：git 按索引顺序落盘，rust-dist/ 排在 rust/ 之前，
-// 所以任何干净签出里都是「源码比产物新」，这条检查会把 verify:clean 永远判成失败。
-// 拿得到 git 信息时以「最后一次改动各自路径的提交」为准；产物还有未提交改动时说明刚重新编译，直接放过。
-const gitOut = args => {
-  try {
-    return execFileSync("git", args, { cwd: ROOT, encoding: "utf8" }).trim();
-  } catch {
-    return "";
-  }
-};
-const lastCommitMs = paths => {
-  const stamp = gitOut(["log", "-1", "--format=%ct", "--", ...paths]);
-  return stamp ? Number(stamp) * 1000 : 0;
-};
 function artifactOlderThanSource(unit, built) {
-  // napi 单元的产物落在 rust/<unit>/ 下，wasm 单元落在 rust-dist/<unit>/ 下，两边都要按实际路径查提交。
-  const distPaths = [relative(ROOT, built).replace(/\\/g, "/").replace(/\/[^/]+$/, "")];
-  if (gitOut(["status", "--porcelain", "--untracked-files=all", "--", ...distPaths])) return false;
+  // napi 单元的产物落在 rust/<unit>/ 下，wasm 单元落在 rust-dist/<unit>/ 下，两边都要按实际路径查。
+  const distDir = relative(ROOT, built).replace(/\\/g, "/").replace(/\/[^/]+$/, "");
+
+  // 首选：比构建输入的指纹。构建时 rust-build.mjs 把「照着哪些文件编的」哈希写进
+  // 产物目录的 build-inputs.json，这里按当前文件重算一次。源码改动不影响 codegen 时
+  // （例如删掉一个多余的取址）wasm 字节完全一致，`rust-dist/` 不会产出新提交，
+  // 早先那套「比提交时间」就会永久判旧；指纹只看输入，不看字节变没变。
+  const stampPath = join(ROOT, distDir, FINGERPRINT_NAME);
+  if (existsSync(stampPath)) {
+    let stamp = null;
+    try {
+      stamp = JSON.parse(readFileSync(stampPath, "utf8"));
+    } catch {
+      return true; // 指纹文件读不出来，按旧处理，让调用方重建
+    }
+    if (stamp?.source !== sourceFingerprint(join(ROOT, unit.crate))) return true;
+    // 指纹对得上，再确认产物文件本身还在原地（被手删过就还得重建）。
+    return !existsSync(built);
+  }
+
+  // 没有指纹：老产物或新加的 crate，退回提交时间。产物有未提交改动说明刚重新编译，直接放过。
+  if (gitOut(["status", "--porcelain", "--untracked-files=all", "--", distDir])) return false;
   const sourceAt = lastCommitMs([`${unit.crate}/src`]);
-  const artifactAt = lastCommitMs(distPaths);
+  const artifactAt = lastCommitMs([distDir]);
   if (sourceAt && artifactAt) return sourceAt > artifactAt;
   return newestSource(unit.crate) > statSync(built).mtimeMs;
 }
