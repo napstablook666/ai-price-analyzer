@@ -28,6 +28,12 @@ npm run docs:build                       # 构建文档站
 npm run version:patch                    # 同步 package.json 与 manifest 版本
 npm run version:check                    # 检查两处版本是否一致
 npm run orphans:check                    # 找没人引用的模块与导出
+npm run guards:check                     # 校验检查脚本本身有没有被挂进 verify
+npm run modules:check                    # 校验模块边界与导入形态
+npm run rust:lint                        # cargo fmt --check + clippy -D warnings
+npm run rust:build                       # 重编 rust/ 下的 wasm 单元到 rust-dist/
+npm run rust:wire                        # 验证 wasm 单元真的接上线、产物不比源码旧
+npm run mv3:check                        # MV3 worker 契约回归
 ```
 
 ## 硬约束
@@ -41,6 +47,10 @@ npm run orphans:check                    # 找没人引用的模块与导出
 
 ## 验收
 
-`npm run verify` 一次跑完 ids、孤儿、测试、插件漂移、版本四类检查。
+`npm run verify` 一次跑完这些：ids、孤儿引用、检查脚本覆盖面、模块边界、`rust:lint`（fmt + clippy）、`rust:wire`、测试、插件漂移、版本一致。
+
+`rust-dist/` 入库，所以每个产物目录里带一份 `build-inputs.json`：构建时记下「照着哪些输入编出来」的哈希（`rust/<unit>/src/**` + `Cargo.toml` + `Cargo.lock` 的相对路径与内容）。`rust:wire` 按当前文件重算这个哈希判断产物新不新。
+
+用它而不是文件时间或提交时间的原因：源码改动可能不影响 codegen（例如删掉一个多余的取址），重建出来的 wasm 字节完全一致。此时 `rust-dist/` 不会产出新提交，按提交时间判断就会永久判旧，`verify` 永远红。改了 Rust 源码后仍然要跑 `npm run rust:build <unit>`，指纹变了才算重建过。
 
 `npm test` 全绿 + `npm run plugins:check` 无漂移。涉及采集链路的改动还要手验：加站点 → 采集 → 比价表有数据且同模型并到一行。

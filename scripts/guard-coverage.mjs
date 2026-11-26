@@ -57,6 +57,18 @@ const mentioned = new Set([...agents.matchAll(/npm run ([a-z][a-z0-9:-]*)/g)].ma
 for (const name of mentioned) {
   if (!(name in (pkg.scripts || {}))) problems.push(`AGENTS.md 提到不存在的命令：npm run ${name}`);
 }
+// 4. Rust 的三道闸必须有脚本，且 lint 与 wire 必须在 verify 链上。
+//    2026-11-25 U12 的教训：rust 的 fmt/clippy 从来没挂进任何脚本，QA 手动跑才暴露
+//    `needless_borrow`，而 verify 一直是绿的。把「必须挂上」写死在这里。
+for (const name of ["rust:lint", "rust:build", "rust:wire"]) {
+  if (!(name in (pkg.scripts || {}))) problems.push(`缺少 Rust 脚本：npm run ${name}`);
+}
+const verifyChain = pkg.scripts?.verify || "";
+for (const name of ["rust:lint", "rust:wire"]) {
+  if (name in (pkg.scripts || {}) && !verifyChain.includes(`npm run ${name}`)) {
+    problems.push(`npm run verify 没有包含 npm run ${name}`);
+  }
+}
 
 if (problems.length > 0) {
   console.error(`护栏覆盖率检查失败，${problems.length} 处：`);
