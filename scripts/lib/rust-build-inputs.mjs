@@ -39,7 +39,9 @@ export function sourceFingerprint(crateDir) {
   for (const file of inputFiles(crateDir)) {
     hash.update(relative(crateDir, file).replace(/\\/g, "/"));
     hash.update("\0");
-    hash.update(readFileSync(file));
+    // 行尾归一：`core.autocrlf` 让同一份源码在工作区是 CRLF、在干净签出里也是 CRLF，
+    // 但库里和别的机器上是 LF。不归一的话指纹跟签出方式绑定，verify:clean 会误判。
+    hash.update(readFileSync(file, "utf8").replace(/\r\n/g, "\n"));
     hash.update("\0");
   }
   return hash.digest("hex");
