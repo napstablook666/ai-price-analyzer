@@ -125,9 +125,15 @@ fn tiers_of(expression: &[u16]) -> Vec<Value> {
                 continue;
             };
             // JS: `coefficients[parts[3].toLowerCase()] = (coefficients[..] || 0) + coefficient;`
+            // `|| 0` 不只为缺省：`-0` 是 falsy，JS 在这里把它归一成 `+0`，端口得照做。
+            let previous = coefficients
+                .iter()
+                .find(|(name, _)| *name == key)
+                .map_or(0.0, |(_, total)| *total);
+            let total = (if previous == 0.0 { 0.0 } else { previous }) + coefficient;
             match coefficients.iter_mut().find(|(name, _)| *name == key) {
-                Some((_, total)) => *total += coefficient,
-                None => coefficients.push((key, coefficient)),
+                Some((_, slot)) => *slot = total,
+                None => coefficients.push((key, total)),
             }
         }
         let coefficient = |name: &str| -> f64 {
@@ -574,17 +580,9 @@ fn boundary_tail(text: &[u16], from: usize) -> Option<(&'static str, f64)> {
         .find_map(|operator| match_ascii_ci(text, index, operator).map(|end| (operator, end)))?;
     let (operator, mut index) = operator;
     index = skip_space(text, index);
-    // `\d+` 必须有，`.` 后面也要有数字；`\d+(?:\.\d+)?` 先贪心再决定带不带小数。
-    let (integer, mut index) = match_digits(text, index)?;
-    let mut value_units: Vec<u16> = integer.to_vec();
-    if index < text.len()
-        && text[index] == DOT
-        && let Some((fraction, after_fraction)) = match_digits(text, index + 1)
-    {
-        value_units.push(DOT);
-        value_units.extend_from_slice(fraction);
-        index = after_fraction;
-    }
+    // `\d+(?:\.\d+)?`：必须有前导数字，`.` 后面也要有数字。
+    let (value_units, after_value) = match_decimal(text, index)?;
+    index = after_value;
     if index < text.len() && (is_space(text[index]) || text[index] == CLOSE_PAREN) {
         // `[\s)]*$`：数字后面只允许空格和右括号，且必须一路到结尾。
         let mut rest = index;
@@ -835,13 +833,13 @@ fn multiplier_rules(expression: &[u16]) -> Vec<(Vec<u16>, f64, f64)> {
             let question = position_of(expression, QUESTION, index)?;
             let condition: Vec<u16> = expression[index..question].to_vec();
             let mut at = skip_space(expression, question + 1);
-            let (first_digits, after_first) = match_number(expression, at)?;
+            let (first_digits, after_first) = match_decimal(expression, at)?;
             at = skip_space(expression, after_first);
             if expression.get(at) != Some(&COLON) {
                 return None;
             }
             at = skip_space(expression, at + 1);
-            let (second_digits, after_second) = match_number(expression, at)?;
+            let (second_digits, after_second) = match_decimal(expression, at)?;
             at = skip_space(expression, after_second);
             if expression.get(at) != Some(&CLOSE_PAREN) {
                 return None;
@@ -943,7 +941,9 @@ fn fill_gaps(tiers: &mut [Map<String, Value>]) {
     // JSON 层面等同 null，但 JS 排序时它是数字 ∞——要垫底，不能当 0。
     let min_key = |tier: &Map<String, Value>| -> f64 {
         match tier.get("minTokens") {
-            Some(Value::Object(marker)) if marker.get("$num").and_then(Value::as_str) == Some("Infinity") => {
+            Some(Value::Object(marker))
+                if marker.get("$num").and_then(Value::as_str) == Some("Infinity") =>
+            {
                 f64::INFINITY
             }
             Some(value) => value.as_f64().unwrap_or(0.0),
@@ -1080,6 +1080,20 @@ fn match_number(text: &[u16], from: usize) -> Option<(&[u16], usize)> {
         return Some((&text[from..after_fraction], after_fraction));
     }
     None
+}
+
+/// `\d+(?:\.\d+)?`——不接受 `.5`。`TIER_MULTIPLIER_PATTERN` 与 `TIER_BOUNDARY_PATTERN`
+/// 都是这个形态（`boundary_tail` 与 `multiplier_rules` 各调一次），而 `fixed()` / `u()` /
+/// 系数 / 倍率后缀那几处写的是 `|\.\d+`，别混用。
+fn match_decimal(text: &[u16], from: usize) -> Option<(&[u16], usize)> {
+    let (_, after_integer) = match_digits(text, from)?;
+    let mut index = after_integer;
+    if text.get(index) == Some(&DOT)
+        && let Some((_, after_fraction)) = match_digits(text, index + 1)
+    {
+        index = after_fraction;
+    }
+    Some((&text[from..index], index))
 }
 
 /// JS `Number(text)`，只用在纯数字片段上。
