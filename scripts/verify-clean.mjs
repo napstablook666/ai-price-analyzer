@@ -17,7 +17,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const repo = resolve(root, "..");
 const pluginsDir = resolve(repo, "plugins");
 const keep = process.argv.includes("--keep");
-const worktree = resolve(root, ".tmp", `verify-${Date.now().toString(36)}`);
+// 放在 extension 的同级目录，让干净签出仍能读取工作区级 AGENTS.md。
+const worktree = resolve(repo, `verify-${Date.now().toString(36)}`);
 
 
 const git = (args, cwd = root) =>
@@ -42,14 +43,9 @@ if (!existsSync(pluginsDir)) {
 
 // worktree 的父目录不是工作区根，插件仓要显式指过去
 const env = { ...process.env, PLUGIN_DIR: pluginsDir };
+// verify:clean 必须跑和日常 verify 同一条链，避免干净签出漏掉新增闸门。
 // 每步写成完整命令行字符串：Windows 上 npm 是 .cmd，参数直传会触发 DEP0190
-const steps = [
-  ["id 引用校验", "node scripts/check-html-ids.mjs"],
-  ["Rust 接线探针", "node scripts/rust-wire-check.mjs"],
-  ["全量测试", "npm test"],
-  ["插件产物漂移", "npm run plugins:check"],
-  ["版本号一致", "npm run version:check"],
-];
+const steps = [["全套验收", "npm run verify"]];
 
 let failed = null;
 try {
