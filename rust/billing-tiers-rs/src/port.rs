@@ -595,7 +595,7 @@ fn boundary_tail(text: &[u16], from: usize) -> Option<(&'static str, f64)> {
     } else if index != text.len() {
         return None;
     }
-    Some((operator, parse_number(&value_units)))
+    Some((operator, parse_number(value_units)))
 }
 
 /// `^name\s*\(\s*` 之后的位置。
