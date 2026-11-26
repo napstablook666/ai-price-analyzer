@@ -536,12 +536,9 @@ fn boundary_match(text: &[u16]) -> Option<(&'static str, f64)> {
             continue;
         }
         for keyword in KEYWORDS {
-            let Some(after_keyword) = match_ascii_ci(text, start, keyword) else {
-                continue;
-            };
-            // `tokens?` / `input_tokens?`：末尾的 `s` 可有可无，正则里已经是贪婪的，
-            // 但两种情况都要试，因为 `token` 后面还可能直接跟 `\s*(<=…)`。
-            for candidate in keyword_variants(start, keyword, after_keyword) {
+            // `tokens?` / `input_tokens?`：末尾的 `s` 可有可无。完整形式没匹配上时，
+            // 还要单独试省略形式——JS 的 `tokens?` 回溯时两种落点都会去接 `\s*(<=…)`。
+            for candidate in keyword_variants(text, start, keyword) {
                 if let Some(found) = boundary_tail(text, candidate) {
                     return Some(found);
                 }
@@ -551,12 +548,18 @@ fn boundary_match(text: &[u16]) -> Option<(&'static str, f64)> {
     None
 }
 
-/// 关键字后面允许的落点：`tokens?` 与 `input_tokens?` 各有「带 s」和「不带 s」两个位置。
-fn keyword_variants(start: usize, keyword: &'static str, after_keyword: usize) -> Vec<usize> {
-    let mut out = vec![after_keyword];
+/// 关键字后面允许的落点：`tokens?` 与 `input_tokens?` 各有「带 s」和「不带 s」两个落点。
+/// 两个形式各自独立匹配：完整形式在前（贪婪优先），省略形式跟在后面。
+fn keyword_variants(text: &[u16], start: usize, keyword: &'static str) -> Vec<usize> {
+    let mut out = Vec::new();
+    if let Some(after_keyword) = match_ascii_ci(text, start, keyword) {
+        out.push(after_keyword);
+    }
     if matches!(keyword, "tokens" | "input_tokens") {
         let trimmed = keyword.trim_end_matches('s');
-        out.push(start + trimmed.len());
+        if let Some(after) = match_ascii_ci(text, start, trimmed) {
+            out.push(after);
+        }
     }
     out
 }
@@ -601,7 +604,8 @@ fn boundary_tail(text: &[u16], from: usize) -> Option<(&'static str, f64)> {
 fn open_call(text: &[u16], name: &str) -> Option<usize> {
     let end = match_ascii_ci(text, 0, name)?;
     let index = skip_space(text, end);
-    require_char(text, index, OPEN_PAREN)
+    let after_paren = require_char(text, index, OPEN_PAREN)?;
+    Some(skip_space(text, after_paren))
 }
 
 /// 跳过空白后要求恰好是 `char`，返回它之后的位置。
@@ -935,12 +939,19 @@ fn fill_gaps(tiers: &mut [Map<String, Value>]) {
     }
 
     // JS: `if (floating.length) tiers.sort((a, b) => (a.minTokens ?? 0) - (b.minTokens ?? 0));`
+    // 排序键可能是骨架趟写入的 Infinity：Rust 侧落在 `{"$num":"Infinity"}` 标记里，
+    // JSON 层面等同 null，但 JS 排序时它是数字 ∞——要垫底，不能当 0。
+    let min_key = |tier: &Map<String, Value>| -> f64 {
+        match tier.get("minTokens") {
+            Some(Value::Object(marker)) if marker.get("$num").and_then(Value::as_str) == Some("Infinity") => {
+                f64::INFINITY
+            }
+            Some(value) => value.as_f64().unwrap_or(0.0),
+            None => 0.0,
+        }
+    };
     if !floating.is_empty() {
-        js::sort(tiers, |left, right| {
-            let left_key = min_of(left).unwrap_or(0.0);
-            let right_key = min_of(right).unwrap_or(0.0);
-            left_key - right_key
-        });
+        js::sort(tiers, |left, right| min_key(left) - min_key(right));
     }
 }
 

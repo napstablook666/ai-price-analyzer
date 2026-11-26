@@ -28,6 +28,23 @@ test("三档单位与区间都从 Rust 侧回来，按次档带 request 而不�
   assert.equal(perCall[0].request, undefined);
 });
 
+test("单数 token 关键字与括号后空格的行为跟 JS 正则一致（40e50fe 口径）", () => {
+  const bounded = parseBillingTiers(' token  >= 100000 ? tier("a", p*2) : tier("b", p)');
+  assert.deepEqual(
+    bounded.map(tier => [tier.name, tier.minTokens, tier.maxTokens]),
+    [["b", 0, 99999], ["a", 100000, null]]
+  );
+  assert.equal(parseBillingTiers('tier("a", fixed( 0.05 ))')[0].fixed, 0.05);
+  assert.equal(parseBillingTiers("tier(\"a\", u( 'seconds' )*2)")[0].unit, "second");
+});
+
+test("骨架趟写入 Infinity 的档位在最终排序垫底（区间重排与 JS 一致）", () => {
+  const tiers = parseBillingTiers(
+    'len >= 0 ? tier("s", p*1) : input_tokens <= 500000 ? tier("m", p*2) : tier("z", p*4)'
+  );
+  assert.deepEqual(tiers.map(tier => tier.name), ["s", "z", "m"]);
+  assert.deepEqual(tiers.map(tier => tier.minTokens), [0, null, Infinity]);
+});
 test("非字符串与空表达式都退化成空档位，不抛", () => {
   assert.deepEqual(parseBillingTiers(null), []);
   assert.deepEqual(parseBillingTiers("p * 2 + c * 8"), []);
