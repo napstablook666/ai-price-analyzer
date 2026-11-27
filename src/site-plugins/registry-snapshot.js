@@ -6,7 +6,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "sevenai",
       "name": "SevenAI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型广场，直连采集",
       "hosts": [
         "sevenai.moe"
@@ -16,7 +16,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "tokenflux",
       "name": "TokenFlux",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价 API，直连采集",
       "hosts": [
         "tokenflux.cloud"
@@ -26,7 +26,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "windhub",
       "name": "WindHub",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公益站公开价格接口",
       "hosts": [
         "windhub.cc"
@@ -36,7 +36,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "centos",
       "name": "ai.centos.hk",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价 API，直连采集",
       "hosts": [
         "ai.centos.hk"
@@ -46,7 +46,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "true-sota",
       "name": "TrueSOTA",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型价格 API",
       "hosts": [
         "true-sota.com"
@@ -56,7 +56,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "sidrune",
       "name": "Sidrune",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型广场，支持汇率配置",
       "hosts": [
         "sidrune.ai"
@@ -66,7 +66,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "nodeai",
       "name": "NodeAI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型广场，直连采集",
       "hosts": [
         "nodeai.cc"
@@ -76,7 +76,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "killai",
       "name": "KillAI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "New API 价格，支持会话刷新",
       "hosts": [
         "api.killai.cc"
@@ -86,7 +86,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "fuck-everyone",
       "name": "fuck-everyone.com",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型广场，直连采集",
       "hosts": [
         "fuck-everyone.com"
@@ -96,7 +96,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "cun",
       "name": "CUN.AI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "复用登录态读取价格 API",
       "hosts": [
         "cun.ai"
@@ -106,7 +106,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "soleapi",
       "name": "SoleAPI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型价格接口直接采，按 Credits 计价（1 Credit = ¥1）",
       "hosts": [
         "soleapi.com"
@@ -116,7 +116,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "dddai",
       "name": "dddai.dev",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型价格 API",
       "hosts": [
         "dddai.dev"
@@ -126,7 +126,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "liuguang",
       "name": "liuguang.ai",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型价格 API",
       "hosts": [
         "liuguang.ai"
@@ -136,7 +136,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "public-pricing",
       "name": "公开价格 API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "通用公开价格适配，按站点地址添加",
       "hosts": [
         "nomissapi.com",
@@ -148,7 +148,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "hepingan",
       "name": "hepingan.top",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "复用浏览器登录态，过期自动续期",
       "hosts": [
         "api.hepingan.top"
@@ -158,7 +158,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "all-in-one",
       "name": "all-in-one.icu",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "租户模型价格，页面会话采集",
       "hosts": [
         "all-in-one.icu"
@@ -168,7 +168,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "aiapi",
       "name": "AIAPI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "模型目录与价格，页面会话采集",
       "hosts": [
         "cn.aiapi.bot"
@@ -178,7 +178,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "fastaitoken",
       "name": "fastaitoken.com",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "读取当前账号的可用渠道",
       "hosts": [
         "fastaitoken.com"
@@ -188,7 +188,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "nexavlinks",
       "name": "NexaVlinks",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "读取当前账号的模型渠道",
       "hosts": [
         "nexavlinks.com"
@@ -198,7 +198,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "cheaprouter",
       "name": "CheapRouter",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开模型价格 API",
       "hosts": [
         "cheaprouter.cc"
@@ -208,7 +208,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "jiji",
       "name": "吉吉模型市场",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "模型市场接口要登录态，插件用你浏览器里的吉吉登录 token 直连采集",
       "hosts": [
         "jiji.cc"
@@ -218,7 +218,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "maolaoapi",
       "name": "maolaoapi.com",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价 API，直连采集；充值 1.03 元/额度，200/500/1000 档另有折扣",
       "hosts": [
         "maolaoapi.com"
@@ -228,7 +228,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "stellaisle",
       "name": "飓星API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开接口直连采集：/api/pricing 给 94 个模型的基准价，/api/group-plaza 给分组与倍率，按分组展开报价",
       "hosts": [
         "token.stellaisle.com"
@@ -238,7 +238,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "relayrouter",
       "name": "RelayRouter",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价 API，直连采集；充值 1 元 = 1 美元额度，面值越大折扣越多（最高 7.5%）",
       "hosts": [
         "www.relayrouter.app",
@@ -249,7 +249,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "stellaisle-carpool",
       "name": "飓星API 拼车",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "登录后读 /api/carpool-market 的座位清单，用座位价除以期间额度当折扣，折算站内模型价",
       "hosts": [
         "token.stellaisle.com"
@@ -259,7 +259,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "newcodex",
       "name": "NewCodex",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，69 个模型 11 个分组；充值 1 元 = 1 美元额度，单笔 ¥100/200/500/1000 另赠 10%/20%/40%/50%",
       "hosts": [
         "newcodex.cn",
@@ -270,7 +270,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "allrouter",
       "name": "AllRouter",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，52 个在售模型、102 条模型分组；分组倍率公开（default 0.75、deepseek 0.4、gpt 0.053 等），倍率 1 = $2/百万 token，37 个模型走分段或分时表达式；充值 1 元 = 1 美元额度",
       "hosts": [
         "allrouter.cc",
@@ -281,7 +281,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "xingya",
       "name": "星芽API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，83 个模型 13 个分组；充值 1 元 = 100 芽点 = 1 美元额度，无阶梯赠送",
       "hosts": [
         "xingya.site",
@@ -292,7 +292,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "openlux",
       "name": "OpenLux",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，322 个模型覆盖按 token 与按次；1 美元 = 1 美元额度，面值越大越便宜（最高 7.5%）",
       "hosts": [
         "www.openlux.ai",
@@ -303,7 +303,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "91token",
       "name": "91Token",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "匿名采集文本与图片报价，保留分组和长度档；充值报价已核实 1:1，无自助阶梯折扣，第三方收银台实付未验证；复杂视频暂不折算",
       "hosts": [
         "91token.com",
@@ -324,7 +324,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "poloai",
       "name": "PoloAPI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "匿名模型广场报价；支持分组、token/缓存、长度档与按次；登录已核实充值1:1和等额快捷金额",
       "hosts": [
         "poloai.top"
@@ -344,7 +344,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "juziai",
       "name": "橘子API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，173 个模型；充值档位与待支付金额已核验，未验证到账比例",
       "hosts": [
         "api.juziai.cc"
@@ -354,7 +354,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "ooioo",
       "name": "ooioo",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "匿名 /api/pricing 直连采集，37 个模型、7 个分组；全按 token 计费，USD 报价；充值比例按公开文档记 1:1，档位未登录核验",
       "hosts": [
         "ooioo.work",
@@ -366,7 +366,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "eapi",
       "name": "E-API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "匿名模型广场报价；per_token 按折后美元/百万、fixed 按张计；充值 ¥7 = $1 额度（登录态 offers 取证）",
       "hosts": [
         "eapi.site"
@@ -376,7 +376,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "moonup",
       "name": "MoonUp",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "订阅制 API 转换平台，公开模型广场直连采集",
       "hosts": [
         "moonup.dev"
@@ -386,7 +386,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "velamost",
       "name": "VelaMost",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，92 个模型；分组倍率报文内自带，美元计价；充值比例需登录未验证",
       "hosts": [
         "velamost.com"
@@ -396,7 +396,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "kelaode",
       "name": "克劳德 APi",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "模型广场要求登录，复用浏览器登录态，token 过期自动续期",
       "hosts": [
         "api.kelaode.si"
@@ -406,7 +406,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "0ait",
       "name": "0AIT 中转站",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，72 个模型 37 个分组（倍率 0.15 ~ 2.0 以上（25 档））；充值 1 美元额度 = ¥7.3",
       "hosts": [
         "0ait.com",
@@ -417,7 +417,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "4zapi",
       "name": "4Z API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，323 个模型 80 个分组（倍率 0.040447 ~ 1.1（41 档））；充值 1 美元额度 = ¥6.68752",
       "hosts": [
         "4zapi.com",
@@ -428,7 +428,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "coderelay",
       "name": "CodeRelay",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，54 个模型 16 个分组（倍率 0.06 ~ 1.5）；充值 1 元 = 1 美元额度",
       "hosts": [
         "coderelay.cn",
@@ -439,7 +439,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "corecode",
       "name": "CoreCode",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，28 个模型 7 个分组（倍率 0.5 ~ 2.05）；充值 1 美元额度 = ¥6.8",
       "hosts": [
         "corecode.live",
@@ -450,7 +450,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "kuaipao",
       "name": "快跑AI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，123 个模型 19 个分组（倍率 0.2 ~ 15.3）；充值 1 美元额度 = ¥0.4",
       "hosts": [
         "kuaipao.ai",
@@ -463,7 +463,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "packycode",
       "name": "packycode",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，78 个模型 25 个分组（倍率 0.3 ~ 7）；充值 1 美元额度 = ¥7",
       "hosts": [
         "packycode.com",
@@ -476,7 +476,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "pqh",
       "name": "PQH 中转站",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，108 个模型 53 个分组（倍率 0.12 ~ 2.6（25 档））；充值 1 美元额度 = ¥7.3",
       "hosts": [
         "pqh.ai",
@@ -487,7 +487,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "undying",
       "name": "Undy API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，88 个模型 75 个分组（倍率 0.37 ~ 11（40 档））；充值 1 美元额度 = ¥7.3",
       "hosts": [
         "undyapi.com",
@@ -498,7 +498,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "xkrelay",
       "name": "深空API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，71 个模型 26 个分组（倍率 0.08 ~ 1.5（16 档））；充值 1 元 = 1 美元额度",
       "hosts": [
         "xkrelay.com",
@@ -509,7 +509,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "zerocat",
       "name": "ZeroCat",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开定价接口直连采集，67 个模型 11 个分组（倍率 0.04 ~ 1.5）；充值 1 元 = 1 美元额度",
       "hosts": [
         "zero.cat",
@@ -590,7 +590,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "man8out",
       "name": "Man8Out",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开渠道目录，直连采集",
       "hosts": [
         "ai.man8out.com"
@@ -600,7 +600,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "openrouter",
       "name": "OpenRouter",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "官方聚合站，匿名 /api/v1/models 直连全量价目",
       "hosts": [
         "openrouter.ai"
@@ -953,7 +953,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "hhapi",
       "name": "HHapi",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，59 个在售模型、27 个分组（倍率 0.06~10），187 行（177 条 token、10 条按张）、6 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
       "hosts": [
         "hhapi.xyz",
@@ -984,7 +984,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "metr4ai",
       "name": "Akari AI 中转站",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，26 个在售模型、7 个分组（倍率 0.08~1.5），58 行（全 token）、1 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
       "hosts": [
         "metr4ai.com"
@@ -994,7 +994,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "ifalso",
       "name": "轻盈科技",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，39 个在售模型、14 个分组（倍率 0.3~7），46 行（36 条 token、5 条按秒、5 条按张）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
       "hosts": [
         "api.ifalso.com"
@@ -1004,7 +1004,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "tokvi",
       "name": "tokvi",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，25 个在售模型、32 个分组（倍率 全 1），48 行（34 条 token、2 条按张、12 条按秒）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度",
       "hosts": [
         "tokvi.net"
@@ -1014,7 +1014,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "fastmodel",
       "name": "Fast Model",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，46 个在售模型、1 个分组（倍率 1），31 行（21 条 token、10 条按张/按次）、15 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥7.3 = 1 美元额度",
       "hosts": [
         "fastmodel.top"
@@ -1024,7 +1024,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "puoai",
       "name": "PuoAI",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，28 个在售模型、1 个分组（倍率 1），25 行（19 条 token、6 条按张）、3 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度",
       "hosts": [
         "puoai.com",
@@ -1057,7 +1057,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "sucloud",
       "name": "SuCloud",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，319 个模型 83 个分组（报文与 RelayRouter 同源）；充值 1 元 = 1 美元额度，面值越大越便宜（最高 7.5% 折扣）",
       "hosts": [
         "sucloud.vip",
@@ -1068,7 +1068,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "relayo",
       "name": "Relayo",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "公开 /api/pricing 直连采集，30 个模型（人民币每百万直价，非倍率制）；1 元 = 1 元额度，支付宝 / 微信，自定义充值满 50 起",
       "hosts": [
         "acombcom.cn",
@@ -1079,7 +1079,7 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
     {
       "id": "clawcn",
       "name": "ClawCn-API",
-      "version": "0.27.1",
+      "version": "0.27.2",
       "description": "价目表要登录（/api/pricing 401），用站点自己的 cookie 换 access_token 后采集；47 个模型 10 个可用分组，1 元 = 1 美元额度",
       "hosts": [
         "claw-cn.org",
