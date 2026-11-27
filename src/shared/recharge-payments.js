@@ -2,10 +2,6 @@ import * as rust from "./rust-shim.js";
 
 // 收银台报价：把「收银台看到的应付金额」落成结构化证据。
 // 只做清洗，不参与 rechargeTiers 的落档。折算率由计算层用 paidRmb / faceAmount 得出。
-const PAYMENT_CHANNELS = new Set(["wechat", "alipay", "card", "stripe", "crypto", "other"]);
-const PAYMENT_CURRENCIES = new Set(["CNY", "USD", "CREDITS"]);
-const PAYMENT_STATUSES = new Set(["pending", "paid", "expired", "cancelled", "failed"]);
-
 export function normalizeRechargePayments(input) {
   return rust.normalizeRechargePayments(input);
 }
@@ -26,16 +22,4 @@ export function cheapestRechargePayment(payments) {
 // 后者不参与排序，只让「已经点过收银台」这件事在界面上看得见。
 export function representativeRechargePayment(payments, faceSpend = null) {
   return rust.representativeRechargePayment(payments, faceSpend);
-}
-
-// 月消耗对应哪个面值的收银台证据：取不高于它的最大面值，全比它大就退回最小面值。
-function payableAtSpend(payments, spend) {
-  const payable = payments.filter(payment => rechargePaymentRate(payment) !== null);
-  if (!payable.length) return null;
-  const faces = payable.map(payment => Number(payment.faceAmount));
-  const affordable = payable.filter(payment => Number(payment.faceAmount) <= spend);
-  const target = affordable.length
-    ? Math.max(...affordable.map(payment => Number(payment.faceAmount)))
-    : Math.min(...faces);
-  return cheapestRechargePayment(payable.filter(payment => Number(payment.faceAmount) === target));
 }

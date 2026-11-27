@@ -6,10 +6,6 @@ export function normalizeRechargeTiers(input) {
   return rust.normalizeRechargeTiers(input);
 }
 
-const PLAN_KINDS = new Set(["topup", "subscription", "carpool", "manual"]);
-const PLAN_AVAILABILITIES = new Set(["self_service", "manual", "unknown"]);
-const PLAN_CURRENCIES = new Set(["CNY", "USD", "CREDITS"]);
-
 // 充值方案是展示/追溯元数据，不参与 rechargeTiers 的自动落档计算。
 // 这样「需管理员处理」和「按周刷新订阅」不会被误当成永久充值折扣。
 export function normalizeRechargePlans(input) {
