@@ -59,7 +59,7 @@ jobs:
             cd dist/source
             # update.bat / update.ps1 只进包，不进 update.json 的文件表：扩展不去写自己。
             zip -qr "../../dist/ai-relay-price-extension-${version}.zip" \
-              manifest.json dashboard.html options.html styles.css styles icons src \
+              manifest.json dashboard.html options.html styles.css styles icons src rust-dist \
               update.bat update.ps1
             zip -qr "../../ai-price-analyzer-${version}-source.zip" .
           )

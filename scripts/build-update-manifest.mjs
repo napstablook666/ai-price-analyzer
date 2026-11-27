@@ -18,7 +18,7 @@ import { resolveMinShell } from "./lib/update-version.mjs";
 const rootDir = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 // zip 里实际打进去的顶层条目，多一个少一个都会让文件表和包内容对不上。
-const RUNTIME_ENTRIES = ["manifest.json", "dashboard.html", "options.html", "styles.css", "styles", "icons", "src"];
+const RUNTIME_ENTRIES = ["manifest.json", "dashboard.html", "options.html", "styles.css", "styles", "icons", "src", "rust-dist"];
 // 更新器本体不进文件表：扩展不该去写自己，它们的升级由自己负责。
 const EXCLUDED_BASENAMES = new Set(["update.bat", "update.ps1", "update-marker.json"]);
 
