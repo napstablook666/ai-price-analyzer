@@ -39,7 +39,8 @@ export const CLASS_LABELS = {
   "auth-wall": "认证墙",
   "domain-moved": "域名/端点变化",
   "http-error": "HTTP/传输失败",
-  timeout: "超时"
+  timeout: "超时",
+  "empty-catalog": "目录为空"
 };
 
 // 每类该走哪条修法，决定了报告怎么分组。
@@ -49,7 +50,8 @@ const FIX_ROUTE = {
   "structure-changed": "发版",
   "domain-moved": "发版",
   "http-error": "发版",
-  timeout: "观察"
+  timeout: "观察",
+  "empty-catalog": "观察"
 };
 
 const LEVEL_ORDER = ["green", "yellow", "red", "obsolete"];
@@ -161,6 +163,11 @@ export function classify({ result, baseline = null, lastSamples = null }) {
   if (result.state === "FAIL") {
     if (result.reasonCategory === "http" && Number(result.httpStatus) >= 500) {
       return { klass: "http-error", current, isNew, evidence: [`HTTP ${result.httpStatus}`] };
+    }
+    // 一行都没解析出来、连模型名都拿不到，说明目录本身没读到（站点半死、返回空壳），
+    // 不是解析规则跟改版对不上。前者该观察，后者才该发版改代码。
+    if (result.reasonCategory === "zero-rows" && !current.models) {
+      return { klass: "empty-catalog", current, isNew, evidence: [`目录为空：${result.reason || "解析出 0 行"}`] };
     }
     return {
       klass: "structure-changed",

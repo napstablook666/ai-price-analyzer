@@ -1055,10 +1055,9 @@
       "host": "bitwiseplus.cc",
       "httpStatus": 200,
       "responseFormat": "allrouter",
-      "models": 16,
-      "rows": 54,
+      "models": 11,
+      "rows": 44,
       "modes": [
-        "image",
         "token"
       ],
       "currency": [
@@ -1203,5 +1202,5 @@
       "ratioBase": null
     }
   },
-  "generatedAt": "2026-11-28T10:25:28.057Z"
+  "generatedAt": "2026-11-28T12:27:54.110Z"
 }

@@ -122,6 +122,29 @@ test("解析失败归 structure-changed，5xx 归 http-error", () => {
   assert.equal(server.klass, "http-error");
 });
 
+test("连模型都读不到时空目录单列，不当结构变化", () => {
+  const empty = classify({
+    result: result({
+      state: "FAIL",
+      reason: "解析出 0 行",
+      reasonCategory: "zero-rows",
+      pricedModels: 0,
+      rows: 0,
+      billingModes: {}
+    }),
+    baseline: baselineOf()
+  });
+  assert.equal(empty.klass, "empty-catalog");
+  assert.match(empty.evidence.join(), /目录为空/);
+
+  // 有模型但价格行没解析出来，这才是解析规则要改。
+  const partial = classify({
+    result: result({ state: "FAIL", reason: "no price rows", reasonCategory: "parse", rows: 0 }),
+    baseline: baselineOf()
+  });
+  assert.equal(partial.klass, "structure-changed");
+});
+
 test("端点换域名优先于数据比较", () => {
   const verdict = classify({
     result: result({ endpoint: "https://demo2.example.com/api/pricing" }),

@@ -23,7 +23,7 @@ npm run health:check -- --update-baseline # 人工确认变化无误后，把当
 
 体检复用审计的采集链路（`scripts/direct-audit.mjs` 的 `auditDirectSites`），不重新实现一套请求逻辑。所以体检能拿到的数据，就是扩展自己采集时能拿到的数据。
 
-## 八个分类
+## 九个分类
 
 分类名对齐 [keiyoushi](https://github.com/keiyoushi/extensions-source) 的 issue 标签口径，方便对照着看。
 
@@ -36,6 +36,7 @@ npm run health:check -- --update-baseline # 人工确认变化无误后，把当
 | `domain-moved` | 端点域名换了，或域名解析不到 | 发版 |
 | `http-error` | 5xx、网络层失败 | 发版 |
 | `timeout` | 超时、连接中断 | 观察 |
+| `empty-catalog` | 返回 200 但一行都解析不出来、连模型名都没拿到 | 观察 |
 | `auth-wall` | 401/403，需要登录或换 key | 不是坏 |
 
 判定顺序是固定的：先排除「根本没拿到数据」，再比结构，最后才谈价格。一个站同时命中多条时，只报最靠前的那条，避免一次改版把十几个信号混成一条看不懂的报告。
