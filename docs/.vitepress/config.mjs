@@ -92,6 +92,7 @@ export default defineConfig({
             { text: "生图与视频比价坐标 📐", link: "/development/media-pricing" },
             { text: "价格映射文档 🧭", link: "/development/price-map" },
             { text: "测试与验收 🧪", link: "/development/testing" },
+            { text: "站点体检 🩺", link: "/development/station-health" },
             { text: "发布流程 📦", link: "/development/release" },
           ],
         },

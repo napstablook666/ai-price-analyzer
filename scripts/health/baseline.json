@@ -1,0 +1,1207 @@
+{
+  "schemaVersion": 1,
+  "plugins": {
+    "sevenai": {
+      "host": "sevenai.moe",
+      "httpStatus": 200,
+      "responseFormat": "sevenai-model-plaza",
+      "models": 44,
+      "rows": 153,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "tokenflux": {
+      "host": "tokenflux.cloud",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 159,
+      "rows": 373,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "windhub": {
+      "host": "windhub.cc",
+      "httpStatus": 200,
+      "responseFormat": "windhub",
+      "models": 11,
+      "rows": 11,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "centos": {
+      "host": "ai.centos.hk",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 82,
+      "rows": 213,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "true-sota": {
+      "host": "true-sota.com",
+      "httpStatus": 200,
+      "responseFormat": "true-sota-model-pricing",
+      "models": 66,
+      "rows": 133,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "sidrune": {
+      "host": "sidrune.ai",
+      "httpStatus": 200,
+      "responseFormat": "sidrune-model-plaza",
+      "models": 124,
+      "rows": 374,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "nodeai": {
+      "host": "nodeai.cc",
+      "httpStatus": 200,
+      "responseFormat": "nodeai-model-plaza",
+      "models": 74,
+      "rows": 126,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "fuck-everyone": {
+      "host": "fuck-everyone.com",
+      "httpStatus": 200,
+      "responseFormat": "fuck-everyone-model-plaza",
+      "models": 60,
+      "rows": 237,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "soleapi": {
+      "host": "soleapi.com",
+      "httpStatus": 200,
+      "responseFormat": "soleapi-public-api",
+      "models": 61,
+      "rows": 87,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "dddai": {
+      "host": "dddai.dev",
+      "httpStatus": 200,
+      "responseFormat": "new-api-pricing",
+      "models": 42,
+      "rows": 140,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "liuguang": {
+      "host": "liuguang.ai",
+      "httpStatus": 200,
+      "responseFormat": "liuguang-models",
+      "models": 51,
+      "rows": 253,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "cheaprouter": {
+      "host": "cheaprouter.cc",
+      "httpStatus": 200,
+      "responseFormat": "cheaprouter-public-api",
+      "models": 39,
+      "rows": 130,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "maolaoapi": {
+      "host": "maolaoapi.com",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 48,
+      "rows": 192,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "stellaisle": {
+      "host": "token.stellaisle.com",
+      "httpStatus": 200,
+      "responseFormat": "stellaisle",
+      "models": 47,
+      "rows": 316,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "relayrouter": {
+      "host": "relayrouter.app",
+      "httpStatus": 200,
+      "responseFormat": "relayrouter",
+      "models": 315,
+      "rows": 1287,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "newcodex": {
+      "host": "newcodex.cn",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 45,
+      "rows": 123,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "allrouter": {
+      "host": "allrouter.cc",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 49,
+      "rows": 155,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "xingya": {
+      "host": "xingya.site",
+      "httpStatus": 200,
+      "responseFormat": "xingya",
+      "models": 85,
+      "rows": 152,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "openlux": {
+      "host": "openlux.ai",
+      "httpStatus": 200,
+      "responseFormat": "relayrouter",
+      "models": 315,
+      "rows": 1287,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "91token": {
+      "host": "91token.com",
+      "httpStatus": 200,
+      "responseFormat": "91token",
+      "models": 65,
+      "rows": 138,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "spiderai": {
+      "host": "spiderai.fun",
+      "httpStatus": 200,
+      "responseFormat": "spiderai-public-page",
+      "models": 78,
+      "rows": 243,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": 1
+    },
+    "poloai": {
+      "host": "poloai.top",
+      "httpStatus": 200,
+      "responseFormat": "poloai",
+      "models": 401,
+      "rows": 1860,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "juziai": {
+      "host": "api.juziai.cc",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 176,
+      "rows": 301,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "ooioo": {
+      "host": "ooioo.work",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 37,
+      "rows": 106,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "eapi": {
+      "host": "eapi.site",
+      "httpStatus": 200,
+      "responseFormat": "eapi",
+      "models": 45,
+      "rows": 45,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "moonup": {
+      "host": "moonup.dev",
+      "httpStatus": 200,
+      "responseFormat": "moonup",
+      "models": 43,
+      "rows": 94,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "velamost": {
+      "host": "velamost.com",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 86,
+      "rows": 122,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "0ait": {
+      "host": "0ait.com",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 73,
+      "rows": 453,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "4zapi": {
+      "host": "4zapi.com",
+      "httpStatus": 200,
+      "responseFormat": "relayrouter",
+      "models": 315,
+      "rows": 1287,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "coderelay": {
+      "host": "coderelay.cn",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 47,
+      "rows": 150,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "corecode": {
+      "host": "corecode.live",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 31,
+      "rows": 70,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "kuaipao": {
+      "host": "kuaipao.ai",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 109,
+      "rows": 312,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "packycode": {
+      "host": "packycode.com",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 87,
+      "rows": 156,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "pqh": {
+      "host": "pqh.ai",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 107,
+      "rows": 561,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "undying": {
+      "host": "undyapi.com",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 88,
+      "rows": 235,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "xkrelay": {
+      "host": "xkrelay.com",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 74,
+      "rows": 214,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "zerocat": {
+      "host": "zero.cat",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 65,
+      "rows": 100,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "axis": {
+      "host": "api.axis.fan",
+      "httpStatus": 200,
+      "responseFormat": "sub2api-model-plaza",
+      "models": 63,
+      "rows": 113,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "crab": {
+      "host": "crab-ai.net",
+      "httpStatus": 200,
+      "responseFormat": "sub2api-model-plaza",
+      "models": 6,
+      "rows": 17,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "abuapi": {
+      "host": "abuai.chat",
+      "httpStatus": 200,
+      "responseFormat": "tokenflux",
+      "models": 313,
+      "rows": 726,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "yescode": {
+      "host": "co.yes.vg",
+      "httpStatus": 200,
+      "responseFormat": "yescode",
+      "models": 33,
+      "rows": 61,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "rightcode": {
+      "host": "rightapi.io",
+      "httpStatus": 200,
+      "responseFormat": "rightcode",
+      "models": 84,
+      "rows": 128,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "man8out": {
+      "host": "ai.man8out.com",
+      "httpStatus": 200,
+      "responseFormat": "fastaitoken",
+      "models": 34,
+      "rows": 76,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "openrouter": {
+      "host": "openrouter.ai",
+      "httpStatus": 200,
+      "responseFormat": "openrouter",
+      "models": 435,
+      "rows": 515,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "USD"
+      ],
+      "ratioBase": null
+    },
+    "xycai": {
+      "host": "xycai.cn",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 336,
+      "rows": 382,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "foxapi": {
+      "host": "foxapi.chat",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 165,
+      "rows": 327,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "kaopuapi": {
+      "host": "api.kaopuapi.xyz",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 106,
+      "rows": 174,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "tccxy": {
+      "host": "api.tccxy.top",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 107,
+      "rows": 335,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "teamapi": {
+      "host": "teamapi.chat",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 77,
+      "rows": 190,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "1xm": {
+      "host": "1xm.ai",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 52,
+      "rows": 195,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "linktoagi": {
+      "host": "api.linktoagi.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 45,
+      "rows": 136,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "daidaishou": {
+      "host": "api.daidaishou.xyz",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 54,
+      "rows": 134,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "vbcoding": {
+      "host": "new.vbcoding.cc",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 50,
+      "rows": 98,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "qianxing": {
+      "host": "qianxing.pro",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 45,
+      "rows": 111,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "yunxuai": {
+      "host": "api.yunxuai.cc",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 42,
+      "rows": 99,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "apiaqi": {
+      "host": "api2.apiaqi.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 39,
+      "rows": 167,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "agentgate": {
+      "host": "agentgate.cc",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 38,
+      "rows": 75,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "astrgate": {
+      "host": "astra.astrgate.net",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 38,
+      "rows": 92,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "viola": {
+      "host": "api.viola-api.top",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 36,
+      "rows": 103,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "axisapi": {
+      "host": "axisapi.cn",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 35,
+      "rows": 81,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "boreara": {
+      "host": "api.boreara.com",
+      "httpStatus": 200,
+      "responseFormat": "relayrouter",
+      "models": 31,
+      "rows": 85,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "tokenmarket": {
+      "host": "tokenmarket.cheap",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 95,
+      "rows": 255,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "xcode": {
+      "host": "xcode.best",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 95,
+      "rows": 197,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "fuelapi": {
+      "host": "fuelapi.top",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 38,
+      "rows": 207,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "deadlion": {
+      "host": "ai.deadlion.cn",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 18,
+      "rows": 28,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": 1
+    },
+    "yuedian": {
+      "host": "mxwq.net",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 22,
+      "rows": 137,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "orcax": {
+      "host": "orcax.net",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 14,
+      "rows": 14,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "shenlong": {
+      "host": "shenlongapi.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 18,
+      "rows": 74,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "tonkic": {
+      "host": "tonkicapi.xyz",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 9,
+      "rows": 56,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "moya": {
+      "host": "moyaspace.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 5,
+      "rows": 5,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "hhapi": {
+      "host": "hhapi.xyz",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 55,
+      "rows": 169,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "bitwiseplus": {
+      "host": "bitwiseplus.cc",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 16,
+      "rows": 54,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "metr4ai": {
+      "host": "metr4ai.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 22,
+      "rows": 45,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "ifalso": {
+      "host": "api.ifalso.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 41,
+      "rows": 62,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "tokvi": {
+      "host": "tokvi.net",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 18,
+      "rows": 43,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "fastmodel": {
+      "host": "fastmodel.top",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 32,
+      "rows": 32,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "puoai": {
+      "host": "puoai.com",
+      "httpStatus": 200,
+      "responseFormat": "allrouter",
+      "models": 27,
+      "rows": 27,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "tokenjoy": {
+      "host": "tokenjoy.org",
+      "httpStatus": 200,
+      "responseFormat": "tokenjoy",
+      "models": 79,
+      "rows": 79,
+      "modes": [
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "su8": {
+      "host": "su8.codes",
+      "httpStatus": 200,
+      "responseFormat": "su8",
+      "models": 34,
+      "rows": 68,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "sucloud": {
+      "host": "sucloud.vip",
+      "httpStatus": 200,
+      "responseFormat": "relayrouter",
+      "models": 315,
+      "rows": 1287,
+      "modes": [
+        "image",
+        "token",
+        "video"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    },
+    "relayo": {
+      "host": "acombcom.cn",
+      "httpStatus": 200,
+      "responseFormat": "direct",
+      "models": 29,
+      "rows": 58,
+      "modes": [
+        "image",
+        "token"
+      ],
+      "currency": [
+        "CREDITS"
+      ],
+      "ratioBase": null
+    }
+  },
+  "generatedAt": "2026-11-28T10:25:28.057Z"
+}

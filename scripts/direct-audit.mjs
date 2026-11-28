@@ -192,6 +192,25 @@ function resultBase(entry, station, collection, records) {
     requests: records.length
   };
 }
+// 体检用的价格样本：只取「模型名 + 输入价 + 输出价」，按模型名排序保证可比。
+// 默认不输出，避免 direct-audit 的报告被几百行价格撑大。
+function roundPrice(value) {
+  return value === null ? null : Math.round(value * 1e6) / 1e6;
+}
+
+function priceSamplesOf(rows, limit = 400) {
+  const samples = [];
+  for (const row of rows) {
+    const model = String(row?.model_name ?? "").trim();
+    if (!model) continue;
+    const input = finite(row?.input_price);
+    const output = finite(row?.output_price);
+    if (input === null && output === null) continue;
+    samples.push([model, roundPrice(input), roundPrice(output)]);
+    if (samples.length >= limit) break;
+  }
+  return samples.sort((left, right) => String(left[0]).localeCompare(String(right[0])));
+}
 
 function diagnosticsOf(normalized) {
   return [
@@ -248,7 +267,7 @@ function emptyConfigResult(entry, error) {
   };
 }
 
-export async function auditEntry(entry, { fetchImpl = globalThis.fetch, retries = DEFAULT_RETRIES, retryDelayMs = DEFAULT_RETRY_DELAY_MS } = {}) {
+export async function auditEntry(entry, { fetchImpl = globalThis.fetch, retries = DEFAULT_RETRIES, retryDelayMs = DEFAULT_RETRY_DELAY_MS, includeSamples = false } = {}) {
   let station;
   let collection;
   const records = [];
@@ -317,6 +336,7 @@ export async function auditEntry(entry, { fetchImpl = globalThis.fetch, retries 
     const primary = primaryRecord(records);
     if (primary) primary.normalized = normalized;
     const base = resultBase(entry, station, collection, records);
+    if (includeSamples) base.priceSamples = priceSamplesOf(rows);
     // 响应不是 JSON 也可能被插件自己解析成报价（模型广场把数据嵌在 HTML 里）。
     // 只有连一行都没解析出来，才算 non-json 失败。
     if (primaryRecord(records)?.nonJson && !rows.length) {
@@ -359,10 +379,10 @@ async function mapLimit(items, limit, worker) {
   return results;
 }
 
-export async function auditDirectSites({ entries = directEntries(), fetchImpl = globalThis.fetch, concurrency = DEFAULT_CONCURRENCY, retries = DEFAULT_RETRIES, retryDelayMs = DEFAULT_RETRY_DELAY_MS } = {}) {
+export async function auditDirectSites({ entries = directEntries(), fetchImpl = globalThis.fetch, concurrency = DEFAULT_CONCURRENCY, retries = DEFAULT_RETRIES, retryDelayMs = DEFAULT_RETRY_DELAY_MS, includeSamples = false } = {}) {
   resetProviderRegistry();
   try {
-    return await mapLimit(entries, concurrency, entry => auditEntry(entry, { fetchImpl, retries, retryDelayMs }));
+    return await mapLimit(entries, concurrency, entry => auditEntry(entry, { fetchImpl, retries, retryDelayMs, includeSamples }));
   } finally {
     resetProviderRegistry();
   }
