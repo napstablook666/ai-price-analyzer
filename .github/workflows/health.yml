@@ -26,6 +26,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # state.json 记的是「连续第几期」，每次 runner 都是干净环境，不缓存就永远从 green 起算，
+      # 等级爬不上去，issue 也就永远不开。key 带 run_id 是为了让 cache 每次都能写新版本，
+      # restore-keys 前缀匹配到最近一份。
+      - uses: actions/cache@v4
+        with:
+          path: out/health/state.json
+          key: station-health-state-${{ github.run_id }}
+          restore-keys: |
+            station-health-state-
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22

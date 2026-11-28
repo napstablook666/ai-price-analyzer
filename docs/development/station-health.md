@@ -106,4 +106,6 @@ green ──1期非ok──> yellow ──2期──> red ──3期──> obso
 | `scripts/health/baseline.json` | 上次确认的指纹（域名、模型数、计费模式、币种、倍率基准） | 是 |
 | `out/health/last-run.json` | 上次的抽样价格，用来算单模型涨跌和中位偏移 | 否 |
 | `out/health/state.json` | 每站的持续期数与当前分类 | 否 |
+
+`state.json` 不入库，但**必须跨轮存活**：等级是从「连续第几期」推出来的，丢了就从 `green` 重新起算，等级永远爬不到 `red`，issue 也就永远不开。CI 里靠 `actions/cache`（`key: station-health-state-${{ github.run_id }}`，`restore-keys: station-health-state-`）在两次运行之间传递它。本机调试跑单站也会改写这份状态，排查完删掉 `out/health/state.json` 再跑全量，免得把调试结论当历史。
 | `out/health/status.md` | 给人看的报告 | 否 |

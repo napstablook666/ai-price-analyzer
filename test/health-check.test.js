@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   classify,
+  decideLevel,
   environmentVerdict,
   exitCodeForHealth,
   nextLevel,
@@ -32,6 +33,13 @@ test("网络层大批阻断时标记出口可疑，不把它当成站点变化",
   assert.match(verdict.note, /4\/10/);
 
   assert.equal(environmentVerdict(offline.slice(0, 4)).suspect, false, "样本太小时不下判断");
+});
+
+test("出口可疑时冻结等级，只有拿到数据才回绿", () => {
+  assert.deepEqual(decideLevel({ lastLevel: "yellow", klass: "timeout", environmentSuspect: true }), { level: "yellow", held: true });
+  assert.deepEqual(decideLevel({ lastLevel: "red", klass: "http-error", environmentSuspect: true }), { level: "red", held: true });
+  assert.deepEqual(decideLevel({ lastLevel: "yellow", klass: "ok", environmentSuspect: true }), { level: "green", held: false });
+  assert.deepEqual(decideLevel({ lastLevel: "yellow", klass: "timeout", environmentSuspect: false }), { level: "red", held: false });
 });
 
 function result(overrides = {}) {

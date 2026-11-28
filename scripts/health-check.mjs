@@ -240,6 +240,14 @@ export function nextLevel(level = "green", klass) {
   return "obsolete";
 }
 
+// 出口可疑（本机到不了、CI runner 出不去）时候判结果不算数，既不能推进也不能复位。
+// ok 例外：真拿到数据就说明这一站通了，照常回绿。
+export function decideLevel({ lastLevel = "green", klass, environmentSuspect = false }) {
+  const advanced = nextLevel(lastLevel, klass);
+  const held = Boolean(environmentSuspect) && klass !== "ok";
+  return { level: held ? (LEVEL_ORDER.includes(lastLevel) ? lastLevel : "green") : advanced, held };
+}
+
 export function levelLabel(level) {
   if (level === "green") return "—";
   if (level === "yellow") return "1 期";
@@ -393,13 +401,23 @@ export async function main(args = process.argv.slice(2)) {
   const previousLevels = Object.fromEntries(Object.entries(state.plugins).map(([id, value]) => [id, value.level || "green"]));
   const items = [];
 
+  // 出口可疑时整轮冻结：一台没配代理的机器不该把一批站各推一期。
+  const environment = environmentVerdict(results);
+  if (environment.suspect && !options.quiet) {
+    console.warn(`⚠ ${environment.note}`);
+  }
+
   for (const result of results) {
     const previous = baseline.plugins[result.id] || null;
     const lastSamples = lastRun.plugins[result.id]?.samples
       ? samplesMap(lastRun.plugins[result.id].samples)
       : null;
     const verdict = classify({ result, baseline: previous, lastSamples });
-    const level = nextLevel(previousLevels[result.id] || "green", verdict.klass);
+    const { level, held } = decideLevel({
+      lastLevel: previousLevels[result.id] || "green",
+      klass: verdict.klass,
+      environmentSuspect: environment.suspect
+    });
     items.push({
       id: result.id,
       name: result.name || result.id,
@@ -407,10 +425,19 @@ export async function main(args = process.argv.slice(2)) {
       klass: verdict.klass,
       route: FIX_ROUTE[verdict.klass] || "—",
       level,
-      evidence: verdict.evidence,
+      evidence: held ? ["出口可疑，本轮不推进", ...verdict.evidence] : verdict.evidence,
       isNew: verdict.isNew,
       current: verdict.current
     });
+    if (held) {
+      const existing = state.plugins[result.id] || {
+        level: lastLevel,
+        klass: verdict.klass,
+        since: generatedAt
+      };
+      state.plugins[result.id] = { ...existing, level, updatedAt: generatedAt };
+      continue;
+    }
     state.plugins[result.id] = {
       level,
       klass: verdict.klass,
@@ -421,10 +448,6 @@ export async function main(args = process.argv.slice(2)) {
 
   const counts = summarizeHealth(items, previousLevels);
   const audit = summarize(results);
-  const environment = environmentVerdict(results);
-  if (environment.suspect && !options.quiet) {
-    console.warn(`⚠ ${environment.note}`);
-  }
 
   // 基线只在人工确认后更新，且只吸收真正拿到数据的站；阻断/失败的站保留旧指纹，
   // 否则一次网络抖动就会把「坏」写进基线，下次永远判 ok。
