@@ -1,0 +1,107 @@
+name: Station health
+
+on:
+  schedule:
+    # 每天 02:10 UTC 跑一次，避开 release 的高峰时段。
+    - cron: "10 2 * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "只跑指定站点 id，逗号分隔（留空为全量）"
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run health check
+        id: health
+        working-directory: .
+        continue-on-error: true
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          args=(--json out/health/report.json)
+          if [ -n "$ONLY" ]; then args+=(--only "$ONLY"); fi
+          set +e
+          npm run health:check -- "${args[@]}"
+          code=$?
+          set -e
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: station-health
+          path: |
+            out/health/status.md
+            out/health/report.json
+          if-no-files-found: warn
+
+      - name: Notify on new failures
+        if: steps.health.outputs.code == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("node:fs");
+            const report = JSON.parse(fs.readFileSync("out/health/report.json", "utf8"));
+            const status = fs.readFileSync("out/health/status.md", "utf8");
+            const escalated = report.counts.escalated || [];
+            if (!escalated.length) return;
+
+            const title = "[health] 站点体检待处理";
+            const body = [
+              `新增待处理：${escalated.map(id => "`" + id + "`").join("、")}`,
+              "",
+              status
+            ].join("\n").slice(0, 60000);
+
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              per_page: 100
+            });
+            const existing = open.find(issue => issue.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail when the check could not run
+        if: steps.health.outputs.code == '2'
+        run: |
+          echo "站点体检一个站都没跑到，检查网络或 --only 参数。" >&2
+          exit 1
