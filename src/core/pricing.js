@@ -5,6 +5,7 @@ import { canonicalKey, stripDecoration, stripVendorPrefix } from "./canonical.js
 import { mediaTypeForPricing } from "./media.js";
 import { effectiveRecharge } from "./recharge.js";
 import { rechargePaymentRate, representativeRechargePayment } from "../shared/recharge-payments.js";
+import { normalizeProvider } from "../shared/provider-identity.js";
 
 
 export function currencyToRmb(currency, rechargeRate = 1) {
@@ -595,7 +596,7 @@ export function filterComparisonsByMode(comparisons = [], mode = "paid") {
 }
 
 export function flattenComparisonRows(comparisons) {
-  return comparisons.flatMap(comparison => comparison.offers.map(offer => ({ ...offer, canonicalModel: comparison.canonicalModel })));
+  return comparisons.flatMap(comparison => comparison.offers.map(offer => ({ ...offer, provider: normalizeProvider(offer.provider ?? comparison.provider), canonicalModel: comparison.canonicalModel })));
 }
 // 站点指数：本站混合单价 / 官方混合单价的逐模型中位数。样本少于 3 的站不输出。
 export function buildStationIndexes(comparisons = []) {

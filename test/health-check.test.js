@@ -2,12 +2,37 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   classify,
+  environmentVerdict,
   exitCodeForHealth,
   nextLevel,
   renderStatus,
   samplesMap,
   summarizeHealth
 } from "../scripts/health-check.mjs";
+
+test("网络层大批阻断时标记出口可疑，不把它当成站点变化", () => {
+  const healthy = Array.from({ length: 10 }, (_, index) => result({ id: `ok-${index}`, reasonCategory: "none" }));
+  assert.equal(environmentVerdict(healthy).suspect, false);
+
+  const noisy = Array.from({ length: 10 }, (_, index) => result({
+    id: `net-${index}`,
+    state: "BLOCKED",
+    reasonCategory: index < 1 ? "network" : "none"
+  }));
+  assert.equal(environmentVerdict(noisy).suspect, false);
+
+  const offline = Array.from({ length: 10 }, (_, index) => result({
+    id: `net-${index}`,
+    state: "BLOCKED",
+    reasonCategory: index < 4 ? "network" : "none"
+  }));
+  const verdict = environmentVerdict(offline);
+  assert.equal(verdict.suspect, true);
+  assert.equal(verdict.network, 4);
+  assert.match(verdict.note, /4\/10/);
+
+  assert.equal(environmentVerdict(offline.slice(0, 4)).suspect, false, "样本太小时不下判断");
+});
 
 function result(overrides = {}) {
   return {

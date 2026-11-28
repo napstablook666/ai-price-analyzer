@@ -143,6 +143,23 @@ test("audit reports non-JSON and network blocking without recording response sec
   assert.equal(Object.hasOwn(networkResult, "headers"), false);
 });
 
+test("网络失败带出原因码，不再只说「网络请求失败」", async () => {
+  const entry = fakeEntry({});
+  const result = await auditEntry(entry, {
+    fetchImpl: async () => {
+      const error = new TypeError("fetch failed");
+      error.cause = Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:443"), { code: "ECONNREFUSED" });
+      throw error;
+    },
+    retries: 1,
+    retryDelayMs: 0
+  });
+  assert.equal(result.state, "BLOCKED");
+  assert.equal(result.reasonCategory, "network");
+  assert.match(result.reason, /ECONNREFUSED/);
+  assert.match(result.reason, /127\.0\.0\.1:443/);
+});
+
 test("a parseable page is not failed just because the raw body is not JSON", async () => {
   const payload = { data: [
     { model_name: "page-model", input_price: 1, output_price: 2, price_currency: "USD" }

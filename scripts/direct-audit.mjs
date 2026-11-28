@@ -161,6 +161,14 @@ async function recordPayload(record, response) {
 function safeReason(message) {
   return String(message || "未知错误").replace(/[\r\n]+/g, " ").slice(0, 240);
 }
+// fetch 把真正的原因塞在 cause 里（ECONNRESET / ENOTFOUND / UND_ERR_CONNECT_TIMEOUT），
+// 只看 error.message 永远是「fetch failed」，站点体检的判读全靠这串码。
+function networkCauseOf(error) {
+  const cause = error?.cause;
+  const code = cause?.code || error?.code || "";
+  const detail = String(cause?.message || error?.message || error || "未知错误");
+  return code && !detail.includes(code) ? `${code} ${detail}` : detail;
+}
 
 function resultBase(entry, station, collection, records) {
   const primary = primaryRecord(records);
@@ -319,7 +327,7 @@ export async function auditEntry(entry, { fetchImpl = globalThis.fetch, retries 
       }
       return response;
     } catch (error) {
-      record.networkError = safeReason(error?.message || error);
+      record.networkError = safeReason(networkCauseOf(error));
       throw error;
     }
   };
@@ -353,7 +361,10 @@ export async function auditEntry(entry, { fetchImpl = globalThis.fetch, retries 
   } catch (error) {
     const primary = primaryRecord(records);
     if (primary?.status === 401 || primary?.status === 403) return blockedResult(entry, station, collection, records, "auth", `HTTP ${primary.status} 认证/权限阻断`);
-    if (records.some(record => record.networkError)) return blockedResult(entry, station, collection, records, "network", "网络请求失败");
+    if (records.some(record => record.networkError)) {
+      const detail = records.find(record => record.networkError)?.networkError;
+      return blockedResult(entry, station, collection, records, "network", `网络请求失败：${detail}`);
+    }
     // 只有 2xx 的响应才谈得上「不是 JSON」；4xx/5xx 是 HTTP 失败，分类不能被 non-json 抢走。
     if (primary?.nonJson && primary?.status >= 200 && primary.status < 300) {
       return failedResult(entry, station, collection, records, "non-json", "响应不是 JSON");

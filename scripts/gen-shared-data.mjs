@@ -6,6 +6,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PROVIDER_BRANDS } from "../src/shared/provider-identity.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SHARED = join(ROOT, "src", "shared");
@@ -39,9 +40,16 @@ const { DEFAULT_STATION } = await import("../src/shared/schema.js");
 // 别名表与名称提示只有 Rust 用，它们的家在 data.json，这里原样带过去。
 const step = JSON.parse(fs.readFileSync(OUT, "utf8"));
 const iconPaths = literalOf(join(SHARED, "ui.js"), "ICON_PATHS");
+const aliases = { ...step.aliases, "azure-cognitive-services": "azure" };
+for (const brand of PROVIDER_BRANDS) {
+  if (!step.providerLogos[brand.logo || brand.id]) continue;
+  for (const alias of [brand.id, brand.label, ...(brand.aliases || [])]) {
+    aliases[alias.trim().toLowerCase().replace(/\s+/g, "-")] = brand.logo || brand.id;
+  }
+}
 
 const data = {
-  aliases: step.aliases,
+  aliases,
   nameHints: step.nameHints,
   iconPaths,
   providerLogos: step.providerLogos,

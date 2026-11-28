@@ -298,6 +298,23 @@ export function renderStatus({ items, counts, generatedAt, previousLevels = {} }
   return `${lines.join("\n")}\n`;
 }
 
+// 一整轮里网络层阻断占比过高，说明是这台机器的出口有问题（没配代理、CI runner
+// 到不了海外），不是这些站变了。这种情况照判会批量刷红，把真正的变化淹没。
+export function environmentVerdict(results, { minSample = 8, ceiling = 0.15 } = {}) {
+  const network = results.filter(result => result.reasonCategory === "network").length;
+  const ratio = results.length ? network / results.length : 0;
+  const suspect = results.length >= minSample && ratio > ceiling;
+  return {
+    network,
+    total: results.length,
+    blockedRatio: Math.round(ratio * 1000) / 1000,
+    suspect,
+    note: suspect
+      ? `网络层阻断 ${network}/${results.length}（${Math.round(ratio * 100)}%），疑似本机出口问题，结论不可作为站点判据`
+      : ""
+  };
+}
+
 export function summarizeHealth(items, previousLevels = {}) {
   const byClass = Object.fromEntries(Object.keys(CLASS_LABELS).map(key => [key, 0]));
   for (const item of items) byClass[item.klass] = (byClass[item.klass] || 0) + 1;
@@ -404,6 +421,10 @@ export async function main(args = process.argv.slice(2)) {
 
   const counts = summarizeHealth(items, previousLevels);
   const audit = summarize(results);
+  const environment = environmentVerdict(results);
+  if (environment.suspect && !options.quiet) {
+    console.warn(`⚠ ${environment.note}`);
+  }
 
   // 基线只在人工确认后更新，且只吸收真正拿到数据的站；阻断/失败的站保留旧指纹，
   // 否则一次网络抖动就会把「坏」写进基线，下次永远判 ok。
@@ -430,7 +451,7 @@ export async function main(args = process.argv.slice(2)) {
   writeFileSync(options.statusPath, status);
 
   if (options.jsonPath) {
-    writeJson(path.resolve(process.cwd(), options.jsonPath), { generatedAt, audit, counts, items });
+    writeJson(path.resolve(process.cwd(), options.jsonPath), { generatedAt, audit, environment, counts, items });
   }
 
   if (!options.quiet) {

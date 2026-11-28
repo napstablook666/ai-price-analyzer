@@ -80,7 +80,22 @@ green ──1期非ok──> yellow ──2期──> red ──3期──> obso
 | 1 | 本次有站新进入 `red` / `obsolete` |
 | 2 | 一个站都没跑到（通常是网络或 `--only` 写错） |
 
-`--json <path>` 会额外落一份机器可读报告，字段是 `generatedAt` / `audit` / `counts` / `items`。定时任务里就靠这个判断要不要提 issue。
+`--json <path>` 会额外落一份机器可读报告，字段是 `generatedAt` / `audit` / `environment` / `counts` / `items`。定时任务里就靠这个判断要不要提 issue。
+
+`--only nexaix,orbitix` 只跑指定站，排查单站时用，别在定时任务里加。
+
+## 网络层与原因码
+
+阻断的原因写在报告里，不再只有一句「网络请求失败」。`direct-audit.mjs` 的 `networkCauseOf` 会从 `error.cause` 里取出真正的原因码：
+
+- `UND_ERR_CONNECT_TIMEOUT` 连接超时，通常是出口到不了
+- `ECONNRESET` / `ECONNREFUSED` 连接被重置或拒绝，多半被中间设备掐了
+- `ENOTFOUND` / `EAI_AGAIN` DNS 解析不到，可能是域名换了，也可能是本地 DNS 挂了
+- `CERT_HAS_EXPIRED` / `UNABLE_TO_VERIFY_LEAF_SIGNATURE` 证书问题，常见于中间人代理
+
+带 `ENOTFOUND` 的先当成 `domain-moved` 的线索去查，别急着判坏。
+
+一整轮里网络层阻断超过 15%（样本少于 8 站不判断）时，`environmentVerdict` 会标 `suspect`，控制台打一行警告，`--json` 里也带 `environment`。出现这个标记，先修出口再谈站点结论：批量刷红的结果是本地没配代理，不是站变了。
 
 `out/health/` 下的运行状态不进版本库，`scripts/health/baseline.json` 要进。
 

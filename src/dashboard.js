@@ -6,7 +6,8 @@ import { initCardCollapse } from "./shared/collapse.js";
 import { initTopMenu } from "./shared/menu.js";
 import { STATION_CATEGORY_LABELS } from "./shared/schema.js";
 import { exchangeRateInfo } from "./core/exchange-rate.js";
-import { providerIconMarkup, providerLogoFor } from "./shared/provider-icons.js";
+import { providerIconMarkup } from "./shared/provider-icons.js";
+import { normalizeProviderSelection, providerLabel, providerSearchText } from "./shared/provider-identity.js";
 import { siteIconMarkup } from "./shared/site-icon.js";
 import { DASHBOARD_HTML_IDS } from "./dom-contract.js";
 import { assertDomContract, makeQuery } from "./core/dom-guard.js";
@@ -14,21 +15,15 @@ import { effectiveMonthlyCost } from "./shared/monthly-cost.js";
 
 // 供应商不写死名单：默认全选（null）。用户改过就记进 localStorage 的 JSON，下次打开沿用。
 const PROVIDER_FILTER_STORE = "model-atlas:provider-filter";
-// 更早存下的分组名可能带着 ~ 前缀（~deepseek 这类浮动别名分组）。它已经不是供应商了，读的时候并回正牌名字。
-function normalizeStoredProvider(value) {
-  return String(value || "").trim().replace(/^~+/, "").trim();
-}
 function readProviderFilter() {
   try {
     const stored = JSON.parse(localStorage.getItem(PROVIDER_FILTER_STORE) || "null");
-    if (!Array.isArray(stored)) return null;
-    const kept = stored.filter(value => typeof value === "string" && value);
-    return [...new Set(kept.map(normalizeStoredProvider).filter(Boolean))];
+    return normalizeProviderSelection(stored);
   } catch { return null; }
 }
 function saveProviderFilter(selection) {
   try {
-    if (Array.isArray(selection)) localStorage.setItem(PROVIDER_FILTER_STORE, JSON.stringify(selection));
+    if (Array.isArray(selection)) localStorage.setItem(PROVIDER_FILTER_STORE, JSON.stringify(normalizeProviderSelection(selection)));
     else localStorage.removeItem(PROVIDER_FILTER_STORE);
   } catch { /* 隐私模式写不进去，本次会话里仍然生效 */ }
 }
@@ -37,12 +32,11 @@ const PROVIDER_FAVORITE_STORE = "model-atlas:provider-favorite";
 function readProviderFavorite() {
   try {
     const stored = JSON.parse(localStorage.getItem(PROVIDER_FAVORITE_STORE) || "null");
-    if (!Array.isArray(stored)) return [];
-    return [...new Set(stored.filter(value => typeof value === "string" && value).map(normalizeStoredProvider).filter(Boolean))];
+    return normalizeProviderSelection(stored) || [];
   } catch { return []; }
 }
 function saveProviderFavorite(values) {
-  const list = [...new Set((values || []).filter(value => typeof value === "string" && value))];
+  const list = normalizeProviderSelection(values) || [];
   try {
     if (list.length) localStorage.setItem(PROVIDER_FAVORITE_STORE, JSON.stringify(list));
     else localStorage.removeItem(PROVIDER_FAVORITE_STORE);
@@ -303,7 +297,7 @@ function filterFacetOptions(key) {
   let matches = 0;
   for (const option of options) {
     // 只匹配名字，不匹配右侧那行统计：搜「2」不该把「2 个模型」全捞出来。
-    const label = option.querySelector("span")?.textContent || option.textContent;
+    const label = option.dataset.searchText || option.querySelector("[data-facet-label]")?.textContent || option.querySelector("span")?.textContent || option.textContent;
     option.hidden = !label.toLowerCase().includes(query);
     if (!option.hidden) matches++;
   }
@@ -346,7 +340,9 @@ function renderFacetFilters(rows) {
           const note = stats && stats.models.size
             ? `<small aria-hidden="true">${stats.models.size} 个模型 · ${formatPrice(stats.cost, currency)}</small>`
             : "";
-          return `<label class="facet-option"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}>${key === "provider" && providerLogoFor(value) ? providerIconMarkup(value, { size: 14 }) : ""}<span>${escapeHtml(value)}</span>${note}</label>`;
+          const label = key === "provider" ? providerLabel(value) : value;
+          const searchText = key === "provider" ? providerSearchText(value) : value;
+          return `<label class="facet-option" data-search-text="${escapeHtml(searchText)}"><input type="checkbox" data-facet-key="${key}" value="${escapeHtml(value)}"${selected.has(value) ? " checked" : ""}>${key === "provider" ? providerIconMarkup(value, { size: 14 }) : ""}<span data-facet-label>${escapeHtml(label)}</span>${note}</label>`;
         }).join("")}<span class="facet-empty" data-no-matches hidden>无匹配项</span>`
       : `<span class="facet-empty">暂无可选项</span>`;
     filterFacetOptions(key);
@@ -394,7 +390,7 @@ function renderFacetFavoritePanel() {
   const panel = facetFavoritePanel();
   const favorite = readProviderFavorite();
   const offered = new Set([...document.querySelectorAll("#provider-filters input[data-facet-key]")].map(input => input.value));
-  const chips = favorite.map(value => `<button type="button" class="facet-favorite-chip${offered.has(value) ? "" : " is-missing"}" data-favorite-remove="${escapeHtml(value)}" title="从常用里移除 ${escapeHtml(value)}">${providerLogoFor(value) ? providerIconMarkup(value, { size: 12 }) : ""}<span>${escapeHtml(value)}</span><span class="facet-favorite-chip-x" aria-hidden="true">×</span></button>`).join("");
+  const chips = favorite.map(value => `<button type="button" class="facet-favorite-chip${offered.has(value) ? "" : " is-missing"}" data-favorite-remove="${escapeHtml(value)}" title="从常用里移除 ${escapeHtml(providerLabel(value))}">${providerIconMarkup(value, { size: 12 })}<span>${escapeHtml(providerLabel(value))}</span><span class="facet-favorite-chip-x" aria-hidden="true">×</span></button>`).join("");
   panel.innerHTML = `<div class="facet-favorite-head"><strong>常用供应商</strong><span>${favorite.length ? `${favorite.length} 个` : "还没设过"}</span></div>${favorite.length ? `<div class="facet-favorite-chips">${chips}</div>` : `<p class="facet-favorite-empty">先勾选供应商，再点「设为常用」。</p>`}<div class="facet-favorite-actions"><button type="button" data-favorite-action="apply"${favorite.length ? "" : " disabled"}>套用常用</button><button type="button" data-favorite-action="save">设为常用</button><button type="button" data-favorite-action="clear"${favorite.length ? "" : " disabled"}>清除</button></div>`;
 }
 
@@ -724,7 +720,7 @@ function modelMatchMarkup(row, currency) {
   const confidence = Math.max(0, Math.min(100, Math.round(Number(row.confidenceScore) || 0)));
   const hasOfficial = Boolean(row.officialName);
   const officialName = hasOfficial ? row.officialName : "没有对应的基准目录记录";
-  const provider = row.provider && row.provider !== "未匹配" ? row.provider : "未匹配";
+  const provider = row.provider && row.provider !== "未匹配" ? providerLabel(row.provider) : "未匹配";
   const rule = row.matchRule || (hasOfficial ? "基准匹配" : "未匹配");
   const candidateItems = candidates.map(candidate => {
     const name = candidate.name || "未命名候选";
@@ -943,7 +939,7 @@ function renderRows() {
     const officialNote = !isPublic ? modelMatchMarkup(row, currency) : "";
     const rowClasses = [bandClasses[index], categoryClass && `category-${categoryClass}`].filter(Boolean).join(" ");
     return `<tr class="${rowClasses}" data-offer-position="${firstVisibleIndex + index}">
-      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(row.provider)}</span>` : ""}${!isPublic && tierTag(row) ? `<span class="status-tag muted">${escapeHtml(tierTag(row))}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
+      <td data-label="模型"><div class="model-cell"><div class="model-head">${modelIconMarkup(row)}<span class="model-name" title="${escapeHtml(modelName)}">${escapeHtml(modelName)}</span>${!isPublic && row.officialName ? `<span class="provider-tag">${escapeHtml(providerLabel(row.provider))}</span>` : ""}${!isPublic && tierTag(row) ? `<span class="status-tag muted">${escapeHtml(tierTag(row))}</span>` : ""}</div>${officialNote ? `<span class="model-meta">${officialNote}</span>` : ""}</div></td>
       <td data-label="中转站"><div class="station-cell">${stationSiteLinkMarkup(station, row)}<span class="station-meta">${escapeHtml(row.groupName || "未分组")}${row.groupRatio ? ` · ×${escapeHtml(row.groupRatio)}` : ""}${billingModeTagMarkup(row)}</span>${rechargeTierMarkup(row)}</div></td>
       <td colspan="3" data-label="费用项" class="price-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${priceCellMarkup(row, currency, officialQuotedPrices, monthlyCostChartMarkup(row, currency, monthlyRanking, index))}</td>
       <td data-label="月成本 · 折算单价" class="cost-combined-cell is-section-start paid-only-column"${isPublic ? " hidden" : ""}>${costCombinedMarkup(row, currency, deltaClass, deltaLabel)}</td>
