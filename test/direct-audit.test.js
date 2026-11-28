@@ -53,12 +53,12 @@ function fetchFor(entry) {
   return async () => entry.response;
 }
 
-test("inventory uses 104/90/14/89 and excludes public-pricing", () => {
+test("inventory uses 102/88/14/87 and excludes public-pricing", () => {
   const result = inventory();
-  assert.equal(result.manifests, 104);
-  assert.equal(result.direct, 90);
+  assert.equal(result.manifests, 102);
+  assert.equal(result.direct, 88);
   assert.equal(result.page, 14);
-  assert.equal(result.directSitePlugins, 89);
+  assert.equal(result.directSitePlugins, 87);
   assert.deepEqual(result.excludedGeneric, ["public-pricing"]);
   assert.equal(directEntries().some(entry => entry.mode === "page"), false);
   assert.equal(directEntries().some(entry => entry.id === "public-pricing"), false);

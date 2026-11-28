@@ -56,7 +56,7 @@ test("every addable direct station gets its own recharge result without an onlin
   // 上面几条断言读的是 audit:recharge 的落盘报告，干净签出里没有那个文件就会跳过。
   // 这里不碰磁盘：直接按 directEntries() 驱动一次离线审计，保证覆盖与独立性在任何环境都成立。
   const entries = directEntries();
-  assert.equal(entries.length, 89);
+  assert.equal(entries.length, 87);
   assert.equal(entries.some(entry => entry.id === "public-pricing"), false);
 
   const shared = entries.filter(entry => ["dddai", "liuguang", "soleapi"].includes(entry.id));

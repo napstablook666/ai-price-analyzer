@@ -82,7 +82,7 @@ green ──1期非ok──> yellow ──2期──> red ──3期──> obso
 
 `--json <path>` 会额外落一份机器可读报告，字段是 `generatedAt` / `audit` / `environment` / `counts` / `items`。定时任务里就靠这个判断要不要提 issue。
 
-`--only nexaix,orbitix` 只跑指定站，排查单站时用，别在定时任务里加。
+`--only dddai,clawcn` 只跑指定站，排查单站时用，别在定时任务里加。
 
 ## 网络层与原因码
 

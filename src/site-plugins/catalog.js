@@ -54,7 +54,6 @@ import { sitePlugin as axisPlugin } from "./providers/axis.js";
 import { sitePlugin as crabPlugin } from "./providers/crab.js";
 import { sitePlugin as initapiPlugin } from "./providers/initapi.js";
 import { sitePlugin as abuapiPlugin } from "./providers/abuapi.js";
-import { sitePlugin as nexaixPlugin } from "./providers/nexaix.js";
 import { sitePlugin as yescodePlugin } from "./providers/yescode.js";
 import { sitePlugin as rightcodePlugin } from "./providers/rightcode.js";
 import { sitePlugin as man8outPlugin } from "./providers/man8out.js";
@@ -93,7 +92,6 @@ import { sitePlugin as shenlongPlugin } from "./providers/shenlong.js";
 import { sitePlugin as tonkicPlugin } from "./providers/tonkic.js";
 import { sitePlugin as moyaPlugin } from "./providers/moya.js";
 import { sitePlugin as hhapiPlugin } from "./providers/hhapi.js";
-import { sitePlugin as orbitixPlugin } from "./providers/orbitix.js";
 import { sitePlugin as bitwiseplusPlugin } from "./providers/bitwiseplus.js";
 import { sitePlugin as metr4aiPlugin } from "./providers/metr4ai.js";
 import { sitePlugin as ifalsoPlugin } from "./providers/ifalso.js";
@@ -177,7 +175,6 @@ export const SITE_PLUGIN_CATALOG = [
   entry("crab", "Crab-AI", "crab-ai.net", "direct", () => ({ sitePlugin: crabPlugin }), { paths: ["/model-plaza"], description: "公开模型广场直连采集，两个分组按倍率计价，含长上下文档" }),
   entry("initapi", "初元 API", "initapi.ai", "page", () => ({ sitePlugin: initapiPlugin }), { paths: ["/model-plaza"], description: "模型广场要求登录，复用浏览器登录态，13 个分组按倍率计价，充值带阶梯赠送" }),
   entry("abuapi", "AbuAPI", "www.abuai.chat", "direct", () => ({ sitePlugin: abuapiPlugin }), { paths: ["/pricing","/console/topup"], description: "new-api 魔改站，245 个模型 24 个分组，含按次与表达式计费" }),
-  entry("nexaix", "NexAIX", "nexaix.ai", "direct", () => ({ sitePlugin: nexaixPlugin }), { paths: ["/pricing"], description: "new-api 站点，7 个模型两个分组，匿名直连采集倍率" }),
   entry("yescode", "YesCode", "co.yes.vg", "direct", () => ({ sitePlugin: yescodePlugin }), { paths: ["/model-plaza","/subscription"], description: "sub2api 变体，公开模型目录 61 个模型，自带倍率，另有按次出图" }),
   entry("rightcode", "Right Code", "rightapi.io", "direct", () => ({ sitePlugin: rightcodePlugin }), { paths: ["/pricing","/console"], description: "Spring Boot 站，13 个上游渠道 111 个模型，含上下文分档与按次出图" }),
   entry("man8out", "Man8Out", "ai.man8out.com", "direct", () => ({ sitePlugin: man8outPlugin }), { paths: ["/modelsmarket"], description: "公开渠道目录，直连采集" }),
@@ -216,7 +213,6 @@ export const SITE_PLUGIN_CATALOG = [
   entry("tonkic", "TonkicAPI", "tonkicapi.xyz", "direct", () => ({ sitePlugin: tonkicPlugin }), { hosts: ["tonkicapi.xyz","www.tonkicapi.xyz"], paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：7 个模型 48 条（模型少但分组多）；7 个分组倍率 0.05 到 1，全部 7 个模型都带 billing_expr（272K 长短上下文分档）；备用域 us.tonkicapi.xyz 实测 502" }),
   entry("moya", "MoyaAI", "moyaspace.com", "direct", () => ({ sitePlugin: moyaPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：5 个模型 5 条；模型条目列了 8 个分组名但 group_ratio 只给 3 档（0.1 / 0.15 / 0.8），没有倍率的分组不落行；无 billing_expr，全部 model_ratio 计价" }),
   entry("hhapi", "HHapi", "hhapi.xyz", "direct", () => ({ sitePlugin: hhapiPlugin }), { hosts: ["hhapi.xyz","www.hhapi.xyz"], paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，59 个在售模型、27 个分组（倍率 0.06~10），187 行（177 条 token、10 条按张）、6 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
-  entry("orbitix", "Orbitix AI", "newapi.orbitix.site", "direct", () => ({ sitePlugin: orbitixPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：11 个模型 19 条（文本 17 / 按张 2）；4 个分组倍率 0.08 到 1，11 个模型全部带 billing_expr，含工作日 9-12 与 14-16/14-18 点（东亚时区）的 peak 双倍分时档" }),
   entry("bitwiseplus", "BitwisePlus", "bitwiseplus.cc", "direct", () => ({ sitePlugin: bitwiseplusPlugin }), { paths: ["/","/pricing","/console","/console/topup","/topup"], description: "匿名 /api/pricing 直连采集：16 个模型 54 条（文本 44 / 按张 10）；3 个分组倍率 0.1 到 0.2，11 个模型带 billing_expr（272K 分档 + 12 小时缓存 cc12h），5 个出图模型按张 0.2" }),
   entry("metr4ai", "Akari AI 中转站", "metr4ai.com", "direct", () => ({ sitePlugin: metr4aiPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，26 个在售模型、7 个分组（倍率 0.08~1.5），58 行（全 token）、1 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),
   entry("ifalso", "轻盈科技", "api.ifalso.com", "direct", () => ({ sitePlugin: ifalsoPlugin }), { paths: ["/","/pricing","/console/topup"], description: "公开 /api/pricing 直连采集，39 个在售模型、14 个分组（倍率 0.3~7），46 行（36 条 token、5 条按秒、5 条按张）、4 条表达式解析不出进未决，倍率 1 = $2/百万 token，充值 ¥1 = 1 美元额度" }),

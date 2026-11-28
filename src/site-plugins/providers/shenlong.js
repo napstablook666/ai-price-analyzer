@@ -9,7 +9,7 @@ import { DEFAULT_PRICING_ENDPOINT as PRICING_ENDPOINT, requestPolicy } from "../
 //   13 个模型带 billing_expr，这批里分档写法最杂：len < 272000 与 len <= 272000 两种写法混用，档名有 standard / long_context、
 //   短上下文 / 长上下文、≤272K / >272K 三套命名，值一样但名字不统一，映射引擎按 tier 名照收，所以同一模型会出现两组「档」行。
 //   另有 1 个模型（deepseek-v4-1-flash-1017）是多语句表达式：let 拼出时区 / 日期 / 星期 / 小时 / 一份 2026 年节假日表，
-//   工作日且非节假日 9–12 与 14–18 点走 tier("高峰")，其余走 tier("空闲")——分时档不只 orbitix 一家有。
+//   工作日且非节假日 9–12 与 14–18 点走 tier("高峰")，其余走 tier("空闲")——分时档在多家中转站都出现过。
 //   7 条带 cache_ratio，cache_creation 系字段全无；没有按次、没有图片端点。
 //   www 与主域都能直连 /api/pricing（都是 18 行），两个都挂。
 //   OP（linux.do 3153976）：双十一（截止 11-11 23:59）充值加赠 50%。

@@ -558,16 +558,6 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "needsCode": true
     },
     {
-      "id": "nexaix",
-      "name": "NexAIX",
-      "version": "0.1.0",
-      "description": "new-api 站点，7 个模型两个分组，匿名直连采集倍率",
-      "hosts": [
-        "nexaix.ai"
-      ],
-      "needsCode": true
-    },
-    {
       "id": "yescode",
       "name": "YesCode",
       "version": "0.1.0",
@@ -958,16 +948,6 @@ export const PLUGIN_REGISTRY_SNAPSHOT = {
       "hosts": [
         "hhapi.xyz",
         "www.hhapi.xyz"
-      ],
-      "needsCode": true
-    },
-    {
-      "id": "orbitix",
-      "name": "Orbitix AI",
-      "version": "0.1.0",
-      "description": "匿名 /api/pricing 直连采集：11 个模型 19 条（文本 17 / 按张 2）；4 个分组倍率 0.08 到 1，11 个模型全部带 billing_expr，含工作日 9-12 与 14-16/14-18 点（东亚时区）的 peak 双倍分时档",
-      "hosts": [
-        "newapi.orbitix.site"
       ],
       "needsCode": true
     },
