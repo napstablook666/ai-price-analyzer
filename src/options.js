@@ -13,7 +13,7 @@ import { applyUpdate, isExtensionDirectory, restoreBackup } from "./core/self-up
 import { OPTIONS_HTML_IDS } from "./dom-contract.js";
 import { assertDomContract, makeQuery } from "./core/dom-guard.js";
 
-const state = { stations: [], sitePlugins: [], settings: null, references: {}, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
+const state = { stations: [], sitePlugins: [], settings: null, references: {}, pluginWorkspace: null, stationSourceTabIds: new Map(), configStationId: null, pendingStation: null, previewRequestId: 0, registryFilter: "all", registryPage: 0, registryPageSize: 20, registrySelected: new Set(), registryAnchorId: "", expandedRegistryId: "", installedOrder: [], installedSelectable: new Set(), installedSelected: new Set(), installedAnchorId: "", registryOrder: [], expandedInstalledId: "", assistantFilter: "all", assistantPage: 0, assistantPageSize: 20, update: null };
 // 页面一打开就核契约：缺的节点一次列全，不再等到切到某个视图才在别处炸。
 assertDomContract("options.html", OPTIONS_HTML_IDS);
 const $ = makeQuery("options.html", OPTIONS_HTML_IDS);
@@ -350,7 +350,7 @@ function registryRow(entry) {
   const expanded = state.expandedRegistryId === entry.id;
   return `<section class="plugin-entry${expanded ? " is-expanded" : ""}">
     <div class="plugin-row" data-registry-row="${escapeHtml(entry.id)}">
-      <input class="plugin-check" type="checkbox" data-registry-check="${escapeHtml(entry.id)}"${state.registrySelected.has(entry.id) ? " checked" : ""}${selectable ? "" : " disabled"} aria-label="选择 ${escapeHtml(entry.name || entry.id)}">
+      <input class="plugin-check" type="checkbox" data-registry-check="${escapeHtml(entry.id)}"${selectable && state.registrySelected.has(entry.id) ? " checked" : ""}${selectable ? "" : " disabled"} aria-label="选择 ${escapeHtml(entry.name || entry.id)}">
       <span class="plugin-row-icon is-registry" aria-hidden="true">${pluginInitial(entry)}</span>
       <button class="plugin-row-toggle" type="button" data-registry-toggle="${escapeHtml(entry.id)}" aria-expanded="${expanded}" title="${escapeHtml(entry.description || entry.name || entry.id)}">
         <span class="plugin-row-main">
@@ -409,6 +409,27 @@ function registryMatchesFilter(entry, filter = state.registryFilter) {
 function filteredRegistryEntries(entries) {
   const query = registryQuery();
   return entries.filter(entry => registryMatchesQuery(entry, query) && registryMatchesFilter(entry));
+}
+
+function registryPageEntries(entries) {
+  const filtered = filteredRegistryEntries(entries);
+  const page = paginateRows(filtered, state.registryPage, state.registryPageSize);
+  state.registryPage = page.page;
+  return { ...page, total: filtered.length };
+}
+
+function changeRegistryPage(page = 0) {
+  state.registryPage = page;
+  state.registryAnchorId = "";
+  state.expandedRegistryId = "";
+  renderPluginRegistry();
+}
+
+function renderRegistryPagination(page) {
+  $("#registry-pagination").hidden = page.total === 0;
+  $("#registry-page").textContent = page.total ? `第 ${page.page + 1} / ${page.pageCount} 页 · 共 ${page.total} 个` : "";
+  $("#registry-previous").disabled = page.page === 0;
+  $("#registry-next").disabled = page.page + 1 >= page.pageCount;
 }
 
 // Shift 点勾选框：按当前可见顺序把首尾之间整段设成同一个状态，不能选的条目跳过。
@@ -473,9 +494,9 @@ async function uninstallSelectedPlugins() {
 
 function updateRegistrySelection() {
   const entries = state.pluginWorkspace?.registry?.entries || [];
-  for (const id of [...state.registrySelected]) {
-    const entry = entries.find(item => item.id === id);
-    if (!entry || !registryEntrySelectable(entry)) state.registrySelected.delete(id);
+  const selectableIds = new Set(entries.filter(registryEntrySelectable).map(entry => entry.id));
+  for (const id of state.registrySelected) {
+    if (!selectableIds.has(id)) state.registrySelected.delete(id);
   }
   const count = state.registrySelected.size;
   const counter = $("#registry-selected-count");
@@ -486,7 +507,7 @@ function updateRegistrySelection() {
     const label = button.querySelector("span:last-child");
     if (label) label.textContent = count ? `安装所选 ${count} 个` : "安装所选";
   }
-  const visible = filteredRegistryEntries(entries);
+  const visible = registryPageEntries(entries).rows;
   const selectAll = $("#registry-select-all");
   if (selectAll) {
     const selectable = visible.filter(entry => registryEntrySelectable(entry));
@@ -522,9 +543,11 @@ function renderPluginRegistry() {
   const list = $("#plugin-registry-list");
   if (!list) return;
   const entries = registry?.entries || [];
-  const visible = filteredRegistryEntries(entries);
+  const page = registryPageEntries(entries);
+  const visible = page.rows;
   list.innerHTML = visible.length ? visible.map(registryRow).join("") : `<p class="plugin-empty">${entries.length ? "没有匹配的插件，换个关键词或筛选试试。" : "仓库里还没有条目，填好仓库地址后点「刷新仓库」。"}</p>`;
-state.registryOrder = visible.map(entry => String(entry.id));
+  state.registryOrder = visible.map(entry => String(entry.id));
+  renderRegistryPagination(page);
   hydrateIcons(list);
   updateRegistrySelection();
 }
@@ -1880,16 +1903,22 @@ $("#plugin-registry-list").addEventListener("click", event => {
   state.registryAnchorId = id;
   updateRegistrySelection();
 });
-$("#plugin-registry-search").addEventListener("input", renderPluginRegistry);
+$("#registry-previous").addEventListener("click", () => changeRegistryPage(state.registryPage - 1));
+$("#registry-next").addEventListener("click", () => changeRegistryPage(state.registryPage + 1));
+$("#registry-page-size").addEventListener("change", event => {
+  state.registryPageSize = Number(event.currentTarget.value) || 20;
+  changeRegistryPage();
+});
+$("#plugin-registry-search").addEventListener("input", () => changeRegistryPage());
 $("#plugin-installed-search").addEventListener("input", renderPluginInstalled);
 for (const button of document.querySelectorAll("[data-registry-filter]")) {
   button.addEventListener("click", () => {
     state.registryFilter = button.dataset.registryFilter;
-    renderPluginRegistry();
+    changeRegistryPage();
   });
 }
 $("#registry-select-all").addEventListener("change", event => {
-  const entries = filteredRegistryEntries(state.pluginWorkspace?.registry?.entries || []);
+  const entries = registryPageEntries(state.pluginWorkspace?.registry?.entries || []).rows;
   for (const entry of entries) {
     if (!registryEntrySelectable(entry)) continue;
     if (event.currentTarget.checked) state.registrySelected.add(entry.id);

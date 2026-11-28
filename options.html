@@ -114,10 +114,16 @@
                 <button type="button" data-registry-filter="installed" aria-pressed="false">已安装</button>
                 <button type="button" data-registry-filter="update" aria-pressed="false">有更新</button>
               </div>
-              <label class="check-label"><input id="registry-select-all" type="checkbox"><span>全选</span></label>
+              <label class="check-label"><input id="registry-select-all" type="checkbox"><span>本页全选</span></label>
               <span id="registry-selected-count" class="plugin-selected-count" aria-live="polite">已选 0 项</span>
               <button class="button button-primary button-small" id="install-selected-plugins" type="button" disabled><span data-icon="package" class="icon"></span><span>安装所选</span></button>
             </div>
+            <nav class="assistant-pagination registry-pagination" id="registry-pagination" aria-label="插件仓库分页" hidden>
+              <label class="assistant-page-size"><span>每页</span><select id="registry-page-size" aria-label="每页插件数量"><option value="20" selected>20</option><option value="50">50</option><option value="100">100</option></select><span>个</span></label>
+              <button class="button button-quiet" id="registry-previous" type="button" aria-controls="plugin-registry-list" disabled><span data-icon="chevron-left" class="icon"></span><span>上一页</span></button>
+              <span class="assistant-page-count" id="registry-page" role="status" aria-live="polite"></span>
+              <button class="button button-quiet" id="registry-next" type="button" aria-controls="plugin-registry-list" disabled><span>下一页</span><span data-icon="chevron-right" class="icon"></span></button>
+            </nav>
             <div id="plugin-registry-list" class="plugin-list" aria-live="polite"></div>
           </section>
         </section>

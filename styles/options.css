@@ -310,12 +310,16 @@
 /* 判定队列按 20 条一页，翻页控件沿用价格表的分页语言 */
 .assistant-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 0 16px 16px; }
 .assistant-pagination[hidden] { display: none; }
+.registry-pagination { margin: 0 0 12px; }
 .assistant-pagination .button { min-height: 30px; font-size: 11px; }
 .assistant-page-size { display: inline-flex; align-items: center; gap: 4px; color: var(--text-2); font-size: 11px; }
 .assistant-page-size select { width: 66px; min-height: 30px; height: 30px; padding: 0 26px 0 8px; font-size: 11px; }
 .assistant-page-count { min-width: 96px; color: var(--text-2); font-size: 11px; text-align: center; }
 @media (max-width: 720px) {
   .assistant-pagination .button, .assistant-page-size select { min-height: 44px; }
+  .registry-pagination { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+  .registry-pagination .assistant-page-size { grid-column: 1 / -1; justify-content: center; }
+  .registry-pagination .assistant-page-count { min-width: 0; }
 }
 /* 关于页：左侧标签、右侧当前值与操作的清单形态 */
 .about-panel + .about-panel { margin-top: 16px; }
