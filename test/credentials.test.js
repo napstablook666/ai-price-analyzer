@@ -14,7 +14,7 @@ import {
 
 const TOKENS = "ai-price-analyzer:tokens";
 const ASSISTANT_KEY = "ai-price-analyzer:model-assistant-key";
-const RENEWAL = { expiresAt: null, refreshToken: "", lastRenewedAt: null, renewFailures: 0, status: "unknown" };
+const RENEWAL = { expiresAt: null, refreshToken: "", lastRenewedAt: null, lastCheckedAt: null, renewFailures: 0, status: "unknown" };
 
 // 最小 chrome.storage 替身：只实现真用到的 get/set/remove，
 // 内容放内存 Map，dump() 用来断言最终落在哪个 area。
@@ -111,9 +111,9 @@ test("只靠 cookie 的站也要能落续期状态", async () => {
 test("getStationCredential 一次给出三段凭据加续期状态", async () => {
   const chromeApi = fakeChrome();
   await setStationCredential("site-a", { token: "t-1", username: "u", password: "p" }, chromeApi);
-  await setStationRenewal("site-a", { expiresAt: 42, refreshToken: "rt", renewFailures: 2, status: "needsLogin" }, chromeApi);
+  await setStationRenewal("site-a", { expiresAt: 42, refreshToken: "rt", lastCheckedAt: 1800000000000, renewFailures: 2, status: "needsLogin" }, chromeApi);
   assert.deepEqual(await getStationCredential("site-a", chromeApi), {
-    token: "t-1", identity: "", username: "u", password: "p", expiresAt: 42, refreshToken: "rt", lastRenewedAt: null, renewFailures: 2, status: "needsLogin"
+    token: "t-1", identity: "", username: "u", password: "p", expiresAt: 42, refreshToken: "rt", lastRenewedAt: null, lastCheckedAt: 1800000000000, renewFailures: 2, status: "needsLogin"
   });
   assert.deepEqual(await getStationCredential("missing", chromeApi), { token: "", identity: "", username: "", password: "", ...RENEWAL });
 });
@@ -142,6 +142,7 @@ test("续期状态可单独读取，不连带凭据三段", async () => {
     expiresAt: 1800000000000,
     refreshToken: "",
     lastRenewedAt: null,
+    lastCheckedAt: null,
     renewFailures: 0,
     status: "ok"
   });
@@ -151,6 +152,21 @@ test("续期状态可单独读取，不连带凭据三段", async () => {
 test("没有续期记录的站读成默认值，不返回 undefined", async () => {
   const chromeApi = fakeChrome();
   assert.deepEqual(await getStationRenewal("never-saved", chromeApi), RENEWAL);
+});
+
+test("检查时间单独落盘，不顶替上次续期成功的时间", async () => {
+  const chromeApi = fakeChrome();
+  await setStationRenewal("site-a", { status: "ok", expiresAt: 1800000000000, lastRenewedAt: 1700000000000 }, chromeApi);
+  // 续期执行器续完会补一笔「查过了」，这一步不该把「上次续期成功」冲成现在。
+  await setStationRenewal("site-a", { lastCheckedAt: 1800000000000 }, chromeApi);
+  const renewal = await getStationRenewal("site-a", chromeApi);
+  assert.equal(renewal.lastCheckedAt, 1800000000000);
+  assert.equal(renewal.lastRenewedAt, 1700000000000);
+
+  // 老记录没有这个字段：读成 null，排期按「没查过」走快档，而不是当成刚到点。
+  await chromeApi.local.set({ [TOKENS]: { "site-b": { token: "t", status: "ok", expiresAt: 1800000000000 } } });
+  assert.equal((await getStationRenewal("site-b", chromeApi)).lastCheckedAt, null);
+  assert.deepEqual(chromeApi.local.dump()[TOKENS]["site-b"], { token: "t", status: "ok", expiresAt: 1800000000000 });
 });
 
 test("清续期只清续期，token 留着，下次采集还能用", async () => {

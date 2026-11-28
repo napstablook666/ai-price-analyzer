@@ -66,10 +66,14 @@ core/collectors.js::collectStation                  按 direct/page 与认证策
 | `expiresAt` | token 到期时间（毫秒）。`null` 表示不会过期或不知道 |
 | `refreshToken` | refresh 令牌，`kind: "refresh-token"` 用 |
 | `lastRenewedAt` | 上次续期成功时间（毫秒），面板上的「上次续期」读它 |
+| `lastCheckedAt` | 上次无头检查时间（毫秒）。无过期时间的站靠它区分「探过」和「没探过」 |
+| `nextCheckAt` | 面板用的下次检查时间（毫秒）：不落仓，`authStatusForUi` 从 `chrome.alarms` 的 `scheduledTime` 现算 |
 | `renewFailures` | 连续失败次数，退避与判定都靠它 |
 | `status` | `ok` / `needsLogin` / `unknown` |
 
 换出来的 token 必须落这个仓，不要再放 service worker 的内存变量：MV3 的 worker 随时被回收，内存里的东西一重启就没了，会变成「每次唤醒都重新换一次 token」，多打接口也多撞风控。
+
+`expiresAt` 只有 cookie / refresh 系拿得到，探活系永远为 `null`，所以「探过没有」另存 `lastCheckedAt`，不要拿 `expiresAt` 兼做这件事。
 
 ### 续期怎么跑
 
@@ -91,6 +95,8 @@ chrome.alarms 重排下一次（成功按新 expiresAt，失败退避）
 - 范围夹在 `now+1min` 到 `now+23h` 之间：太早会自激回环，太晚站点会话本身可能已被服务端回收。
 - 失败退避 `15min × 2^(n-1)`，封顶 `6h`；网络、5xx 这类可能自己好的失败连续 `3` 次才转成 `needsLogin`，在此之前只是 `unknown`。401/403 与「仓里没有凭据」是确定的失败，当次就转 `needsLogin`，不等三次。
 - `kind: "manual-token"` 不排期，长效令牌没有过期概念。
+- 没有 `expiresAt` 且从没探过 → `now + 1min` 先探一次；探过之后还是拿不到过期时间 → 退 6 小时慢档（`slowPathMs`）。探不出来就是探不出来，按分钟锤只会撞风控。
+- 续期 TTL 有下限 `MIN_TTL_MS`（11 分钟，`src/core/renewal.js`）：小于保活提前量时排期窗口会塌成一个槽，变成每分钟续一次。refresh 响应不带 `expires_in` 时用 `DEFAULT_REFRESH_TTL_MS`（30 分钟），不要退到分钟级兜底。
 
 `chrome.alarms` 有数量上限，所以前 `480` 个站一站点一个 alarm，超出的按 `20` 个一批合成 sweep alarm（`KEEPALIVE_ALARM_LIMIT` / `KEEPALIVE_SWEEP_SIZE`）。
 
@@ -101,6 +107,12 @@ chrome.alarms 重排下一次（成功按新 expiresAt，失败退避）
 `REFRESH_ALL` 之前的登录态检查读的是凭据仓里的 `status`，不再为每个 page 站开一次标签页探活。判据在 `core/auth-keepalive.js::authConfirmedFromRenewal`：`status: "ok"` 且 `expiresAt` 还没到才算活着；`expiresAt` 缺失不算永不过期（只有用户自己粘的 `manual-token` 是那样），缺过期时间的站照样走预检，否则登录态死了也没人发现。实测一次全量刷新（14 个 page 站）的临时标签页数从 27 降到 14，证据见 `.omt3/evidence/u8-d3-tab-count.txt`，脚本 `node scripts/measure-tabs.mjs`。
 
 `mode: "page"` 的站还是要开标签页，因为采集本身只能靠页面。但「刷新前先探一次」这一轮没了，标签页开销从每站 2 次降到每站 1 次。
+
+不打开 dashboard 也会续：`onInstalled` 与 `onStartup`（浏览器重开）建完排期就直接跑一次 `runDueKeepalive`，把当轮到期的站续掉；面板每次轮询数据时也调一次 `kickDueKeepalive`，同一个 5 分钟节流窗口内只扫一次。这条路径和 alarm 走同一个执行器，靠 `lastCheckedAt` 去重，不会把同一批站连着续两遍。浏览器不常开的时候 alarm 可能整轮都轮不到，排到 23 小时的站更是永远轮不到，开机、装好、面板打开都算「该检查了」。
+
+面板上能手动干预三件事：每行「立即检查」（消息 `AUTH_RENEW_NOW`，立刻续一个站再重排）、「打开站点」、展开后粘「令牌 / uid」（消息 `SAVE_STATION_TOKEN`，存仓并立刻检查一次）。`manual-token` 站没有「立即检查」，它没有可续的会话。
+
+页面侧续出来的令牌通过消息回传 worker 回写仓。轮换后的 refresh 令牌必须回传，否则浏览器重开之后无头续期手里是旧的那把，第二次续期必然 401。
 
 ### 插件声明决定续期能力
 

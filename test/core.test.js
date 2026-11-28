@@ -4834,7 +4834,10 @@ test("refreshes page auth once and stops after a failed refresh", async () => {
   assert.equal(storage.get("refresh_token"), "rotated-refresh-token");
   assert.ok(Number(storage.get("token_expires_at")) > Date.now());
   assert.equal(success.response.status, 200);
-  assert.equal(JSON.stringify(posted).includes("refresh-token"), false);
+  // 轮换后的 refresh 令牌要报给 service worker：不回传的话浏览器重开之后无头续期只有
+  // 旧的那把，第二次续期必然 401。
+  const reportedRenewals = posted.filter(message => message.renewal).map(message => message.renewal);
+  assert.equal(reportedRenewals.at(-1).refreshToken, "rotated-refresh-token");
 
   calls.length = 0;
   storage.set("auth_token", "expired-token");

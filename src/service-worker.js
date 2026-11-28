@@ -1,6 +1,6 @@
 import { collectStation, createPageFetch } from "./core/collectors.js";
-import { applyPageRenewal, renewalFromProvider, renewStationAuth } from "./core/renewal.js";
-import { applyKeepaliveResult, authConfirmedFromRenewal, KEEPALIVE_ALARM_PREFIX, keepaliveAlarmName, planKeepalive, planKeepaliveSweeps, resolveSweepStationIds } from "./core/auth-keepalive.js";
+import { DEFAULT_COOKIE_TTL_MS, applyPageRenewal, probeFieldNames, renewalFromProvider, renewStationAuth, tokenSavePatch } from "./core/renewal.js";
+import { applyKeepaliveResult, authConfirmedFromRenewal, KEEPALIVE_ALARM_PREFIX, dueStationIds, keepaliveAlarmName, planKeepalive, planKeepaliveSweeps, resolveSweepStationIds } from "./core/auth-keepalive.js";
 import { PAGE_WINDOW_AUTH_RENEWAL_TYPE } from "./core/bridge-protocol.js";
 import { modelAliasesForStations, prepareStationInput, providerForStation } from "./core/provider-registry.js";
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
@@ -165,7 +165,7 @@ async function cookieAuthAccessToken(station, cookieAuth) {
     const token = String(readPayloadPath(payload, cookieAuth.accessTokenPath) || "").trim();
     if (!token) throw new Error(cookieAuth.failureMessage);
     const expiresAt = Number(readPayloadPath(payload, cookieAuth.expiresAtPath)) * 1000;
-    const nextExpiresAt = Number.isFinite(expiresAt) && expiresAt > Date.now() ? expiresAt - 60000 : Date.now() + 4 * 60 * 1000;
+    const nextExpiresAt = Number.isFinite(expiresAt) && expiresAt > Date.now() ? expiresAt - 60000 : Date.now() + DEFAULT_COOKIE_TTL_MS;
     await setStationCredential(station.id, { token, username: stored.username, password: stored.password });
     await setStationRenewal(station.id, { expiresAt: nextExpiresAt, lastRenewedAt: Date.now(), renewFailures: 0, status: "ok" });
     return token;
@@ -191,8 +191,23 @@ async function collectWithCookieAuth(station, collection, cookieAuth) {
 
 // 面板的登录态来自凭据仓，不再靠每轮开标签页现探：仓里有 ok 就是 ok，
 // 保活失败会把它推成 unknown / needsLogin，面板跟着变。
+function authStatusMissingField(renewal, renewalKind, saved) {
+  if (renewalKind !== "session-probe") return null;
+  // 探活头认哪个字段由 core 统一判（跟粘令牌存哪一格是同一个问题），别在 SW 里再抄一份正则。
+  const fields = probeFieldNames(renewal);
+  if (!fields.has("identity")) return null;
+  const identity = String(saved?.identity || "").trim();
+  return identity ? null : "identity";
+}
+
+
 async function authStatusForUi(stations) {
-  const stored = new Map((await listStationRenewals()).map(row => [row.stationId, row]));
+  const [storedRows, alarms] = await Promise.all([
+    listStationRenewals(),
+    chrome.alarms?.getAll ? chrome.alarms.getAll().catch(() => []) : Promise.resolve([])
+  ]);
+  const stored = new Map((storedRows || []).map(row => [row.stationId, row]));
+  const alarmByName = new Map((Array.isArray(alarms) ? alarms : []).map(a => [String(a?.name || ""), a]));
   const rows = [];
   for (const station of stations) {
     const provider = providerForStation(station);
@@ -200,21 +215,27 @@ async function authStatusForUi(stations) {
     const pageAuth = Boolean(provider?.request?.pageAuth || provider?.request?.credentials === "include");
     if (!renewal && !pageAuth) continue;
     const saved = stored.get(station.id) || {};
+    const renewalKind = renewal?.kind || (pageAuth ? "page" : "cookie");
+    const alarm = alarmByName.get(keepaliveAlarmName(station.id));
+    const nextCheckAt = Number(alarm?.scheduledTime) > 0 ? Math.floor(Number(alarm.scheduledTime)) : null;
     rows.push({
       stationId: station.id,
       stationName: station.name || station.id,
       baseUrl: String(station.baseUrl || ""),
-      status: saved.status || "unknown",
+      status: String(saved.status || "unknown"),
       // 续期能力以插件声明为准，声明不到就说明只能靠页面，面板上要能看出区别。
-      renewalKind: renewal?.kind || (pageAuth ? "page" : "cookie"),
+      renewalKind,
+      missingField: authStatusMissingField(renewal, renewalKind, saved),
       expiresAt: Number(saved.expiresAt) > 0 ? Number(saved.expiresAt) : null,
+      lastCheckedAt: Number(saved.lastCheckedAt) > 0 ? Number(saved.lastCheckedAt) : null,
       lastRenewedAt: Number(saved.lastRenewedAt) > 0 ? Number(saved.lastRenewedAt) : null,
-      renewFailures: Number(saved.renewFailures) > 0 ? Number(saved.renewFailures) : 0
+      nextCheckAt,
+      renewFailures: Number(saved.renewFailures) > 0 ? Math.floor(Number(saved.renewFailures)) : 0
     });
   }
+  // 面板按站名排：仓里的顺序跟着采集写入走，不排会每轮跳。
   return rows.sort((left, right) => left.stationName.localeCompare(right.stationName, "zh-CN"));
 }
-
 // 长效令牌由用户自己粘：写进仓，expiresAt 置 null（不过期），保活排期会自动跳过这个站。
 async function saveStationToken(stationId, token) {
   const id = String(stationId || "");
@@ -222,8 +243,26 @@ async function saveStationToken(stationId, token) {
   if (!id) throw new Error("缺少站点 id");
   if (!value) throw new Error("令牌不能为空");
   const stored = await getStationCredential(id);
-  await setStationCredential(id, { token: value, username: stored.username, password: stored.password });
-  await setStationRenewal(id, { expiresAt: null, refreshToken: "", lastRenewedAt: Date.now(), renewFailures: 0, status: "ok" });
+  const station = (await getPreparedStations()).find(row => row.id === id) || null;
+  const renewal = station ? renewalFromProvider(providerForStation(station)) : null;
+  const patch = tokenSavePatch(renewal, value);
+  // 三处写入互不覆盖：给探活站填的是 uid，动的是 identity；给长效令牌站填的是会话令牌，动的是 token。
+  await setStationCredential(id, {
+    token: "token" in patch ? patch.token : stored.token,
+    identity: "identity" in patch ? patch.identity : stored.identity,
+    username: stored.username,
+    password: stored.password
+  });
+  if (patch.status) {
+    await setStationRenewal(id, { expiresAt: patch.expiresAt ?? null, refreshToken: "", lastRenewedAt: Date.now(), renewFailures: 0, status: patch.status });
+  } else if (station && renewal) {
+    // 粘令牌就是要当场验一次。仓里旧 token 的 expiresAt 还新鲜时 renewStationAuth 会走缓存
+    // 短路、一个接口都不打，粘错了也不会有任何反馈。先把过期时间和状态清掉，让这次真的去打。
+    await setStationRenewal(id, { expiresAt: null, status: "unknown" });
+    // 状态由结果写仓：粘错了令牌不能靠 UI 直接标成已登录，那样面板说登录正常、采集全 401。
+    // 缺字段的情况（探活站还没有 uid）由 renewStationAuth 自己跳过，不硬探。
+    await renewStationAuth(station, renewal).catch(error => console.warn("[AI比价] 令牌写入后试续期失败", error));
+  }
   await scheduleAuthKeepalive();
   return dashboard();
 }
@@ -259,6 +298,10 @@ async function keepaliveEntries() {
       stationId: station.id,
       expiresAt: Number(saved.expiresAt) > 0 ? Number(saved.expiresAt) : null,
       renewFailures: Number(saved.renewFailures) > 0 ? Number(saved.renewFailures) : 0,
+      // 排期用这两个时间区分快档和慢档，启动去重也用它们判断「刚查过没有」。
+      lastCheckedAt: Number(saved.lastCheckedAt) > 0 ? Number(saved.lastCheckedAt) : null,
+      lastRenewedAt: Number(saved.lastRenewedAt) > 0 ? Number(saved.lastRenewedAt) : null,
+      status: String(saved.status || "unknown"),
       renewalKind: renewal.kind,
       renewal,
       station
@@ -309,6 +352,25 @@ async function runAuthKeepaliveFromAlarm(alarmName) {
   }));
 }
 
+// 同一个站的续期同一时刻只能跑一条。alarm、开机扫描、面板「立即检查」三条路都会叫醒
+// 同一个站；refresh-token 站并发续期会拿同一把 refresh 令牌换两次，第二次 401，
+// 站点被打成 needsLogin，仓里还可能留下输掉那一轮的值。后到的等前一条落地。
+const renewInFlight = new Map();
+
+async function renewStationOnce(entry) {
+  const stationId = entry.stationId;
+  try {
+    await renewStationAuth(entry.station, entry.renewal);
+  } catch (error) {
+    // 续期执行器自己会把结果写仓；抛出来说明连写仓都没走到，这里补一次失败计数。
+    console.warn("[AI比价] 续期失败", stationId, error);
+    await setStationRenewal(stationId, applyKeepaliveResult(await getStationRenewal(stationId), false));
+  } finally {
+    // 成不成功都要记一笔：排期靠它区分「没查过（快档）」和「查过但拿不到过期时间（慢档）」。
+    await setStationRenewal(stationId, { lastCheckedAt: Date.now() });
+  }
+}
+
 async function runAuthKeepalive(stationIds) {
   if (!stationIds.length) return;
   const entries = await keepaliveEntries();
@@ -320,15 +382,49 @@ async function runAuthKeepalive(stationIds) {
       await chrome.alarms.clear(keepaliveAlarmName(stationId));
       continue;
     }
+    const running = renewInFlight.get(stationId);
+    if (running) {
+      await running.catch(() => {});
+      continue;
+    }
+    const task = renewStationOnce(entry);
+    renewInFlight.set(stationId, task);
     try {
-      await renewStationAuth(entry.station, entry.renewal);
-    } catch (error) {
-      // 续期执行器自己会把结果写仓；抛出来说明连写仓都没走到，这里补一次失败计数。
-      console.warn("[AI比价] 续期失败", stationId, error);
-      await setStationRenewal(stationId, applyKeepaliveResult(await getStationRenewal(stationId), false));
+      await task;
+    } finally {
+      renewInFlight.delete(stationId);
     }
   }
   await scheduleAuthKeepalive();
+}
+
+// 浏览器不常开的时候，alarm 可能整轮都没轮到，排到 23 小时的站更是永远轮不到：
+// 开机、装好、面板打开都算「该检查了」。这条路径和 alarm 走同一个执行器，
+// 靠 lastCheckedAt 去重，不会把同一批站连着续两遍。
+const DUE_KEEPALIVE_INTERVAL_MS = 5 * 60 * 1000;
+let lastDueKeepaliveAt = 0;
+let dueKeepaliveTask = null;
+
+function runDueKeepalive() {
+  if (dueKeepaliveTask) return dueKeepaliveTask;
+  lastDueKeepaliveAt = Date.now();
+  dueKeepaliveTask = (async () => {
+    try {
+      const due = dueStationIds(await keepaliveEntries());
+      if (due.length) await runAuthKeepalive(due);
+    } catch (error) {
+      console.warn("[AI比价] 启动续期失败", error);
+    } finally {
+      dueKeepaliveTask = null;
+    }
+  })();
+  return dueKeepaliveTask;
+}
+
+// 面板每次轮询都会读数据，这里只做「距上次不到 5 分钟就不再扫」的节流，不挡首屏。
+function kickDueKeepalive() {
+  if (Date.now() - lastDueKeepaliveAt < DUE_KEEPALIVE_INTERVAL_MS) return;
+  void runDueKeepalive();
 }
 
 // 拿不到页面标签页的原因不止「没登录」：同一站点多开了几个页面同样会走到这里，
@@ -902,6 +998,8 @@ async function dashboard() {
     .map(snapshot => ({ stationId: snapshot.stationId, stationName: snapshot.stationName || stationsById.get(snapshot.stationId)?.name || snapshot.stationId, category: stationsById.get(snapshot.stationId)?.category || "paid", error: snapshot.error || "采集失败", collectedAt: snapshot.collectedAt }));
   const selectedComparisons = filterComparisonsByMode(comparisonResult.comparisons, savedSettings.comparisonMode);
   const authStatus = await authStatusForUi(comparisonStations);
+  // 面板打开就是一次「该检查了」的信号：不 await，别拖慢首屏。
+  kickDueKeepalive();
   return { stations, sitePlugins: sitePluginCatalogForStations(stations, { bundledVersion: bundledPluginVersion() }), snapshots: visibleSnapshots, stationErrors, references, settings: savedSettings, comparisons: selectedComparisons, summary: summarizeComparisons(selectedComparisons), stationIndexes: buildStationIndexes(selectedComparisons), refreshInProgress: Boolean(refreshAllTask || refreshReferencesTask), refreshScope: { comparisonMode: refresh.comparisonMode, comparisonLabel: refresh.comparisonLabel, stationCount: refresh.stationCount }, refreshPreflight, authStatus };
 }
 
@@ -1908,6 +2006,18 @@ case "UNINSTALL_PLUGINS": return uninstallPlugins(message.ids);
     case "SAVE_STATION_TOKEN": return saveStationToken(message.stationId, message.token);
     case "REFRESH_PREFLIGHT": return createRefreshPreflight();
     case "CANCEL_REFRESH_PREFLIGHT": return cancelRefreshPreflight();
+    // 「立即检查」只续一个站：走跟 alarm 同一个执行器，排期随后自己会重算。
+    // 没有续期能力的站（插件只声明了页面续期）在 keepaliveEntries 里会被过滤掉，
+    // 那样这里会「成功但什么都没做」，所以先判能力再打。
+    case "AUTH_RENEW_NOW": {
+      const id = String(message.stationId || "").trim();
+      if (!id) throw new Error("缺少站点 id");
+      const station = (await getPreparedStations()).find(row => row.id === id) || null;
+      if (!station) throw new Error("站点不存在，先刷新插件列表");
+      if (!renewalFromProvider(providerForStation(station))) throw new Error("这个站没有可用的续期方式，请打开登录页手动登录一次");
+      await runAuthKeepalive([id]);
+      return dashboard();
+    }
     case "REFRESH_ALL": {
       if (refreshConfirmationInProgress) {
         const error = new Error(REFRESH_CONFIRMATION_REQUIRED_MESSAGE);
@@ -2011,7 +2121,7 @@ chrome.runtime.onInstalled.addListener(() => {
   scheduleUpdateAlarm();
   scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
-  ensureWorkspacePlugins({ force: true }).then(() => scheduleAuthKeepalive()).catch(error => console.warn("[AI比价] 建保活排期失败", error));
+  ensureWorkspacePlugins({ force: true }).then(() => scheduleAuthKeepalive()).then(() => runDueKeepalive()).catch(error => console.warn("[AI比价] 建保活排期失败", error));
 });
 chrome.runtime.onStartup.addListener(() => {
   clearLegacyAlarms();
@@ -2019,7 +2129,7 @@ chrome.runtime.onStartup.addListener(() => {
   scheduleUpdateAlarm();
   scheduleMarkerWatchAlarm();
   scheduleMagpieUsageAlarm();
-  ensureWorkspacePlugins({ force: true }).then(() => scheduleAuthKeepalive()).catch(error => console.warn("[AI比价] 建保活排期失败", error));
+  ensureWorkspacePlugins({ force: true }).then(() => scheduleAuthKeepalive()).then(() => runDueKeepalive()).catch(error => console.warn("[AI比价] 建保活排期失败", error));
 });
 chrome.alarms.onAlarm.addListener(alarm => {
   if (alarm.name === REFERENCE_ALARM_NAME) return refreshOfficialReferences().catch(error => console.warn("[AI比价] 刷新参考数据失败", error));

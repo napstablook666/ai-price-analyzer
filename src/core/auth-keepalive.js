@@ -6,17 +6,24 @@ export const KEEPALIVE_DEFAULTS = Object.freeze({
   marginMs: 10 * 60 * 1000,
   // 散列槽位粒度：同刻到期的站按站点 id 摊到不同槽，避免整点一起醒。
   slotMs: 5 * 60 * 1000,
+  // 临期窗口（margin）内的散列粒度：窗口只有 10 分钟，用 5 分钟槽只剩两个位置。
+  marginSlotMs: 30 * 1000,
   slotsPerDay: 288,
   // 再急也不早于 now+1min，免得 alarm 立刻回环。
   minDelayMs: 60 * 1000,
   // 再远也不晚于 now+23h：超过一天不碰，站点会话本身就可能被服务端回收。
   maxDelayMs: 23 * 60 * 60 * 1000,
+  // 探不出来过期时间的站退到这一档。浏览器很少连开 23 小时，排到 maxDelayMs
+  // 的站永远轮不到，所以「没检查过」的必须先尽快探一次，探过才退到慢档。
+  slowPathMs: 6 * 60 * 60 * 1000,
   // 已经过期的站要尽快动手，但也不能全挤在同一分钟，散在 15 分钟内。
   expiredStaggerMs: 15 * 60 * 1000,
   backoffBaseMs: 15 * 60 * 1000,
   maxBackoffMs: 6 * 60 * 60 * 1000,
   // 连续失败到这个次数才认定「要重新登录」，在此之前只是状态未知。
-  failureThreshold: 3
+  failureThreshold: 3,
+  // 刚试过续期的站在这个窗口内不再重复试：开机、面板轮询、alarm 三处都可能同时叫醒。
+  checkWindowMs: 5 * 60 * 1000
 });
 
 export const KEEPALIVE_ALARM_PREFIX = "auth-keepalive:";
@@ -38,6 +45,14 @@ function hashStationId(stationId) {
 export function keepaliveSlotOffset(stationId, config = KEEPALIVE_DEFAULTS) {
   const slots = Math.max(1, Number(config.slotsPerDay) || 1);
   return (hashStationId(String(stationId || "")) % slots) * (Number(config.slotMs) || 0);
+}
+
+// margin 窗口内的散列：窗口只有 margin 宽，按整天的 5 分钟槽取模只剩两个槽位，
+// 站多的时候就等于整点一起醒，所以这里按更细的格子摊。同一站点结果固定，重启不变。
+function keepaliveMarginOffset(stationId, config) {
+  const slotMs = Math.max(1, Number(config.marginSlotMs) || 1);
+  const slots = Math.max(1, Math.floor((Number(config.marginMs) || 0) / slotMs));
+  return (hashStationId(String(stationId || "")) % slots) * slotMs;
 }
 
 function renewalKindOf(entry) {
@@ -65,25 +80,70 @@ export function planKeepalive(entries, now = Date.now(), options = {}) {
       const expiresAt = Number(entry?.expiresAt);
       const hasExpiry = Number.isFinite(expiresAt) && expiresAt > 0;
       const stagger = keepaliveSlotOffset(stationId, config);
+      // 页面续期只写 lastRenewedAt、老仓也可能只有它：两个都算「上次动手时间」。
+      const lastCheckedAt = Number(entry?.lastCheckedAt || entry?.lastRenewedAt);
+      const stale = !(lastCheckedAt > 0) || currentTime - lastCheckedAt >= config.slowPathMs;
       if (!hasExpiry) {
-        // 没有过期时间的站没有「临期」可言，只能按最晚一拍叫醒，不参与散列。
-        when = currentTime + config.maxDelayMs;
-      } else if (expiresAt <= currentTime + config.minDelayMs) {
-        // 已经到期的站不按整天散列，否则一个早过期的站能被推到几小时后才醒。
-        when = currentTime + config.minDelayMs + (stagger % config.expiredStaggerMs);
+        // 探不出过期时间的（session-probe）不能按整天散列：排到 maxDelayMs 的那一拍浏览器
+        // 很少连开 23 小时，永远轮不到。没查过或很久没查的先尽快探一遍，探过就退到慢档，
+        // 免得把站锤成高频。
+        when = stale
+          ? currentTime + config.minDelayMs + (stagger % config.expiredStaggerMs)
+          : currentTime + config.slowPathMs + (stagger % Math.max(1, config.maxDelayMs - config.slowPathMs));
+      } else if (expiresAt - config.marginMs <= currentTime) {
+        // 已经进续期窗口或已经过期：这一拍就该动手，要么续，要么探一次确认。
+        // 刚查过的隔一个去重窗口再醒（checkWindowMs），否则「令牌还没到期、续了也是缓存」
+        // 会退化成每分钟一圈；很久没查的直接按过期档尽快动手。
+        when = stale
+          ? currentTime + config.minDelayMs + (stagger % config.expiredStaggerMs)
+          : currentTime + Math.max(config.minDelayMs, config.checkWindowMs);
       } else {
-        // 散列只能落在「现在」到「临期前 margin」之间。直接加最省事，但槽位最大
-        // 23h55m，令牌只活几小时的站会被推到过期之后，等于续了个死令牌，
-        // 所以窗口更窄时按窗口取模。
-        const window = Math.max(1, expiresAt - config.marginMs - (currentTime + config.minDelayMs));
-        when = expiresAt - config.marginMs - (stagger % window);
+        // 醒的时间点必须落在「到期前 margin」之后：把散列减在 margin 前面时，令牌一短
+        // 就算出已经过去的时间点，目标一过期就被钳成 now+1min，变成每分钟一圈。
+        // 所以基准是 expiresAt - margin，散列只在 margin 窗口内部错峰。
+        const spread = keepaliveMarginOffset(stationId, config);
+        when = expiresAt - config.marginMs + spread;
       }
+      // 刚查过的站不早于一个去重窗口再醒：短寿命令牌（margin 几乎等于整条命）否则
+      // 会算出「刚续完就到点」，一圈接一圈。这一条对三种分支都成立，退避分支不受影响。
+      if (lastCheckedAt > 0) when = Math.max(when, lastCheckedAt + config.checkWindowMs);
     }
     when = Math.min(Math.max(when, currentTime + config.minDelayMs), currentTime + config.maxDelayMs);
     plans.push({ stationId, when, delayMs: when - currentTime, attempt });
   }
   plans.sort((left, right) => left.when - right.when || left.stationId.localeCompare(right.stationId));
   return plans;
+}
+
+// 浏览器起起来的那一刻，alarm 多半还没到点，关了几天的机器更是这样。开机、装好、
+// 面板打开这三处都先问一遍：现在哪些站该立刻续。
+// 只挑「现在就该动手」的，不是「所有登录站」——退避中的、刚试过的、长效令牌的都不掺和，
+// 否则每次开机把所有站锤一遍。
+export function dueStationIds(entries, now = Date.now(), options = {}) {
+  const config = { ...KEEPALIVE_DEFAULTS, ...options };
+  const currentTime = Number(now);
+  const due = [];
+  for (const entry of Array.isArray(entries) ? entries : []) {
+    const stationId = String(entry?.stationId || "");
+    if (!stationId) continue;
+    if (renewalKindOf(entry) === "manual-token") continue;
+
+    // 排期给失败站的退避时间永远在「现在」之后（15min 起翻倍），所以只要有过失败记录
+    // 就交给 alarm 去叫，这里别插一脚把退避打穿。
+    if (Math.max(0, Math.floor(Number(entry?.renewFailures) || 0)) > 0) continue;
+
+    // 页面续期只写 lastRenewedAt、不写 lastCheckedAt，老仓也可能只有 lastRenewedAt：
+    // 两个都看，否则刚在页面上续过一轮的站，开机这一拍会立刻再续一遍。
+    const lastCheckedAt = Number(entry?.lastCheckedAt || entry?.lastRenewedAt);
+    if (lastCheckedAt > 0 && currentTime - lastCheckedAt < config.checkWindowMs) continue;
+
+    const expiresAt = Number(entry?.expiresAt);
+    const hasExpiry = Number.isFinite(expiresAt) && expiresAt > 0;
+    // 没查过的、状态不是 ok 的、以及「减去 margin 已经到点」的，都属于现在该动手。
+    const needed = String(entry?.status || "") !== "ok" || !hasExpiry || expiresAt - config.marginMs <= currentTime;
+    if (needed) due.push(stationId);
+  }
+  return due;
 }
 
 // 一次保活跑完后的仓状态补丁。成功清零退避；失败累加，够次数才转 needsLogin。

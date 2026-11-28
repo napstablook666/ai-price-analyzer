@@ -4,6 +4,7 @@ import {
   KEEPALIVE_DEFAULTS,
   applyKeepaliveResult,
   authConfirmedFromRenewal,
+  dueStationIds,
   keepaliveAlarmName,
   keepaliveSlotOffset,
   planKeepalive,
@@ -15,15 +16,42 @@ const HOUR = 60 * 60 * 1000;
 const NOW = 1800000000000;
 
 test("按 expiresAt 提前 margin 排期，不是按采集轮次", () => {
-  const plans = planKeepalive([{ stationId: "cun", expiresAt: NOW + 6 * HOUR }], NOW);
-  assert.equal(plans.length, 1);
-  // 槽位最大 23h55m，比「令牌还剩多久」还长，所以窗口更窄时按窗口取模，
-  // 排期只能落在「现在」到「临期前 margin」之间。
-  const window = NOW + 6 * HOUR - KEEPALIVE_DEFAULTS.marginMs - (NOW + KEEPALIVE_DEFAULTS.minDelayMs);
-  const expected = NOW + 6 * HOUR - KEEPALIVE_DEFAULTS.marginMs - (keepaliveSlotOffset("cun") % window);
-  assert.equal(plans[0].when, expected);
-  assert.equal(plans[0].delayMs, expected - NOW);
-  assert.equal(plans[0].attempt, 0);
+  const plans = planKeepalive(["cun", "dstopology", "yuki"].map(stationId => ({ stationId, expiresAt: NOW + 6 * HOUR })), NOW);
+  // 动手点只能落在「到期前 margin」到「到期」之间：早于 margin 是白叫醒，晚于到期是续死令牌。
+  const marginStart = NOW + 6 * HOUR - KEEPALIVE_DEFAULTS.marginMs;
+  for (const plan of plans) {
+    assert.ok(plan.when >= marginStart, `${plan.stationId} 早了 ${Math.round((marginStart - plan.when) / 60000)} 分钟`);
+    assert.ok(plan.when < NOW + 6 * HOUR, `${plan.stationId} 排到过期之后`);
+    assert.equal(plan.delayMs, plan.when - NOW);
+    assert.equal(plan.attempt, 0);
+  }
+  // 同刻到期的站不落在同一秒，错峰还在。
+  assert.ok(new Set(plans.map(plan => plan.when)).size >= 2, "同刻到期的站全挤在同一秒");
+});
+
+test("续期一圈回来不会再退化成每分钟一次", () => {
+  // 真跑出来过的 bug：目标点是「expiresAt - margin」这种绝对时间戳，令牌续上之后下一拍
+  // 算出来还停在过去，被钳成 now+1min，于是 60 秒一圈，永远不收敛。
+  for (const [stationId, ttlMs] of [["cun", 30 * 60 * 1000], ["yuki", 11 * 60 * 1000], ["dstopology", 6 * HOUR]]) {
+    let now = NOW;
+    let expiresAt = NOW + ttlMs;
+    let lastCheckedAt = null;
+    for (let round = 0; round < 6; round += 1) {
+      const plan = planKeepalive([{ stationId, expiresAt, status: "ok", lastCheckedAt }], now)[0];
+      assert.ok(plan.delayMs >= KEEPALIVE_DEFAULTS.minDelayMs, `${stationId} 第 ${round + 1} 圈只隔了 ${Math.round(plan.delayMs / 1000)} 秒`);
+      if (round > 0) {
+        // 刚查过的站不许比去重窗口更早醒：这就是「每分钟续一次」的防线。
+        assert.ok(
+          plan.delayMs >= KEEPALIVE_DEFAULTS.checkWindowMs,
+          `${stationId} 第 ${round + 1} 圈只隔了 ${Math.round(plan.delayMs / 1000)} 秒`
+        );
+      }
+      now = plan.when;
+      lastCheckedAt = now;
+      // 执行器的行为：剩余寿命进 margin 就真续一次，续完又是一条完整 TTL。
+      if (expiresAt - now <= KEEPALIVE_DEFAULTS.marginMs) expiresAt = now + ttlMs;
+    }
+  }
 });
 
 test("短命令牌不会被错峰推到过期之后", () => {
@@ -33,7 +61,7 @@ test("短命令牌不会被错峰推到过期之后", () => {
     const expiresAt = NOW + 30 * 60 * 1000;
     const plan = planKeepalive([{ stationId, expiresAt }], NOW)[0];
     assert.ok(
-      plan.when <= expiresAt - KEEPALIVE_DEFAULTS.marginMs,
+      plan.when <= expiresAt,
       `${stationId} 排到 ${Math.round((plan.when - NOW) / 60000)} 分钟，过期点是 ${(expiresAt - NOW) / 60000} 分钟`
     );
   }
@@ -56,9 +84,42 @@ test("失败按次数指数退避，封顶 maxBackoffMs", () => {
   assert.equal(many.when, NOW + KEEPALIVE_DEFAULTS.maxBackoffMs);
 });
 
-test("没有过期时间的站按最长间隔排，不会立刻醒", () => {
-  const plan = planKeepalive([{ stationId: "yuki", expiresAt: null }], NOW)[0];
-  assert.equal(plan.when, NOW + KEEPALIVE_DEFAULTS.maxDelayMs);
+test("没检查过的无过期时间站尽快探一次，检查过才退到慢档", () => {
+  const fastRoom = KEEPALIVE_DEFAULTS.minDelayMs + KEEPALIVE_DEFAULTS.expiredStaggerMs;
+  // 浏览器很少连开 23 小时：排到 maxDelayMs 的这一拍永远轮不到，站就一直是「从未续期」。
+  const fresh = planKeepalive([{ stationId: "yuki", expiresAt: null }], NOW)[0];
+  assert.ok(fresh.when >= NOW + KEEPALIVE_DEFAULTS.minDelayMs, "不能比 minDelay 还早");
+  assert.ok(fresh.when <= NOW + fastRoom, `首次探活排到 ${Math.round((fresh.when - NOW) / 60000)} 分钟`);
+
+  // 探过还是拿不到过期时间：退到慢档，不能每 15 分钟锤一遍。
+  const checked = planKeepalive([{ stationId: "yuki", expiresAt: null, lastCheckedAt: NOW - 60 * 1000 }], NOW)[0];
+  assert.ok(checked.when >= NOW + KEEPALIVE_DEFAULTS.slowPathMs, "刚检查过的站不该再来一次");
+  assert.ok(checked.when <= NOW + KEEPALIVE_DEFAULTS.maxDelayMs, "慢档也不能超出一天");
+
+  // 老仓没有 lastCheckedAt，退回 lastRenewedAt。
+  const legacy = planKeepalive([{ stationId: "yuki", expiresAt: null, lastRenewedAt: NOW - 60 * 1000 }], NOW)[0];
+  assert.equal(legacy.when, checked.when);
+
+  // 距离上次检查超过慢档间隔，重新进快档。
+  const aged = planKeepalive([{ stationId: "yuki", expiresAt: null, lastCheckedAt: NOW - 7 * HOUR }], NOW)[0];
+  assert.ok(aged.when <= NOW + fastRoom, "隔了一天还排到慢档等于放弃这个站");
+});
+
+test("料到期的站也按上次检查时间分档，不出现每分钟一次的回环", () => {
+  // 4 分钟 TTL 之类拿不到过期时间的站，若每轮都进快档，1min 就会被反复叫醒。
+  const justChecked = planKeepalive([{ stationId: "hepingan", expiresAt: null, lastCheckedAt: NOW - 1000 }], NOW)[0];
+  assert.ok(justChecked.delayMs >= KEEPALIVE_DEFAULTS.slowPathMs, `续期回环：${Math.round(justChecked.delayMs / 60000)} 分钟`);
+
+  // 已经过期、但刚查过的站：令牌是死的，不能推到 6 小时后的慢档，也不能一分钟后再醒。
+  const expiredButJustChecked = planKeepalive([{ stationId: "hepingan", expiresAt: NOW - HOUR, lastCheckedAt: NOW - 1000 }], NOW)[0];
+  assert.ok(
+    expiredButJustChecked.delayMs >= KEEPALIVE_DEFAULTS.checkWindowMs,
+    `过期站回环：${Math.round(expiredButJustChecked.delayMs / 60000)} 分钟`
+  );
+  assert.ok(
+    expiredButJustChecked.delayMs < KEEPALIVE_DEFAULTS.slowPathMs,
+    `过期站被推到慢档，死令牌要等 ${Math.round(expiredButJustChecked.delayMs / 60000)} 分钟`
+  );
 });
 
 test("已经过期的站尽快动手，且散在 15 分钟内不堆在一起", () => {
@@ -169,4 +230,36 @@ test("批次按名单叫醒，不按「第几批」现算：排期挪动不会�
     resolveSweepStationIds({}, name, drifted, { alarmLimit: 480, sweepSize: 20 }),
     drifted.slice(500, 505).map(plan => plan.stationId)
   );
+});
+
+test("启动只挑现在就该动手的站，退避中和刚查过的不掺和", () => {
+  const base = { status: "unknown", expiresAt: null, renewFailures: 0, lastCheckedAt: null, renewalKind: "cookie" };
+  const entries = [
+    // 从没查过：快档，开机就试。
+    { ...base, stationId: "never-checked" },
+    // 状态 ok 但没有过期时间，上次检查是 7 小时前：该重新探了。
+    { ...base, stationId: "probe-again", status: "ok", lastCheckedAt: NOW - 7 * HOUR },
+    // 上次检查是 1 分钟前（比如刚才开机试过）：这一轮跳过。
+    { ...base, stationId: "just-checked", status: "ok", lastCheckedAt: NOW - 60 * 1000 },
+    // expiresAt 减去 margin 已经到点：临期，要续。
+    { ...base, stationId: "expiring", status: "ok", expiresAt: NOW + 5 * 60 * 1000 },
+    // 已经过期：要续。
+    { ...base, stationId: "expired", status: "ok", expiresAt: NOW - HOUR },
+    // 还剩 20 小时、刚查过 3 小时前：不该在开机时吵它。
+    { ...base, stationId: "healthy", status: "ok", expiresAt: NOW + 20 * HOUR, lastCheckedAt: NOW - 3 * HOUR },
+    // 有失败记录：退避归 alarm 管，别把退避打穿。
+    { ...base, stationId: "backing-off", status: "unknown", renewFailures: 2 },
+    // 用户自己粘的长效令牌：不用动。
+    { ...base, stationId: "manual", renewalKind: "manual-token" },
+    // 脏数据不该让整条链挂掉。
+    { ...base, stationId: "" },
+    null
+  ];
+
+  assert.deepEqual(dueStationIds(entries, NOW), ["never-checked", "probe-again", "expiring", "expired"]);
+  // 全部刚查过的时候返回空，调用方据此跳过整轮（也就不会每 5 分钟白扫一遍）。
+  assert.deepEqual(dueStationIds([{ ...base, stationId: "x", lastCheckedAt: NOW - 60 * 1000 }], NOW), []);
+  // 页面刚续过（只写 lastRenewedAt，不动 lastCheckedAt）：开机这一拍不该再续一遍。
+  assert.deepEqual(dueStationIds([{ ...base, stationId: "just-renewed", status: "ok", lastRenewedAt: NOW - 60 * 1000 }], NOW), []);
+  assert.deepEqual(dueStationIds(undefined, NOW), []);
 });

@@ -18,14 +18,22 @@
 .refresh-preflight-heading, .refresh-progress-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .refresh-preflight-heading h2, .refresh-progress-heading h2 { margin: 0; font-size: 13px; }
 .refresh-preflight-panel > p, .refresh-progress-panel > p, .auth-status-panel > p { margin: 8px 0; color: var(--text-2); font-size: 11px; }
-.auth-status-row { display: grid; grid-template-columns: minmax(100px, .4fr) 76px minmax(0, .5fr) minmax(0, .6fr) auto; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 6px; background: var(--surface-2); font-size: 11px; }
-.auth-status-label { font-weight: 600; }
-.auth-status-kind, .auth-status-time { color: var(--text-2); }
-.auth-needsLogin .auth-status-label, .auth-unknown .auth-status-label { color: var(--warn); }
+.auth-status-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 8px; align-items: start; padding: 8px; border-radius: var(--radius-control); background: var(--surface-2); font-size: 11px; }
+.auth-status-main { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
+.auth-status-site { color: var(--text); font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-status-kind, .auth-status-time, .auth-status-next { color: var(--text-3); font-size: 10px; white-space: nowrap; }
+.auth-status-label { font-size: 11px; font-weight: 500; }
+.auth-needsLogin .auth-status-label { color: var(--danger); }
+.auth-unknown .auth-status-label { color: var(--warn); }
 .auth-ok .auth-status-label { color: var(--ok); }
-.auth-token-form { display: flex; grid-column: 1 / -1; gap: 6px; align-items: center; padding: 2px 0 0; }
-.auth-token-form button { flex: 0 0 auto; white-space: nowrap; }
-.auth-token-form input { flex: 1 1 auto; min-width: 0; padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: inherit; font: inherit; font-size: 11px; }
+.auth-status-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.auth-status-actions .button { min-height: 24px; padding: 0 8px; font-size: 10px; }
+.auth-token-details { grid-column: 1 / -1; }
+.auth-token-details > summary { cursor: pointer; color: var(--text-2); font-size: 10px; user-select: none; }
+.auth-token-details[open] > summary { margin-bottom: 4px; }
+.auth-token-form { display: flex; gap: 4px; }
+.auth-token-form input { flex: 1; min-width: 0; min-height: 28px; padding: 0 8px; font-size: 11px; }
+.auth-token-form .button { min-height: 28px; padding: 0 8px; font-size: 10px; }
 
 .refresh-preflight-panel ul, .refresh-progress-panel ul, .auth-status-panel ul { display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; }
 .refresh-progress-panel progress { width: 100%; height: 5px; accent-color: var(--accent); }
@@ -41,6 +49,7 @@
 .summary-item.is-primary .summary-value { color: var(--accent); }
 .toolbar-panel { flex: 0 0 auto; overflow: visible; }
 .toolbar-panel > .panel-heading { padding-inline: 16px; }
+
 .toolbar-main { display: grid; gap: 0; padding: 0 16px; }
 .toolbar-section { display: grid; gap: 8px; padding: 16px 0; border-bottom: 1px solid var(--line); }
 .toolbar-section h3 { margin: 0; color: var(--text-3); font-size: 12px; font-weight: 600; }

@@ -97,11 +97,14 @@ sub2api 系的凭证在 `localStorage`：`auth_token`、`refresh_token`、`sub2a
 | 续期档位 | 站点 | 用户要做什么 |
 | --- | --- | --- |
 | `cookie`（cookie 换新 token，带 `expiresAt`） | clawcn、sccx、killai | 登录一次，之后不再管 |
+| `refresh-token`（用 `localStorage` 里的 `refresh_token` 无头换新 token） | all-in-one、hepingan、initapi、jiji、kelaode | 登录一次，之后不开标签页也能续（待实测） |
 | `manual-token`（长效令牌，粘一次永不过期） | fastaitoken | 登录一次并粘令牌，之后不再管 |
-| `session-probe`（只探存亡，换不出新凭据） | cun、dstopology、yuki、stellaisle-carpool | 会话到期后重登一次 |
-| 无声明（只能靠页面自己续） | aiapi、all-in-one、hepingan、initapi、jiji、kelaode、leaflow | 会话到期后重登一次 |
+| `session-probe`（只探存亡，换不出新凭据） | cun、dstopology、yuki、stellaisle-carpool | 会话到期后重登一次，可随时点「立即检查」确认 |
+| 无声明（只能靠页面自己续） | aiapi、leaflow | 会话到期后重登一次 |
 
 口径写法与四种 kind 的定义见 [插件开发与维护规范](./plugin-development.md#登录态与续期)。
+
+`refresh-token` 这一档不用在插件里手写 `renewal`：`pageAuth.refresh` 里已经写全了接口、请求键名与响应字段，扩展侧直接据此推导（`src/core/renewal.js` 的 `renewalFromProvider`）。`refresh_token` 在第一次采集页面上下文时入仓，之后 service worker 无头续，不开标签页。标「待实测」是因为响应字段名是按插件声明推出来的，真站若改字段名，续上来的令牌只会落到底兜 TTL，不会报错。
 
 `session-probe` 与「无声明」的区别只在面板显示：前者能主动探出 `needsLogin`，后者状态停在 `unknown`，要等采集失败才发现。
 

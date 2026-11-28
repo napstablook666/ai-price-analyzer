@@ -425,6 +425,18 @@ function writeStoredPath(storageKey, path, value) {
   return true;
 }
 
+// 页面里的 refresh 令牌：优先按 refreshTokenPath 从存储 JSON 里取，否则按
+// refreshTokenStorageKey 直接读。cookieOnly 的站没有这把令牌，换令牌只认页面 cookie。
+function readStoredRefreshToken(pageAuth) {
+  const refresh = pageAuth?.refresh || {};
+  if (refresh.cookieOnly === true) return "";
+  const refreshTokenPath = String(refresh.refreshTokenPath || "");
+  if (refreshTokenPath) return readStoredPath(pageAuth.storageKey, refreshTokenPath);
+  const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
+  if (!refreshTokenKey) return "";
+  return String(readStorageValue(window.localStorage, refreshTokenKey) || readStorageValue(window.sessionStorage, refreshTokenKey) || "").trim();
+}
+
 function writeStoredPageToken(pageAuth, token) {
   const storageKey = String(pageAuth?.storageKey || "");
   if (!storageKey) return false;
@@ -456,6 +468,10 @@ async function applyPageAuth(headers, pageAuth) {
   // New-Api-User 是站点用户 ID，不是秘密也不参与过期。报给 service worker 存进凭据仓，
   // 之后它自己就能拼出这个头去探活，不必为判一次存亡再开标签页。
   if (header.toLowerCase() === "new-api-user") postAuthIdentity(pageAuth, token);
+  // 顺手把页面里的 refresh 令牌报一次：仓里有了它，浏览器不常开的时候 service worker
+  // 也能自己续期，不用等到下一次页面续期才第一次拿到。
+  const seedRefreshToken = readStoredRefreshToken(pageAuth);
+  if (seedRefreshToken) postAuthRefreshSeed(pageAuth, seedRefreshToken);
 }
 
 async function validateRequest(request) {
@@ -488,9 +504,7 @@ async function refreshPageAuth(pageAuth) {
   if (!isSameSiteOrigin(refreshUrl.origin, window.location.origin)) return { ok: false };
   alignToPageOrigin(refreshUrl);
   const cookieOnly = refresh.cookieOnly === true;
-  const refreshTokenKey = String(refresh.refreshTokenStorageKey || "");
-  const refreshTokenPath = String(refresh.refreshTokenPath || "");
-  const refreshToken = cookieOnly ? "" : (refreshTokenPath ? readStoredPath(pageAuth.storageKey, refreshTokenPath) : String(readStorageValue(window.localStorage, refreshTokenKey) || readStorageValue(window.sessionStorage, refreshTokenKey) || "").trim());
+  const refreshToken = readStoredRefreshToken(pageAuth);
   if (!cookieOnly && !refreshToken) return { ok: false };
   const headers = { Accept: "application/json", "Content-Type": "application/json" };
   const accessToken = readStoredPageToken(pageAuth);
@@ -543,7 +557,8 @@ function persistPageAuth(pageAuth, renewed) {
 }
 
 // 续期结果要回给 service worker 落仓，否则页面一关令牌就丢，下一轮刷新又得重新续。
-// 只回 access 令牌与过期时间：refresh 令牌留在页面本地存储里，不经过 window.postMessage 再扩散一次。
+// 只回 access 令牌、轮换后的 refresh 令牌与过期时间。refresh 令牌必须回传：
+// 站点每次续期都换一对，页面关掉之后无头续期只能用仓里那一份，不回传第二次必然 401。
 function postAuthIdentity(pageAuth, identity) {
   const value = String(identity || "").trim();
   const stationId = String(pageAuth?.stationId || "");
@@ -560,10 +575,23 @@ function postAuthRenewal(pageAuth, renewed) {
     type: PAGE_WINDOW_AUTH_RENEWAL_TYPE,
     renewal: {
       accessToken: renewed.accessToken,
+      ...(renewed.refreshToken ? { refreshToken: renewed.refreshToken } : {}),
       expiresAt: renewed.expiresAt,
       storageKey: String(pageAuth?.storageKey || ""),
       stationId: String(pageAuth?.stationId || "")
     }
+  }, window.location.origin);
+}
+
+// 只报 refresh 令牌。仓里缺的就是这一块，access 令牌和登录状态留给下一次真正续期
+// 的结果去写，免得「读到令牌」被当成「会话还活着」。
+function postAuthRefreshSeed(pageAuth, refreshToken) {
+  const value = String(refreshToken || "").trim();
+  const stationId = String(pageAuth?.stationId || "");
+  if (!value || !stationId) return;
+  window.postMessage({
+    type: PAGE_WINDOW_AUTH_RENEWAL_TYPE,
+    renewal: { refreshToken: value, stationId }
   }, window.location.origin);
 }
 

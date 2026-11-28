@@ -176,6 +176,13 @@ request: requestPolicy(ENDPOINT, {
 
 `request.cookieAuth` 存在时按 `kind: "cookie"` 处理，`request.renewal` 优先。两样都没有就不排无头任务。映射在 `src/core/renewal.js` 的 `renewalFromProvider`，service worker 和测试用的是同一个函数。
 
+两类声明的路径规则不一样，写错字段取不到值，会静默落到兜底 TTL：
+
+- `cookieRefreshAuth` 的 `accessTokenPath` / `expiresAtPath` 相对响应体写完整路径（`data.access_token`），原样用。
+- 页面续期声明（`pageAuth.refresh`）的 `accessTokenKey` / `refreshTokenKey` / `expiresInKey` 写的是响应体里的片段，映射时会自动拼上 `responsePath`（默认 `data`）。所以插件里写 `access_token`，不是 `data.access_token`。
+
+`expiresInKey` 读的是「多少秒后过期」，落仓时换成绝对毫秒。没有这个字段的站（all-in-one 那类一个接口返回全部信息的）按兜底 30 分钟算：够用，也不会把请求打成每分钟一次。
+
 四种 `kind`：
 
 | kind | 干什么 | 谁能用 |
@@ -194,10 +201,11 @@ request: requestPolicy(ENDPOINT, {
 
 **OAuth 站（GitHub / LinuxDO 之类第三方授权登录）怎么选**：登录方式不影响扩展侧做法，只看登录之后留下什么。留 session cookie 且站有换 token 接口就是 `cookie`；只剩一个长效令牌就是 `manual-token`。不要按「用户是用密码还是 OAuth 登的」区分。
 
-`session-probe` 的两个坑：
+`session-probe` 的三个坑：
 
 - `probeHeaders` 里的 `{{identity}}` / `{{token}}` 由凭据仓替换。New-API 系站点不带 `New-Api-User` 头一律 401，拼不出这个头就会把「已登录」误报成 `needsLogin`。
-- 探活不是续期。`kind` 是 `session-probe` 的站，会话到期后只能靠用户在面板点「打开登录页」重登一次，扩展替它续不了。
+- 探活不是续期。`kind` 是 `session-probe` 的站，会话到期后只能靠用户在面板点「打开站点」重登一次，扩展替它续不了。
+- 探活站只能判存亡，判完之后既没有 `expiresAt` 也换不出 token，排期会退到 6 小时慢档；用户想在两次检查之间提前确认，只能在面板点「立即检查」。
 
 **现状**（`node scripts/list-auth-stations.mjs` 打印，2026-11 那次）：
 
@@ -211,9 +219,12 @@ request: requestPolicy(ENDPOINT, {
 | `cun` | `page` | 是 | `session-probe` |
 | `stellaisle-carpool` | `page` | 是 | `session-probe` |
 | `fastaitoken` | `page` | 是 | `manual-token` |
-| `aiapi` / `all-in-one` / `hepingan` / `initapi` / `jiji` / `kelaode` / `leaflow` | `page` | 是 | 无声明 |
+| `all-in-one` / `hepingan` / `initapi` / `jiji` / `kelaode` | `page` | 是 | `refresh-token`（`pageAuth.refresh` 推导，待实测） |
+| `aiapi` / `leaflow` | `page` | 是 | 无声明 |
 
-「无声明」的 7 个只能靠页面自己续，凭据仓里状态停在 `unknown`；用户发现采不到时在面板点「打开登录页」重登一次。给它们补声明是后续的事。
+`refresh-token` 那五个站没有手写 `renewal`：`request.pageAuth.refresh` 里已经写全了接口、键名与响应字段，`renewalFromProvider` 直接据此推导，插件目录零改动。它们的 `refresh_token` 在第一次采集页面时入仓，之后无头续期，不开标签页。因为响应字段是按仓里声明推出来的，真站若改字段名只会静默落到底兜 TTL，所以标「待实测」，实测通过再删掉这个标注。
+
+「无声明」的两个只能靠页面自己续，凭据仓里状态停在 `unknown`；用户发现采不到时在面板点「打开站点」重登一次。给它们补声明是后续的事。
 
 `session-probe` 的站会话到期后也要重登一次——探活只判存亡，换不出新凭据。真正登一次就长期不动的只有 `cookie` 与 `manual-token`。
 新站点不确定该用哪条时，先按 1 → 4 试一遍，把结论写进插件注释，并标「待实测」，等真机跑过再改成实测结论。

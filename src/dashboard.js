@@ -1139,13 +1139,56 @@ function renderRefreshPreflight(preflight = state.refreshPreflight) {
   cancel.disabled = !preflight || state.preflightLoading || state.refreshInProgress;
 }
 
-const AUTH_STATUS_LABELS = { ok: "已登录", needsLogin: "需要登录", unknown: "状态未知" };
 const AUTH_KIND_LABELS = { cookie: "cookie 换 token", "refresh-token": "refresh 令牌", "session-probe": "会话探活", "manual-token": "长效令牌", page: "页面续期" };
 
-function formatRenewedAt(value) {
-  const time = Number(value);
-  if (!Number.isFinite(time) || time <= 0) return "从未续期";
-  return new Date(time).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+function formatRelativeTime(value) {
+  if (!Number(value)) return "—";
+  const diff = Date.now() - Number(value);
+  const abs = Math.abs(diff);
+  if (abs < 60_000) return diff >= 0 ? "刚刚" : "1 分钟内";
+  if (abs < 3_600_000) {
+    const n = Math.max(1, Math.floor(abs / 60_000));
+    return diff >= 0 ? `${n} 分钟前` : `${n} 分钟后`;
+  }
+  if (abs < 86_400_000) {
+    const n = Math.max(1, Math.floor(abs / 3_600_000));
+    return diff >= 0 ? `${n} 小时前` : `${n} 小时后`;
+  }
+  const n = Math.max(1, Math.floor(abs / 86_400_000));
+  return diff >= 0 ? `${n} 天前` : `${n} 天后`;
+}
+
+
+function formatNextCheckAt(row) {
+  if (Number(row?.nextCheckAt) > 0) return formatRelativeTime(row.nextCheckAt);
+  // 长效令牌站压根不排期；其余站没 alarm 说明保活没排上（插件没声明续期能力或排期被打断）。
+  if (row?.renewalKind === "manual-token") return "不限时（长效令牌）";
+  return "未排期";
+}
+function authStatusLabel(row) {
+  const status = String(row?.status || "unknown");
+  const failures = Number(row?.renewFailures) > 0 ? Math.floor(Number(row.renewFailures)) : 0;
+  const failureSuffix = failures > 0 ? `（已失败 ${failures} 次）` : "";
+  if (status === "ok") return "已登录";
+  if (status === "needsLogin") return `需要重新登录${failureSuffix}`;
+  const hasChecked = Number(row?.lastCheckedAt) > 0;
+  if (!hasChecked) return "从未检查";
+  if (row?.renewalKind === "session-probe" && row?.missingField === "identity") return "缺 uid，先打开该站采集一次";
+  return "状态未知";
+}
+
+// 粘令牌这一步各站要的东西不一样：长效令牌站是会话令牌，New-API 那类探活站要的是面板 uid。
+// 只能靠打开页面续的站不给输入框——粘了也用不上，白让人以为能救。
+function authTokenForm(row) {
+  const kind = String(row?.renewalKind || "");
+  if (!kind || kind === "page") return "";
+  const placeholder = kind === "manual-token"
+    ? "粘贴长效令牌"
+    : kind === "session-probe" && row?.missingField === "identity"
+      ? "填 New-Api-User 的 uid"
+      : "粘贴会话令牌";
+  const label = kind === "manual-token" ? "令牌" : "令牌 / uid";
+  return `<details class="auth-token-details"><summary>${escapeHtml(label)}</summary><form class="auth-token-form" data-auth-token-form="${escapeHtml(row.stationId)}"><input type="password" name="token" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(placeholder)}" aria-label="${escapeHtml(row.stationName)} ${escapeHtml(label)}"><button type="submit" class="button button-quiet">保存</button></form></details>`;
 }
 
 // 登录态直接读 service worker 快照里的 authStatus（来自凭据仓），
@@ -1156,25 +1199,32 @@ function renderAuthStatus() {
   panel.hidden = rows.length === 0;
   const summary = $("#auth-status-summary");
   const list = $("#auth-status-results");
-  if (!rows.length) {
-    summary.textContent = "";
-    list.replaceChildren();
-    return;
-  }
+  if (!rows.length) { summary.textContent = ""; list.innerHTML = ""; return; }
   const needsLogin = rows.filter(row => row.status === "needsLogin").length;
   const unknown = rows.filter(row => row.status === "unknown").length;
-  summary.textContent = `${rows.length} 个站点需要登录态，${needsLogin} 个需要重新登录，${unknown} 个状态未知。`;
+  // 「从未检查」单独一档：这些站不是续期失败，是还没轮到过（浏览器没开够久），
+  // 混进「状态未知」里会让人以为登录态坏了。
+  const neverChecked = rows.filter(row => row.status === "unknown" && !Number(row.lastCheckedAt)).length;
+  const parts = [
+    needsLogin ? `${needsLogin} 个需要重新登录` : "",
+    neverChecked ? `${neverChecked} 个从未检查` : "",
+    unknown - neverChecked > 0 ? `${unknown - neverChecked} 个状态未知` : ""
+  ].filter(Boolean);
+  summary.textContent = parts.length ? `${rows.length} 个站点：${parts.join("，")}。` : `${rows.length} 个站点登录态正常。`;
   list.innerHTML = rows.map(row => {
-    const openButton = row.status !== "ok" && row.baseUrl
-      ? `<button class="button button-quiet" type="button" data-auth-open="${escapeHtml(row.baseUrl)}"><span>打开登录页</span></button>`
-      : "";
-    const tokenForm = row.renewalKind === "manual-token"
-      ? `<form class="auth-token-form" data-auth-token-form="${escapeHtml(row.stationId)}"><input type="password" name="token" autocomplete="off" placeholder="粘贴长效令牌" aria-label="${escapeHtml(row.stationName)} 的长效令牌"><button class="button button-quiet" type="submit"><span>保存</span></button></form>`
-      : "";
     const statusClass = ["ok", "needsLogin", "unknown"].includes(row.status) ? row.status : "unknown";
-    return `<li class="auth-status-row auth-${statusClass}"><span class="auth-status-site">${escapeHtml(row.stationName)}</span><span class="auth-status-label">${AUTH_STATUS_LABELS[row.status] || "状态未知"}</span><span class="auth-status-kind">${AUTH_KIND_LABELS[row.renewalKind] || "页面续期"}</span><span class="auth-status-time">${escapeHtml(formatRenewedAt(row.lastRenewedAt))}</span><span class="auth-status-actions">${openButton}</span>${tokenForm}</li>`;
+    const openButton = row.baseUrl ? `<button type="button" class="button button-quiet" data-auth-open="${escapeHtml(row.baseUrl)}">打开站点</button>` : "";
+    // 长效令牌站靠手动粘令牌，没有可续的会话，按钮给了也是骗人。
+    const renewButton = row.renewalKind !== "manual-token"
+      ? `<button type="button" class="button button-quiet" data-auth-renew="${escapeHtml(row.stationId)}">立即检查</button>`
+      : "";
+    const tokenForm = authTokenForm(row);
+    const label = authStatusLabel(row);
+    const nextCheck = formatNextCheckAt(row);
+    return `<li class="auth-status-row auth-${statusClass}"><div class="auth-status-main"><span class="auth-status-site">${escapeHtml(row.stationName)}</span><span class="auth-status-label">${escapeHtml(label)}</span><span class="auth-status-kind">${escapeHtml(AUTH_KIND_LABELS[row.renewalKind] || "页面续期")}</span><span class="auth-status-time" title="上次检查">${escapeHtml(formatRelativeTime(row.lastCheckedAt || row.lastRenewedAt))}</span><span class="auth-status-next" title="下次检查">${escapeHtml(nextCheck)}</span></div><div class="auth-status-actions">${renewButton}${openButton}</div>${tokenForm}</li>`;
   }).join("");
 }
+
 
 function render(data, { preservePage = false } = {}) {
   state.data = data;
@@ -1724,27 +1774,46 @@ $("#cancel-refresh-preflight").addEventListener("click", async () => {
 });
 
 // 事件委托挂在列表上：行是每次渲染重生成的，逐个绑会漏。
-$("#auth-status-results").addEventListener("click", event => {
-  const button = event.target.closest("[data-auth-open]");
-  if (!button) return;
-  chrome.tabs.create({ url: button.dataset.authOpen }).catch(error => toast(error.message));
+$("#auth-status-results").addEventListener("click", async event => {
+  const openButton = event.target.closest("[data-auth-open]");
+  if (openButton) {
+    chrome.tabs.create({ url: openButton.dataset.authOpen }).catch(error => toast(error.message));
+    return;
+  }
+  const renewButton = event.target.closest("[data-auth-renew]");
+  if (!renewButton) return;
+  const stationId = String(renewButton.dataset.authRenew || "").trim();
+  if (!stationId) return;
+  renewButton.disabled = true;
+  try {
+    render(await callService("AUTH_RENEW_NOW", { stationId }));
+    toast("已触发检查");
+  } catch (error) {
+    toast(error.message);
+  } finally {
+    renewButton.disabled = false;
+  }
 });
 
 $("#auth-status-results").addEventListener("submit", async event => {
   const form = event.target.closest("[data-auth-token-form]");
   if (!form) return;
   event.preventDefault();
-  const token = String(form.querySelector('input[name="token"]')?.value || "").trim();
-  if (!token) { toast("令牌不能为空"); return; }
-  const button = form.querySelector('button[type="submit"]');
-  if (button) button.disabled = true;
+  const input = form.querySelector('input[name="token"]');
+  const token = String(input?.value || "").trim();
+  if (!token) { toast("请先粘贴令牌或 uid"); return; }
+  const stationId = form.dataset.authTokenForm;
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+  if (input) input.disabled = true;
   try {
-    render(await callService("SAVE_STATION_TOKEN", { stationId: form.dataset.authTokenForm, token }));
-    toast("令牌已保存，保活排期已更新");
+    render(await callService("SAVE_STATION_TOKEN", { stationId, token }));
+    toast("已保存并触发检查");
   } catch (error) {
     toast(error.message);
   } finally {
-    if (button) button.disabled = false;
+    if (submitButton) submitButton.disabled = false;
+    if (input) input.disabled = false;
   }
 });
 

@@ -10,6 +10,7 @@ import {
   readRenewalPath,
   renewalFromProvider,
   renewStationAuth,
+  tokenSavePatch,
   applyPageRenewal
 } from "../src/core/renewal.js";
 import { getStationCredential, setStationCredential } from "../src/shared/credentials.js";
@@ -181,7 +182,7 @@ test("refresh-token 成功时同时换掉 access 与 refresh", async () => {
   assert.equal(store.data.get("kelaode").expiresAt, NOW + 3600 * 1000 - 60000);
 });
 
-test("仓里 token 还没过期就不打接口", async () => {
+test("仓里 token 离到期还早就不打接口", async () => {
   const chromeApi = fakeChrome();
   const store = fakeStore();
   const request = fakeFetch({ "*": { status: 500, body: {} } });
@@ -191,12 +192,31 @@ test("仓里 token 还没过期就不打接口", async () => {
     fetch: request,
     now: () => NOW,
     ...store,
-    credential: { token: "still-good", expiresAt: NOW + 60000 }
+    credential: { token: "still-good", expiresAt: NOW + 30 * 60 * 1000 }
   });
 
   assert.equal(result.status, "ok");
   assert.equal(result.cached, true);
   assert.equal(request.calls.length, 0);
+});
+
+test("已经进续期窗口（离到期不到 margin）就真续，不是拿缓存", async () => {
+  // 排期是在「到期前 margin」叫醒的；执行器还要求「已经过期才续」的话，那一拍永远只拿缓存，
+  // 排期再算一次还是那个过去的时间点，于是变成每分钟一圈。
+  const chromeApi = fakeChrome();
+  const store = fakeStore();
+  const request = fakeFetch({ [REFRESH_URL]: { status: 200, body: { data: { access_token: "at-window", access_expires_at: NOW / 1000 + 1800 } } } });
+
+  const result = await renewStationAuth(CLAW, COOKIE_RENEWAL, {
+    chrome: chromeApi,
+    fetch: request,
+    now: () => NOW,
+    ...store,
+    credential: { token: "still-good", expiresAt: NOW + 60000 }
+  });
+
+  assert.equal(result.cached, undefined);
+  assert.equal(request.calls.length, 1);
 });
 
 test("session-probe 只判存亡，ok 时按探活 TTL 记过期", async () => {
@@ -400,6 +420,22 @@ test("页面回报缺 stationId 或令牌一律不落仓，避免污染别的站
   assert.equal(store.data.get("cun").token, "keep");
 });
 
+test("页面只报 refresh 令牌时补进仓，不动状态也不冲掉已有身份", async () => {
+  const store = fakeStore();
+  store.data.set("hepingan", { token: "at-keep", identity: "42", status: "unknown", expiresAt: 1800000600000, lastRenewedAt: NOW - 1000 });
+
+  const result = await applyPageRenewal({ stationId: "hepingan", refreshToken: "rt-seed" }, { now: () => NOW, ...store });
+
+  assert.deepEqual(result, { stationId: "hepingan", identity: "" });
+  const saved = store.data.get("hepingan");
+  assert.equal(saved.refreshToken, "rt-seed");
+  // 读到令牌不等于会话还活着：状态、过期时间、上一次续期时间都不许改。
+  assert.equal(saved.status, "unknown");
+  assert.equal(saved.expiresAt, 1800000600000);
+  assert.equal(saved.lastRenewedAt, NOW - 1000);
+  assert.equal(saved.identity, "42");
+  assert.equal(saved.token, "at-keep");
+});
 test("页面回报没有过期时间就存 null，不做瞎猜", async () => {
   const store = fakeStore();
   await applyPageRenewal({ stationId: "yuki", accessToken: "t", expiresAt: "not-a-number" }, { now: () => NOW, ...store });
@@ -469,8 +505,9 @@ test("假站只靠插件目录里的声明就能续期，token 落仓且全程�
   assert.equal(result.status, "ok");
   assert.equal(result.token, "fixture-at");
   assert.equal(store.data.get("fake-login").token, "fixture-at");
-  // 站点报的是秒的绝对时间戳 1800000600，落仓时统一减一分钟余量，避免刚写完就判过期。
-  assert.equal(store.data.get("fake-login").expiresAt, 1800000540000);
+  // 站点报 1800000600（秒），落仓按毫秒并减一分钟余量得 1800000540；但那比保活余量还短，
+  // 会被抬到 11 分钟下限，否则「过期时间 - margin」落在过去，站点每分钟续一次。
+  assert.equal(store.data.get("fake-login").expiresAt, 1800000660000);
   assert.equal(chromeApi.rules.size, 0, "临时 header 规则必须清掉");
   assert.equal(chromeApi.tabCreates(), 0);
 });
@@ -486,4 +523,147 @@ test("插件两样都没声明就不排无头任务，交回原来的页面路�
   assert.equal(renewalFromProvider({ request: {} }), null);
   assert.equal(renewalFromProvider({ request: { cookieAuth: { cookieName: "x" } } }), null);
   assert.equal(renewalFromProvider(undefined), null);
+});
+
+// 五个 localStorage 站（hepingan / fastaitoken / FrostFox / …）的插件声明里 endpoint、
+// body 键名、响应字段都写全了，缺的只是「人得站在页面上」。这几条把换算结果钉住。
+const PAGE_REFRESH_PLUGIN = {
+  request: {
+    pageAuth: {
+      refresh: {
+        endpoint: "/api/user/auth/refresh",
+        requestTokenKey: "refresh_token",
+        responsePath: "data",
+        accessTokenKey: "access_token",
+        refreshTokenKey: "refresh_token",
+        expiresInKey: "expires_in"
+      }
+    }
+  }
+};
+const PAGE_STATION = { id: "hepingan", baseUrl: "https://hepingan.top/pricing" };
+const PAGE_REFRESH_URL = "https://hepingan.top/api/user/auth/refresh";
+
+function withoutExpiryKey(refresh) {
+  const copy = { ...refresh };
+  delete copy.expiresInKey;
+  return copy;
+}
+
+test("页面续期声明换成无头 refresh-token 配置，三个响应键都带上 responsePath 前缀", () => {
+  const renewal = renewalFromProvider(PAGE_REFRESH_PLUGIN);
+  assert.equal(renewal.kind, "refresh-token");
+  assert.equal(renewal.refreshPath, "/api/user/auth/refresh");
+  assert.equal(renewal.requestTokenKey, "refresh_token");
+  // 少拼一个前缀，readRenewalPath 就取不到值，续上来的令牌会被当成没有寿命。
+  assert.equal(renewal.accessTokenPath, "data.access_token");
+  assert.equal(renewal.refreshTokenPath, "data.refresh_token");
+  assert.equal(renewal.expiresInPath, "data.expires_in");
+});
+
+test("没声明过期字段的站留空 expiresInPath，仍算可无头续期", () => {
+  const plugin = { request: { pageAuth: { refresh: withoutExpiryKey(PAGE_REFRESH_PLUGIN.request.pageAuth.refresh) } } };
+  const renewal = renewalFromProvider(plugin);
+  assert.equal(renewal.kind, "refresh-token");
+  assert.equal(renewal.expiresInPath, "");
+  assert.equal(renewal.accessTokenPath, "data.access_token");
+});
+
+test("cookieOnly 的站不无头续期，仍交回页面路径", () => {
+  const plugin = { request: { pageAuth: { refresh: { ...PAGE_REFRESH_PLUGIN.request.pageAuth.refresh, cookieOnly: true } } } };
+  assert.equal(renewalFromProvider(plugin), null);
+});
+
+test("响应里没有过期字段时按 30 分钟兜底，不会塌成 4 分钟", async () => {
+  const renewal = renewalFromProvider({ request: { pageAuth: { refresh: withoutExpiryKey(PAGE_REFRESH_PLUGIN.request.pageAuth.refresh) } } });
+  const chromeApi = fakeChrome();
+  const store = fakeStore();
+  store.data.set("hepingan", { refreshToken: "rt-1" });
+  const request = fakeFetch({ [PAGE_REFRESH_URL]: { status: 200, body: { data: { access_token: "at-1", refresh_token: "rt-2" } } } });
+
+  const result = await renewStationAuth(PAGE_STATION, renewal, { chrome: chromeApi, fetch: request, now: () => NOW, ...store });
+
+  assert.equal(result.status, "ok");
+  const expiresAt = store.data.get("hepingan").expiresAt;
+  // 取不到寿命就整段兜底 30 分钟（clampExpiry 的 NaN 分支不再减余量）。
+  assert.equal(expiresAt, NOW + 30 * 60 * 1000);
+  // 保活按 expiresAt - margin(10min) 散列，寿命短于 11 分钟就会退化成每分钟一次。
+  assert.ok(expiresAt - NOW > 11 * 60 * 1000, "兜底 TTL 不能塌进分钟级回环");
+});
+
+test("站点给的寿命短于保活余量时抬到 11 分钟，不落进分钟级回环", async () => {
+  const renewal = renewalFromProvider(PAGE_REFRESH_PLUGIN);
+  const chromeApi = fakeChrome();
+  const store = fakeStore();
+  store.data.set("hepingan", { refreshToken: "rt-1" });
+  const request = fakeFetch({ [PAGE_REFRESH_URL]: { status: 200, body: { data: { access_token: "at-1", refresh_token: "rt-2", expires_in: 30 } } } });
+
+  const result = await renewStationAuth(PAGE_STATION, renewal, { chrome: chromeApi, fetch: request, now: () => NOW, ...store });
+
+  assert.equal(result.status, "ok");
+  assert.equal(store.data.get("hepingan").expiresAt, NOW + 11 * 60 * 1000);
+});
+
+test("仓里有 refreshToken 就全程不开标签页，轮换后的令牌落仓给下一次用", async () => {
+  const renewal = renewalFromProvider(PAGE_REFRESH_PLUGIN);
+  const chromeApi = fakeChrome();
+  const store = fakeStore();
+  store.data.set("hepingan", { refreshToken: "rt-1" });
+  // 站点每次续期都换一对，服务端只认最新那把 refresh_token。
+  const request = fakeFetch({
+    [PAGE_REFRESH_URL]: n => ({ status: 200, body: { data: { access_token: `at-${n}`, refresh_token: `rt-${n + 1}`, expires_in: 3600 } } })
+  });
+
+  const first = await renewStationAuth(PAGE_STATION, renewal, { chrome: chromeApi, fetch: request, now: () => NOW, ...store });
+
+  assert.equal(first.status, "ok");
+  assert.equal(chromeApi.tabCreates(), 0, "无头续期不该开标签页");
+  assert.equal(JSON.parse(request.calls[0].options.body).refresh_token, "rt-1");
+  assert.equal(store.data.get("hepingan").refreshToken, "rt-2");
+
+  // 把仓里的过期时间拨到过去，模拟临期后浏览器已经重开，只能拿仓里那把。
+  store.data.set("hepingan", { ...store.data.get("hepingan"), expiresAt: NOW - 1 });
+  const second = await renewStationAuth(PAGE_STATION, renewal, { chrome: chromeApi, fetch: request, now: () => NOW + 1, ...store });
+
+  assert.equal(second.status, "ok");
+  assert.equal(JSON.parse(request.calls[1].options.body).refresh_token, "rt-2");
+  assert.equal(store.data.get("hepingan").refreshToken, "rt-3");
+  assert.equal(chromeApi.tabCreates(), 0);
+});
+
+test("仓里没有 refreshToken 时按跳过处理，不把站标成需要登录", async () => {
+  const renewal = renewalFromProvider(PAGE_REFRESH_PLUGIN);
+  const chromeApi = fakeChrome();
+  const store = fakeStore();
+  store.data.set("hepingan", { token: "", status: "ok", renewFailures: 0 });
+  const request = fakeFetch({ "*": { status: 500, body: {} } });
+
+  const result = await renewStationAuth(PAGE_STATION, renewal, { chrome: chromeApi, fetch: request, now: () => NOW, ...store });
+
+  assert.equal(result.status, "unknown");
+  assert.equal(request.calls.length, 0, "没有令牌就不该打接口");
+  const saved = store.data.get("hepingan");
+  // 没凭据续期不等于登录过期：状态退回未知、失败计数不动、上次续期时间不写。
+  assert.equal(saved.status, "unknown");
+  assert.equal(saved.renewFailures, 0);
+  assert.equal(saved.lastRenewedAt, null);
+});
+
+test("粘令牌存哪一格按站型决定，非手动令牌站不当场标成已登录", () => {
+  // 长效令牌站：粘进去就是它的会话令牌，写 token 并标 ok。
+  assert.deepEqual(tokenSavePatch({ kind: "manual-token" }, " sk-long "), { token: "sk-long", status: "ok", expiresAt: null });
+
+  // New-API 那类站要的是面板 uid（New-Api-User: {{identity}}）：存进 token 位采集照样 401。
+  assert.deepEqual(
+    tokenSavePatch({ kind: "session-probe", probePath: "/api/user/self", probeHeaders: { "New-Api-User": "{{identity}}" } }, "42"),
+    { identity: "42" }
+  );
+
+  // cookie 站和拿不准的站：写 token，状态留给续期结果，这里一个字都不标。
+  assert.deepEqual(tokenSavePatch({ kind: "cookie", cookieName: "session" }, "sk-cookie"), { token: "sk-cookie" });
+  assert.deepEqual(tokenSavePatch(null, "sk-unknown"), { token: "sk-unknown" });
+  assert.deepEqual(tokenSavePatch({ kind: "" }, "sk-unknown"), { token: "sk-unknown" });
+
+  // 探活头同时引用两个字段的站退回写 token，别猜。
+  assert.deepEqual(tokenSavePatch({ kind: "session-probe", probeHeaders: { A: "{{identity}}", B: "{{token}}" } }, "v"), { token: "v" });
 });

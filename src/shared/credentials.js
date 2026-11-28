@@ -6,6 +6,9 @@ const RENEWAL_DEFAULTS = Object.freeze({
   expiresAt: null,
   refreshToken: "",
   lastRenewedAt: null,
+  // 上一次「试过续期」的时间（成不成功都写）。排期靠它区分快档和慢档，
+  // 没有它的记录按「没查过」处理。
+  lastCheckedAt: null,
   renewFailures: 0,
   status: "unknown"
 });
@@ -29,6 +32,7 @@ function normalizeCredential(value) {
     expiresAt: positiveOrNull(value?.expiresAt),
     refreshToken: String(value?.refreshToken || ""),
     lastRenewedAt: positiveOrNull(value?.lastRenewedAt),
+    lastCheckedAt: positiveOrNull(value?.lastCheckedAt),
     renewFailures: Number.isFinite(failures) && failures > 0 ? Math.floor(failures) : 0,
     status: CREDENTIAL_STATUSES.has(value?.status) ? value.status : RENEWAL_DEFAULTS.status
   };
