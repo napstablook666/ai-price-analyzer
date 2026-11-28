@@ -1,10 +1,6 @@
-// D3 取证：一次全量刷新里，page 模式站点会开多少个临时标签页。
-//
-// 只读真实产物（src/site-plugins/catalog.js 与 src/core/refresh-preflight.js），
-// 不造假数据：站点集来自 105 个插件生成出来的 catalog，
-// 判定函数就是扩展运行时用的那个 requiresPageSessionPreflight。
-//
-// 跑法：node out/measure-tabs.mjs
+// 按当前插件目录估算开页预算，不访问网站，不是浏览器实测。
+// 假设：所有页面站点启用、没有既有页面、预检无有效凭据、每站只采集一次。
+// 跑法：node scripts/measure-tabs.mjs
 import { SITE_PLUGIN_CATALOG } from "../src/site-plugins/catalog.js";
 import { requiresPageSessionPreflight } from "../src/core/refresh-preflight.js";
 
@@ -28,20 +24,19 @@ const rows = pageEntries.map(entry => {
 const preflight = rows.filter(row => row.needsPreflight);
 const collect = rows.length;
 
-// 旧路径：刷新前对每个要预检的 page 站开一个标签页探活，采集时再为每个 page 站开一个。
-// 新路径：预检改读凭据仓，不开标签页；采集仍是一站一个。
 const before = preflight.length + collect;
 const after = collect;
 
-console.log(`page 模式站点：${collect}`);
-console.log(`其中刷新前需要页面预检：${preflight.length}`);
+console.log("静态预算，非浏览器实测；假设全启用、无已打开页面、无有效凭据。");
+console.log(`页面站点：${collect}；旧路径可能额外预检开页的站点：${preflight.length}`);
 console.log("");
-console.log("| 站点 | pageAuth | credentials:include | 无头续期 | 旧路径开标签页 | 新路径开标签页 |");
+console.log("| 站点 | pageAuth | credentials:include | 无头续期 | 旧路径开页上限 | 修复后开页上限 |");
 console.log("| --- | --- | --- | --- | --- | --- |");
 for (const row of rows) {
   const oldTabs = (row.needsPreflight ? 1 : 0) + 1;
   console.log(`| ${row.id} | ${row.pageAuth ? "是" : "否"} | ${row.include ? "是" : "否"} | ${row.renewal || "无（走页面）"} | ${oldTabs} | 1 |`);
 }
 console.log("");
-console.log(`一次全量刷新合计：旧 ${before} 个临时标签页 → 新 ${after} 个（减少 ${before - after}）`);
-console.log(`平均每站：旧 ${(before / collect).toFixed(2)} 个 → 新 ${(after / collect).toFixed(2)} 个`);
+console.log(`一次刷新开页预算：旧路径最多 ${before} 个，修复后最多 ${after} 个，预检额外开页为 0。`);
+console.log("修复后页面采集共用 1 个槽位；直接 API 采集保留 3 个并行槽位。");
+console.log("实际行为由 test/refresh-preflight.test.js 和 test/core.test.js 的回归测试验证。");

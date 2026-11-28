@@ -4,7 +4,7 @@ import nodeTest from "node:test";
 import { PAGE_RUNTIME_FETCH_TYPE } from "../src/core/bridge-protocol.js";
 import { NORMALIZATION_VERSION } from "../src/core/normalizers.js";
 import { flattenComparisonRows, getProxyPriceQuote } from "../src/core/pricing.js";
-import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, classifyPageSessionResponse, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
+import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_PREFLIGHT_TTL_MS, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "../src/core/refresh-preflight.js";
 import { normalizeSettings, usagePresetId, usagePresetUsage } from "../src/shared/schema.js";
 
 import { loadedSitePluginIds, resetSitePluginLoader } from "../src/site-plugins/loader.js";
@@ -359,12 +359,6 @@ test("adds selected local plugins in one idempotent batch without eager loading"
   });
 });
 
-test("classifies redirected login pages and login-specific errors even when the endpoint returns HTTP 200", () => {
-  assert.equal(classifyPageSessionResponse({ ok: true, status: 200, body: '<html><form action="/auth/login"><input type="password"></form></html>' }), "needsLogin");
-  assert.equal(classifyPageSessionResponse({ ok: true, status: 200, body: '<html><input name="password" type="password"></html>' }), "needsLogin");
-  assert.equal(classifyPageSessionResponse({ ok: true, status: 200, body: { redirect_url: "https://relay.example/login" } }), "needsLogin");
-  assert.equal(classifyPageSessionResponse({ ok: true, status: 200, body: { data: [{ model_name: "normal-model" }] } }), "ready");
-});
 
 test("preflight signatures and displayed URLs omit URL credentials and secret query parameters", () => {
   const safeUrl = sanitizePreflightUrl("https://user:password@relay.example/pricing?access_token=secret&region=cn#session");
@@ -529,7 +523,7 @@ test("GET_DASHBOARD compares false and missing recharge verification at 1:1", as
   });
 });
 
-test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, and does not collect or write snapshots", async () => {
+test("preflight reads saved login state without opening pages, probing sites, or changing snapshots", async () => {
   const stations = [
     { id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" },
     { id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" },
@@ -541,152 +535,70 @@ test("preflight classifies sessions, bypasses direct APIs, preserves user tabs, 
   ];
   const beforeSnapshots = [{ id: "preserve", stationId: "fastai", collectedAt: 1, normalized: { data: [] } }];
   await withWorker({ stations, snapshots: beforeSnapshots }, {
-    existingTabs: [{ id: 7, url: "https://cun.ai/pricing", status: "complete" }],
-    pageResponses: {
-      "www.fastaitoken.com": { ok: true, status: 200, body: { data: [{ model_name: "probe-only" }] } },
-      "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } },
-      "cn.aiapi.bot": { ok: false, status: 503, body: { message: "gateway unavailable" } },
-      "cun.ai": { ok: true, status: 200, body: { data: [] } }
-    }
+    existingTabs: [{ id: 7, url: "https://cun.ai/pricing", status: "complete" }]
   }, async (worker, stores) => {
+    const credentials = {
+      fastai: { status: "ok", expiresAt: Date.now() + 3600000 },
+      hepingan: { status: "needsLogin", expiresAt: Date.now() + 3600000 },
+      aiapi: { status: "ok", expiresAt: Date.now() - 1000 },
+      cun: { status: "ok", expiresAt: null }
+    };
+    await worker.chrome.storage.session.set({ "ai-price-analyzer:tokens": credentials });
     const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
     const byId = new Map(preflight.results.map(result => [result.stationId, result]));
     assert.equal(byId.get("fastai").status, "ready");
+    assert.match(byId.get("fastai").reason, /已保存/);
     assert.equal(byId.get("hepingan").status, "needsLogin");
+    assert.match(byId.get("hepingan").reason, /上次检查/);
     assert.equal(byId.get("aiapi").status, "uncertain");
-    assert.equal(byId.get("cun").status, "ready");
-    assert.equal(byId.get("cun").tabId, 7);
+    assert.equal(byId.get("cun").status, "uncertain");
     assert.equal(byId.get("custom-page").status, "noLoginRequired");
     assert.equal(byId.has("disabled-fastai"), false);
     assert.equal(byId.get("dddai").status, "noLoginRequired");
-    assert.deepEqual(worker.removed, [worker.created[0].id]);
-    assert.equal(worker.created.length, 3);
-    assert.equal(worker.pageRequests.length, 4);
-    assert.ok(worker.pageRequests.every(request => request.method === "GET" && request.body === undefined));
-    assert.equal(worker.pageRequests.find(request => request.url.includes("api.hepingan.top")).pageAuth.refresh, undefined);
-    assert.equal(worker.created.some(tab => tab.url.includes("dddai.dev") || tab.url.includes("cun.ai")), false);
-    assert.equal(worker.removed.includes(7), false);
-    assert.equal(byId.get("hepingan").tabId, worker.created[1].id);
-    assert.equal(byId.get("aiapi").tabId, worker.created[2].id);
+    assert.equal(byId.get("hepingan").tabId, null);
+    assert.equal(byId.get("hepingan").tabUrl, stations[1].baseUrl);
+    assert.deepEqual(worker.created, []);
+    assert.deepEqual(worker.removed, []);
+    assert.deepEqual(worker.pageRequests, []);
+    assert.deepEqual(await worker.chrome.storage.session.get("ai-price-analyzer:tokens"), { "ai-price-analyzer:tokens": credentials });
     assert.deepEqual([...stores.snapshots.values()], beforeSnapshots);
     assert.equal(worker.runtimeMessages.some(message => message.type === "REFRESH_PROGRESS"), false);
 
     responseError(await worker.send("REFRESH_ALL"), REFRESH_CONFIRMATION_REQUIRED_CODE);
-    assert.deepEqual([...stores.snapshots.values()], beforeSnapshots);
     await worker.send("CANCEL_REFRESH_PREFLIGHT");
     responseError(await worker.send("REFRESH_ALL", { preflightToken: preflight.token, confirmed: true }), REFRESH_CONFIRMATION_REQUIRED_CODE);
     assert.deepEqual([...stores.snapshots.values()], beforeSnapshots);
   });
 });
 
-
-test("warns failed temporary preflight cleanup and preserves the fallback tab ID", async () => {
-  const previousWarn = console.warn;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args);
-  try {
-    await withWorker({ stations: [{ id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" }] }, {
-      pageResponses: { "www.fastaitoken.com": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
-      removeError: new Error("cleanup failed")
-    }, async worker => {
+test("repeated preflight for 102 page stations never creates or reloads a tab", async () => {
+  const stations = Array.from({ length: 102 }, (_, index) => ({
+    id: `page-${index}`, name: `Page ${index}`, pluginId: "hepingan",
+    baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page"
+  }));
+  await withWorker({ stations }, {}, async worker => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
-      assert.equal(preflight.results[0].status, "ready");
-      assert.equal(preflight.results[0].tabId, worker.created[0].id);
+      assert.equal(preflight.results.length, 102);
+      assert.ok(preflight.results.every(result => result.status === "uncertain" && result.tabId === null));
+      assert.deepEqual(worker.created, []);
+      assert.deepEqual(worker.tabQueries, []);
+      assert.deepEqual(worker.pageRequests, []);
       assert.deepEqual(worker.removed, []);
-    });
-  } finally {
-    console.warn = previousWarn;
-  }
-  assert.equal(warnings.length, 1);
-  assert.match(String(warnings[0][0]), /刷新预检临时标签页清理失败/);
-});
-
-test("warns refresh preflight state reconciliation failures after tab removal", async () => {
-  const previousWarn = console.warn;
-  const warnings = [];
-  console.warn = (...args) => warnings.push(args);
-  try {
-    await withWorker({ stations: [{ id: "fastai", name: "FastAI", baseUrl: "https://www.fastaitoken.com/available-channels", enabled: true, mode: "page" }] }, {
-      pageResponses: { "www.fastaitoken.com": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
-      removeError: new Error("cleanup failed")
-    }, async worker => {
-      const preflight = responseData(await worker.send("REFRESH_PREFLIGHT"));
-      warnings.length = 0;
-      worker.setSessionError(new Error("persist failed"));
-      await worker.removeUserTab(preflight.results[0].tabId);
-    });
-  } finally {
-    console.warn = previousWarn;
-  }
-  assert.equal(warnings.length, 1);
-  assert.match(String(warnings[0][0]), /刷新预检状态恢复失败/);
-});
-test("stale preflight cleans a temporary tab invalidated before loading completes", { concurrency: false }, async () => {
-  const station = { id: "early-race-page", name: "Early race page", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
-  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-    deferTabLoad: true,
-    pageResponses: { "api.hepingan.top": { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } }
-  }, async worker => {
-    const staleRequest = worker.send("REFRESH_PREFLIGHT");
-    await waitFor(() => worker.created.length === 1);
-    const tabId = worker.created[0].id;
-    await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Early race page updated" }] });
-    await worker.completeTab(tabId);
-    responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
-    assert.deepEqual(worker.removed, [tabId]);
+    }
   });
 });
 
-test("stale preflight temporary tabs are cleaned for ready, needsLogin, and uncertain", { concurrency: false }, async () => {
-  const scenarios = [
-    { name: "ready", host: "api.hepingan.top", baseUrl: "https://api.hepingan.top/available-channels", response: { ok: true, status: 200, body: { data: [{ model_name: "ready" }] } } },
-    { name: "needsLogin", host: "www.nexavlinks.com", baseUrl: "https://www.nexavlinks.com/modelsmarket", response: { ok: false, status: 401, body: { message: "Unauthorized" } } },
-    { name: "uncertain", host: "all-in-one.icu", baseUrl: "https://all-in-one.icu/#/tenant/models", response: { ok: false, status: 503, body: { message: "gateway unavailable" } } }
-  ];
-  for (const scenario of scenarios) {
-    let releaseProbe;
-    const probe = new Promise(resolve => { releaseProbe = resolve; });
-    const station = { id: `cleanup-${scenario.name}`, name: scenario.name, category: "paid", baseUrl: scenario.baseUrl, enabled: true, mode: "page" };
-    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-      pageResponseHandlers: { [scenario.host]: () => probe }
-    }, async worker => {
-      const staleRequest = worker.send("REFRESH_PREFLIGHT");
-      await waitFor(() => worker.created.length === 1);
-      const tabId = worker.created[0].id;
-      await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: `${scenario.name} updated` }] });
-      releaseProbe(scenario.response);
-      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
-      assert.deepEqual(worker.removed, [tabId]);
-    });
-  }
-});
-
-test("stale preflight does not close a reused temporary tab", { concurrency: false }, async () => {
-  let requestCount = 0;
-  let releaseProbe;
-  const probe = new Promise(resolve => { releaseProbe = resolve; });
-  const station = { id: "reuse-page", name: "Reused temporary tab", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
-  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-    pageResponseHandlers: {
-      "api.hepingan.top": () => {
-        requestCount += 1;
-        return requestCount === 1 ? probe : { ok: true, status: 200, body: { data: [{ model_name: "new-preflight" }] } };
-      }
-    }
-  }, async worker => {
-    const staleRequest = worker.send("REFRESH_PREFLIGHT");
-    await waitFor(() => worker.created.length === 1);
-    const tabId = worker.created[0].id;
-    await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Reused temporary tab updated" }] });
-    const currentRequest = worker.send("REFRESH_PREFLIGHT");
-    await waitFor(() => worker.tabQueries.length >= 2);
-    releaseProbe({ ok: true, status: 200, body: { data: [{ model_name: "ready" }] } });
-    await waitFor(() => worker.pageRequests.length >= 2);
-    const currentPreflight = responseData(await currentRequest);
-    assert.equal(currentPreflight.results[0].status, "ready");
-    assert.equal(currentPreflight.results[0].tabId, tabId);
-    assert.deepEqual(worker.removed, []);
-    responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+test("preflight persistence failures are returned and a later retry can succeed without loading sites", async () => {
+  const station = { id: "hepingan", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
+  await withWorker({ stations: [station] }, {}, async worker => {
+    worker.setSessionError(new Error("persist failed"));
+    const failed = await worker.send("REFRESH_PREFLIGHT");
+    assert.equal(failed.ok, false);
+    assert.match(failed.error, /persist failed/);
+    worker.setSessionError(null);
+    assert.equal(responseData(await worker.send("REFRESH_PREFLIGHT")).results[0].status, "uncertain");
+    assert.deepEqual(worker.created, []);
     assert.deepEqual(worker.removed, []);
   });
 });
@@ -727,22 +639,36 @@ test("REFRESH_ALL requires live explicit confirmation, rejects expired or cancel
   });
 });
 
-test("stale async preflight cannot republish after a comparison-mode change", async () => {
-  let releaseProbe;
-  const probe = new Promise(resolve => { releaseProbe = resolve; });
-  const station = { id: "race-page", name: "Race page", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
-  await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {
-    pageResponseHandlers: { "api.hepingan.top": () => probe }
-  }, async worker => {
-    const staleRequest = worker.send("REFRESH_PREFLIGHT");
-    await waitFor(() => worker.pageRequests.length === 1);
-    await worker.send("SAVE_COMPARISON_MODE", { mode: "public" });
-    await worker.send("SAVE_COMPARISON_MODE", { mode: "paid" });
-    releaseProbe({ ok: true, status: 200, body: { data: [{ model_name: "ready-after-mode-change" }] } });
-    responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
-    assert.deepEqual(worker.removed, [worker.created[0].id]);
-    assert.equal(responseData(await worker.send("GET_DASHBOARD")).refreshPreflight, null);
-  });
+test("stale async preflight cannot republish after a comparison-mode or station change", async () => {
+  for (const change of ["mode", "station"]) {
+    const station = { id: "race-page", name: "Race page", category: "paid", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
+    await withWorker({ stations: [station], values: { settings: { comparisonMode: "paid" } } }, {}, async worker => {
+      let releaseRead;
+      let reading = false;
+      const credentials = new Promise(resolve => { releaseRead = resolve; });
+      const get = worker.chrome.storage.local.get;
+      worker.chrome.storage.local.get = key => {
+        if (key === "ai-price-analyzer:tokens" && !reading) {
+          reading = true;
+          return credentials;
+        }
+        return get(key);
+      };
+      const staleRequest = worker.send("REFRESH_PREFLIGHT");
+      await waitFor(() => reading);
+      if (change === "mode") {
+        await worker.send("SAVE_COMPARISON_MODE", { mode: "public" });
+        await worker.send("SAVE_COMPARISON_MODE", { mode: "paid" });
+      } else {
+        await worker.send("SAVE_STATIONS", { stations: [{ ...station, name: "Updated station" }] });
+      }
+      releaseRead({});
+      responseError(await staleRequest, REFRESH_CONFIRMATION_REQUIRED_CODE);
+      assert.deepEqual(worker.created, []);
+      assert.deepEqual(worker.removed, []);
+      assert.equal(responseData(await worker.send("GET_DASHBOARD")).refreshPreflight, null);
+    });
+  }
 });
 
 test("station configuration changes invalidate old confirmation and require a new preflight", async () => {
@@ -859,37 +785,19 @@ test("concurrent REFRESH_ALL requests cannot consume one confirmation twice", as
   });
 });
 
-test("tab removal clears preflight ownership before a same-id user tab is reused", async () => {
+test("preflight never takes ownership of user tabs, including after a worker restart", async () => {
   const station = { id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
-  await withWorker({ stations: [station] }, { pageResponses: { "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
+  await withWorker({ stations: [station] }, { existingTabs: [{ id: 7, url: station.baseUrl, status: "complete" }] }, async worker => {
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    const tabId = first.results[0].tabId;
-    assert.ok(Number.isInteger(tabId));
-    worker.removeUserTab(tabId);
-    worker.addUserTab({ id: tabId, url: station.baseUrl, status: "complete" });
-    worker.pageResponses["api.hepingan.top"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
-
-    const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    assert.equal(second.results[0].status, "ready");
-    assert.equal(second.results[0].tabId, tabId);
-    assert.deepEqual(worker.removed, []);
-  });
-});
-
-test("restored tab ownership is cleared when a tab closes while the worker is cold", async () => {
-  const station = { id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" };
-  await withWorker({ stations: [station] }, { pageResponses: { "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
-    const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    const tabId = first.results[0].tabId;
+    assert.equal(first.results[0].tabId, null);
     await worker.reboot();
-    await worker.removeUserTab(tabId);
-    worker.addUserTab({ id: tabId, url: station.baseUrl, status: "complete" });
-    worker.pageResponses["api.hepingan.top"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
-
+    await worker.removeUserTab(7);
+    worker.addUserTab({ id: 7, url: station.baseUrl, status: "complete" });
     const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    assert.equal(second.results[0].status, "ready");
-    assert.equal(second.results[0].tabId, tabId);
+    assert.equal(second.results[0].tabId, null);
+    assert.deepEqual(worker.created, []);
     assert.deepEqual(worker.removed, []);
+    assert.deepEqual(worker.tabQueries, []);
   });
 });
 
@@ -916,22 +824,20 @@ test("REFRESH_ALL collects from the prepared station state validated at confirma
   });
 });
 
-test("restores preflight confirmation and temporary tab ownership after a service-worker restart", async () => {
+test("restores preflight confirmation after a service-worker restart and reads updated credentials", async () => {
   const stations = [{ id: "hepingan", name: "KillAI", baseUrl: "https://api.hepingan.top/available-channels", enabled: true, mode: "page" }];
-  await withWorker({ stations }, { pageResponses: { "api.hepingan.top": { ok: false, status: 401, body: { message: "Unauthorized" } } } }, async worker => {
-    responseData(await worker.send("GET_DASHBOARD"));
+  await withWorker({ stations }, {}, async worker => {
     const first = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    const killAiTab = first.results.find(result => result.stationId === "hepingan").tabId;
-    assert.ok(Number.isInteger(killAiTab));
-
+    assert.equal(first.results[0].status, "uncertain");
     await worker.reboot();
     const dashboard = responseData(await worker.send("GET_DASHBOARD"));
     assert.equal(dashboard.refreshPreflight.token, first.token);
-
-    worker.pageResponses["api.hepingan.top"] = { ok: true, status: 200, body: { data: [{ model_name: "logged-in" }] } };
+    await worker.chrome.storage.session.set({ "ai-price-analyzer:tokens": { hepingan: { status: "ok", expiresAt: Date.now() + 3600000 } } });
     const second = responseData(await worker.send("REFRESH_PREFLIGHT"));
-    assert.equal(second.results.find(result => result.stationId === "hepingan").status, "ready");
-    assert.ok(worker.removed.includes(killAiTab));
+    assert.equal(second.results[0].status, "ready");
+    assert.deepEqual(worker.created, []);
+    assert.deepEqual(worker.pageRequests, []);
+    assert.deepEqual(worker.removed, []);
   });
 });
 

@@ -85,7 +85,7 @@ async function reloadErrorPage(tabs, tab) {
   return reloaded;
 }
 
-export async function findOrOpenPageTab(tabs, station, preferredTabId, { keepOnLoadFailure = false, onTemporaryTabCreated } = {}) {
+export async function findOrOpenPageTab(tabs, station, preferredTabId) {
   const url = new URL(station.adapter?.pageUrl || station.baseUrl);
   const candidates = await tabs.query({});
   let tab = selectPageTab(candidates, url.origin, preferredTabId, url.toString());
@@ -104,15 +104,9 @@ export async function findOrOpenPageTab(tabs, station, preferredTabId, { keepOnL
   }
   const created = await tabs.create({ url: url.toString(), active: false });
   try {
-    await onTemporaryTabCreated?.(created);
     return { tab: await reloadErrorPage(tabs, await waitForTab(tabs, created.id)), temporary: true };
   } catch (error) {
-    if (keepOnLoadFailure) {
-      error.tabId = created.id;
-      error.temporary = true;
-    } else {
-      await tabs.remove(created.id).catch(() => {});
-    }
+    await tabs.remove(created.id).catch(() => {});
     throw error;
   }
 }

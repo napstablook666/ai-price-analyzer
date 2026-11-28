@@ -5689,7 +5689,7 @@ test("finishes refresh when error snapshot construction fails", async () => {
   assert.equal(progress.at(-1).completed, 1);
 });
 
-test("serializes withPageFetch lifecycle and cleans temporary tabs after request failure", async () => {
+test("serializes page loading across different sites and cleans temporary tabs after request failure", async () => {
   const previousChrome = globalThis.chrome;
   const events = [];
   let nextTabId = 1;
@@ -5732,13 +5732,15 @@ test("serializes withPageFetch lifecycle and cleans temporary tabs after request
 
   try {
     const { withPageFetch } = await import(`../src/service-worker.js?page-fetch-test=${Date.now()}`);
-    const station = { id: "page-station", name: "Page station", baseUrl: "https://fastaitoken.com/available-channels", mode: "page" };
-    const run = label => withPageFetch(station, undefined, async pageFetch => {
+    const run = (label, baseUrl) => withPageFetch({ id: label, name: label, baseUrl, mode: "page" }, undefined, async pageFetch => {
       events.push(`task:${label}`);
-      const response = await pageFetch({ url: "https://fastaitoken.com/api/v1/channels/available" });
+      const response = await pageFetch({ url: new URL("/api/v1/channels/available", baseUrl).toString() });
       return response.body;
     });
-    const results = await Promise.allSettled([run("first"), run("second")]);
+    const results = await Promise.allSettled([
+      run("first", "https://fastaitoken.com/available-channels"),
+      run("second", "https://www.nexavlinks.com/modelsmarket")
+    ]);
 
     assert.deepEqual(results.map(result => result.status), ["rejected", "fulfilled"]);
     assert.equal(results[1].value, "ok");

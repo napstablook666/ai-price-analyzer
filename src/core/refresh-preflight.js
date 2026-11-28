@@ -17,27 +17,6 @@ export function sanitizePreflightUrl(value, base) {
   }
 }
 
-function loginSignal(value) {
-  if (typeof value !== "string") return false;
-  return /unauthori[sz]ed|not[ -]?authenticated|session.{0,16}(expired|invalid)|please.{0,16}log[ -]?in|login.{0,16}(required|expired)|未登录|未找到.{0,20}(登录|凭据)|登录凭据|请先登录|请登录|登录已过期|会话已失效|认证失败|重新登录/i.test(value);
-}
-
-function loginPageSignal(value) {
-  if (typeof value !== "string") return false;
-  return /<form\b[^>]*(?:login|signin)/i.test(value)
-    || /<form\b[\s\S]{0,800}(?:type=["']password["']|name=["']password["'])/i.test(value)
-    || /<input\b[^>]*(?:type=["']password["']|name=["']password["'])[^>]*>/i.test(value)
-    || /(?:href|action)=["'][^"']*\/(?:login|signin)(?:[/?#"']|$)/i.test(value)
-    || /"(?:url|redirect|redirect_url)"\s*:\s*"[^"]*\/(?:login|signin)(?:[/?#"]|$)/i.test(value);
-}
-
-function responseSignalsLogin(body) {
-  if (loginSignal(body) || loginPageSignal(body)) return true;
-  if (!body || typeof body !== "object") return false;
-  let serialized;
-  try { serialized = JSON.stringify(body); } catch { return false; }
-  return loginSignal(serialized) || loginPageSignal(serialized);
-}
 
 export function requiresPageSessionPreflight(station, provider) {
   if (!station?.enabled || station.mode !== "page") return false;
@@ -48,16 +27,6 @@ export function requiresPageSessionPreflight(station, provider) {
   return Boolean(request.pageAuth || request.credentials === "include");
 }
 
-export function classifyPageSessionResponse(response) {
-  const status = Number(response?.status);
-  if (status === 401 || status === 403 || responseSignalsLogin(response?.body)) return "needsLogin";
-  if (response?.ok === true && status >= 200 && status < 300) return "ready";
-  return "uncertain";
-}
-
-export function classifyPageSessionError(error) {
-  return loginSignal(error?.message || String(error)) ? "needsLogin" : "uncertain";
-}
 
 const PREFLIGHT_REASON_LIMIT = 120;
 

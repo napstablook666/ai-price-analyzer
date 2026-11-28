@@ -104,9 +104,11 @@ chrome.alarms 重排下一次（成功按新 expiresAt，失败退避）
 
 ### 刷新预检不再开标签页
 
-`REFRESH_ALL` 之前的登录态检查读的是凭据仓里的 `status`，不再为每个 page 站开一次标签页探活。判据在 `core/auth-keepalive.js::authConfirmedFromRenewal`：`status: "ok"` 且 `expiresAt` 还没到才算活着；`expiresAt` 缺失不算永不过期（只有用户自己粘的 `manual-token` 是那样），缺过期时间的站照样走预检，否则登录态死了也没人发现。实测一次全量刷新（14 个 page 站）的临时标签页数从 27 降到 14，证据见 `.omt3/evidence/u8-d3-tab-count.txt`，脚本 `node scripts/measure-tabs.mjs`。
+`REFRESH_PREFLIGHT` 只读一次凭据仓，不访问站点、不创建或重载标签页。`core/auth-keepalive.js::authConfirmedFromRenewal` 判定保存的凭据是否有效：`status: "ok"` 且 `expiresAt` 尚未到期才显示已就绪，`manual-token` 允许没有过期时间。上次检查为 `needsLogin` 的记录提示重新登录；没有记录、缺少过期时间或已过期的记录显示无法确认，等用户确认刷新后由实际采集检查，不能冒充实时验证通过。
 
-`mode: "page"` 的站还是要开标签页，因为采集本身只能靠页面。但「刷新前先探一次」这一轮没了，标签页开销从每站 2 次降到每站 1 次。
+`mode: "page"` 的实际采集共用一个全局槽位，开页、请求、清理完成后才轮到下一站，避免多个站点页面同时加载。已有用户页面优先复用且不关闭；只有本轮创建的临时页面在采集后清理。直接 API 采集仍保留总调度器的 3 个并行槽位，不受页面槽位限制。
+
+`test/refresh-preflight.test.js` 覆盖 102 个页面站点连续两次预检均零开页、零页面请求，以及取消、过期、配置变化和 worker 重启；`test/core.test.js` 覆盖跨站页面串行与请求失败后的清理。`node scripts/measure-tabs.mjs` 仅按当前插件目录估算全启用、无既有页面时的开页预算，不是浏览器实测，也不代表用户机器的内存或 CPU 降幅。
 
 不打开 dashboard 也会续：`onInstalled` 与 `onStartup`（浏览器重开）建完排期就直接跑一次 `runDueKeepalive`，把当轮到期的站续掉；面板每次轮询数据时也调一次 `kickDueKeepalive`，同一个 5 分钟节流窗口内只扫一次。这条路径和 alarm 走同一个执行器，靠 `lastCheckedAt` 去重，不会把同一批站连着续两遍。浏览器不常开的时候 alarm 可能整轮都轮不到，排到 23 小时的站更是永远轮不到，开机、装好、面板打开都算「该检查了」。
 

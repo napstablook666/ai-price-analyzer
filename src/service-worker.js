@@ -4,7 +4,7 @@ import { applyKeepaliveResult, authConfirmedFromRenewal, KEEPALIVE_ALARM_PREFIX,
 import { PAGE_WINDOW_AUTH_RENEWAL_TYPE } from "./core/bridge-protocol.js";
 import { modelAliasesForStations, prepareStationInput, providerForStation } from "./core/provider-registry.js";
 import { buildStationRequest, resolveStationCollection } from "./core/request-strategy.js";
-import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, classifyPageSessionError, classifyPageSessionResponse, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
+import { REFRESH_CONFIRMATION_REQUIRED_CODE, REFRESH_CONFIRMATION_REQUIRED_MESSAGE, REFRESH_PREFLIGHT_TTL_MS, assertRefreshConfirmation, pageSessionStatusReason, refreshStationSignature, requiresPageSessionPreflight, sanitizePreflightUrl } from "./core/refresh-preflight.js";
 import { inferStationAdapter } from "./core/adapters.js";
 import { addProviderStationPresets } from "./core/station-presets.js";
 import { loadSitePluginForStation, loadSitePlugins, pruneSitePlugins, syncSitePlugins, syncSpecSitePlugins, unloadSpecSitePlugin } from "./site-plugins/loader.js";
@@ -42,7 +42,6 @@ const REFERENCE_ALARM_NAME = "refresh-references";
 
 const REFRESH_CONCURRENCY = 3;
 const REFRESH_PREFLIGHT_SESSION_KEY = "ai-price-analyzer:refresh-preflight";
-const REFRESH_PREFLIGHT_TABS_SESSION_KEY = "ai-price-analyzer:refresh-preflight-tabs";
 const REFRESH_GROUP_LABELS = Object.freeze({ paid: "付费中转站", public: "公益站" });
 const REFRESH_NO_STATIONS_CODE = "REFRESH_NO_STATIONS";
 const REFRESH_NO_STATIONS_MESSAGE = "当前分组没有启用的站点，未发起刷新";
@@ -435,12 +434,10 @@ function pageTabFailureMessage(station, reason) {
   return "请先在当前 Chrome 配置文件登录目标站点一次后重试";
 }
 
-export async function withPageFetch(station, preferredTabId, task, { existingTab } = {}) {
-  const origin = new URL(station.baseUrl).origin;
-  return withKeyedLock(origin, async () => {
-    const opened = existingTab?.id
-      ? { tab: existingTab, temporary: false }
-      : await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
+export async function withPageFetch(station, preferredTabId, task) {
+  // 页面加载共享一个槽位，覆盖开页、请求和清理；直接 API 请求不占这个槽位。
+  return withKeyedLock("page-collection", async () => {
+    const opened = await findOrOpenPageTab(chrome.tabs, station, preferredTabId);
     const { tab, temporary } = opened;
     if (!tab?.id) throw new Error(pageTabFailureMessage(station, opened.reason));
     try {
@@ -554,10 +551,6 @@ let activeRefreshPreflight = null;
 let refreshConfirmationInProgress = false;
 let refreshPreflightRevision = 0;
 let refreshPreflightPersistence = Promise.resolve();
-const refreshPreflightCreatedTabIds = new Set();
-const refreshPreflightTabRevisions = new Map();
-const refreshPreflightStaleTabRevisions = new Map();
-const refreshPreflightTabClaims = new Map();
 
 function newRefreshPreflightToken() {
   return globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -575,33 +568,13 @@ function queueRefreshPreflightPersistence(operation) {
   return task;
 }
 
-async function closeRefreshPreflightTabs(tabIds) {
-  for (const tabId of tabIds) {
-    try {
-      await chrome.tabs.remove(tabId);
-    } catch (error) {
-      if (!isMissingTabError(error)) console.warn("[AI比价] 失效刷新预检临时标签页清理失败", error);
-    }
-  }
-}
-
-
 async function restoreRefreshPreflightState() {
   const session = chrome.storage?.session;
   if (!session) return;
   const restoreRevision = refreshPreflightRevision;
-  const stored = await queueRefreshPreflightPersistence(() => session.get([REFRESH_PREFLIGHT_SESSION_KEY, REFRESH_PREFLIGHT_TABS_SESSION_KEY]));
+  const stored = await queueRefreshPreflightPersistence(() => session.get([REFRESH_PREFLIGHT_SESSION_KEY]));
   if (restoreRevision !== refreshPreflightRevision) return;
   if (!activeRefreshPreflight && stored[REFRESH_PREFLIGHT_SESSION_KEY]) activeRefreshPreflight = stored[REFRESH_PREFLIGHT_SESSION_KEY];
-  if (Array.isArray(stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY])) {
-    refreshPreflightCreatedTabIds.clear();
-    refreshPreflightTabRevisions.clear();
-    for (const tabId of stored[REFRESH_PREFLIGHT_TABS_SESSION_KEY]) if (Number.isInteger(tabId)) {
-      refreshPreflightCreatedTabIds.add(tabId);
-      refreshPreflightTabRevisions.set(tabId, refreshPreflightRevision);
-      refreshPreflightStaleTabRevisions.delete(tabId);
-    }
-  }
 }
 
 async function persistRefreshPreflightState(expectedRevision = refreshPreflightRevision) {
@@ -609,180 +582,32 @@ async function persistRefreshPreflightState(expectedRevision = refreshPreflightR
   if (!session) return;
   return queueRefreshPreflightPersistence(() => {
     if (expectedRevision !== refreshPreflightRevision) return undefined;
-    return session.set({
-      [REFRESH_PREFLIGHT_SESSION_KEY]: activeRefreshPreflight,
-      [REFRESH_PREFLIGHT_TABS_SESSION_KEY]: [...refreshPreflightCreatedTabIds]
-    });
+    return session.set({ [REFRESH_PREFLIGHT_SESSION_KEY]: activeRefreshPreflight });
   });
 }
 
 function invalidateRefreshPreflight() {
-  for (const tabId of refreshPreflightCreatedTabIds) {
-    const tabRevision = refreshPreflightTabRevisions.get(tabId);
-    if (Number.isInteger(tabRevision)) refreshPreflightStaleTabRevisions.set(tabId, tabRevision);
-  }
   refreshPreflightRevision += 1;
   activeRefreshPreflight = null;
-  refreshPreflightCreatedTabIds.clear();
-  refreshPreflightTabRevisions.clear();
   const session = chrome.storage?.session;
   if (!session) return Promise.resolve();
-  return queueRefreshPreflightPersistence(() => session.set({
-    [REFRESH_PREFLIGHT_SESSION_KEY]: null,
-    [REFRESH_PREFLIGHT_TABS_SESSION_KEY]: []
-  }));
+  return queueRefreshPreflightPersistence(() => session.set({ [REFRESH_PREFLIGHT_SESSION_KEY]: null }));
 }
 
-function safePreflightTabUrl(value) {
-  return sanitizePreflightUrl(value);
-}
-
-
-// 仓里登记「已登录」且没过期，就当登录态还活着，不再开标签页确认。
-// 没有过期时间不等于永不过期：只有用户自己粘的长效令牌才是那样，
-// 别的站缺过期时间只是「还没测出来」，让它们照样走预检，不然登录态死了也没人发现。
-async function stationAuthConfirmed(station) {
-  const renewal = await getStationRenewal(station.id);
-  return authConfirmedFromRenewal(renewal, renewalFromProvider(providerForStation(station))?.kind);
-}
-
-async function preflightPageStation(station, requestRevision) {
-  let opened;
-  try {
-    opened = await findOrOpenPageTab(chrome.tabs, station, undefined, {
-      keepOnLoadFailure: true,
-      onTemporaryTabCreated: async created => {
-        if (requestRevision === refreshPreflightRevision) {
-          refreshPreflightCreatedTabIds.add(created.id);
-          refreshPreflightTabRevisions.set(created.id, requestRevision);
-          await persistRefreshPreflightState(requestRevision);
-        } else {
-          refreshPreflightStaleTabRevisions.set(created.id, requestRevision);
-        }
-      }
-    });
-  } catch (error) {
-    if (error.temporary && Number.isInteger(error.tabId)) {
-      if (requestRevision === refreshPreflightRevision) {
-        refreshPreflightCreatedTabIds.add(error.tabId);
-        refreshPreflightTabRevisions.set(error.tabId, requestRevision);
-        await persistRefreshPreflightState(requestRevision);
-      } else if (refreshPreflightStaleTabRevisions.get(error.tabId) === requestRevision) {
-        refreshPreflightStaleTabRevisions.delete(error.tabId);
-        await closeRefreshPreflightTabs([error.tabId]);
-      }
-    }
-    const stale = requestRevision !== refreshPreflightRevision;
-    return {
-      stationId: station.id,
-      stationName: station.name,
-      status: "uncertain",
-      reason: pageSessionStatusReason("uncertain", error?.message),
-      tabId: stale ? null : (Number.isInteger(error.tabId) ? error.tabId : null),
-      tabUrl: stale ? "" : safePreflightTabUrl(station.baseUrl)
-    };
-  }
-
-  const tab = opened?.tab;
-  if (!tab?.id) return {
-    stationId: station.id,
-    stationName: station.name,
-    status: "uncertain",
-    reason: pageSessionStatusReason("uncertain"),
-    tabId: null,
-    tabUrl: safePreflightTabUrl(station.baseUrl)
-  };
-  const claimedReusedTab = !opened.temporary && requestRevision === refreshPreflightRevision
-    && refreshPreflightStaleTabRevisions.has(tab.id);
-  if (claimedReusedTab) refreshPreflightTabClaims.set(tab.id, requestRevision);
-  if (opened.temporary) {
-    if (requestRevision !== refreshPreflightRevision) {
-      if (refreshPreflightStaleTabRevisions.get(tab.id) === requestRevision) {
-        refreshPreflightStaleTabRevisions.delete(tab.id);
-        await closeRefreshPreflightTabs([tab.id]);
-      }
-      return {
-        stationId: station.id,
-        stationName: station.name,
-        status: "uncertain",
-        reason: pageSessionStatusReason("uncertain"),
-        tabId: null,
-        tabUrl: ""
-      };
-    }
-    refreshPreflightCreatedTabIds.add(tab.id);
-    refreshPreflightTabRevisions.set(tab.id, requestRevision);
-    await persistRefreshPreflightState(requestRevision);
-  }
-
-  let status = "uncertain";
-  let probeError = "";
-  try {
-    const collection = resolveStationCollection(station);
-    const probe = collection.request.preflight || null;
-    if (!probe) {
-      if (String(collection.station.adapter?.method || "GET").toUpperCase() !== "GET") {
-        throw new Error("No safe GET session probe is available");
-      }
-    }
-    const probeEndpoint = probe?.endpoint ? new URL(probe.endpoint, collection.station.baseUrl).toString() : collection.endpoints[0];
-    const request = buildStationRequest(collection.station, probeEndpoint, collection.request);
-    const pageAuth = request.pageRequest.pageAuth ? { ...request.pageRequest.pageAuth, refresh: undefined } : undefined;
-    const pageRequest = { ...request.pageRequest, url: probeEndpoint, method: probe?.method || "GET", body: undefined, pageAuth };
-    const response = await withPageFetch(station, tab.id, pageFetch => pageFetch(pageRequest), { existingTab: tab });
-    status = classifyPageSessionResponse(response);
-  } catch (error) {
-    status = classifyPageSessionError(error);
-    probeError = error?.message || "";
-  }
-
-  if (requestRevision !== refreshPreflightRevision) {
-    const claimedByThisRequest = refreshPreflightTabClaims.get(tab.id) === requestRevision;
-    if (opened.temporary && refreshPreflightStaleTabRevisions.get(tab.id) === requestRevision
-      && !claimedByThisRequest && !refreshPreflightTabClaims.has(tab.id)) {
-      refreshPreflightStaleTabRevisions.delete(tab.id);
-      await closeRefreshPreflightTabs([tab.id]);
-    }
-    if (claimedByThisRequest) {
-      refreshPreflightTabClaims.delete(tab.id);
-      refreshPreflightStaleTabRevisions.delete(tab.id);
-    }
-    return {
-      stationId: station.id,
-      stationName: station.name,
-      status: "uncertain",
-      reason: pageSessionStatusReason("uncertain"),
-      tabId: null,
-      tabUrl: ""
-    };
-  }
-
-  const ownedTemporary = refreshPreflightCreatedTabIds.has(tab.id)
-    && refreshPreflightTabRevisions.get(tab.id) === requestRevision;
-  let closedTemporary = false;
-  if (status === "ready" && ownedTemporary) {
-    try {
-      await chrome.tabs.remove(tab.id);
-      refreshPreflightCreatedTabIds.delete(tab.id);
-      refreshPreflightTabRevisions.delete(tab.id);
-      refreshPreflightStaleTabRevisions.delete(tab.id);
-      closedTemporary = true;
-    } catch (error) {
-      if (!isMissingTabError(error)) console.warn("[AI比价] 刷新预检临时标签页清理失败", error);
-    }
-    await persistRefreshPreflightState(requestRevision);
-  }
-  if (claimedReusedTab && refreshPreflightTabClaims.get(tab.id) === requestRevision) {
-    refreshPreflightTabClaims.delete(tab.id);
-    refreshPreflightStaleTabRevisions.delete(tab.id);
-  }
+// 预检只读凭据仓，未知状态留到用户确认后的采集再检查，避免为同一站点加载两遍网页。
+function preflightStationAuth(station, provider, saved) {
+  const confirmed = authConfirmedFromRenewal(saved, renewalFromProvider(provider)?.kind);
+  const status = confirmed ? "ready" : saved?.status === "needsLogin" ? "needsLogin" : "uncertain";
+  const reason = confirmed ? "已保存的登录凭据仍在有效期内"
+    : status === "needsLogin" ? "上次检查需要重新登录，可打开站点登录后再刷新"
+      : "尚无法确认登录状态，确认刷新后再检查；预检不会加载站点页面";
   return {
     stationId: station.id,
     stationName: station.name,
     status,
-    reason: pageSessionStatusReason(status, probeError),
-    tabId: closedTemporary ? null : tab.id,
-    tabUrl: closedTemporary ? "" : safePreflightTabUrl(tab.url || station.baseUrl)
+    reason,
+    tabId: null,
+    tabUrl: sanitizePreflightUrl(station.baseUrl)
   };
 }
 
@@ -792,33 +617,24 @@ async function createRefreshPreflight() {
   // 预检要和采集用同一套插件状态。service worker 睡醒后注册表是空的，
   // providerForStation 拿不到插件，站点就会被判成「无需登录」一路放过。
   await ensureWorkspacePlugins();
-  const carriedTemporaryTabIds = [...refreshPreflightCreatedTabIds];
   const invalidation = invalidateRefreshPreflight();
   const requestRevision = refreshPreflightRevision;
   await invalidation;
-  for (const tabId of carriedTemporaryTabIds) {
-    refreshPreflightStaleTabRevisions.delete(tabId);
-    refreshPreflightCreatedTabIds.add(tabId);
-    refreshPreflightTabRevisions.set(tabId, requestRevision);
-  }
   const settings = await getSettings();
   const scope = refreshScope(await getPreparedStations(), settings.comparisonMode);
   const { stations } = scope;
   const requestMode = scope.comparisonMode;
   const requestSignature = refreshStationSignature(stations, requestMode);
-  // 15 个登录站串行开标签页是分钟级；这里按刷新并发度并行，标签页本身仍由 findOrOpenPageTab 按源排队。
+  // 并行读取本地登录状态，不为预检访问站点或加载页面。
+  const savedRenewals = new Map((await listStationRenewals()).map(row => [row.stationId, row]));
   const results = new Array(stations.length);
-  const outcomes = await runWithConcurrency(stations, REFRESH_CONCURRENCY, async (station, index) => {
+  const outcomes = await runWithConcurrency(stations, REFRESH_CONCURRENCY, async (station) => {
     await loadSitePluginForStation(station);
     const provider = providerForStation(station);
     if (!requiresPageSessionPreflight(station, provider)) {
       return { stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "无需页面登录预检" };
     }
-    // 仓里刚续过、还没过期的站不重复开标签页确认一次登录，省掉整轮一轮开销。
-    if (await stationAuthConfirmed(station)) {
-      return { stationId: station.id, stationName: station.name, status: "noLoginRequired", reason: "凭据仓里的登录态仍然有效" };
-    }
-    return preflightPageStation(station, requestRevision);
+    return preflightStationAuth(station, provider, savedRenewals.get(station.id));
   });
   outcomes.forEach((outcome, index) => {
     results[index] = outcome.status === "fulfilled"
@@ -2101,19 +1917,6 @@ chrome.action?.onClicked?.addListener(() => {
   openDashboardTab().catch(error => console.warn("[AI比价] 打开扩展页面失败", error));
 });
 
-chrome.tabs?.onRemoved?.addListener(tabId => {
-  const wasOwned = refreshPreflightCreatedTabIds.delete(tabId);
-  refreshPreflightTabRevisions.delete(tabId);
-  refreshPreflightStaleTabRevisions.delete(tabId);
-  refreshPreflightTabClaims.delete(tabId);
-  const reconcile = wasOwned
-    ? persistRefreshPreflightState()
-    : restoreRefreshPreflightState().then(() => {
-      if (refreshPreflightCreatedTabIds.delete(tabId)) return persistRefreshPreflightState();
-      return undefined;
-    });
-  return reconcile.catch(error => console.warn("[AI比价] 刷新预检状态恢复失败", error));
-});
 
 chrome.runtime.onInstalled.addListener(() => {
   clearLegacyAlarms();
